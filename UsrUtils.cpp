@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
-
 
 #include "SysInclude.h"
 #include "SysDep.h"
@@ -46,12 +45,6 @@
 #include "AliasDomain.h"
 #include "UsrAuth.h"
 
-
-
-
-
-
-
 #define SVR_TABLE_FILE              "mailusers.tab"
 #define SVR_ALIAS_FILE              "aliases.tab"
 #define WILD_ALIASES_HASH           0
@@ -65,2865 +58,2473 @@
 #define MLUSERS_TABLE_FILE          "mlusers.tab"
 #define MAILPROCESS_FILE            "mailproc.tab"
 
+enum UsrFileds {
+	usrDomain = 0,
+	usrName,
+	usrPassword,
+	usrID,
+	usrPath,
+	usrType,
 
-
-
-
-
-
-
-
-enum UsrFileds
-{
-    usrDomain = 0,
-    usrName,
-    usrPassword,
-    usrID,
-    usrPath,
-    usrType,
-
-    usrMax
+	usrMax
 };
 
-struct UserInfoVar
-{
-    LISTLINK        LL;
-    char           *pszName;
-    char           *pszValue;
+struct UserInfoVar {
+	LISTLINK LL;
+	char *pszName;
+	char *pszValue;
 };
 
-enum AliasFileds
-{
-    alsDomain = 0,
-    alsAlias,
-    alsName,
+enum AliasFileds {
+	alsDomain = 0,
+	alsAlias,
+	alsName,
 
-    alsMax
+	alsMax
 };
 
-struct UsersDBScanData
-{
-    char            szTmpDBFile[SYS_MAX_PATH];
-    FILE           *pDBFile;
+struct UsersDBScanData {
+	char szTmpDBFile[SYS_MAX_PATH];
+	FILE *pDBFile;
 };
 
-struct AliasDBScanData
-{
-    char            szTmpDBFile[SYS_MAX_PATH];
-    FILE           *pDBFile;
+struct AliasDBScanData {
+	char szTmpDBFile[SYS_MAX_PATH];
+	FILE *pDBFile;
 };
 
-
-
-
-
-
-static int      UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-                                 SYS_UINT32 *puHashVal, bool bCaseSens);
-static int      UsrRebuildUsersIndexes(char const *pszUsrFilePath);
-static int      UsrRebuildAliasesIndexes(char const *pszAlsFilePath);
-static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath);
-static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath);
+static int UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+			    SYS_UINT32 * puHashVal, bool bCaseSens);
+static int UsrRebuildUsersIndexes(char const *pszUsrFilePath);
+static int UsrRebuildAliasesIndexes(char const *pszAlsFilePath);
+static char *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath);
+static char *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath);
 static UserInfo *UsrGetUserFromStrings(char **ppszStrings);
 static UserInfoVar *UsrAllocVar(const char *pszName, const char *pszValue);
-static void     UsrFreeVar(UserInfoVar *pUIV);
-static void     UsrFreeInfoList(HSLIST & InfoList);
+static void UsrFreeVar(UserInfoVar * pUIV);
+static void UsrFreeInfoList(HSLIST & InfoList);
 static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName);
-static int      UsrWriteInfoList(HSLIST & InfoList, FILE *pProfileFile);
-static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
-static int      UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath);
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain = NULL);
-static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                                     const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
-static int      UsrWriteAlias(FILE *pAlsFile, AliasInfo *pAI);
-static bool     UsrIsWildAlias(char const *pszAlias);
-static int      UsrRemoveUserAlias(char const *pszDomain, char const *pszName);
+static int UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile);
+static int UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
+static int UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath);
+static int UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain = NULL);
+static int UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
+				const char *pszAlias, char *pszName = NULL, bool bWildMatch =
+				true);
+static int UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI);
+static bool UsrIsWildAlias(char const *pszAlias);
+static int UsrRemoveUserAlias(char const *pszDomain, char const *pszName);
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
-                                    const char *pszName);
+				    const char *pszName);
 static UserInfo *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
-                                            char *pszRealAddr);
-static int      UsrDropUserEnv(UserInfo *pUI);
-static int      UsrWriteUser(UserInfo *pUI, FILE *pUsrFile);
+					    char *pszRealAddr);
+static int UsrDropUserEnv(UserInfo * pUI);
+static int UsrWriteUser(UserInfo * pUI, FILE * pUsrFile);
 static char const *UsrGetMailboxDir(void);
-static int      UsrCreateMailbox(char const *pszUsrUserPath);
-static int      UsrPrepareUserEnv(UserInfo *pUI);
-static char    *UsrGetPop3LocksPath(UserInfo *pUI, char *pszPop3LockPath, int iMaxPath);
+static int UsrCreateMailbox(char const *pszUsrUserPath);
+static int UsrPrepareUserEnv(UserInfo * pUI);
+static char *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath);
 
+static int iIdxUser_Domain_Name[] = {
+	usrDomain,
+	usrName,
 
-
-
-
-
-
-
-
-
-static int      iIdxUser_Domain_Name[] =
-{
-    usrDomain,
-    usrName,
-
-    INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
-static int      iIdxAlias_Domain_Alias[] =
-{
-    alsDomain,
-    alsAlias,
+static int iIdxAlias_Domain_Alias[] = {
+	alsDomain,
+	alsAlias,
 
-    INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
-
-
-
-
-
-
-
-
-static int      UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-                                 SYS_UINT32 *puHashVal, bool bCaseSens)
+static int UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+			    SYS_UINT32 * puHashVal, bool bCaseSens)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  This will group wild alias ( * ? )
 ///////////////////////////////////////////////////////////////////////////////
-    int             iFieldsCount = StrStringsCount(ppszTabTokens);
+	int iFieldsCount = StrStringsCount(ppszTabTokens);
 
-    if ((iFieldsCount > alsAlias) &&
-        (UsrIsWildAlias(ppszTabTokens[alsAlias]) || UsrIsWildAlias(ppszTabTokens[alsDomain])))
-    {
-        *puHashVal = WILD_ALIASES_HASH;
+	if ((iFieldsCount > alsAlias) &&
+	    (UsrIsWildAlias(ppszTabTokens[alsAlias]) || UsrIsWildAlias(ppszTabTokens[alsDomain])))
+	{
+		*puHashVal = WILD_ALIASES_HASH;
 
-        return (0);
-    }
+		return (0);
+	}
 
-
-    return (TbixCalculateHash(ppszTabTokens, piFieldsIdx, puHashVal, bCaseSens));
+	return (TbixCalculateHash(ppszTabTokens, piFieldsIdx, puHashVal, bCaseSens));
 
 }
 
-
-
-int             UsrCheckUsersIndexes(void)
+int UsrCheckUsersIndexes(void)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align Domain-Name index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCheckIndex(szUsrFilePath, iIdxUser_Domain_Name, false) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCheckIndex(szUsrFilePath, iIdxUser_Domain_Name, false) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrCheckAliasesIndexes(void)
+int UsrCheckAliasesIndexes(void)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align Domain-Alias index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCheckIndex(szAlsFilePath, iIdxAlias_Domain_Alias, false, UsrCalcAliasHash) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCheckIndex(szAlsFilePath, iIdxAlias_Domain_Alias, false, UsrCalcAliasHash) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrRebuildUsersIndexes(char const *pszUsrFilePath)
+static int UsrRebuildUsersIndexes(char const *pszUsrFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild Domain-Name index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCreateIndex(pszUsrFilePath, iIdxUser_Domain_Name, false) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCreateIndex(pszUsrFilePath, iIdxUser_Domain_Name, false) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrRebuildAliasesIndexes(char const *pszAlsFilePath)
+static int UsrRebuildAliasesIndexes(char const *pszAlsFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild Domain-Alias index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCreateIndex(pszAlsFilePath, iIdxAlias_Domain_Alias, false, UsrCalcAliasHash) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCreateIndex(pszAlsFilePath, iIdxAlias_Domain_Alias, false, UsrCalcAliasHash) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath)
+static char *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszUsrFilePath, iMaxPath);
+	CfgGetRootPath(pszUsrFilePath, iMaxPath);
 
-    StrNCat(pszUsrFilePath, SVR_TABLE_FILE, iMaxPath);
+	StrNCat(pszUsrFilePath, SVR_TABLE_FILE, iMaxPath);
 
-    return (pszUsrFilePath);
+	return (pszUsrFilePath);
 
 }
 
-
-
-static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath)
+static char *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszAlsFilePath, iMaxPath);
+	CfgGetRootPath(pszAlsFilePath, iMaxPath);
 
-    StrNCat(pszAlsFilePath, SVR_ALIAS_FILE, iMaxPath);
+	StrNCat(pszAlsFilePath, SVR_ALIAS_FILE, iMaxPath);
 
-    return (pszAlsFilePath);
+	return (pszAlsFilePath);
 
 }
 
-
-
-char           *UsrGetMLTableFilePath(UserInfo *pUI, char *pszMLTablePath, int iMaxPath)
+char *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int iMaxPath)
 {
 
-    UsrGetUserPath(pUI, pszMLTablePath, iMaxPath, 1);
+	UsrGetUserPath(pUI, pszMLTablePath, iMaxPath, 1);
 
-    StrNCat(pszMLTablePath, MLUSERS_TABLE_FILE, iMaxPath);
+	StrNCat(pszMLTablePath, MLUSERS_TABLE_FILE, iMaxPath);
 
-    return (pszMLTablePath);
+	return (pszMLTablePath);
 
 }
 
-
-
-UserType        UsrGetUserType(UserInfo *pUI)
+UserType UsrGetUserType(UserInfo * pUI)
 {
 
-    if (pUI->pszType == NULL)
-        return (usrTypeError);
+	if (pUI->pszType == NULL)
+		return (usrTypeError);
 
-    switch (ToUpper(pUI->pszType[0]))
-    {
-    case ('U'):
-        return (usrTypeUser);
+	switch (ToUpper(pUI->pszType[0])) {
+	case ('U'):
+		return (usrTypeUser);
 
-    case ('M'):
-        return (usrTypeML);
-    }
+	case ('M'):
+		return (usrTypeML);
+	}
 
-    return (usrTypeError);
+	return (usrTypeError);
 
 }
 
-
-
-UserInfo       *UsrCreateDefaultUser(char const *pszDomain, char const *pszName,
-                                     char const *pszPassword, UserType TypeUser)
+UserInfo *UsrCreateDefaultUser(char const *pszDomain, char const *pszName,
+			       char const *pszPassword, UserType TypeUser)
 {
 
-    UserInfo       *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
+	UserInfo *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
 
-    if (pUI == NULL)
-        return (NULL);
+	if (pUI == NULL)
+		return (NULL);
 
-    pUI->pszDomain = SysStrDup(pszDomain);
-    pUI->uUserID = 0;
-    pUI->pszName = SysStrDup(pszName);
-    pUI->pszPassword = SysStrDup(pszPassword);
-    pUI->pszPath = SysStrDup(pszName);
-    pUI->pszType = SysStrDup((TypeUser == usrTypeUser) ? "U" : "M");
+	pUI->pszDomain = SysStrDup(pszDomain);
+	pUI->uUserID = 0;
+	pUI->pszName = SysStrDup(pszName);
+	pUI->pszPassword = SysStrDup(pszPassword);
+	pUI->pszPath = SysStrDup(pszName);
+	pUI->pszType = SysStrDup((TypeUser == usrTypeUser) ? "U" : "M");
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load user profile
 ///////////////////////////////////////////////////////////////////////////////
-    ListInit(pUI->InfoList);
+	ListInit(pUI->InfoList);
 
-    UsrLoadUserDefaultInfo(pUI->InfoList, pszDomain);
+	UsrLoadUserDefaultInfo(pUI->InfoList, pszDomain);
 
-    return (pUI);
+	return (pUI);
 
 }
-
-
 
 static UserInfo *UsrGetUserFromStrings(char **ppszStrings)
 {
 
-    int             iFieldsCount = StrStringsCount(ppszStrings);
+	int iFieldsCount = StrStringsCount(ppszStrings);
 
-    if (iFieldsCount < usrMax)
-        return (NULL);
+	if (iFieldsCount < usrMax)
+		return (NULL);
 
-    char            szPassword[512] = "";
+	char szPassword[512] = "";
 
-    if (StrDeCrypt(ppszStrings[usrPassword], szPassword) == NULL)
-        return (NULL);
+	if (StrDeCrypt(ppszStrings[usrPassword], szPassword) == NULL)
+		return (NULL);
 
+	UserInfo *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
 
-    UserInfo       *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
+	if (pUI == NULL)
+		return (NULL);
 
-    if (pUI == NULL)
-        return (NULL);
-
-    pUI->pszDomain = SysStrDup(ppszStrings[usrDomain]);
-    pUI->uUserID = (unsigned int) atol(ppszStrings[usrID]);
-    pUI->pszName = SysStrDup(ppszStrings[usrName]);
-    pUI->pszPassword = SysStrDup(szPassword);
-    pUI->pszPath = SysStrDup(ppszStrings[usrPath]);
-    pUI->pszType = SysStrDup(ppszStrings[usrType]);
+	pUI->pszDomain = SysStrDup(ppszStrings[usrDomain]);
+	pUI->uUserID = (unsigned int) atol(ppszStrings[usrID]);
+	pUI->pszName = SysStrDup(ppszStrings[usrName]);
+	pUI->pszPassword = SysStrDup(szPassword);
+	pUI->pszPath = SysStrDup(ppszStrings[usrPath]);
+	pUI->pszType = SysStrDup(ppszStrings[usrType]);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load user profile
 ///////////////////////////////////////////////////////////////////////////////
-    ListInit(pUI->InfoList);
+	ListInit(pUI->InfoList);
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrFilePath, sizeof(szUsrFilePath), 1);
+	UsrGetUserPath(pUI, szUsrFilePath, sizeof(szUsrFilePath), 1);
 
-    StrNCat(szUsrFilePath, USER_PROFILE_FILE, sizeof(szUsrFilePath));
+	StrNCat(szUsrFilePath, USER_PROFILE_FILE, sizeof(szUsrFilePath));
 
-    UsrLoadUserInfo(pUI->InfoList, pUI->uUserID, szUsrFilePath);
+	UsrLoadUserInfo(pUI->InfoList, pUI->uUserID, szUsrFilePath);
 
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-void            UsrFreeUserInfo(UserInfo *pUI)
+void UsrFreeUserInfo(UserInfo * pUI)
 {
 
-    UsrFreeInfoList(pUI->InfoList);
+	UsrFreeInfoList(pUI->InfoList);
 
-    if (pUI->pszDomain != NULL)
-        SysFree(pUI->pszDomain);
+	if (pUI->pszDomain != NULL)
+		SysFree(pUI->pszDomain);
 
-    if (pUI->pszPassword != NULL)
-        SysFree(pUI->pszPassword);
+	if (pUI->pszPassword != NULL)
+		SysFree(pUI->pszPassword);
 
-    if (pUI->pszName != NULL)
-        SysFree(pUI->pszName);
+	if (pUI->pszName != NULL)
+		SysFree(pUI->pszName);
 
-    if (pUI->pszPath != NULL)
-        SysFree(pUI->pszPath);
+	if (pUI->pszPath != NULL)
+		SysFree(pUI->pszPath);
 
-    if (pUI->pszType != NULL)
-        SysFree(pUI->pszType);
+	if (pUI->pszType != NULL)
+		SysFree(pUI->pszType);
 
-    SysFree(pUI);
+	SysFree(pUI);
 
 }
 
-
-
-char           *UsrGetUserInfoVar(UserInfo *pUI, const char *pszName,
-                                  const char *pszDefault)
+char *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName, const char *pszDefault)
 {
 
-    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+	UserInfoVar *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
 
-    if (pUIV != NULL)
-        return (SysStrDup(pUIV->pszValue));
+	if (pUIV != NULL)
+		return (SysStrDup(pUIV->pszValue));
 
-    return ((pszDefault != NULL) ? SysStrDup(pszDefault) : NULL);
+	return ((pszDefault != NULL) ? SysStrDup(pszDefault) : NULL);
 
 }
 
-
-
-int             UsrGetUserInfoVarInt(UserInfo *pUI, const char *pszName, int iDefault)
+int UsrGetUserInfoVarInt(UserInfo * pUI, const char *pszName, int iDefault)
 {
 
-    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+	UserInfoVar *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
 
-    return ((pUIV != NULL) ? atoi(pUIV->pszValue): iDefault);
+	return ((pUIV != NULL) ? atoi(pUIV->pszValue) : iDefault);
 
 }
 
-
-
-int             UsrDelUserInfoVar(UserInfo *pUI, const char *pszName)
+int UsrDelUserInfoVar(UserInfo * pUI, const char *pszName)
 {
 
-    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+	UserInfoVar *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
 
-    if (pUIV == NULL)
-    {
-        ErrSetErrorCode(ERR_USER_VAR_NOT_FOUND);
-        return (ERR_USER_VAR_NOT_FOUND);
-    }
+	if (pUIV == NULL) {
+		ErrSetErrorCode(ERR_USER_VAR_NOT_FOUND);
+		return (ERR_USER_VAR_NOT_FOUND);
+	}
 
-    ListRemovePtr(pUI->InfoList, (PLISTLINK) pUIV);
+	ListRemovePtr(pUI->InfoList, (PLISTLINK) pUIV);
 
-    UsrFreeVar(pUIV);
+	UsrFreeVar(pUIV);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrSetUserInfoVar(UserInfo *pUI, const char *pszName,
-                                  const char *pszValue)
+int UsrSetUserInfoVar(UserInfo * pUI, const char *pszName, const char *pszValue)
 {
 
-    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+	UserInfoVar *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
 
-    if (pUIV != NULL)
-    {
-        SysFree(pUIV->pszValue);
+	if (pUIV != NULL) {
+		SysFree(pUIV->pszValue);
 
-        pUIV->pszValue = SysStrDup(pszValue);
-    }
-    else
-    {
-        UserInfoVar    *pUIV = UsrAllocVar(pszName, pszValue);
+		pUIV->pszValue = SysStrDup(pszValue);
+	} else {
+		UserInfoVar *pUIV = UsrAllocVar(pszName, pszValue);
 
-        if (pUIV == NULL)
-            return (ErrGetErrorCode());
+		if (pUIV == NULL)
+			return (ErrGetErrorCode());
 
-        ListAddTail(pUI->InfoList, (PLISTLINK) pUIV);
-    }
+		ListAddTail(pUI->InfoList, (PLISTLINK) pUIV);
+	}
 
-    return (0);
+	return (0);
 
 }
 
-
-
-char          **UsrGetProfileVars(UserInfo *pUI)
+char **UsrGetProfileVars(UserInfo * pUI)
 {
 
-    int             iVarsCount = ListGetCount(pUI->InfoList);
-    char          **ppszVars = (char **) SysAlloc((iVarsCount + 1) * sizeof(char *));
+	int iVarsCount = ListGetCount(pUI->InfoList);
+	char **ppszVars = (char **) SysAlloc((iVarsCount + 1) * sizeof(char *));
 
-    if (ppszVars == NULL)
-        return (NULL);
+	if (ppszVars == NULL)
+		return (NULL);
 
+	int iCurrVar = 0;
+	UserInfoVar *pUIV = (UserInfoVar *) ListFirst(pUI->InfoList);
 
-    int             iCurrVar = 0;
-    UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(pUI->InfoList);
+	for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
+	     ListNext(pUI->InfoList, (PLISTLINK) pUIV))
+		ppszVars[iCurrVar++] = SysStrDup(pUIV->pszName);
 
-    for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-             ListNext(pUI->InfoList, (PLISTLINK) pUIV))
-        ppszVars[iCurrVar++] = SysStrDup(pUIV->pszName);
+	ppszVars[iCurrVar] = NULL;
 
-    ppszVars[iCurrVar] = NULL;
-
-    return (ppszVars);
+	return (ppszVars);
 
 }
-
-
 
 static UserInfoVar *UsrAllocVar(const char *pszName, const char *pszValue)
 {
 
-    UserInfoVar    *pUIV = (UserInfoVar *) SysAlloc(sizeof(UserInfoVar));
+	UserInfoVar *pUIV = (UserInfoVar *) SysAlloc(sizeof(UserInfoVar));
 
-    if (pUIV == NULL)
-        return (NULL);
+	if (pUIV == NULL)
+		return (NULL);
 
-    ListLinkInit(pUIV);
-    pUIV->pszName = SysStrDup(pszName);
-    pUIV->pszValue = SysStrDup(pszValue);
+	ListLinkInit(pUIV);
+	pUIV->pszName = SysStrDup(pszName);
+	pUIV->pszValue = SysStrDup(pszValue);
 
-    return (pUIV);
+	return (pUIV);
 
 }
 
-
-
-static void     UsrFreeVar(UserInfoVar *pUIV)
+static void UsrFreeVar(UserInfoVar * pUIV)
 {
 
-    SysFree(pUIV->pszName);
-    SysFree(pUIV->pszValue);
+	SysFree(pUIV->pszName);
+	SysFree(pUIV->pszValue);
 
-    SysFree(pUIV);
+	SysFree(pUIV);
 
 }
 
-
-
-static void     UsrFreeInfoList(HSLIST & InfoList)
+static void UsrFreeInfoList(HSLIST & InfoList)
 {
 
-    UserInfoVar    *pUIV;
+	UserInfoVar *pUIV;
 
-    while ((pUIV = (UserInfoVar *) ListRemove(InfoList)) != INVALID_SLIST_PTR)
-        UsrFreeVar(pUIV);
+	while ((pUIV = (UserInfoVar *) ListRemove(InfoList)) != INVALID_SLIST_PTR)
+		UsrFreeVar(pUIV);
 
 }
-
-
 
 static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName)
 {
 
-    UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(InfoList);
+	UserInfoVar *pUIV = (UserInfoVar *) ListFirst(InfoList);
 
-    for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-             ListNext(InfoList, (PLISTLINK) pUIV))
-        if (strcmp(pUIV->pszName, pszName) == 0)
-            return (pUIV);
+	for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
+	     ListNext(InfoList, (PLISTLINK) pUIV))
+		if (strcmp(pUIV->pszName, pszName) == 0)
+			return (pUIV);
 
-    return (NULL);
+	return (NULL);
 
 }
 
-
-
-static int      UsrWriteInfoList(HSLIST & InfoList, FILE *pProfileFile)
+static int UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile)
 {
 
-    UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(InfoList);
+	UserInfoVar *pUIV = (UserInfoVar *) ListFirst(InfoList);
 
-    for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-             ListNext(InfoList, (PLISTLINK) pUIV))
-    {
+	for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
+	     ListNext(InfoList, (PLISTLINK) pUIV)) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Write variabile name
 ///////////////////////////////////////////////////////////////////////////////
-        char           *pszQuoted = StrQuote(pUIV->pszName, '"');
+		char *pszQuoted = StrQuote(pUIV->pszName, '"');
 
-        if (pszQuoted == NULL)
-            return (ErrGetErrorCode());
+		if (pszQuoted == NULL)
+			return (ErrGetErrorCode());
 
-        fprintf(pProfileFile, "%s\t", pszQuoted);
+		fprintf(pProfileFile, "%s\t", pszQuoted);
 
-        SysFree(pszQuoted);
+		SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write variabile value
 ///////////////////////////////////////////////////////////////////////////////
-        pszQuoted = StrQuote(pUIV->pszValue, '"');
+		pszQuoted = StrQuote(pUIV->pszValue, '"');
 
-        if (pszQuoted == NULL)
-            return (ErrGetErrorCode());
+		if (pszQuoted == NULL)
+			return (ErrGetErrorCode());
 
-        fprintf(pProfileFile, "%s\n", pszQuoted);
+		fprintf(pProfileFile, "%s\n", pszQuoted);
 
-        SysFree(pszQuoted);
-    }
+		SysFree(pszQuoted);
+	}
 
-    return (0);
-
-}
-
-
-
-static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
-                                const char *pszFilePath)
-{
-
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
-                                                          sizeof(szResLock)));
-
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
-
-
-    FILE           *pProfileFile = fopen(pszFilePath, "rt");
-
-    if (pProfileFile == NULL)
-    {
-        RLckUnlockSH(hResLock);
-        ErrSetErrorCode(ERR_NO_USER_PRFILE);
-        return (ERR_NO_USER_PRFILE);
-    }
-
-    char            szProfileLine[USR_TABLE_LINE_MAX] = "";
-
-    while (MscFGets(szProfileLine, sizeof(szProfileLine) - 1, pProfileFile) != NULL)
-    {
-        if (szProfileLine[0] == TAB_COMMENT_CHAR)
-            continue;
-
-        char          **ppszStrings = StrGetTabLineStrings(szProfileLine);
-
-        if (ppszStrings == NULL)
-            continue;
-
-        int             iFieldsCount = StrStringsCount(ppszStrings);
-
-        if (iFieldsCount == 2)
-        {
-            UserInfoVar    *pUIV = UsrAllocVar(ppszStrings[0], ppszStrings[1]);
-
-            if (pUIV != NULL)
-                ListAddTail(InfoList, (PLISTLINK) pUIV);
-        }
-
-        StrFreeStrings(ppszStrings);
-    }
-
-    fclose(pProfileFile);
-
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath)
+static int UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath)
 {
 
-    if (pszDomain != NULL)
-    {
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
+							  sizeof(szResLock)));
+
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
+
+	FILE *pProfileFile = fopen(pszFilePath, "rt");
+
+	if (pProfileFile == NULL) {
+		RLckUnlockSH(hResLock);
+		ErrSetErrorCode(ERR_NO_USER_PRFILE);
+		return (ERR_NO_USER_PRFILE);
+	}
+
+	char szProfileLine[USR_TABLE_LINE_MAX] = "";
+
+	while (MscFGets(szProfileLine, sizeof(szProfileLine) - 1, pProfileFile) != NULL) {
+		if (szProfileLine[0] == TAB_COMMENT_CHAR)
+			continue;
+
+		char **ppszStrings = StrGetTabLineStrings(szProfileLine);
+
+		if (ppszStrings == NULL)
+			continue;
+
+		int iFieldsCount = StrStringsCount(ppszStrings);
+
+		if (iFieldsCount == 2) {
+			UserInfoVar *pUIV = UsrAllocVar(ppszStrings[0], ppszStrings[1]);
+
+			if (pUIV != NULL)
+				ListAddTail(InfoList, (PLISTLINK) pUIV);
+		}
+
+		StrFreeStrings(ppszStrings);
+	}
+
+	fclose(pProfileFile);
+
+	RLckUnlockSH(hResLock);
+
+	return (0);
+
+}
+
+static int UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath)
+{
+
+	if (pszDomain != NULL) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to lookup domain specific configuration
 ///////////////////////////////////////////////////////////////////////////////
-        MDomGetDomainPath(pszDomain, pszInfoFile, iMaxPath, 1);
+		MDomGetDomainPath(pszDomain, pszInfoFile, iMaxPath, 1);
 
-        StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
+		StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
 
+		if (SysExistFile(pszInfoFile))
+			return (0);
 
-        if (SysExistFile(pszInfoFile))
-            return (0);
-
-    }
-
+	}
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to lookup global configuration
 ///////////////////////////////////////////////////////////////////////////////
-    CfgGetRootPath(pszInfoFile, iMaxPath);
+	CfgGetRootPath(pszInfoFile, iMaxPath);
 
-    StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
+	StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
 
-    if (!SysExistFile(pszInfoFile))
-    {
-        ErrSetErrorCode(ERR_NO_USER_DEFAULT_PRFILE);
-        return (ERR_NO_USER_DEFAULT_PRFILE);
-    }
+	if (!SysExistFile(pszInfoFile)) {
+		ErrSetErrorCode(ERR_NO_USER_DEFAULT_PRFILE);
+		return (ERR_NO_USER_DEFAULT_PRFILE);
+	}
 
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain)
+static int UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain)
 {
 
-    char            szUserDefFilePath[SYS_MAX_PATH] = "";
+	char szUserDefFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetDefaultInfoFile(pszDomain, szUserDefFilePath, sizeof(szUserDefFilePath)) < 0)
-        return (ErrGetErrorCode());
+	if (UsrGetDefaultInfoFile(pszDomain, szUserDefFilePath, sizeof(szUserDefFilePath)) < 0)
+		return (ErrGetErrorCode());
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szUserDefFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUserDefFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	FILE *pProfileFile = fopen(szUserDefFilePath, "rt");
 
+	if (pProfileFile == NULL) {
+		ErrSetErrorCode(ERR_NO_USER_DEFAULT_PRFILE);
+		RLckUnlockSH(hResLock);
+		return (ERR_NO_USER_DEFAULT_PRFILE);
+	}
 
-    FILE           *pProfileFile = fopen(szUserDefFilePath, "rt");
+	char szProfileLine[USR_TABLE_LINE_MAX] = "";
 
-    if (pProfileFile == NULL)
-    {
-        ErrSetErrorCode(ERR_NO_USER_DEFAULT_PRFILE);
-        RLckUnlockSH(hResLock);
-        return (ERR_NO_USER_DEFAULT_PRFILE);
-    }
+	while (MscFGets(szProfileLine, sizeof(szProfileLine) - 1, pProfileFile) != NULL) {
+		if (szProfileLine[0] == TAB_COMMENT_CHAR)
+			continue;
 
-    char            szProfileLine[USR_TABLE_LINE_MAX] = "";
+		char **ppszStrings = StrGetTabLineStrings(szProfileLine);
 
-    while (MscFGets(szProfileLine, sizeof(szProfileLine) - 1, pProfileFile) != NULL)
-    {
-        if (szProfileLine[0] == TAB_COMMENT_CHAR)
-            continue;
+		if (ppszStrings == NULL)
+			continue;
 
-        char          **ppszStrings = StrGetTabLineStrings(szProfileLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if (iFieldsCount == 2) {
+			UserInfoVar *pUIV = UsrAllocVar(ppszStrings[0], ppszStrings[1]);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			if (pUIV != NULL)
+				ListAddTail(InfoList, (PLISTLINK) pUIV);
+		}
 
-        if (iFieldsCount == 2)
-        {
-            UserInfoVar    *pUIV = UsrAllocVar(ppszStrings[0], ppszStrings[1]);
+		StrFreeStrings(ppszStrings);
+	}
 
-            if (pUIV != NULL)
-                ListAddTail(InfoList, (PLISTLINK) pUIV);
-        }
+	fclose(pProfileFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	RLckUnlockSH(hResLock);
 
-    fclose(pProfileFile);
-
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                                     const char *pszAlias, char *pszName, bool bWildMatch)
+static int UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
+				const char *pszAlias, char *pszName, bool bWildMatch)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index ( lookup precise aliases )
 ///////////////////////////////////////////////////////////////////////////////
-    char          **ppszTabTokens = TbixLookup(pszAlsFilePath, iIdxAlias_Domain_Alias, false,
-                                               pszDomain,
-                                               pszAlias,
-                                               NULL);
+	char **ppszTabTokens = TbixLookup(pszAlsFilePath, iIdxAlias_Domain_Alias, false,
+					  pszDomain,
+					  pszAlias,
+					  NULL);
 
-    if (ppszTabTokens != NULL)
-    {
-        if (pszName != NULL)
-            strcpy(pszName, ppszTabTokens[alsName]);
+	if (ppszTabTokens != NULL) {
+		if (pszName != NULL)
+			strcpy(pszName, ppszTabTokens[alsName]);
 
+		StrFreeStrings(ppszTabTokens);
 
-        StrFreeStrings(ppszTabTokens);
-
-        return (1);
-    }
-
+		return (1);
+	}
 ///////////////////////////////////////////////////////////////////////////////
 //  We can stop here if wild alias matching is not required
 ///////////////////////////////////////////////////////////////////////////////
-    if (!bWildMatch)
-        return (0);
+	if (!bWildMatch)
+		return (0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index ( lookup wild aliases grouped
 //  under WILD_ALIASES_HASH hash key )
 ///////////////////////////////////////////////////////////////////////////////
-    INDEX_HANDLE    hIndexLookup = TbixOpenHandle(pszAlsFilePath, iIdxAlias_Domain_Alias,
-                                                  WILD_ALIASES_HASH);
+	INDEX_HANDLE hIndexLookup = TbixOpenHandle(pszAlsFilePath, iIdxAlias_Domain_Alias,
+						   WILD_ALIASES_HASH);
 
-    if (hIndexLookup != INVALID_INDEX_HANDLE)
-    {
-        int             iNumRecords = TbixLookedUpRecords(hIndexLookup);
-        int             iMaxLength = -1;
+	if (hIndexLookup != INVALID_INDEX_HANDLE) {
+		int iNumRecords = TbixLookedUpRecords(hIndexLookup);
+		int iMaxLength = -1;
 
-        for (int ii = 0; ii < iNumRecords; ii++)
-        {
-            char          **ppszTabTokens = TbixGetRecord(hIndexLookup, ii);
+		for (int ii = 0; ii < iNumRecords; ii++) {
+			char **ppszTabTokens = TbixGetRecord(hIndexLookup, ii);
 
-            if (ppszTabTokens == NULL)
-                continue;
+			if (ppszTabTokens == NULL)
+				continue;
 
+			int iFieldsCount = StrStringsCount(ppszTabTokens);
 
-            int             iFieldsCount = StrStringsCount(ppszTabTokens);
+			if ((iFieldsCount >= alsMax) &&
+			    StrIWildMatch(pszDomain, ppszTabTokens[alsDomain]) &&
+			    StrIWildMatch(pszAlias, ppszTabTokens[alsAlias])) {
+				int iLength = strlen(ppszTabTokens[alsDomain]) +
+				    strlen(ppszTabTokens[alsAlias]);
 
-            if ((iFieldsCount >= alsMax) &&
-                StrIWildMatch(pszDomain, ppszTabTokens[alsDomain]) &&
-                StrIWildMatch(pszAlias, ppszTabTokens[alsAlias]))
-            {
-                int             iLength = strlen(ppszTabTokens[alsDomain]) +
-                    strlen(ppszTabTokens[alsAlias]);
+				if (iLength > iMaxLength) {
+					iMaxLength = iLength;
 
-                if (iLength > iMaxLength)
-                {
-                    iMaxLength = iLength;
+					if (pszName != NULL)
+						strcpy(pszName, ppszTabTokens[alsName]);
+				}
+			}
 
-                    if (pszName != NULL)
-                        strcpy(pszName, ppszTabTokens[alsName]);
-                }
-            }
+			StrFreeStrings(ppszTabTokens);
+		}
 
-            StrFreeStrings(ppszTabTokens);
-        }
+		TbixCloseHandle(hIndexLookup);
 
-        TbixCloseHandle(hIndexLookup);
+		if (iMaxLength > 0)
+			return (1);
+	}
 
-        if (iMaxLength > 0)
-            return (1);
-    }
-
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
-                                   char *pszName, bool bWildMatch)
+int UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
+		       char *pszName, bool bWildMatch)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (0);
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (0);
+	int iLookupResult = UsrAliasLookupNameLK(szAlsFilePath, pszDomain,
+						 pszAlias, pszName, bWildMatch);
 
+	RLckUnlockSH(hResLock);
 
-    int             iLookupResult = UsrAliasLookupNameLK(szAlsFilePath, pszDomain,
-                                                         pszAlias, pszName, bWildMatch);
-
-
-    RLckUnlockSH(hResLock);
-
-    return (iLookupResult);
+	return (iLookupResult);
 
 }
 
-
-
-static int      UsrWriteAlias(FILE *pAlsFile, AliasInfo *pAI)
+static int UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Domain
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszQuoted = StrQuote(pAI->pszDomain, '"');
+	char *pszQuoted = StrQuote(pAI->pszDomain, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAlsFile, "%s\t", pszQuoted);
+	fprintf(pAlsFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Alias
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pAI->pszAlias, '"');
+	pszQuoted = StrQuote(pAI->pszAlias, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAlsFile, "%s\t", pszQuoted);
+	fprintf(pAlsFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Account name
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pAI->pszName, '"');
+	pszQuoted = StrQuote(pAI->pszName, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAlsFile, "%s\n", pszQuoted);
+	fprintf(pAlsFile, "%s\n", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
-    return (0);
-
-}
-
-
-
-AliasInfo      *UsrAllocAlias(const char *pszDomain, const char *pszAlias,
-                              const char *pszName)
-{
-
-    AliasInfo      *pAI = (AliasInfo *) SysAlloc(sizeof(AliasInfo));
-
-    if (pAI == NULL)
-        return (NULL);
-
-    pAI->pszDomain = (pszDomain != NULL) ? SysStrDup(pszDomain) : NULL;
-    pAI->pszAlias = (pszAlias != NULL) ? SysStrDup(pszAlias) : NULL;
-    pAI->pszName = (pszName != NULL) ? SysStrDup(pszName) : NULL;
-
-    return (pAI);
+	return (0);
 
 }
 
-
-
-void            UsrFreeAlias(AliasInfo *pAI)
+AliasInfo *UsrAllocAlias(const char *pszDomain, const char *pszAlias, const char *pszName)
 {
 
-    SysFreeCheck(pAI->pszDomain);
-    SysFreeCheck(pAI->pszAlias);
-    SysFreeCheck(pAI->pszName);
+	AliasInfo *pAI = (AliasInfo *) SysAlloc(sizeof(AliasInfo));
 
-    SysFree(pAI);
+	if (pAI == NULL)
+		return (NULL);
+
+	pAI->pszDomain = (pszDomain != NULL) ? SysStrDup(pszDomain) : NULL;
+	pAI->pszAlias = (pszAlias != NULL) ? SysStrDup(pszAlias) : NULL;
+	pAI->pszName = (pszName != NULL) ? SysStrDup(pszName) : NULL;
+
+	return (pAI);
 
 }
 
-
-
-static bool     UsrIsWildAlias(char const *pszAlias)
+void UsrFreeAlias(AliasInfo * pAI)
 {
 
-    return ((strchr(pszAlias, '*') != NULL) || (strchr(pszAlias, '?') != NULL));
+	SysFreeCheck(pAI->pszDomain);
+	SysFreeCheck(pAI->pszAlias);
+	SysFreeCheck(pAI->pszName);
+
+	SysFree(pAI);
 
 }
 
-
-
-int             UsrAddAlias(AliasInfo *pAI)
+static bool UsrIsWildAlias(char const *pszAlias)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	return ((strchr(pszAlias, '*') != NULL) || (strchr(pszAlias, '?') != NULL));
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+}
 
+int UsrAddAlias(AliasInfo * pAI)
+{
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    FILE           *pAlsFile = fopen(szAlsFilePath, "r+t");
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (pAlsFile == NULL)
-    {
-        ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
-        RLckUnlockEX(hResLock);
-        return (ERR_ALIAS_FILE_NOT_FOUND);
-    }
+	FILE *pAlsFile = fopen(szAlsFilePath, "r+t");
 
-    char            szAlsLine[USR_ALIAS_LINE_MAX] = "";
+	if (pAlsFile == NULL) {
+		ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
+		RLckUnlockEX(hResLock);
+		return (ERR_ALIAS_FILE_NOT_FOUND);
+	}
 
-    while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAlsLine);
+	char szAlsLine[USR_ALIAS_LINE_MAX] = "";
 
-        if (ppszStrings == NULL)
-            continue;
+	while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAlsLine);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (ppszStrings == NULL)
+			continue;
 
-        if ((iFieldsCount >= alsMax) && (stricmp(pAI->pszDomain, ppszStrings[alsDomain]) == 0) &&
-            (stricmp(pAI->pszAlias, ppszStrings[alsAlias]) == 0))
-        {
-            StrFreeStrings(ppszStrings);
-            fclose(pAlsFile);
-            RLckUnlockEX(hResLock);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-            ErrSetErrorCode(ERR_ALIAS_EXIST);
-            return (ERR_ALIAS_EXIST);
-        }
+		if ((iFieldsCount >= alsMax) &&
+		    (stricmp(pAI->pszDomain, ppszStrings[alsDomain]) == 0) &&
+		    (stricmp(pAI->pszAlias, ppszStrings[alsAlias]) == 0)) {
+			StrFreeStrings(ppszStrings);
+			fclose(pAlsFile);
+			RLckUnlockEX(hResLock);
 
-        StrFreeStrings(ppszStrings);
-    }
+			ErrSetErrorCode(ERR_ALIAS_EXIST);
+			return (ERR_ALIAS_EXIST);
+		}
 
-    fseek(pAlsFile, 0, SEEK_END);
+		StrFreeStrings(ppszStrings);
+	}
 
-    if (UsrWriteAlias(pAlsFile, pAI) < 0)
-    {
-        fclose(pAlsFile);
-        RLckUnlockEX(hResLock);
+	fseek(pAlsFile, 0, SEEK_END);
 
-        ErrSetErrorCode(ERR_WRITE_ALIAS_FILE);
-        return (ERR_WRITE_ALIAS_FILE);
-    }
+	if (UsrWriteAlias(pAlsFile, pAI) < 0) {
+		fclose(pAlsFile);
+		RLckUnlockEX(hResLock);
 
-    fclose(pAlsFile);
+		ErrSetErrorCode(ERR_WRITE_ALIAS_FILE);
+		return (ERR_WRITE_ALIAS_FILE);
+	}
+
+	fclose(pAlsFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
+int UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pAlsFile = fopen(szAlsFilePath, "rt");
 
+	if (pAlsFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pAlsFile = fopen(szAlsFilePath, "rt");
+		ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
+		return (ERR_ALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAlsFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
-        return (ERR_ALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAlsFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAlsFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	int iAliasFound = 0;
+	char szAlsLine[USR_ALIAS_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAlsLine);
 
-    int             iAliasFound = 0;
-    char            szAlsLine[USR_ALIAS_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAlsLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= alsMax) && (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)
+		    && (stricmp(pszAlias, ppszStrings[alsAlias]) == 0)) {
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			++iAliasFound;
 
-        if ((iFieldsCount >= alsMax) && (stricmp(pszDomain, ppszStrings[alsDomain]) == 0) &&
-            (stricmp(pszAlias, ppszStrings[alsAlias]) == 0))
-        {
+		} else
+			fprintf(pTmpFile, "%s\n", szAlsLine);
 
-            ++iAliasFound;
+		StrFreeStrings(ppszStrings);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAlsLine);
+	fclose(pAlsFile);
+	fclose(pTmpFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
 
-    fclose(pAlsFile);
-    fclose(pTmpFile);
+		ErrSetErrorCode(ERR_ALIAS_NOT_FOUND);
+		return (ERR_ALIAS_NOT_FOUND);
+	}
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
+	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
 
-        ErrSetErrorCode(ERR_ALIAS_NOT_FOUND);
-        return (ERR_ALIAS_NOT_FOUND);
-    }
+	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
 
-    char            szTmpAlsFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
+	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
+		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0)
-    {
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    if (MscMoveFile(szTmpFile, szAlsFilePath) < 0)
-    {
-        MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    SysRemove(szTmpAlsFilePath);
+	SysRemove(szTmpAlsFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrRemoveDomainAliases(const char *pszDomain)
+int UsrRemoveDomainAliases(const char *pszDomain)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pAlsFile = fopen(szAlsFilePath, "rt");
 
+	if (pAlsFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pAlsFile = fopen(szAlsFilePath, "rt");
+		ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
+		return (ERR_ALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAlsFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
-        return (ERR_ALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAlsFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAlsFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	int iAliasFound = 0;
+	char szAlsLine[USR_ALIAS_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAlsLine);
 
-    int             iAliasFound = 0;
-    char            szAlsLine[USR_ALIAS_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAlsLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= alsMax) && (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) {
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			++iAliasFound;
 
-        if ((iFieldsCount >= alsMax) && (stricmp(pszDomain, ppszStrings[alsDomain]) == 0))
-        {
+		} else
+			fprintf(pTmpFile, "%s\n", szAlsLine);
 
-            ++iAliasFound;
+		StrFreeStrings(ppszStrings);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAlsLine);
+	fclose(pAlsFile);
+	fclose(pTmpFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (0);
+	}
 
-    fclose(pAlsFile);
-    fclose(pTmpFile);
+	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (0);
-    }
+	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
 
+	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
+		ErrorPush();
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    char            szTmpAlsFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
-
-    if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0)
-    {
-        ErrorPush();
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szAlsFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpAlsFilePath);
+	SysRemove(szTmpAlsFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrRemoveUserAlias(char const *pszDomain, char const *pszName)
+static int UsrRemoveUserAlias(char const *pszDomain, char const *pszName)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	FILE *pAlsFile = fopen(szAlsFilePath, "rt");
 
+	if (pAlsFile == NULL) {
+		RLckUnlockEX(hResLock);
 
-    FILE           *pAlsFile = fopen(szAlsFilePath, "rt");
+		ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
+		return (ERR_ALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAlsFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_ALIAS_FILE_NOT_FOUND);
-        return (ERR_ALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAlsFile);
+		RLckUnlockEX(hResLock);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAlsFile);
-        RLckUnlockEX(hResLock);
+	char szUserAddress[MAX_ADDR_NAME] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	sprintf(szUserAddress, "%s@%s", pszName, pszDomain);
 
+	int iAliasFound = 0;
+	char szAlsLine[USR_ALIAS_LINE_MAX] = "";
 
-    char            szUserAddress[MAX_ADDR_NAME] = "";
+	while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAlsLine);
 
-    sprintf(szUserAddress, "%s@%s", pszName, pszDomain);
+		if (ppszStrings == NULL)
+			continue;
 
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-    int             iAliasFound = 0;
-    char            szAlsLine[USR_ALIAS_LINE_MAX] = "";
+		if ((iFieldsCount >= alsMax) &&
+		    (((stricmp(pszName, ppszStrings[alsName]) == 0) &&
+		      (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) ||
+		     (stricmp(szUserAddress, ppszStrings[alsName]) == 0))) {
 
-    while (MscFGets(szAlsLine, sizeof(szAlsLine) - 1, pAlsFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAlsLine);
+			++iAliasFound;
 
-        if (ppszStrings == NULL)
-            continue;
+		} else
+			fprintf(pTmpFile, "%s\n", szAlsLine);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        if ((iFieldsCount >= alsMax) &&
-            (((stricmp(pszName, ppszStrings[alsName]) == 0) &&
-              (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) ||
-             (stricmp(szUserAddress, ppszStrings[alsName]) == 0)))
-        {
+	fclose(pAlsFile);
+	fclose(pTmpFile);
 
-            ++iAliasFound;
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (0);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAlsLine);
+	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
 
-        StrFreeStrings(ppszStrings);
-    }
+	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
 
-    fclose(pAlsFile);
-    fclose(pTmpFile);
+	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (0);
-    }
+	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
+		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    char            szTmpAlsFilePath[SYS_MAX_PATH] = "";
-
-    sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
-
-    if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0)
-    {
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    if (MscMoveFile(szTmpFile, szAlsFilePath) < 0)
-    {
-        MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    SysRemove(szTmpAlsFilePath);
+	SysRemove(szTmpAlsFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
-
-
 
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
-                                    const char *pszName)
+				    const char *pszName)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index
 ///////////////////////////////////////////////////////////////////////////////
-    char          **ppszTabTokens = TbixLookup(pszUsrFilePath, iIdxUser_Domain_Name, false,
-                                               pszDomain,
-                                               pszName,
-                                               NULL);
+	char **ppszTabTokens = TbixLookup(pszUsrFilePath, iIdxUser_Domain_Name, false,
+					  pszDomain,
+					  pszName,
+					  NULL);
 
-    if (ppszTabTokens == NULL)
-    {
-        ErrSetErrorCode(ERR_USER_NOT_FOUND);
+	if (ppszTabTokens == NULL) {
+		ErrSetErrorCode(ERR_USER_NOT_FOUND);
 
-        return (NULL);
-    }
+		return (NULL);
+	}
 
+	UserInfo *pUI = UsrGetUserFromStrings(ppszTabTokens);
 
-    UserInfo       *pUI = UsrGetUserFromStrings(ppszTabTokens);
+	StrFreeStrings(ppszTabTokens);
 
-
-    StrFreeStrings(ppszTabTokens);
-
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName)
+UserInfo *UsrLookupUser(const char *pszDomain, const char *pszName)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (NULL);
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (NULL);
+	UserInfo *pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszName);
 
+	RLckUnlockSH(hResLock);
 
-    UserInfo       *pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszName);
-
-
-    RLckUnlockSH(hResLock);
-
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
+UserInfo *UsrGetUserByName(const char *pszDomain, const char *pszName)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for alias domain
 ///////////////////////////////////////////////////////////////////////////////
-    UserInfo       *pUI = UsrLookupUser(pszDomain, pszName);
-    char            szADomain[MAX_HOST_NAME] = "";
+	UserInfo *pUI = UsrLookupUser(pszDomain, pszName);
+	char szADomain[MAX_HOST_NAME] = "";
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for alias domain if first lookup failed
 ///////////////////////////////////////////////////////////////////////////////
-    if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
-        pUI = UsrLookupUser(szADomain, pszName);
+	if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
+		pUI = UsrLookupUser(szADomain, pszName);
 
-    return (pUI);
-
-}
-
-
-
-static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
-                                               char *pszRealAddr)
-{
-
-    char const     *pszAliasedUser = NULL;
-    char const     *pszAliasedDomain = NULL;
-    char            szAliasedAccount[MAX_ADDR_NAME] = "";
-    char            szAliasedName[MAX_ADDR_NAME] = "";
-    char            szAliasedDomain[MAX_ADDR_NAME] = "";
-
-    if (UsrAliasLookupName(pszDomain, pszName, szAliasedAccount))
-    {
-        if (USmtpSplitEmailAddr(szAliasedAccount, szAliasedName, szAliasedDomain) < 0)
-        {
-            pszAliasedUser = szAliasedAccount;
-            pszAliasedDomain = pszDomain;
-        }
-        else
-        {
-            pszAliasedUser = szAliasedName;
-            pszAliasedDomain = szAliasedDomain;
-        }
-    }
-
-
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
-
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
-
-
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
-
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (NULL);
-
-
-    UserInfo       *pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszName);
-
-    if ((pUI == NULL) && (pszAliasedUser != NULL))
-        pUI = UsrGetUserByNameLK(szUsrFilePath, pszAliasedDomain, pszAliasedUser);
-
-    if ((pUI != NULL) && (pszRealAddr != NULL))
-        UsrGetAddress(pUI, pszRealAddr);
-
-
-    RLckUnlockSH(hResLock);
-
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
-                                        char *pszRealAddr)
+static UserInfo *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
+					    char *pszRealAddr)
 {
 
-    UserInfo       *pUI = UsrGetUserByNameOrAliasNDA(pszDomain, pszName, pszRealAddr);
-    char            szADomain[MAX_HOST_NAME] = "";
+	char const *pszAliasedUser = NULL;
+	char const *pszAliasedDomain = NULL;
+	char szAliasedAccount[MAX_ADDR_NAME] = "";
+	char szAliasedName[MAX_ADDR_NAME] = "";
+	char szAliasedDomain[MAX_ADDR_NAME] = "";
+
+	if (UsrAliasLookupName(pszDomain, pszName, szAliasedAccount)) {
+		if (USmtpSplitEmailAddr(szAliasedAccount, szAliasedName, szAliasedDomain) < 0) {
+			pszAliasedUser = szAliasedAccount;
+			pszAliasedDomain = pszDomain;
+		} else {
+			pszAliasedUser = szAliasedName;
+			pszAliasedDomain = szAliasedDomain;
+		}
+	}
+
+	char szUsrFilePath[SYS_MAX_PATH] = "";
+
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
+
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (NULL);
+
+	UserInfo *pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszName);
+
+	if ((pUI == NULL) && (pszAliasedUser != NULL))
+		pUI = UsrGetUserByNameLK(szUsrFilePath, pszAliasedDomain, pszAliasedUser);
+
+	if ((pUI != NULL) && (pszRealAddr != NULL))
+		UsrGetAddress(pUI, pszRealAddr);
+
+	RLckUnlockSH(hResLock);
+
+	return (pUI);
+
+}
+
+UserInfo *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName, char *pszRealAddr)
+{
+
+	UserInfo *pUI = UsrGetUserByNameOrAliasNDA(pszDomain, pszName, pszRealAddr);
+	char szADomain[MAX_HOST_NAME] = "";
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for alias domain if first lookup failed
 ///////////////////////////////////////////////////////////////////////////////
-    if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
-        pUI = UsrGetUserByNameOrAliasNDA(szADomain, pszName, pszRealAddr);
+	if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
+		pUI = UsrGetUserByNameOrAliasNDA(szADomain, pszName, pszRealAddr);
 
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-int             UsrRemoveUser(const char *pszDomain, const char *pszName,
-                              unsigned int uUserID)
+int UsrRemoveUser(const char *pszDomain, const char *pszName, unsigned int uUserID)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pUsrFile = fopen(szUsrFilePath, "rt");
 
+	if (pUsrFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pUsrFile = fopen(szUsrFilePath, "rt");
+		ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
+		return (ERR_USERS_FILE_NOT_FOUND);
+	}
 
-    if (pUsrFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
-        return (ERR_USERS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pUsrFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pUsrFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	UserInfo *pUI = NULL;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
+		if (ppszStrings == NULL)
+			continue;
 
-    UserInfo       *pUI = NULL;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-    while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0)
+		    && (((uUserID != 0) && (uUserID == (unsigned int) atol(ppszStrings[usrID])))
+			|| ((pszName != NULL) &&
+			    (stricmp(pszName, ppszStrings[usrName]) == 0)))) {
+			if (pUI != NULL)
+				UsrFreeUserInfo(pUI);
 
-        if (ppszStrings == NULL)
-            continue;
+			pUI = UsrGetUserFromStrings(ppszStrings);
+		} else
+			fprintf(pTmpFile, "%s\n", szUsrLine);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0) &&
-            (((uUserID != 0) && (uUserID == (unsigned int) atol(ppszStrings[usrID]))) ||
-             ((pszName != NULL) && (stricmp(pszName, ppszStrings[usrName]) == 0))))
-        {
-            if (pUI != NULL)
-                UsrFreeUserInfo(pUI);
+	fclose(pUsrFile);
+	fclose(pTmpFile);
 
-            pUI = UsrGetUserFromStrings(ppszStrings);
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szUsrLine);
+	if (pUI == NULL) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
 
-        StrFreeStrings(ppszStrings);
-    }
+		ErrSetErrorCode(ERR_USER_NOT_FOUND);
+		return (ERR_USER_NOT_FOUND);
+	}
 
-    fclose(pUsrFile);
-    fclose(pTmpFile);
+	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
 
-    if (pUI == NULL)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
+	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
 
-        ErrSetErrorCode(ERR_USER_NOT_FOUND);
-        return (ERR_USER_NOT_FOUND);
-    }
+	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
+		ErrorPush();
+		UsrFreeUserInfo(pUI);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    char            szTmpUsrFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
+		UsrFreeUserInfo(pUI);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-
-    if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0)
-    {
-        ErrorPush();
-        UsrFreeUserInfo(pUI);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
-        UsrFreeUserInfo(pUI);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpUsrFilePath);
+	SysRemove(szTmpUsrFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildUsersIndexes(szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        UsrFreeUserInfo(pUI);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
+		ErrorPush();
+		UsrFreeUserInfo(pUI);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
+	GwLkRemoveUserLinks(pUI->pszDomain, pUI->pszName);
 
-    GwLkRemoveUserLinks(pUI->pszDomain, pUI->pszName);
+	ExAlRemoveUserAliases(pUI->pszDomain, pUI->pszName);
 
-    ExAlRemoveUserAliases(pUI->pszDomain, pUI->pszName);
-
-
-    UsrRemoveUserAlias(pUI->pszDomain, pUI->pszName);
+	UsrRemoveUserAlias(pUI->pszDomain, pUI->pszName);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Try ( if defined ) to remove external auth user
 ///////////////////////////////////////////////////////////////////////////////
-    UAthDelUser(AUTH_SERVICE_POP3, pUI);
+	UAthDelUser(AUTH_SERVICE_POP3, pUI);
 
+	UsrDropUserEnv(pUI);
 
-    UsrDropUserEnv(pUI);
+	UsrFreeUserInfo(pUI);
 
-    UsrFreeUserInfo(pUI);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             UsrModifyUser(UserInfo *pUI)
+int UsrModifyUser(UserInfo * pUI)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pUsrFile = fopen(szUsrFilePath, "rt");
 
+	if (pUsrFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pUsrFile = fopen(szUsrFilePath, "rt");
+		ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
+		return (ERR_USERS_FILE_NOT_FOUND);
+	}
 
-    if (pUsrFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
-        return (ERR_USERS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pUsrFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pUsrFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	UserInfo *pFoundUI = NULL;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
+		if (ppszStrings == NULL)
+			continue;
 
-    UserInfo       *pFoundUI = NULL;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-    while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if ((iFieldsCount >= usrMax) && (pFoundUI == NULL) &&
+		    (pUI->uUserID == (unsigned int) atol(ppszStrings[usrID])) &&
+		    (stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
+		    (stricmp(pUI->pszName, ppszStrings[usrName]) == 0)) {
+			if ((UsrWriteUser(pUI, pTmpFile) < 0) ||
+			    ((pFoundUI = UsrGetUserFromStrings(ppszStrings)) == NULL)) {
+				ErrorPush();
+				fclose(pUsrFile);
+				fclose(pTmpFile);
+				SysRemove(szTmpFile);
+				RLckUnlockEX(hResLock);
+				return (ErrorPop());
+			}
+		} else
+			fprintf(pTmpFile, "%s\n", szUsrLine);
 
-        if (ppszStrings == NULL)
-            continue;
+		StrFreeStrings(ppszStrings);
+	}
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+	fclose(pUsrFile);
+	fclose(pTmpFile);
 
-        if ((iFieldsCount >= usrMax) && (pFoundUI == NULL) &&
-            (pUI->uUserID == (unsigned int) atol(ppszStrings[usrID])) &&
-            (stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
-            (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
-        {
-            if ((UsrWriteUser(pUI, pTmpFile) < 0) ||
-                ((pFoundUI = UsrGetUserFromStrings(ppszStrings)) == NULL))
-            {
-                ErrorPush();
-                fclose(pUsrFile);
-                fclose(pTmpFile);
-                SysRemove(szTmpFile);
-                RLckUnlockEX(hResLock);
-                return (ErrorPop());
-            }
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szUsrLine);
+	if (pFoundUI == NULL) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    fclose(pUsrFile);
-    fclose(pTmpFile);
-
-    if (pFoundUI == NULL)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-
-        ErrSetErrorCode(ERR_USER_NOT_FOUND);
-        return (ERR_USER_NOT_FOUND);
-    }
-
+		ErrSetErrorCode(ERR_USER_NOT_FOUND);
+		return (ERR_USER_NOT_FOUND);
+	}
 ///////////////////////////////////////////////////////////////////////////////
 //
 //  Adjust for fields changes
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Try ( if defined ) to modify external auth user
 ///////////////////////////////////////////////////////////////////////////////
-    UAthModifyUser(AUTH_SERVICE_POP3, pUI);
+	UAthModifyUser(AUTH_SERVICE_POP3, pUI);
 
+	UsrFreeUserInfo(pFoundUI);
 
-    UsrFreeUserInfo(pFoundUI);
+	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
 
+	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
 
+	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
+		ErrorPush();
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    char            szTmpUsrFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-
-    if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0)
-    {
-        ErrorPush();
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpUsrFilePath);
+	SysRemove(szTmpUsrFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildUsersIndexes(szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             UsrRemoveDomainUsers(const char *pszDomain)
+int UsrRemoveDomainUsers(const char *pszDomain)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pUsrFile = fopen(szUsrFilePath, "rt");
 
+	if (pUsrFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pUsrFile = fopen(szUsrFilePath, "rt");
+		ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
+		return (ERR_USERS_FILE_NOT_FOUND);
+	}
 
-    if (pUsrFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
-        return (ERR_USERS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pUsrFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pUsrFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	int iUsersFound = 0;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
+		if (ppszStrings == NULL)
+			continue;
 
-    int             iUsersFound = 0;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-    while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0)) {
 
-        if (ppszStrings == NULL)
-            continue;
+			++iUsersFound;
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		} else
+			fprintf(pTmpFile, "%s\n", szUsrLine);
 
-        if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0))
-        {
+		StrFreeStrings(ppszStrings);
+	}
 
-            ++iUsersFound;
+	fclose(pUsrFile);
+	fclose(pTmpFile);
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szUsrLine);
+	if (iUsersFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (0);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
+	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
 
-    fclose(pUsrFile);
-    fclose(pTmpFile);
+	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
 
-    if (iUsersFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (0);
-    }
+	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
+		ErrorPush();
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
+	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    char            szTmpUsrFilePath[SYS_MAX_PATH] = "";
-
-    sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-
-    if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0)
-    {
-        ErrorPush();
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpUsrFilePath);
+	SysRemove(szTmpUsrFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildUsersIndexes(szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrDropUserEnv(UserInfo *pUI)
+static int UsrDropUserEnv(UserInfo * pUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  User directory cleaning
 ///////////////////////////////////////////////////////////////////////////////
-    char            szUsrUserPath[SYS_MAX_PATH] = "";
+	char szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
+	UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
-    if (MscClearDirectory(szUsrUserPath) < 0)
-        return (ErrGetErrorCode());
+	if (MscClearDirectory(szUsrUserPath) < 0)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  User directory removing
 ///////////////////////////////////////////////////////////////////////////////
-    if (SysRemoveDir(szUsrUserPath) < 0)
-        return (ErrGetErrorCode());
+	if (SysRemoveDir(szUsrUserPath) < 0)
+		return (ErrGetErrorCode());
 
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      UsrWriteUser(UserInfo *pUI, FILE *pUsrFile)
+static int UsrWriteUser(UserInfo * pUI, FILE * pUsrFile)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Domain
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszQuoted = StrQuote(pUI->pszDomain, '"');
+	char *pszQuoted = StrQuote(pUI->pszDomain, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pUsrFile, "%s\t", pszQuoted);
+	fprintf(pUsrFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Name
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pUI->pszName, '"');
+	pszQuoted = StrQuote(pUI->pszName, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pUsrFile, "%s\t", pszQuoted);
+	fprintf(pUsrFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Password
 ///////////////////////////////////////////////////////////////////////////////
-    char            szPassword[512] = "";
+	char szPassword[512] = "";
 
-    StrCrypt(pUI->pszPassword, szPassword);
+	StrCrypt(pUI->pszPassword, szPassword);
 
-    pszQuoted = StrQuote(szPassword, '"');
+	pszQuoted = StrQuote(szPassword, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pUsrFile, "%s\t", pszQuoted);
+	fprintf(pUsrFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  UserID
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pUsrFile, "%u\t", pUI->uUserID);
+	fprintf(pUsrFile, "%u\t", pUI->uUserID);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Directory
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pUI->pszPath, '"');
+	pszQuoted = StrQuote(pUI->pszPath, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pUsrFile, "%s\t", pszQuoted);
+	fprintf(pUsrFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  User type
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pUI->pszType, '"');
+	pszQuoted = StrQuote(pUI->pszType, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pUsrFile, "%s\n", pszQuoted);
+	fprintf(pUsrFile, "%s\n", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
-
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrAddUser(UserInfo *pUI)
+int UsrAddUser(UserInfo * pUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Search for overlapping alias ( wildcard alias not checked here )
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrAliasLookupName(pUI->pszDomain, pUI->pszName, NULL, false))
-    {
-        ErrSetErrorCode(ERR_ALIAS_EXIST);
-        return (ERR_ALIAS_EXIST);
-    }
+	if (UsrAliasLookupName(pUI->pszDomain, pUI->pszName, NULL, false)) {
+		ErrSetErrorCode(ERR_ALIAS_EXIST);
+		return (ERR_ALIAS_EXIST);
+	}
 
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	FILE *pUsrFile = fopen(szUsrFilePath, "r+t");
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (pUsrFile == NULL) {
+		RLckUnlockEX(hResLock);
 
+		ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
+		return (ERR_USERS_FILE_NOT_FOUND);
+	}
 
-    FILE           *pUsrFile = fopen(szUsrFilePath, "r+t");
+	unsigned int uMaxUserID = 0;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-    if (pUsrFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
+	while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
-        ErrSetErrorCode(ERR_USERS_FILE_NOT_FOUND);
-        return (ERR_USERS_FILE_NOT_FOUND);
-    }
+		if (ppszStrings == NULL)
+			continue;
 
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-    unsigned int    uMaxUserID = 0;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+		if (iFieldsCount >= usrMax) {
+			if ((stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
+			    (stricmp(pUI->pszName, ppszStrings[usrName]) == 0)) {
+				StrFreeStrings(ppszStrings);
+				fclose(pUsrFile);
+				RLckUnlockEX(hResLock);
 
-    while (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUsrFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+				ErrSetErrorCode(ERR_USER_EXIST);
+				return (ERR_USER_EXIST);
+			}
 
-        if (ppszStrings == NULL)
-            continue;
+			unsigned int uUserID = (unsigned int) atol(ppszStrings[usrID]);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			if (uUserID > uMaxUserID)
+				uMaxUserID = uUserID;
+		}
 
-        if (iFieldsCount >= usrMax)
-        {
-            if ((stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
-                (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
-            {
-                StrFreeStrings(ppszStrings);
-                fclose(pUsrFile);
-                RLckUnlockEX(hResLock);
+		StrFreeStrings(ppszStrings);
+	}
 
-                ErrSetErrorCode(ERR_USER_EXIST);
-                return (ERR_USER_EXIST);
-            }
+	pUI->uUserID = uMaxUserID + 1;
 
-            unsigned int    uUserID = (unsigned int) atol(ppszStrings[usrID]);
+	if (UsrPrepareUserEnv(pUI) < 0) {
+		fclose(pUsrFile);
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-            if (uUserID > uMaxUserID)
-                uMaxUserID = uUserID;
-        }
+	fseek(pUsrFile, 0, SEEK_END);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (UsrWriteUser(pUI, pUsrFile) < 0) {
+		fclose(pUsrFile);
+		RLckUnlockEX(hResLock);
 
-    pUI->uUserID = uMaxUserID + 1;
+		ErrSetErrorCode(ERR_WRITE_USERS_FILE);
+		return (ERR_WRITE_USERS_FILE);
+	}
 
-
-    if (UsrPrepareUserEnv(pUI) < 0)
-    {
-        fclose(pUsrFile);
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-
-    fseek(pUsrFile, 0, SEEK_END);
-
-    if (UsrWriteUser(pUI, pUsrFile) < 0)
-    {
-        fclose(pUsrFile);
-        RLckUnlockEX(hResLock);
-
-        ErrSetErrorCode(ERR_WRITE_USERS_FILE);
-        return (ERR_WRITE_USERS_FILE);
-    }
-
-    fclose(pUsrFile);
+	fclose(pUsrFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrRebuildUsersIndexes(szUsrFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Try ( if defined ) to add external auth user
 ///////////////////////////////////////////////////////////////////////////////
-    UAthAddUser(AUTH_SERVICE_POP3, pUI);
+	UAthAddUser(AUTH_SERVICE_POP3, pUI);
 
-    return (0);
+	return (0);
 
 }
-
-
 
 static char const *UsrGetMailboxDir(void)
 {
 
-
-    return ((iMailboxType == XMAIL_MAILBOX) ? MAILBOX_DIRECTORY: MAILDIR_DIRECTORY);
+	return ((iMailboxType == XMAIL_MAILBOX) ? MAILBOX_DIRECTORY : MAILDIR_DIRECTORY);
 
 }
 
-
-
-static int      UsrCreateMailbox(char const *pszUsrUserPath)
+static int UsrCreateMailbox(char const *pszUsrUserPath)
 {
 
-    if (iMailboxType == XMAIL_MAILBOX)
-    {
+	if (iMailboxType == XMAIL_MAILBOX) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create mailbox directory
 ///////////////////////////////////////////////////////////////////////////////
-        char            szUsrMailboxPath[SYS_MAX_PATH] = "";
+		char szUsrMailboxPath[SYS_MAX_PATH] = "";
 
-        StrSNCpy(szUsrMailboxPath, pszUsrUserPath);
+		StrSNCpy(szUsrMailboxPath, pszUsrUserPath);
 
-        AppendSlash(szUsrMailboxPath);
-        StrSNCat(szUsrMailboxPath, MAILBOX_DIRECTORY);
+		AppendSlash(szUsrMailboxPath);
+		StrSNCat(szUsrMailboxPath, MAILBOX_DIRECTORY);
 
-        if (SysMakeDir(szUsrMailboxPath) < 0)
-            return (ErrGetErrorCode());
+		if (SysMakeDir(szUsrMailboxPath) < 0)
+			return (ErrGetErrorCode());
 
-        return (0);
-    }
+		return (0);
+	}
 
-    return (MdirCreateStructure(pszUsrUserPath));
+	return (MdirCreateStructure(pszUsrUserPath));
 
 }
 
-
-
-static int      UsrPrepareUserEnv(UserInfo *pUI)
+static int UsrPrepareUserEnv(UserInfo * pUI)
 {
 
-    char            szUsrUserPath[SYS_MAX_PATH] = "";
+	char szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
+	UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create main directory
 ///////////////////////////////////////////////////////////////////////////////
-    if (SysMakeDir(szUsrUserPath) < 0)
-        return (ErrGetErrorCode());
+	if (SysMakeDir(szUsrUserPath) < 0)
+		return (ErrGetErrorCode());
 
-    if (UsrGetUserType(pUI) == usrTypeUser)
-    {
+	if (UsrGetUserType(pUI) == usrTypeUser) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create mailbox directory
 ///////////////////////////////////////////////////////////////////////////////
-        if (UsrCreateMailbox(szUsrUserPath) < 0)
-        {
-            ErrorPush();
-            MscClearDirectory(szUsrUserPath);
-            SysRemoveDir(szUsrUserPath);
-            return (ErrorPop());
-        }
-    }
-    else
-    {
+		if (UsrCreateMailbox(szUsrUserPath) < 0) {
+			ErrorPush();
+			MscClearDirectory(szUsrUserPath);
+			SysRemoveDir(szUsrUserPath);
+			return (ErrorPop());
+		}
+	} else {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create mailing list users file
 ///////////////////////////////////////////////////////////////////////////////
-        char            szMLUsersFilePath[SYS_MAX_PATH] = "";
+		char szMLUsersFilePath[SYS_MAX_PATH] = "";
 
-        StrSNCpy(szMLUsersFilePath, szUsrUserPath);
+		StrSNCpy(szMLUsersFilePath, szUsrUserPath);
 
-        AppendSlash(szMLUsersFilePath);
-        StrSNCat(szMLUsersFilePath, MLUSERS_TABLE_FILE);
+		AppendSlash(szMLUsersFilePath);
+		StrSNCat(szMLUsersFilePath, MLUSERS_TABLE_FILE);
 
-        if (MscCreateEmptyFile(szMLUsersFilePath) < 0)
-        {
-            ErrorPush();
-            MscClearDirectory(szUsrUserPath);
-            SysRemoveDir(szUsrUserPath);
-            return (ErrorPop());
-        }
-    }
+		if (MscCreateEmptyFile(szMLUsersFilePath) < 0) {
+			ErrorPush();
+			MscClearDirectory(szUsrUserPath);
+			SysRemoveDir(szUsrUserPath);
+			return (ErrorPop());
+		}
+	}
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create profile file
 ///////////////////////////////////////////////////////////////////////////////
-    char            szUsrProfileFilePath[SYS_MAX_PATH] = "";
+	char szUsrProfileFilePath[SYS_MAX_PATH] = "";
 
-    StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
+	StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
 
-    AppendSlash(szUsrProfileFilePath);
-    StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
+	AppendSlash(szUsrProfileFilePath);
+	StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
 
-    FILE           *pProfileFile = fopen(szUsrProfileFilePath, "wt");
+	FILE *pProfileFile = fopen(szUsrProfileFilePath, "wt");
 
-    if (pProfileFile == NULL)
-    {
-        MscClearDirectory(szUsrUserPath);
-        SysRemoveDir(szUsrUserPath);
+	if (pProfileFile == NULL) {
+		MscClearDirectory(szUsrUserPath);
+		SysRemoveDir(szUsrUserPath);
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    UsrWriteInfoList(pUI->InfoList, pProfileFile);
+	UsrWriteInfoList(pUI->InfoList, pProfileFile);
 
-    fclose(pProfileFile);
+	fclose(pProfileFile);
 
-
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             UsrFlushUserVars(UserInfo *pUI)
+int UsrFlushUserVars(UserInfo * pUI)
 {
 
-    char            szUsrUserPath[SYS_MAX_PATH] = "";
+	char szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
+	UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Build profile file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szUsrProfileFilePath[SYS_MAX_PATH] = "";
+	char szUsrProfileFilePath[SYS_MAX_PATH] = "";
 
-    StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
+	StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
 
-    AppendSlash(szUsrProfileFilePath);
-    StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
+	AppendSlash(szUsrProfileFilePath);
+	StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szUsrProfileFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrProfileFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	FILE *pProfileFile = fopen(szUsrProfileFilePath, "wt");
 
+	if (pProfileFile == NULL) {
+		RLckUnlockEX(hResLock);
 
-    FILE           *pProfileFile = fopen(szUsrProfileFilePath, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pProfileFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
+	UsrWriteInfoList(pUI->InfoList, pProfileFile);
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	fclose(pProfileFile);
 
-    UsrWriteInfoList(pUI->InfoList, pProfileFile);
+	RLckUnlockEX(hResLock);
 
-    fclose(pProfileFile);
-
-
-    RLckUnlockEX(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             UsrGetDBFileSnapShot(const char *pszFileName)
+int UsrGetDBFileSnapShot(const char *pszFileName)
 {
 
-    char            szUsrFilePath[SYS_MAX_PATH] = "";
+	char szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
+	UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (MscCopyFile(pszFileName, szUsrFilePath) < 0) {
+		RLckUnlockSH(hResLock);
+		return (ErrGetErrorCode());
+	}
 
+	RLckUnlockSH(hResLock);
 
-    if (MscCopyFile(pszFileName, szUsrFilePath) < 0)
-    {
-        RLckUnlockSH(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-USRF_HANDLE     UsrOpenDB(void)
+USRF_HANDLE UsrOpenDB(void)
 {
 
-    UsersDBScanData *pUDBSD = (UsersDBScanData *) SysAlloc(sizeof(UsersDBScanData));
+	UsersDBScanData *pUDBSD = (UsersDBScanData *) SysAlloc(sizeof(UsersDBScanData));
 
-    if (pUDBSD == NULL)
-        return (INVALID_USRF_HANDLE);
+	if (pUDBSD == NULL)
+		return (INVALID_USRF_HANDLE);
 
-    SysGetTmpFile(pUDBSD->szTmpDBFile);
+	SysGetTmpFile(pUDBSD->szTmpDBFile);
 
-    if (UsrGetDBFileSnapShot(pUDBSD->szTmpDBFile) < 0)
-    {
-        SysFree(pUDBSD);
-        return (INVALID_USRF_HANDLE);
-    }
+	if (UsrGetDBFileSnapShot(pUDBSD->szTmpDBFile) < 0) {
+		SysFree(pUDBSD);
+		return (INVALID_USRF_HANDLE);
+	}
 
-    if ((pUDBSD->pDBFile = fopen(pUDBSD->szTmpDBFile, "rt")) == NULL)
-    {
-        SysRemove(pUDBSD->szTmpDBFile);
-        SysFree(pUDBSD);
-        return (INVALID_USRF_HANDLE);
-    }
+	if ((pUDBSD->pDBFile = fopen(pUDBSD->szTmpDBFile, "rt")) == NULL) {
+		SysRemove(pUDBSD->szTmpDBFile);
+		SysFree(pUDBSD);
+		return (INVALID_USRF_HANDLE);
+	}
 
-    return ((USRF_HANDLE) pUDBSD);
+	return ((USRF_HANDLE) pUDBSD);
 
 }
 
-
-
-void            UsrCloseDB(USRF_HANDLE hUsersDB)
+void UsrCloseDB(USRF_HANDLE hUsersDB)
 {
 
-    UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
+	UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
 
-    fclose(pUDBSD->pDBFile);
+	fclose(pUDBSD->pDBFile);
 
-    SysRemove(pUDBSD->szTmpDBFile);
+	SysRemove(pUDBSD->szTmpDBFile);
 
-    SysFree(pUDBSD);
+	SysFree(pUDBSD);
 
 }
 
-
-
-UserInfo       *UsrGetFirstUser(USRF_HANDLE hUsersDB)
+UserInfo *UsrGetFirstUser(USRF_HANDLE hUsersDB)
 {
 
-    UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
+	UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
 
-    rewind(pUDBSD->pDBFile);
+	rewind(pUDBSD->pDBFile);
 
+	UserInfo *pUI = NULL;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-    UserInfo       *pUI = NULL;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+	while ((pUI == NULL) &&
+	       (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
-    while ((pUI == NULL) &&
-           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= usrMax)
+			pUI = UsrGetUserFromStrings(ppszStrings);
 
-        if (iFieldsCount >= usrMax)
-            pUI = UsrGetUserFromStrings(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB)
+UserInfo *UsrGetNextUser(USRF_HANDLE hUsersDB)
 {
 
-    UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
+	UsersDBScanData *pUDBSD = (UsersDBScanData *) hUsersDB;
 
+	UserInfo *pUI = NULL;
+	char szUsrLine[USR_TABLE_LINE_MAX] = "";
 
-    UserInfo       *pUI = NULL;
-    char            szUsrLine[USR_TABLE_LINE_MAX] = "";
+	while ((pUI == NULL) &&
+	       (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
-    while ((pUI == NULL) &&
-           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= usrMax)
+			pUI = UsrGetUserFromStrings(ppszStrings);
 
-        if (iFieldsCount >= usrMax)
-            pUI = UsrGetUserFromStrings(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pUI);
+	return (pUI);
 
 }
 
-
-
-static char    *UsrGetPop3LocksPath(UserInfo *pUI, char *pszPop3LockPath, int iMaxPath)
+static char *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszPop3LockPath, iMaxPath);
+	CfgGetRootPath(pszPop3LockPath, iMaxPath);
 
-    StrNCat(pszPop3LockPath, POP3_LOCKS_DIR, iMaxPath);
-    AppendSlash(pszPop3LockPath);
+	StrNCat(pszPop3LockPath, POP3_LOCKS_DIR, iMaxPath);
+	AppendSlash(pszPop3LockPath);
 
-    char            szUserAddress[MAX_ADDR_NAME] = "";
+	char szUserAddress[MAX_ADDR_NAME] = "";
 
-    UsrGetAddress(pUI, szUserAddress);
+	UsrGetAddress(pUI, szUserAddress);
 
-    StrNCat(pszPop3LockPath, szUserAddress, iMaxPath);
+	StrNCat(pszPop3LockPath, szUserAddress, iMaxPath);
 
-    return (pszPop3LockPath);
+	return (pszPop3LockPath);
 
 }
 
-
-
-int             UsrPOP3Lock(UserInfo *pUI)
+int UsrPOP3Lock(UserInfo * pUI)
 {
 
-    char            szLockPath[SYS_MAX_PATH] = "";
+	char szLockPath[SYS_MAX_PATH] = "";
 
-    UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
+	UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
 
-    if (SysLockFile(szLockPath) < 0)
-        return (ErrGetErrorCode());
+	if (SysLockFile(szLockPath) < 0)
+		return (ErrGetErrorCode());
 
-    return (0);
+	return (0);
 
 }
 
-
-
-void            UsrPOP3Unlock(UserInfo *pUI)
+void UsrPOP3Unlock(UserInfo * pUI)
 {
 
-    char            szLockPath[SYS_MAX_PATH] = "";
+	char szLockPath[SYS_MAX_PATH] = "";
 
-    UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
+	UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
 
-    SysUnlockFile(szLockPath);
+	SysUnlockFile(szLockPath);
 
 }
 
-
-
-int             UsrClearPop3LocksDir(void)
+int UsrClearPop3LocksDir(void)
 {
 
-    char            szLocksDir[SYS_MAX_PATH] = "";
+	char szLocksDir[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szLocksDir, sizeof(szLocksDir));
+	CfgGetRootPath(szLocksDir, sizeof(szLocksDir));
 
-    StrNCat(szLocksDir, POP3_LOCKS_DIR, sizeof(szLocksDir));
+	StrNCat(szLocksDir, POP3_LOCKS_DIR, sizeof(szLocksDir));
 
-    return (MscClearDirectory(szLocksDir));
+	return (MscClearDirectory(szLocksDir));
 
 }
 
-
-
-char           *UsrGetUserPath(UserInfo *pUI, char *pszUserPath, int iMaxPath, int iFinalSlash)
+char *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, int iFinalSlash)
 {
 
-    MDomGetDomainPath(pUI->pszDomain, pszUserPath, iMaxPath, 1);
+	MDomGetDomainPath(pUI->pszDomain, pszUserPath, iMaxPath, 1);
 
-    StrNCat(pszUserPath, pUI->pszPath, iMaxPath);
+	StrNCat(pszUserPath, pUI->pszPath, iMaxPath);
 
-    if (iFinalSlash)
-        AppendSlash(pszUserPath);
+	if (iFinalSlash)
+		AppendSlash(pszUserPath);
 
-    return (pszUserPath);
+	return (pszUserPath);
 
 }
 
-
-
-char           *UsrGetMailboxPath(UserInfo *pUI, char *pszMBPath, int iMaxPath, int iFinalSlash)
+char *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash)
 {
 
-    UsrGetUserPath(pUI, pszMBPath, iMaxPath, 1);
+	UsrGetUserPath(pUI, pszMBPath, iMaxPath, 1);
 
-    StrNCat(pszMBPath, UsrGetMailboxDir(), iMaxPath);
-    if (iFinalSlash)
-        AppendSlash(pszMBPath);
+	StrNCat(pszMBPath, UsrGetMailboxDir(), iMaxPath);
+	if (iFinalSlash)
+		AppendSlash(pszMBPath);
 
-    return (pszMBPath);
+	return (pszMBPath);
 
 }
 
-
-
-int             UsrMoveToMailBox(UserInfo *pUI, char const *pszFileName,
-                                 char const *pszMessageID)
+int UsrMoveToMailBox(UserInfo * pUI, char const *pszFileName, char const *pszMessageID)
 {
 
-    if (iMailboxType == XMAIL_MAILBOX)
-    {
+	if (iMailboxType == XMAIL_MAILBOX) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup full mailbox file path
 ///////////////////////////////////////////////////////////////////////////////
-        char            szMBPath[SYS_MAX_PATH] = "";
-        char            szMBFile[SYS_MAX_PATH] = "";
+		char szMBPath[SYS_MAX_PATH] = "";
+		char szMBFile[SYS_MAX_PATH] = "";
 
-        UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
+		UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
-        sprintf(szMBFile, "%s" SYS_SLASH_STR "%s", szMBPath, pszMessageID);
+		sprintf(szMBFile, "%s" SYS_SLASH_STR "%s", szMBPath, pszMessageID);
 
+		char szResLock[SYS_MAX_PATH] = "";
+		RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+								  sizeof(szResLock)));
 
-        char            szResLock[SYS_MAX_PATH] = "";
-        RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
-                                                              sizeof(szResLock)));
+		if (hResLock == INVALID_RLCK_HANDLE)
+			return (ErrGetErrorCode());
 
-        if (hResLock == INVALID_RLCK_HANDLE)
-            return (ErrGetErrorCode());
+		if (MscMoveFile(pszFileName, szMBFile) < 0) {
+			ErrorPush();
+			RLckUnlockEX(hResLock);
+			return (ErrorPop());
+		}
 
-        if (MscMoveFile(pszFileName, szMBFile) < 0)
-        {
-            ErrorPush();
-            RLckUnlockEX(hResLock);
-            return (ErrorPop());
-        }
-
-        RLckUnlockEX(hResLock);
-    }
-    else
-    {
+		RLckUnlockEX(hResLock);
+	} else {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get user Maildir path
 ///////////////////////////////////////////////////////////////////////////////
-        char            szMBPath[SYS_MAX_PATH] = "";
+		char szMBPath[SYS_MAX_PATH] = "";
 
-        UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
+		UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
+		char szResLock[SYS_MAX_PATH] = "";
+		RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+								  sizeof(szResLock)));
 
-        char            szResLock[SYS_MAX_PATH] = "";
-        RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
-                                                              sizeof(szResLock)));
+		if (hResLock == INVALID_RLCK_HANDLE)
+			return (ErrGetErrorCode());
 
-        if (hResLock == INVALID_RLCK_HANDLE)
-            return (ErrGetErrorCode());
+		if (MdirMoveMessage(szMBPath, pszFileName, pszMessageID) < 0) {
+			ErrorPush();
+			RLckUnlockEX(hResLock);
+			return (ErrorPop());
+		}
 
-        if (MdirMoveMessage(szMBPath, pszFileName, pszMessageID) < 0)
-        {
-            ErrorPush();
-            RLckUnlockEX(hResLock);
-            return (ErrorPop());
-        }
+		RLckUnlockEX(hResLock);
+	}
 
-        RLckUnlockEX(hResLock);
-    }
-
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             UsrGetMailProcessFile(UserInfo *pUI, char const *pszMPPath)
+int UsrGetMailProcessFile(UserInfo * pUI, char const *pszMPPath)
 {
 
-    char            szMPFilePath[SYS_MAX_PATH] = "";
+	char szMPFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
-        return (ErrGetErrorCode());
+	if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
+		return (ErrGetErrorCode());
 
-    StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
+	StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
 
-    if (!SysExistFile(szMPFilePath))
-    {
-        ErrSetErrorCode(ERR_NO_MAILPROC_FILE);
-        return (ERR_NO_MAILPROC_FILE);
-    }
+	if (!SysExistFile(szMPFilePath)) {
+		MDomGetDomainPath(pUI->pszDomain, szMPFilePath, sizeof(szMPFilePath) - 1, 1);
+		StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath) - 1);
+		if (!SysExistFile(szMPFilePath)) {
+			ErrSetErrorCode(ERR_NO_MAILPROC_FILE);
+			return (ERR_NO_MAILPROC_FILE);
+		}
+	}
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (MscCopyFile(pszMPPath, szMPFilePath) < 0) {
+		ErrorPush();
+		CheckRemoveFile(pszMPPath);
+		RLckUnlockSH(hResLock);
+		return (ErrorPop());
+	}
 
-    if (MscCopyFile(pszMPPath, szMPFilePath) < 0)
-    {
-        ErrorPush();
-        CheckRemoveFile(pszMPPath);
-        RLckUnlockSH(hResLock);
-        return (ErrorPop());
-    }
+	RLckUnlockSH(hResLock);
 
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-int             UsrSetMailProcessFile(UserInfo *pUI, char const *pszMPPath)
+int UsrSetMailProcessFile(UserInfo * pUI, char const *pszMPPath)
 {
 
-    char            szMPFilePath[SYS_MAX_PATH] = "";
+	char szMPFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
-        return (ErrGetErrorCode());
+	if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
+		return (ErrGetErrorCode());
 
-    StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
+	StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szMPFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMPFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (pszMPPath != NULL) {
+		if (MscCopyFile(szMPFilePath, pszMPPath) < 0) {
+			ErrorPush();
+			RLckUnlockEX(hResLock);
+			return (ErrorPop());
+		}
+	} else
+		SysRemove(szMPFilePath);
 
+	RLckUnlockEX(hResLock);
 
-    if (pszMPPath != NULL)
-    {
-        if (MscCopyFile(szMPFilePath, pszMPPath) < 0)
-        {
-            ErrorPush();
-            RLckUnlockEX(hResLock);
-            return (ErrorPop());
-        }
-    }
-    else
-        SysRemove(szMPFilePath);
-
-
-    RLckUnlockEX(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-char           *UsrGetAddress(UserInfo *pUI, char *pszAddress)
+char *UsrGetAddress(UserInfo * pUI, char *pszAddress)
 {
 
-    sprintf(pszAddress, "%s@%s", pUI->pszName, pUI->pszDomain);
+	sprintf(pszAddress, "%s@%s", pUI->pszName, pUI->pszDomain);
 
-    return (pszAddress);
+	return (pszAddress);
 
 }
 
-
-
-int             UsrGetAliasDBFileSnapShot(char const *pszFileName)
+int UsrGetAliasDBFileSnapShot(char const *pszFileName)
 {
 
-    char            szAlsFilePath[SYS_MAX_PATH] = "";
+	char szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
+	UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (MscCopyFile(pszFileName, szAlsFilePath) < 0) {
+		RLckUnlockSH(hResLock);
+		return (ErrGetErrorCode());
+	}
 
+	RLckUnlockSH(hResLock);
 
-    if (MscCopyFile(pszFileName, szAlsFilePath) < 0)
-    {
-        RLckUnlockSH(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-ALSF_HANDLE     UsrAliasOpenDB(void)
+ALSF_HANDLE UsrAliasOpenDB(void)
 {
 
-    AliasDBScanData *pADBSD = (AliasDBScanData *) SysAlloc(sizeof(AliasDBScanData));
+	AliasDBScanData *pADBSD = (AliasDBScanData *) SysAlloc(sizeof(AliasDBScanData));
 
-    if (pADBSD == NULL)
-        return (INVALID_ALSF_HANDLE);
+	if (pADBSD == NULL)
+		return (INVALID_ALSF_HANDLE);
 
-    SysGetTmpFile(pADBSD->szTmpDBFile);
+	SysGetTmpFile(pADBSD->szTmpDBFile);
 
-    if (UsrGetAliasDBFileSnapShot(pADBSD->szTmpDBFile) < 0)
-    {
-        SysFree(pADBSD);
-        return (INVALID_ALSF_HANDLE);
-    }
+	if (UsrGetAliasDBFileSnapShot(pADBSD->szTmpDBFile) < 0) {
+		SysFree(pADBSD);
+		return (INVALID_ALSF_HANDLE);
+	}
 
-    if ((pADBSD->pDBFile = fopen(pADBSD->szTmpDBFile, "rt")) == NULL)
-    {
-        SysRemove(pADBSD->szTmpDBFile);
-        SysFree(pADBSD);
-        return (INVALID_ALSF_HANDLE);
-    }
+	if ((pADBSD->pDBFile = fopen(pADBSD->szTmpDBFile, "rt")) == NULL) {
+		SysRemove(pADBSD->szTmpDBFile);
+		SysFree(pADBSD);
+		return (INVALID_ALSF_HANDLE);
+	}
 
-    return ((ALSF_HANDLE) pADBSD);
+	return ((ALSF_HANDLE) pADBSD);
 
 }
 
-
-
-void            UsrAliasCloseDB(ALSF_HANDLE hAliasDB)
+void UsrAliasCloseDB(ALSF_HANDLE hAliasDB)
 {
 
-    AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
+	AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
 
-    fclose(pADBSD->pDBFile);
+	fclose(pADBSD->pDBFile);
 
-    SysRemove(pADBSD->szTmpDBFile);
+	SysRemove(pADBSD->szTmpDBFile);
 
-    SysFree(pADBSD);
+	SysFree(pADBSD);
 
 }
 
-
-
-AliasInfo      *UsrAliasGetFirst(ALSF_HANDLE hAliasDB)
+AliasInfo *UsrAliasGetFirst(ALSF_HANDLE hAliasDB)
 {
 
-    AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
+	AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
 
-    rewind(pADBSD->pDBFile);
+	rewind(pADBSD->pDBFile);
 
+	AliasInfo *pAI = NULL;
+	char szUsrLine[USR_ALIAS_LINE_MAX] = "";
 
-    AliasInfo      *pAI = NULL;
-    char            szUsrLine[USR_ALIAS_LINE_MAX] = "";
+	while ((pAI == NULL) &&
+	       (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
-    while ((pAI == NULL) &&
-           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= alsMax)
+			pAI =
+			    UsrAllocAlias(ppszStrings[alsDomain], ppszStrings[alsAlias],
+					  ppszStrings[alsName]);
 
-        if (iFieldsCount >= alsMax)
-            pAI = UsrAllocAlias(ppszStrings[alsDomain], ppszStrings[alsAlias], ppszStrings[alsName]);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pAI);
+	return (pAI);
 
 }
 
-
-
-AliasInfo      *UsrAliasGetNext(ALSF_HANDLE hAliasDB)
+AliasInfo *UsrAliasGetNext(ALSF_HANDLE hAliasDB)
 {
 
-    AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
+	AliasDBScanData *pADBSD = (AliasDBScanData *) hAliasDB;
 
+	AliasInfo *pAI = NULL;
+	char szUsrLine[USR_ALIAS_LINE_MAX] = "";
 
-    AliasInfo      *pAI = NULL;
-    char            szUsrLine[USR_ALIAS_LINE_MAX] = "";
+	while ((pAI == NULL) &&
+	       (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
-    while ((pAI == NULL) &&
-           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= alsMax)
+			pAI =
+			    UsrAllocAlias(ppszStrings[alsDomain], ppszStrings[alsAlias],
+					  ppszStrings[alsName]);
 
-        if (iFieldsCount >= alsMax)
-            pAI = UsrAllocAlias(ppszStrings[alsDomain], ppszStrings[alsAlias], ppszStrings[alsName]);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pAI);
+	return (pAI);
 
 }
-

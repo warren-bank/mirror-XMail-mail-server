@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,38 +20,21 @@
  *
  */
 
-
 #ifndef _LMAILSVR_H
 #define _LMAILSVR_H
-
-
-
 
 #define LMAILF_STOP_SERVER          (1 << 0)
 #define LMAILF_LOG_ENABLED          (1 << 1)
 
-
-
-
-struct LMAILConfig
-{
-    unsigned long   ulFlags;
-    long            lNumThreads;
-    int             iSleepTimeout;
-    long            lThreadCount;
+struct LMAILConfig {
+	unsigned long ulFlags;
+	long lNumThreads;
+	int iSleepTimeout;
+	long lThreadCount;
 
 };
 
-
-
-
-
-char           *LMAILGetSpoolDir(char *pszSpoolPath, int iMaxPath);
-unsigned int    LMAILThreadProc(void *pThreadData);
-
-
-
-
-
+char *LMAILGetSpoolDir(char *pszSpoolPath, int iMaxPath);
+unsigned int LMAILThreadProc(void *pThreadData);
 
 #endif

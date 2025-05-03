@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,11 +23,8 @@
 #ifndef _DNS_H
 #define _DNS_H
 
-
-
 #define DNS_QUERY_TCP           1
 #define DNS_QUERY_UDP           2
-
 
 #define QTYPE_A                 1
 #define QTYPE_NS                2
@@ -51,7 +48,6 @@
 #define QTYPE_MAILA             254
 #define QTYPE_ALL               255
 
-
 #define QCLASS_IN               1
 #define QCLASS_CS               2
 #define QCLASS_CH               3
@@ -61,42 +57,32 @@
 
 #define RCODE_NXDOMAIN          3
 
-
-
-struct DNS_HEADER
-{
-    SYS_UINT16      Id;
-#ifdef LITTLE_ENDIAN_BITFIELD
-    SYS_UINT8       RD:1, TC:1, AA:1, OpCode:4, QR:1;
-    SYS_UINT8       RCode:4, Z:3, RA:1;
+struct DNS_HEADER {
+	SYS_UINT16 Id;
+#ifdef BIG_ENDIAN_BITFIELD
+	SYS_UINT8 QR:1, OpCode:4, AA:1, TC:1, RD:1;
+	SYS_UINT8 RA:1, Z:3, RCode:4;
 #else
-    SYS_UINT8       QR:1, OpCode:4, AA:1, TC:1, RD:1;
-    SYS_UINT8       RA:1, Z:3, RCode:4;
-#endif // #ifdef LITTLE_ENDIAN_BITFIELD
-    SYS_UINT16      QDCount;
-    SYS_UINT16      ANCount;
-    SYS_UINT16      NSCount;
-    SYS_UINT16      ARCount;
+	SYS_UINT8 RD:1, TC:1, AA:1, OpCode:4, QR:1;
+	SYS_UINT8 RCode:4, Z:3, RA:1;
+#endif				// #ifdef BIG_ENDIAN_BITFIELD
+	SYS_UINT16 QDCount;
+	SYS_UINT16 ANCount;
+	SYS_UINT16 NSCount;
+	SYS_UINT16 ARCount;
 };
 
-
-
-
-int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
-                                     char const *pszRespFile, bool & bAuth, char *pszCName,
-                                     SYS_UINT32 *pTTL = NULL);
-int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
-                                   char const *pszRespFile, char *pszCName,
-                                   SYS_UINT32 *pTTL = NULL);
-int             DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
-                                      char *pszCName, SYS_UINT32 *pTTL = NULL);
-int             DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile);
-int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
-                                char *pszCName, SYS_UINT32 *pTTL = NULL);
-int             DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszDomain,
-                                      int iQuerySockType, char *&pszMXDomains, SYS_UINT32 *pTTL = NULL);
-
-
-
+int DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
+			 char const *pszRespFile, bool & bAuth, char *pszCName,
+			 SYS_UINT32 * pTTL = NULL);
+int DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
+		       char const *pszRespFile, char *pszCName, SYS_UINT32 * pTTL = NULL);
+int DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
+			  char *pszCName, SYS_UINT32 * pTTL = NULL);
+int DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile);
+int DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
+		    char *pszCName, SYS_UINT32 * pTTL = NULL);
+int DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszDomain,
+			  int iQuerySockType, char *&pszMXDomains, SYS_UINT32 * pTTL = NULL);
 
 #endif

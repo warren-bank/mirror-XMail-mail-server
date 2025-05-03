@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  *
  */
 
-
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
@@ -30,53 +29,42 @@
 #include "MailSvr.h"
 #include "MailConfig.h"
 
-
-
-
-
-char           *CfgGetRootPath(char *pszPath, int iMaxPath)
+char *CfgGetRootPath(char *pszPath, int iMaxPath)
 {
 
-    StrNCpy(pszPath, szMailPath, iMaxPath);
+	StrNCpy(pszPath, szMailPath, iMaxPath);
 
-    return (pszPath);
+	return (pszPath);
 
 }
 
-
-
-
-char           *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
+char *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
 {
 
-    char            szRootPath[SYS_MAX_PATH] = "";
+	char szRootPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szRootPath, sizeof(szRootPath));
+	CfgGetRootPath(szRootPath, sizeof(szRootPath));
 
+	int iRootLength = strlen(szRootPath);
 
-    int             iRootLength = strlen(szRootPath);
+	if (strncmp(pszFullPath, szRootPath, iRootLength) == 0)
+		StrNCpy(pszBasePath, pszFullPath + iRootLength, iMaxPath);
+	else
+		StrNCpy(pszBasePath, pszFullPath, iMaxPath);
 
-    if (strncmp(pszFullPath, szRootPath, iRootLength) == 0)
-        StrNCpy(pszBasePath, pszFullPath + iRootLength, iMaxPath);
-    else
-        StrNCpy(pszBasePath, pszFullPath, iMaxPath);
-
-
-    return (pszBasePath);
+	return (pszBasePath);
 
 }
 
-
-
-
-char           *CfgGetFullPath(char const *pszRelativePath, char *pszFullPath, int iMaxPath)
+char *CfgGetFullPath(char const *pszRelativePath, char *pszFullPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszFullPath, iMaxPath);
+	CfgGetRootPath(pszFullPath, iMaxPath);
 
-    StrNCat(pszFullPath, (*pszRelativePath != SYS_SLASH_CHAR) ? pszRelativePath: pszRelativePath + 1,
-            iMaxPath);
+	StrNCat(pszFullPath,
+		(*pszRelativePath != SYS_SLASH_CHAR) ? pszRelativePath : pszRelativePath + 1,
+		iMaxPath);
 
-    return (pszFullPath);
+	return (pszFullPath);
 
 }

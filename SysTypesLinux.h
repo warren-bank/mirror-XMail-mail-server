@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,9 +23,12 @@
 #ifndef _SYSTYPESLINUX_H
 #define _SYSTYPESLINUX_H
 
-
-
-#define SYS_OS_PORT             "Linux/" SYS_CPU_PORT
+#ifdef MACH_BIG_ENDIAN_WORDS
+#define BIG_ENDIAN_CPU
+#endif
+#ifdef MACH_BIG_ENDIAN_BITFIELD
+#define BIG_ENDIAN_BITFIELD
+#endif
 
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
 #define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
@@ -58,57 +61,43 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
-
-
-
-
-typedef char    SYS_INT8;
+typedef char SYS_INT8;
 typedef unsigned char SYS_UINT8;
 typedef short int SYS_INT16;
 typedef unsigned short int SYS_UINT16;
-typedef int     SYS_INT32;
+typedef int SYS_INT32;
 typedef unsigned int SYS_UINT32;
 typedef long long int SYS_INT64;
 typedef unsigned long long int SYS_UINT64;
 typedef unsigned long long int SYS_LONGLONG;
 typedef unsigned int SYS_PTRUINT;
 typedef unsigned long SYS_HANDLE;
-typedef pthread_key_t   SYS_TLSKEY;
-typedef pthread_once_t  SYS_THREAD_ONCE;
-typedef int     SYS_SOCKET;
-typedef void   *SYS_SEMAPHORE;
-typedef void   *SYS_MUTEX;
-typedef void   *SYS_EVENT;
-typedef void   *SYS_THREAD;
+typedef pthread_key_t SYS_TLSKEY;
+typedef pthread_once_t SYS_THREAD_ONCE;
+typedef int SYS_SOCKET;
+typedef void *SYS_SEMAPHORE;
+typedef void *SYS_MUTEX;
+typedef void *SYS_EVENT;
+typedef void *SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 
-
-
-
-
-struct SYS_INET_ADDR
-{
-    struct sockaddr_in Addr;
+struct SYS_INET_ADDR {
+	struct sockaddr_in Addr;
 };
 
-enum SysFileTypes
-{
-    ftNormal = 1,
-    ftDirectory,
-    ftLink,
-    ftOther,
+enum SysFileTypes {
+	ftNormal = 1,
+	ftDirectory,
+	ftLink,
+	ftOther,
 
-    ftMax
+	ftMax
 };
 
-struct SYS_FILE_INFO
-{
-    int             iFileType;
-    unsigned long   ulSize;
-    time_t          tMod;
+struct SYS_FILE_INFO {
+	int iFileType;
+	unsigned long ulSize;
+	time_t tMod;
 };
-
-
-
 
 #endif

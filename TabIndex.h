@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,48 +20,30 @@
  *
  */
 
-
 #ifndef _TABINDEX_H
 #define _TABINDEX_H
-
-
-
 
 #define INDEX_SEQUENCE_TERMINATOR       (-1)
 
 #define INVALID_INDEX_HANDLE            ((INDEX_HANDLE) 0)
 
+typedef struct INDEX_HANDLE_struct {
+} *INDEX_HANDLE;
 
-
-
-
-typedef struct INDEX_HANDLE_struct
-{
-}              *INDEX_HANDLE;
-
-
-
-
-
-
-char           *TbixGetIndexFile(char const *pszTabFilePath, int const *piFieldsIdx,
-                                 char *pszIndexFile);
-int             TbixCreateIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
-                                int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) = NULL);
-int             TbixCalculateHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-                                  SYS_UINT32 *puHashVal, bool bCaseSens);
-char          **TbixLookup(char const *pszTabFilePath, int const *piFieldsIdx,
-                           bool bCaseSens, ...);
-int             TbixCheckIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
-                               int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) = NULL);
-INDEX_HANDLE    TbixOpenHandle(char const *pszTabFilePath, int const *piFieldsIdx,
-                               SYS_UINT32 uHashVal);
-int             TbixCloseHandle(INDEX_HANDLE hIndexLookup);
-int             TbixLookedUpRecords(INDEX_HANDLE hIndexLookup);
-char          **TbixGetRecord(INDEX_HANDLE hIndexLookup, int iRecord);
-
-
-
-
+char *TbixGetIndexFile(char const *pszTabFilePath, int const *piFieldsIdx, char *pszIndexFile);
+int TbixCreateIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+		    int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) =
+		    NULL);
+int TbixCalculateHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+		      SYS_UINT32 * puHashVal, bool bCaseSens);
+char **TbixLookup(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens, ...);
+int TbixCheckIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+		   int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) =
+		   NULL);
+INDEX_HANDLE TbixOpenHandle(char const *pszTabFilePath, int const *piFieldsIdx,
+			    SYS_UINT32 uHashVal);
+int TbixCloseHandle(INDEX_HANDLE hIndexLookup);
+int TbixLookedUpRecords(INDEX_HANDLE hIndexLookup);
+char **TbixGetRecord(INDEX_HANDLE hIndexLookup, int iRecord);
 
 #endif

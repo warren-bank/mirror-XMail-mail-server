@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,21 +20,12 @@
  *
  */
 
-
 #ifndef _DYNDNS_H
 #define _DYNDNS_H
 
-
-
-
-
-int             DynDnsSetup(SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
-int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
-                                         char const * pszHTTPRegString, char const * pszUsername = NULL,
-                                         char const * pszPassword = NULL);
-
-
-
-
+int DynDnsSetup(SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
+int DynDnsRegisterDomainHTTP(char const *pszServer, int iPortNo,
+			     char const *pszHTTPRegString, char const *pszUsername = NULL,
+			     char const *pszPassword = NULL);
 
 #endif

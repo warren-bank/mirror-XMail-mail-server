@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,38 +20,19 @@
  *
  */
 
-
 #ifndef _RESLOCKS_H
 #define _RESLOCKS_H
 
-
-
-
-
 #define INVALID_RLCK_HANDLE         ((RLCK_HANDLE) 0)
 
+typedef struct RLCK_HANDLE_struct {
+} *RLCK_HANDLE;
 
-
-
-
-typedef struct RLCK_HANDLE_struct
-{
-}              *RLCK_HANDLE;
-
-
-
-
-
-
-int             RLckInitLockers(void);
-int             RLckCleanupLockers(void);
-RLCK_HANDLE     RLckLockEX(char const *pszResourceName);
-int             RLckUnlockEX(RLCK_HANDLE hLock);
-RLCK_HANDLE     RLckLockSH(char const *pszResourceName);
-int             RLckUnlockSH(RLCK_HANDLE hLock);
-
-
-
-
+int RLckInitLockers(void);
+int RLckCleanupLockers(void);
+RLCK_HANDLE RLckLockEX(char const *pszResourceName);
+int RLckUnlockEX(RLCK_HANDLE hLock);
+RLCK_HANDLE RLckLockSH(char const *pszResourceName);
+int RLckUnlockSH(RLCK_HANDLE hLock);
 
 #endif

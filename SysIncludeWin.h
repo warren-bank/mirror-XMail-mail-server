@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,8 @@
  *
  */
 
-
 #ifndef _SYSINCLUDEWIN_H
 #define _SYSINCLUDEWIN_H
-
 
 #include <winsock2.h>
 #include <mswsock.h>
@@ -43,6 +41,5 @@
 #include <time.h>
 #include <stdarg.h>
 #include <limits.h>
-
 
 #endif

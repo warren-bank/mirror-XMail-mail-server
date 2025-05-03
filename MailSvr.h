@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,45 +20,27 @@
  *
  */
 
-
 #ifndef _MAILSVR_H
 #define _MAILSVR_H
-
-
 
 #define XMAIL_MAILDIR    1
 #define XMAIL_MAILBOX    2
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Defined in MailSvr.cpp
 ///////////////////////////////////////////////////////////////////////////////
-extern SHB_HANDLE hShbFING,
-                hShbCTRL,
-                hShbPOP3,
-                hShbSMTP,
-                hShbSMAIL,
-                hShbPSYNC,
-                hShbLMAIL;
-extern char     szMailPath[SYS_MAX_PATH];
-extern bool     bServerDebug;
-extern int      iFilterTimeout;
+extern SHB_HANDLE hShbFING, hShbCTRL, hShbPOP3, hShbSMTP, hShbSMAIL, hShbPSYNC, hShbLMAIL;
+extern char szMailPath[SYS_MAX_PATH];
+extern bool bServerDebug;
+extern int iFilterTimeout;
 extern QUEUE_HANDLE hSpoolQueue;
 extern SYS_SEMAPHORE hSyncSem;
-extern int      iLogRotateHours;
-extern int      iQueueSplitLevel;
-extern int      iMailboxType;
+extern int iLogRotateHours;
+extern int iQueueSplitLevel;
+extern int iMailboxType;
 
-
-
-
-
-int             SvrMain(int iArgCount, char *pszArgs[]);
-int             SvrStopServer(bool bWait = true);
-bool            SvrInShutdown(bool bForceCheck = false);
-
-
-
+int SvrMain(int iArgCount, char *pszArgs[]);
+int SvrStopServer(bool bWait = true);
+bool SvrInShutdown(bool bForceCheck = false);
 
 #endif

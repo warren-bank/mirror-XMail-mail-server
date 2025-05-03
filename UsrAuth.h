@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,31 +20,18 @@
  *
  */
 
-
 #ifndef _USRAUTH_H
 #define _USRAUTH_H
-
-
-
 
 #define AUTH_SERVICE_POP3               "pop3"
 #define AUTH_SERVICE_SMTP               "smtp"
 
-
-
-
-
-
-char           *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath);
-int             UAthAuthenticateUser(char const *pszService, char const *pszDomain,
-                                     char const *pszUsername, char const *pszPassword);
-int             UAthAddUser(char const *pszService, UserInfo *pUI);
-int             UAthModifyUser(char const *pszService, UserInfo *pUI);
-int             UAthDelUser(char const *pszService, UserInfo *pUI);
-int             UAthDropDomain(char const *pszService, char const *pszDomain);
-
-
-
-
+char *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath);
+int UAthAuthenticateUser(char const *pszService, char const *pszDomain,
+			 char const *pszUsername, char const *pszPassword);
+int UAthAddUser(char const *pszService, UserInfo * pUI);
+int UAthModifyUser(char const *pszService, UserInfo * pUI);
+int UAthDelUser(char const *pszService, UserInfo * pUI);
+int UAthDropDomain(char const *pszService, char const *pszDomain);
 
 #endif

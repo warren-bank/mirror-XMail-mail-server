@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,8 @@
  *
  */
 
-
 #ifndef _CTRLSVR_H
 #define _CTRLSVR_H
-
-
 
 #define STD_CTRL_PORT               6017
 #define MAX_CTRL_ACCEPT_ADDRESSES   32
@@ -32,32 +29,18 @@
 #define CTRLF_STOP_SERVER           (1 << 0)
 #define CTRLF_LOG_ENABLED           (1 << 1)
 
-
-
-
-
-struct CTRLConfig
-{
-    unsigned long   ulFlags;
-    int             iPort;
-    long            lThreadCount;
-    long            lMaxThreads;
-    int             iSessionTimeout;
-    int             iTimeout;
-    int             iNumAddr;
-    SYS_INET_ADDR   SvrAddr[MAX_CTRL_ACCEPT_ADDRESSES];
+struct CTRLConfig {
+	unsigned long ulFlags;
+	int iPort;
+	long lThreadCount;
+	long lMaxThreads;
+	int iSessionTimeout;
+	int iTimeout;
+	int iNumAddr;
+	SYS_INET_ADDR SvrAddr[MAX_CTRL_ACCEPT_ADDRESSES];
 
 };
 
-
-
-
-
-unsigned int    CTRLThreadProc(void *pThreadData);
-
-
-
-
-
+unsigned int CTRLThreadProc(void *pThreadData);
 
 #endif

@@ -34,8 +34,8 @@ OVERVIEW
     mailing lists, remote administration, custom mail exchangers, logging,
     and multi-platform code.
 
-    XMail sources compile under GNU/Linux, FreeBSD, OpenBSD, Solaris and
-    NT/2K.
+    XMail sources compile under GNU/Linux, FreeBSD, OpenBSD, NetBSD, OSX,
+    Solaris and NT/2K.
 
     This server born due to the need of having a free and stable Mail Server
     to be used inside my old company, which used a Windows Network. I don't
@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.18
+    1.19
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    03-27-2004
+    05-29-2004
 
   project by
 
@@ -234,23 +234,57 @@ OBTAINING THE SOURCE
 
 BUILD
 
-    In Windows NT I give you a project that can be loaded from Visual C++
-    while in *nixes:
+    For Windows, Visual C++ project files are supplied, while for *nixes,
+    the following options are given:
 
-     # make -f Makefile.lnx      (Linux)
-     # make -f Makefile.slx      (Linux on SPARC)
-     # make -f Makefile.plx      (Linux on PPC)
-     # gmake -f Makefile.bsd     (FreeBSD, OpenBSD - you need GCC and GMAKE to build on FreeBSD, OpenBSD)
-     # make -f Makefile.sso      (Sun/Solaris on SPARC - you need GCC to build on Solaris)
-     # make -f Makefile.ssx      (Sun/Solaris on Intel - you need GCC to build on Solaris)
+    [Linux]
 
-    will build XMail and tools executables.
+      # make -f Makefile.lnx
 
-    As soon as the project reaches a higher maturity I plan to supply a
-    configure script. Under Linux an init.d startup script is supplied
-    (xmail) to allow you to run XMail as a standard rc? daemon. You must put
-    it into /etc/init.d (it depends on which distro you're using) directory
-    and then create K??xmail - S??xmail links into the proper directories.
+    [FreeBSD]
+
+      # setenv OSTYPE FreeBSD
+      # gmake -f Makefile.bsd
+
+    or (depending on the shell):
+
+      # OSTYPE=FreeBSD gmake -f Makefile.bsd
+
+    [OpenBSD]
+
+      # setenv OSTYPE OpenBSD
+      # gmake -f Makefile.bsd
+
+    or (depending on the shell):
+
+      # OSTYPE=OpenBSD gmake -f Makefile.bsd
+
+    [NetBSD]
+
+      # setenv OSTYPE NetBSD
+      # gmake -f Makefile.bsd
+
+    or (depending on the shell):
+
+      # OSTYPE=NetBSD gmake -f Makefile.bsd
+
+    [OSX]
+
+      # OSTYPE=Darwin make -f Makefile.bsd
+
+    or (depending on the shell):
+
+      # setenv OSTYPE Darwin
+      # make -f Makefile.bsd
+
+    [Solaris]
+
+      # make -f Makefile.sso
+
+    Under Linux an init.d startup script is supplied (xmail) to allow you to
+    run XMail as a standard rc? daemon. You must put it into /etc/init.d (it
+    depends on which distro you're using) directory and then create K??xmail
+    - S??xmail links into the proper directories.
 
     Under Windows NT/2000/XP the XMail's executable is a Win32 service by
     default and if you want to have it built like a standard executable
@@ -323,9 +357,9 @@ CONFIGURATION
     14. To start XMail without reboot you can run (from root):
         /etc/rc.d/init.d/xmail start otherwise reboot your machine.
 
-    15. Setup the file 'smtprelay.tab' (and/or 'smtp.ipmap.tab' if
-        necessary) to restrict mail relaying of your server. 'THIS IS
-        IMPORTANT!'
+    15. Setup the file 'smtprelay.tab' if you want to extend mail relaying
+        to IPs out of the internet's private IP blocks (or you want to deny
+        even those - that comes enabled by default with XMail).
 
     [configuration] [top]
 
@@ -379,25 +413,35 @@ CONFIGURATION
         Services -> XMail server and start the service, otherwise reboot
         your machine.
 
-    16. Setup the file 'smtprelay.tab' (and/or 'smtp.ipmap.tab' if
-        necessary) to restrict mail relaying of your server. 'THIS IS
-        IMPORTANT!'
+    16. Setup the file 'smtprelay.tab' if you want to extend mail relaying
+        to IPs out of the internet's private IP blocks (or you want to deny
+        even those - that comes enabled by default with XMail).
 
     [configuration] [top]
 
-  Environment variable
+  Environment variables
 
-    If you want to start XMail as a simple test you must setup an
-    environment variable MAIL_ROOT that point to the XMail Server root
-    directory.
+    [MAIL_ROOT]
+        If you want to start XMail as a simple test you must setup an
+        environment variable MAIL_ROOT that point to the XMail Server root
+        directory.
 
-    Linux/etc.:
+        Linux/etc.:
 
-     export MAIL_ROOT=/var/XMailRoot
+         export MAIL_ROOT=/var/XMailRoot
 
-    Windows:
+        Windows:
 
-     set MAIL_ROOT=C:\MailRoot
+         set MAIL_ROOT=C:\MailRoot
+
+    [MAIL_CMD_LINE]
+        Let the user to specify extra command line parameters (they will be
+        appended to the ones specified in the command line).
+
+    [XMAIL_PID_DIR]
+        Let the user to specify the PID directory (Unix only ports). The
+        specified directory must NOT have the final slash (/) appended to
+        the path.
 
     [configuration] [top]
 
@@ -429,6 +473,8 @@ CONFIGURATION
       finger.ipmap.tab    <file>
       filters.in.tab  <file>
       filters.out.tab <file>
+      filters.pre-data.tab <file>
+      filters.post-data.tab <file>
       smtp.ipprop.tab <file>
 
     and these directories:
@@ -469,6 +515,7 @@ CONFIGURATION
 
         DOMAIN      <dir>
         userdef.tab <file>
+        mailproc.tab    <file>  [ optional ]
 
     inside of which reside, for each account ACCOUNT:
 
@@ -528,6 +575,10 @@ CONFIGURATION
     "MLUSERS.TAB"
     "MAILPROC.TAB"
     "SMTP.IPPROP.TAB"
+    "FILTERS.IN.TAB"
+    "FILTERS.OUT.TAB"
+    "FILTERS.PRE-DATA.TAB"
+    "FILTERS.POST-DATA.TAB"
 
     [configuration] [top]
 
@@ -935,12 +986,50 @@ CONFIGURATION
 
      "ipaddr"[TAB]"netmask"[NEWLINE]
 
+    or:
+
+     "ipaddr"[TAB]"netmask"[TAB]"params"[NEWLINE]
+
+    or:
+
+     "ipaddr/bits"[NEWLINE]
+
+    or:
+
+     "ipaddr/bits"[TAB]"params"[NEWLINE]
+
     Example:
 
      "212.131.173.0"  "255.255.255.0"
+     "212.131.173.0/24"
 
     register all hosts of the class 'C' network '212.131.173.XXX' as
-    spammers, and block them the use of XMail SMTP server.
+    spammers, and block them the use of XMail SMTP server. If a match is
+    found on one of those records, XMail will reject the incoming SMTP
+    connection at early stages. It is possible to specify optional
+    parameters to tell XMail which behaviour it should assume in case of
+    match. An example of such setup is:
+
+     "212.131.173.0/24"  "code=0"
+
+    In this case a code=0 tells XMail to flag the connection as possible
+    spammer, but wait later SMTP session stages to reject the connection
+    itself. In this case an authenticated SMTP session can override the
+    SPAMMERS.TAB match. The optional "params" field lists parameters
+    associated with the record, separated by a comma:
+
+     "param1=value1,param2=value2,...,paramN=valueN"
+
+    Currently supported parameters are:
+
+    code
+        Specify the rejection code for the record. If the value is greater
+        than zero, the connection is rejected soon, and the remote SMTP
+        client is disconnected. If the value is zero, the connection is
+        flagged as spammer but wait later stages for rejection, by allowing
+        authenticated SMTP connections to bypass the SPAMMERS.TAB match. If
+        the value is less than zero, XMail will insert an "absolute value"
+        seconds delay between SMTP commands.
 
     [table index] [configuration] [top]
 
@@ -1082,8 +1171,11 @@ CONFIGURATION
     stores commands (internals or externals) that have to be executed on a
     message file. The presence of this file is optional ans if it does not
     exist the default processing is to store the message in user mailbox.
-
-    Each argument can be a macro also:
+    The 'MAILPROC.TAB' file can be either per user or per domain, depending
+    where the file is stored. If stored inside the user directory it applies
+    only to the user whose directory hosts the 'MAILPROC.TAB', while if
+    stored inside the domain directory it applies to all users of such
+    domain. Each argument can be a macro also:
 
     @@FROM
         is substituted for the sender of the message
@@ -1108,7 +1200,9 @@ CONFIGURATION
     @@TMPFILE
         creates a copy of the message file to a temporary one. It can be
         used with 'external' command but in this case it's external program
-        responsibility to delete the temporary file.
+        responsibility to delete the temporary file. Do not use it with
+        'filter' commands since the filter will have no way to modify the
+        real spool file.
 
     Supported commands:
 
@@ -1132,7 +1226,41 @@ CONFIGURATION
         timeout to complete, otherwise the file will be removed by XMail
         while the command is processing. This is because such file is a
         temporary one that is deleted when XMail exits from 'MAILPROC.TAB'
-        file processing.
+        file processing. In case the external command exit code will be
+        '16', the command processing will stop and all the following
+        commands listed inside the file will be skipped.
+
+    [FILTER]
+
+     "filter"[TAB]"priority"[TAB]"wait-timeout"[TAB]"command-path"[TAB]=>
+       "arg-or-macro"[TAB]...[NEWLINE]
+
+    where:
+
+    filter
+        command keyword
+
+    priority
+        process priority: 0 = normal -1 = below normal +1 = above normal
+
+    wait-timeout
+        wait timeout for process execution in seconds: 0 = nowait
+
+        With filters, it is not suggested to use @@TMPFILE, since the filter
+        will never have the ability to change the message content in that
+        way. Also, to avoid problems very difficult to troubleshoot, it is
+        suggested to give the filter 'ENOUGH' timeout to complete (90
+        seconds or more). See [MESSAGE FILTERS] for detailed information
+        about return codes. In the filter command, the "Stop Filter
+        Processing" return flag will make XMail to stop the execution of the
+        current custom processing file.
+
+    The 'filter' command will pass the message file to a custom external
+    filter, that after inspecting it, has the option to accept, reject or
+    modify it. Care should be taken to properly re-format the message after
+    changing it, to avoid message corruption. The 'filter' command 'CANNOT'
+    successfully change the private XMail's header part of the spool
+    message.
 
     [MAILBOX]
 
@@ -1142,19 +1270,43 @@ CONFIGURATION
 
     [REDIRECT]
 
-     "redirect"[TAB]"address"[TAB]...[NEWLINE]
+     "redirect"[TAB]"domain-or-emailaddress"[TAB]...[NEWLINE]
 
-    Redirect message to internal or external addresses.
+    Redirect message to internal or external domain or email address. If the
+    message was for foo-user@custdomain.net and the file custdomain.net.tab
+    contains a line:
+
+     "redirect"  "target-domain.org"
+
+    the message is delivered to 'foo-user@target-domain.org'.
+
+    While the line:
+
+     "redirect"  "user@target-domain.org"
+
+    redirects the message to user@target-domain.org.
 
     [LREDIRECT]
 
-     "lredirect"[TAB]"address"[TAB]...[NEWLINE]
+     "lredirect"[TAB]"domain-or-emailaddress"[TAB]...[NEWLINE]
 
-    Redirect message to internal or external addresses impersonating local
-    domain during message delivery. The difference between "redirect" and
-    "lredirect" is the following. Suppose A@B sends a message to C@D, that
-    has a redirect to E@F. With "redirect" E@F will see A@B has sender while
-    with "lredirect" he will see C@D.
+    Redirect the message to internal or external domain (or email address)
+    impersonating local domain during messages delivery. If the message was
+    for foo-user@custdomain.net and the file custdomain.net.tab contains a
+    line:
+
+     "redirect"  "target-domain.org"
+
+    the message is delivered to 'foo-user@target-domain.org'.
+
+    While the line:
+
+     "redirect"  "user@target-domain.org"
+
+    redirects the message to 'user@target-domain.org'. The difference
+    between "redirect" and "lredirect" is the following. Suppose A@B sends a
+    message to C@D, that has a redirect to E@F. With "redirect" E@F will see
+    A@B has sender while with "lredirect" he will see C@D.
 
     [SMTPRELAY]
 
@@ -1185,6 +1337,30 @@ CONFIGURATION
     WhiteList
         If set to 1 and if the peer IP matches the address mask, all peer IP
         based checks will be skipped.
+
+    [table index] [configuration] [top]
+
+   FILTERS.IN.TAB
+
+    See [MESSAGE FILTERS]
+
+    [table index] [configuration] [top]
+
+   FILTERS.OUT.TAB
+
+    See [MESSAGE FILTERS]
+
+    [table index] [configuration] [top]
+
+   FILTERS.PRE-DATA.TAB
+
+    See [SMTP MESSAGE FILTERS]
+
+    [table index] [configuration] [top]
+
+   FILTERS.POST-DATA.TAB
+
+    See [SMTP MESSAGE FILTERS]
 
     [table index] [configuration] [top]
 
@@ -1406,7 +1582,42 @@ CUSTOM DOMAIN MAIL PROCESSING
                 enough timeout to complete, otherwise the file will be
                 removed by XMail while the command is processing. This is
                 because such file is a temporary one that is deleted when
-                XMail exits from file processing.
+                XMail exits from file processing. In case the external
+                command exit code will be '16', the command processing will
+                stop and all the following commands listed inside the file
+                will be skipped.
+
+    [FILTER]
+         "filter"[TAB]"priority"[TAB]"wait-timeout"[TAB]"command-path"[TAB]=>
+           "arg-or-macro"[TAB]...[NEWLINE]
+
+        where:
+
+        filter
+            command keyword
+
+        priority
+            process priority: 0 = normal -1 = below normal +1 = above normal
+
+        wait-timeout
+            wait timeout for process execution in seconds: 0 = nowait
+
+            With filters, it is not suggested to use @@TMPFILE, since the
+            filter will never have the ability to change the message content
+            in that way. Also, to avoid problems very difficult to
+            troubleshoot, it is suggested to give the filter 'ENOUGH'
+            timeout to complete (90 seconds or more). See [MESSAGE FILTERS]
+            for detailed information about return codes. In the filter
+            command, the "Stop Filter Processing" return flag will make
+            XMail to stop the execution of the current custom processing
+            file.
+
+        The 'filter' command will pass the message file to a custom external
+        filter, that after inspecting it, has the option to accept, reject
+        or modify it. Care should be taken to properly re-format the message
+        after changing it, to avoid message corruption. The 'filter' command
+        'CANNOT' successfully change the private XMail's header part of the
+        spool message.
 
     [REDIRECT]
          "redirect"[TAB]"domain-or-emailaddress"[TAB]...[NEWLINE]
@@ -1871,11 +2082,116 @@ MESSAGE FILTERS
 
     After the '<<MAIL-DATA>>' tag (5th line) the message follows. The
     message is composed of a headers section and, after the first empty
-    line, the message body. 'EXTREME' care must be used when modifying the
-    message because the filter will be working on the real message, and a
-    badly reformatted file will lead to message loss. The spool file header
-    (any data before <<MAIL-DATA>>) 'MUST' be preserved as is by the filter
-    in case of message rewrite happens.
+    line, the message body. The format of the "Info Data" line is:
+
+     ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo
+
+    'EXTREME' care must be used when modifying the message because the
+    filter will be working on the real message, and a badly reformatted file
+    will lead to message loss. The spool file header (any data before
+    <<MAIL-DATA>>) 'MUST' be preserved as is by the filter in case of
+    message rewrite happens.
+
+    [top]
+
+SMTP MESSAGE FILTERS
+
+    Besides having the ability to perform off-line message filtering, XMail
+    gives the user the power to run filters during the SMTP session. Two
+    files drive the SMTP on-line filtering, and these are
+    'FILTERS.PRE-DATA.TAB' and 'FILTERS.POST-DATA.TAB'. The file
+    'FILTERS.PRE-DATA.TAB' contains one or more commands to be executed
+    after the remote SMTP client sends the DATA command, and before XMail
+    sends the response to the command. Using such filters, the user can tell
+    XMail if or if not accept the following DATA transaction and, in case of
+    rejection, the user is also allowed to specify a custom message to be
+    sent to the remote SMTP client. The file 'FILTERS.POST-DATA.TAB'
+    contains one or more commands to be executed after XMail received the
+    whole client DATA, and before XMail sends the final response to the DATA
+    command (final messages ack). The files 'FILTERS.PRE-DATA.TAB' and
+    'FILTERS.POST-DATA.TAB' conatins zero or more lines with the following
+    format:
+
+     "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
+
+    Each file may contain multiple commands, that will be executed in
+    strictly sequential order. The first command that will trigger a
+    rejection code will make the filtering process to end. Each argument can
+    be a macro also:
+
+    @@FILE
+        message file path
+
+    @@USERAUTH
+        name of the SMTP authenticated user, or "-" if not authentication
+        has been granted
+
+    @@REMOTEADDR
+        remote IP address and port of the sender
+
+    @@LOCALADDR
+        local IP address and port where the message has been accepted
+
+    Filter commands have the ability to inspect and modify the content of
+    the message (or info) file. The exit code of commands executed by XMail
+    are used to tell XMail the action that has to be performed as a
+    cosequence of the filter. The exit code is composed by a raw exit code
+    and additional flags. Currently defined flags are:
+
+    '16'
+        Stop selected filter list processing.
+
+    Currently defined raw exit codes are:
+
+    '3' Reject the message.
+
+    Any other exit codes will make XMail to accept the message, and can be
+    used also when changing the content of the @@FILE file. 'EXTREME' care
+    must be used when changing the @@FILE file, since XMail expect the file
+    format to be correct. Also, it is important to preserve the <CR><LF>
+    line termination of the file itself. When rejecting the message, the
+    filter command has the ability to specify the SMTP status code that
+    XMail will send to the remote SMTP client, by creating a file named
+    @@FILE.rej containing the message in the very first line. Such file will
+    be automatically removed by XMail. The data passed to filter commands
+    inside @@FILE varies depending if the command is listed inside
+    'FILTERS.PRE-DATA.TAB' or inside 'FILTERS.POST-DATA.TAB'. Commands
+    listed inside 'FILTERS.PRE-DATA.TAB' will receive the following data
+    stored inside @@FILE:
+
+     Info Data           [ 1th line ]
+     SmtpDomain          [ 2nd line ]
+     SmtpMessageID       [ 3rd line ]
+     MAIL FROM:<...>     [ 4th line ]
+     RCPT TO:<...> {...} [ 5th line ]
+     ...
+
+    The file can have one or more "RCPT TO" lines. The format of the "Info
+    Data" line is:
+
+     ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo
+
+    Commands listed inside 'FILTERS.POST-DATA.TAB' will receive the
+    following data stored inside @@FILE:
+
+     Info Data           [ 1th line ]
+     SmtpDomain          [ 2nd line ]
+     SmtpMessageID       [ 3rd line ]
+     MAIL FROM:<...>     [ 4th line ]
+     RCPT TO:<...> {...} [ 5th line ]
+     ...
+     <<MAIL-DATA>>
+     ...
+
+    After the '<<MAIL-DATA>>' tag the message follows. The message is
+    composed of a headers section and, after the first empty line, the
+    message body. The format of the RCPT line is:
+
+     RCPT TO:<address> {ra=real-address}
+
+    where "real-address" is the "address" after it has been translated (if
+    aliases applies) to the real local address. Otherwise it holds the same
+    value of "address".
 
     [top]
 
@@ -1973,7 +2289,7 @@ XMAIL SPOOL DESIGN
     When XMail needs to create a new spool file a spool path is chosen in a
     random way and a new file with the format:
 
-     mstime.pid.hostname
+     mstime.tid.seq.hostname
 
     is created inside the 'temp' subdirectory. When the spool file is ready
     to be committed, it's moved into the 'mess' subdirectory that holds
@@ -2776,12 +3092,18 @@ XMAIL ADMIN PROTOCOL
 
     or:
 
-     "aliasdomainlist"[TAB]"wildmatch0"[TAB]...[TAB]"wildmatchN"<CR><LF>
+     "aliasdomainlist"[TAB]"wild-dom-match"<CR><LF>
+
+    or:
+
+     "aliasdomainlist"[TAB]"wild-dom-match"[TAB]"wild-adom-match"<CR><LF>
 
     The result is a RESSTRING. The wild match version simply returns a
     filtered list of alias domains. If successful (00100), a formatted list
     of alias domains follows, terminated by a line containing a single dot
-    (<CR><LF>.<CR><LF>).
+    (<CR><LF>.<CR><LF>). The output format is:
+
+     "real-domain"[TAB]"alias-domain"<CR><LF>
 
     [admin protocol] [top]
 
@@ -3537,8 +3859,6 @@ THANKS
     My cat Grace, for her patience waiting for food while I'm coding.
 
     All of the free source community, for giving me code and knowledge.
-
-    My company, Network Associates, for giving me my wage.
 
     [top]
 

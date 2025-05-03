@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,51 +20,30 @@
  *
  */
 
-
 #ifndef _ALIASDOMAIN_H
 #define _ALIASDOMAIN_H
 
-
-
-
-
 #define INVALID_ADOMAIN_HANDLE          ((ADOMAIN_HANDLE) 0)
 
+enum ADomainFileds {
+	adomADomain = 0,
+	adomDomain,
 
-
-
-enum ADomainFileds
-{
-    adomADomain = 0,
-    adomDomain,
-
-    adomMax
+	adomMax
 };
 
+typedef struct ADOMAIN_HANDLE_struct {
+} *ADOMAIN_HANDLE;
 
-
-
-typedef struct ADOMAIN_HANDLE_struct
-{
-}              *ADOMAIN_HANDLE;
-
-
-
-
-
-int             ADomCheckDomainsIndexes(void);
-int             ADomLookupDomain(const char *pszADomain, char *pszDomain, bool bWildMatch);
-int             ADomAddADomain(char const *pszADomain, char const *pszDomain);
-int             ADomRemoveADomain(char const *pszADomain);
-int             ADomRemoveLinkedDomains(char const *pszDomain);
-int             ADomGetADomainFileSnapShot(const char *pszFileName);
-ADOMAIN_HANDLE  ADomOpenDB(void);
-void            ADomCloseDB(ADOMAIN_HANDLE hDomainsDB);
+int ADomCheckDomainsIndexes(void);
+int ADomLookupDomain(const char *pszADomain, char *pszDomain, bool bWildMatch);
+int ADomAddADomain(char const *pszADomain, char const *pszDomain);
+int ADomRemoveADomain(char const *pszADomain);
+int ADomRemoveLinkedDomains(char const *pszDomain);
+int ADomGetADomainFileSnapShot(const char *pszFileName);
+ADOMAIN_HANDLE ADomOpenDB(void);
+void ADomCloseDB(ADOMAIN_HANDLE hDomainsDB);
 char const *const *ADomGetFirstDomain(ADOMAIN_HANDLE hDomainsDB);
 char const *const *ADomGetNextDomain(ADOMAIN_HANDLE hDomainsDB);
-
-
-
-
 
 #endif

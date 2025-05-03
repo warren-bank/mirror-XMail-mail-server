@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,51 +20,33 @@
  *
  */
 
-
 #ifndef _EXTALIASES_H
 #define _EXTALIASES_H
 
-
-
-
 #define INVALID_EXAL_HANDLE         ((EXAL_HANDLE) 0)
 
-
-
-
-
-struct ExtAlias
-{
-    char           *pszDomain;
-    char           *pszName;
-    char           *pszRmtDomain;
-    char           *pszRmtName;
+struct ExtAlias {
+	char *pszDomain;
+	char *pszName;
+	char *pszRmtDomain;
+	char *pszRmtName;
 };
 
-typedef struct EXAL_HANDLE_struct
-{
-}              *EXAL_HANDLE;
+typedef struct EXAL_HANDLE_struct {
+} *EXAL_HANDLE;
 
-
-
-
-
-
-int             ExAlCheckAliasIndexes(void);
-ExtAlias       *ExAlAllocAlias(void);
-void            ExAlFreeAlias(ExtAlias *pExtAlias);
-int             ExAlAddAlias(ExtAlias *pExtAlias);
-ExtAlias       *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName);
-int             ExAlRemoveAlias(ExtAlias *pExtAlias);
-int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName);
-int             ExAlRemoveDomainAliases(const char *pszDomain);
-int             ExAlGetDBFileSnapShot(const char *pszFileName);
-EXAL_HANDLE     ExAlOpenDB(void);
-void            ExAlCloseDB(EXAL_HANDLE hLinksDB);
-ExtAlias       *ExAlGetFirstAlias(EXAL_HANDLE hLinksDB);
-ExtAlias       *ExAlGetNextAlias(EXAL_HANDLE hLinksDB);
-
-
-
+int ExAlCheckAliasIndexes(void);
+ExtAlias *ExAlAllocAlias(void);
+void ExAlFreeAlias(ExtAlias * pExtAlias);
+int ExAlAddAlias(ExtAlias * pExtAlias);
+ExtAlias *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName);
+int ExAlRemoveAlias(ExtAlias * pExtAlias);
+int ExAlRemoveUserAliases(const char *pszDomain, const char *pszName);
+int ExAlRemoveDomainAliases(const char *pszDomain);
+int ExAlGetDBFileSnapShot(const char *pszFileName);
+EXAL_HANDLE ExAlOpenDB(void);
+void ExAlCloseDB(EXAL_HANDLE hLinksDB);
+ExtAlias *ExAlGetFirstAlias(EXAL_HANDLE hLinksDB);
+ExtAlias *ExAlGetNextAlias(EXAL_HANDLE hLinksDB);
 
 #endif

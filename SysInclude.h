@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,49 +20,40 @@
  *
  */
 
-
 #ifndef _SYSINCLUDE_H
 #define _SYSINCLUDE_H
 
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  Load CPU defines
-///////////////////////////////////////////////////////////////////////////////
-#include "CPUDefines.h"
-
-
-
+#ifdef HAS_SYSMACHINE
+#include "SysMachine.h"
+#endif
 
 #ifdef WIN32
 
 #include "SysIncludeWin.h"
 
-#else           // #ifdef WIN32
+#else				// #ifdef WIN32
 #ifdef __LINUX__
 
 #include "SysIncludeLinux.h"
 
-#else           // #ifdef __LINUX__
+#else				// #ifdef __LINUX__
 #ifdef __SOLARIS__
 
 #include "SysIncludeSolaris.h"
 
-#else           // #ifdef __SOLARIS__
+#else				// #ifdef __SOLARIS__
 #ifdef __BSD__
 
 #include "SysIncludeBSD.h"
 
-#else           // #ifdef __BSD__
+#else				// #ifdef __BSD__
 
 #error System type not defined
 
-#endif          // #ifdef __BSD__
-#endif          // #ifdef __SOLARIS__
-#endif          // #ifdef __LINUX__
-#endif          // #ifdef WIN32
-
-
+#endif				// #ifdef __BSD__
+#endif				// #ifdef __SOLARIS__
+#endif				// #ifdef __LINUX__
+#endif				// #ifdef WIN32
 
 #include "SysTypes.h"
 
@@ -73,8 +64,5 @@
 #include "Errors.h"
 
 #include "CommTypes.h"
-
-
-
 
 #endif

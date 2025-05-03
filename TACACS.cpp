@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  *
  */
 
-
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
@@ -31,9 +30,6 @@
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "TACACS.h"
-
-
-
 
 /*
 
@@ -48,9 +44,6 @@
 {ERR_TACACS_SERVER_NOT_FOUND, "TACACS server for domain not found", NULL},
 
     */
-
-
-
 
 #define TACACS_TIMEOUT          15
 #define TACACS_SEND_RETRIES     3
@@ -76,9 +69,8 @@
 #define	TA_A_EXPIRING           1
 #define	TA_A_PASSWORD           2
 #define	TA_A_DENIED             3
-#define	TA_A_NOROUTE            8   /* Dialup routing not allowed           */
-#define	TA_A_LOGINREQ           9   /* Login required for requested action  */
-
+#define	TA_A_NOROUTE            8	/* Dialup routing not allowed           */
+#define	TA_A_LOGINREQ           9	/* Login required for requested action  */
 
 #define XTACACSSIZE             sizeof(xtacacstype)
 
@@ -100,244 +92,193 @@
 #define	XTA_A_REJECTED          2
 
 #define XTA_A_NONE              0
-#define	XTA_A_EXPIRING          1   /* Account expiring                     */
-#define	XTA_A_PASSWORD          2   /* Wrong password                       */
-#define	XTA_A_DENIED            3   /* Permission denied                    */
-#define	XTA_A_NOROUTE           8   /* Dialup routing not permitted         */
-#define	XTA_A_LOGINREQ          9   /* Login required for requested action  */
+#define	XTA_A_EXPIRING          1	/* Account expiring                     */
+#define	XTA_A_PASSWORD          2	/* Wrong password                       */
+#define	XTA_A_DENIED            3	/* Permission denied                    */
+#define	XTA_A_NOROUTE           8	/* Dialup routing not permitted         */
+#define	XTA_A_LOGINREQ          9	/* Login required for requested action  */
 
+enum TacsFields {
+	tacsDomain = 0,
+	tacsServer,
+	tacsPort,
 
+	tacsMax
+};
 
-
-
-
-
-
-
-
-    enum TacsFields
-    {
-        tacsDomain = 0,
-        tacsServer,
-        tacsPort,
-
-        tacsMax
-    };
-
-struct xtacacstype
-{
-    SYS_UINT8       version;    /* version of protocol      */
-    SYS_UINT8       type;       /* Type of query/response   */
-    SYS_UINT16      trans;      /* transaction ID           */
-    SYS_UINT8       namelen;    /* length of name           */
-    SYS_UINT8       pwlen;      /* length of password       */
-    SYS_UINT8       response;   /* response code            */
-    SYS_UINT8       reason;     /* reason for response      */
-    SYS_UINT32      uuid;       /* user id code assigned    */
-    SYS_UINT32      dhost;      /* destination host         */
-    SYS_UINT16      dport;      /* destination port         */
-    SYS_UINT16      lport;      /* local line number        */
-    SYS_UINT32      flags;      /* misc flags               */
-    SYS_UINT16      accesslist; /* access list for user     */
+struct xtacacstype {
+	SYS_UINT8 version;	/* version of protocol      */
+	SYS_UINT8 type;		/* Type of query/response   */
+	SYS_UINT16 trans;	/* transaction ID           */
+	SYS_UINT8 namelen;	/* length of name           */
+	SYS_UINT8 pwlen;	/* length of password       */
+	SYS_UINT8 response;	/* response code            */
+	SYS_UINT8 reason;	/* reason for response      */
+	SYS_UINT32 uuid;	/* user id code assigned    */
+	SYS_UINT32 dhost;	/* destination host         */
+	SYS_UINT16 dport;	/* destination port         */
+	SYS_UINT16 lport;	/* local line number        */
+	SYS_UINT32 flags;	/* misc flags               */
+	SYS_UINT16 accesslist;	/* access list for user     */
 /*                  user name[]                             */
 /*                  password[]                              */
 };
 
+static char *TacsGetConfigFilePath(char *pszTacsFile);
+static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iPortNo);
 
-
-
-
-
-
-
-
-
-static char    *TacsGetConfigFilePath(char *pszTacsFile);
-static int      TacsGetServerName(char const * pszDomain, char *pszTacsServer, int &iPortNo);
-
-
-
-
-
-
-
-
-static char    *TacsGetConfigFilePath(char *pszTacsFile)
+static char *TacsGetConfigFilePath(char *pszTacsFile)
 {
 
-    CfgGetRootPath(pszTacsFile);
+	CfgGetRootPath(pszTacsFile);
 
-    strcat(pszTacsFile, TACS_CONFIG_FILE);
+	strcat(pszTacsFile, TACS_CONFIG_FILE);
 
-    return (pszTacsFile);
+	return (pszTacsFile);
 
 }
 
-
-
-
-static int      TacsGetServerName(char const * pszDomain, char *pszTacsServer, int &iPortNo)
+static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iPortNo)
 {
 
-    char            szTacsFile[SYS_MAX_PATH] = "";
+	char szTacsFile[SYS_MAX_PATH] = "";
 
-    TacsGetConfigFilePath(szTacsFile);
+	TacsGetConfigFilePath(szTacsFile);
 
+	FILE *pTacsFile = fopen(szTacsFile, "rt");
 
+	if (pTacsFile == NULL) {
+		ErrSetErrorCode(ERR_TACACS_FILE_NOT_FOUND);
+		return (ERR_TACACS_FILE_NOT_FOUND);
+	}
 
-    FILE           *pTacsFile = fopen(szTacsFile, "rt");
+	char szTacsLine[TACS_ALIAS_LINE_MAX] = "";
 
-    if (pTacsFile == NULL)
-    {
-        ErrSetErrorCode(ERR_TACACS_FILE_NOT_FOUND);
-        return (ERR_TACACS_FILE_NOT_FOUND);
-    }
+	while (MscGetConfigLine(szTacsLine, sizeof(szTacsLine) - 1, pTacsFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szTacsLine);
 
-    char            szTacsLine[TACS_ALIAS_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscGetConfigLine(szTacsLine, sizeof(szTacsLine) - 1, pTacsFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szTacsLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= tacsMax) &&
+		    StrIWildMatch(pszDomain, ppszStrings[tacsDomain])) {
+			strcpy(pszTacsServer, ppszStrings[tacsServer]);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			iPortNo = atoi(ppszStrings[tacsPort]);
 
-        if ((iFieldsCount >= tacsMax) &&
-            StrIWildMatch(pszDomain, ppszStrings[tacsDomain]))
-        {
-            strcpy(pszTacsServer, ppszStrings[tacsServer]);
+			StrFreeStrings(ppszStrings);
+			fclose(pTacsFile);
 
-            iPortNo = atoi(ppszStrings[tacsPort]);
+			return (0);
+		}
 
+		StrFreeStrings(ppszStrings);
+	}
 
-            StrFreeStrings(ppszStrings);
-            fclose(pTacsFile);
+	fclose(pTacsFile);
 
-            return (0);
-        }
+	ErrSetErrorCode(ERR_TACACS_SERVER_NOT_FOUND);
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    fclose(pTacsFile);
-
-
-    ErrSetErrorCode(ERR_TACACS_SERVER_NOT_FOUND);
-
-    return (ERR_TACACS_SERVER_NOT_FOUND);
+	return (ERR_TACACS_SERVER_NOT_FOUND);
 
 }
 
-
-
-
-
-
-int             TacsAuthenticate(char const * pszDomain, char const * pszUsername,
-                                 char const * pszPassword, int iServicePort)
+int TacsAuthenticate(char const *pszDomain, char const *pszUsername,
+		     char const *pszPassword, int iServicePort)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get TACACS server coordinates
 ///////////////////////////////////////////////////////////////////////////////
-    int             iPortNo = TACACS_PORT;
-    char            szTacsServer[MAX_HOST_NAME] = "";
+	int iPortNo = TACACS_PORT;
+	char szTacsServer[MAX_HOST_NAME] = "";
 
-    if (TacsGetServerName(pszDomain, szTacsServer, iPortNo) < 0)
-        return (ErrGetErrorCode());
+	if (TacsGetServerName(pszDomain, szTacsServer, iPortNo) < 0)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  If not specified use POP3 port ( TACACS_DPORT )
 ///////////////////////////////////////////////////////////////////////////////
-    if (iServicePort < 0)
-        iServicePort = TACACS_DPORT;
+	if (iServicePort < 0)
+		iServicePort = TACACS_DPORT;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Open TACACS server socket
 ///////////////////////////////////////////////////////////////////////////////
-    SYS_SOCKET      SockFD;
-    SYS_INET_ADDR   SvrAddr;
-    SYS_INET_ADDR   SockAddr;
+	SYS_SOCKET SockFD;
+	SYS_INET_ADDR SvrAddr;
+	SYS_INET_ADDR SockAddr;
 
-    if (MscCreateClientSocket(szTacsServer, iPortNo, SOCK_DGRAM, &SockFD, &SvrAddr,
-                              &SockAddr, TACACS_TIMEOUT) < 0)
-        return (ErrGetErrorCode());
+	if (MscCreateClientSocket(szTacsServer, iPortNo, SOCK_DGRAM, &SockFD, &SvrAddr,
+				  &SockAddr, TACACS_TIMEOUT) < 0)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Build TACACS request packet
 ///////////////////////////////////////////////////////////////////////////////
-    char            szBuffer[1024] = "";
-    xtacacstype    *pTacs = (xtacacstype *) szBuffer;
+	char szBuffer[1024] = "";
+	xtacacstype *pTacs = (xtacacstype *) szBuffer;
 
-    ZeroData(szBuffer);
+	ZeroData(szBuffer);
 
-    pTacs->type = XTA_LOGIN;
-    pTacs->version = XTA_VERSION;
-    pTacs->trans = htons((unsigned short) SysGetCurrentThreadId());
-    pTacs->reason = XTA_A_NONE;
-    pTacs->dhost = (SYS_UINT32) SysGetAddrAddress(SockAddr);
-    pTacs->dport = htons((unsigned short) iServicePort);
-    pTacs->lport = htons(TACACS_LPORT);
-    pTacs->namelen = (SYS_UINT8) strlen(pszUsername);
-    pTacs->pwlen = (SYS_UINT8) strlen(pszPassword);
+	pTacs->type = XTA_LOGIN;
+	pTacs->version = XTA_VERSION;
+	pTacs->trans = htons((unsigned short) SysGetCurrentThreadId());
+	pTacs->reason = XTA_A_NONE;
+	pTacs->dhost = (SYS_UINT32) SysGetAddrAddress(SockAddr);
+	pTacs->dport = htons((unsigned short) iServicePort);
+	pTacs->lport = htons(TACACS_LPORT);
+	pTacs->namelen = (SYS_UINT8) strlen(pszUsername);
+	pTacs->pwlen = (SYS_UINT8) strlen(pszPassword);
 
-    int             iQueryLenght = XTACACSSIZE + pTacs->namelen + pTacs->pwlen;
+	int iQueryLenght = XTACACSSIZE + pTacs->namelen + pTacs->pwlen;
 
-    memcpy(&szBuffer[XTACACSSIZE], pszUsername, pTacs->namelen);
-    memcpy(&szBuffer[XTACACSSIZE + pTacs->namelen], pszPassword, pTacs->pwlen);
+	memcpy(&szBuffer[XTACACSSIZE], pszUsername, pTacs->namelen);
+	memcpy(&szBuffer[XTACACSSIZE + pTacs->namelen], pszPassword, pTacs->pwlen);
 
-
-
-    for (int iSendLoops = 0; iSendLoops < TACACS_SEND_RETRIES; iSendLoops++)
-    {
+	for (int iSendLoops = 0; iSendLoops < TACACS_SEND_RETRIES; iSendLoops++) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Send packet
 ///////////////////////////////////////////////////////////////////////////////
-        if (SysSendDataTo(SockFD, (const struct sockaddr *) & SvrAddr, sizeof(SvrAddr),
-                          szBuffer, iQueryLenght, TACACS_TIMEOUT) != iQueryLenght)
-            continue;
+		if (SysSendDataTo(SockFD, (const struct sockaddr *) &SvrAddr, sizeof(SvrAddr),
+				  szBuffer, iQueryLenght, TACACS_TIMEOUT) != iQueryLenght)
+			continue;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Receive packet lenght
 ///////////////////////////////////////////////////////////////////////////////
-        SYS_INET_ADDR   RecvAddr;
-        SYS_UINT8       RespBuffer[1024];
+		SYS_INET_ADDR RecvAddr;
+		SYS_UINT8 RespBuffer[1024];
 
-        ZeroData(RecvAddr);
-        ZeroData(RespBuffer);
+		ZeroData(RecvAddr);
+		ZeroData(RespBuffer);
 
+		int iPacketLenght =
+		    SysRecvDataFrom(SockFD, (struct sockaddr *) &RecvAddr, sizeof(RecvAddr),
+				    (char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
 
-        int             iPacketLenght = SysRecvDataFrom(SockFD, (struct sockaddr *) & RecvAddr, sizeof(RecvAddr),
-                                                        (char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
+		if (iPacketLenght < XTACACSSIZE)
+			continue;
 
+		xtacacstype *pRespTacs = (xtacacstype *) RespBuffer;
 
-        if (iPacketLenght < XTACACSSIZE)
-            continue;
+		if (pRespTacs->response != 1) {
+			SysCloseSocket(SockFD);
 
-        xtacacstype    *pRespTacs = (xtacacstype *) RespBuffer;
+			ErrSetErrorCode(ERR_TACACS_AUTH_FAILED);
+			return (ERR_TACACS_AUTH_FAILED);
+		}
 
-        if (pRespTacs->response != 1)
-        {
-            SysCloseSocket(SockFD);
+		SysCloseSocket(SockFD);
 
-            ErrSetErrorCode(ERR_TACACS_AUTH_FAILED);
-            return (ERR_TACACS_AUTH_FAILED);
-        }
+		return (0);
+	}
 
+	SysCloseSocket(SockFD);
 
+	ErrSetErrorCode(ERR_TACACS_AUTH_UNAVAILABLE);
 
-        SysCloseSocket(SockFD);
-
-        return (0);
-    }
-
-    SysCloseSocket(SockFD);
-
-
-    ErrSetErrorCode(ERR_TACACS_AUTH_UNAVAILABLE);
-
-    return (ERR_TACACS_AUTH_UNAVAILABLE);
+	return (ERR_TACACS_AUTH_UNAVAILABLE);
 
 }
-

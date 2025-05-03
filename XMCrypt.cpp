@@ -1,6 +1,6 @@
 /*
  *  XMCrypt by Davide Libenzi ( XMail password crypter )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,50 +24,38 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
-
-
-char           *StrCrypt(char const * pszString, char *pszCrypt)
+char *StrCrypt(char const *pszString, char *pszCrypt)
 {
 
-    strcpy(pszCrypt, "");
+	strcpy(pszCrypt, "");
 
-    for (int ii = 0; pszString[ii] != '\0'; ii++)
-    {
-        unsigned int    uChar = (unsigned int) pszString[ii];
-        char            szByte[32] = "";
+	for (int ii = 0; pszString[ii] != '\0'; ii++) {
+		unsigned int uChar = (unsigned int) pszString[ii];
+		char szByte[32] = "";
 
-        sprintf(szByte, "%02x", (uChar ^ 101) & 0xff);
+		sprintf(szByte, "%02x", (uChar ^ 101) & 0xff);
 
-        strcat(pszCrypt, szByte);
-    }
+		strcat(pszCrypt, szByte);
+	}
 
-    return (pszCrypt);
+	return (pszCrypt);
 
 }
 
-
-
-
-int             main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 
-    if (argc < 2)
-    {
-        printf("usage : %s  password\n", argv[0]);
-        return (1);
-    }
+	if (argc < 2) {
+		printf("usage : %s  password\n", argv[0]);
+		return (1);
+	}
 
+	char szCrypt[1024] = "";
 
-    char            szCrypt[1024] = "";
+	StrCrypt(argv[1], szCrypt);
 
-    StrCrypt(argv[1], szCrypt);
+	printf("%s\n", szCrypt);
 
-
-    printf("%s\n", szCrypt);
-
-
-    return (0);
+	return (0);
 
 }

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
-
 
 #include "SysInclude.h"
 #include "SysDep.h"
@@ -45,640 +44,543 @@
 #include "AppDefines.h"
 #include "MailSvr.h"
 
-
-
-
-
-
 #define FILTER_STORAGE_DIR          "filters"
 #define FILTER_SELECT_MAX           128
 #define FILTER_DB_LINE_MAX          512
 #define FILTER_LINE_MAX             1024
-#define FILTER_PRIORITY             SYS_PRIORITY_NORMAL
-#define FILTER_OUT_NNF_EXITCODE     4
-#define FILTER_OUT_NN_EXITCODE      5
-#define FILTER_OUT_EXITCODE         6
-#define FILTER_MODIFY_EXITCODE      7
-#define FILTER_FLAGS_BREAK          (1 << 4)
-#define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
-
-
-struct FilterMsgInfo
-{
-    char            szSender[MAX_ADDR_NAME];
-    char            szRecipient[MAX_ADDR_NAME];
-    SYS_INET_ADDR   LocalAddr;
-    SYS_INET_ADDR   RemoteAddr;
-    char            szSpoolFile[SYS_MAX_PATH];
+struct FilterMsgInfo {
+	char szSender[MAX_ADDR_NAME];
+	char szRecipient[MAX_ADDR_NAME];
+	SYS_INET_ADDR LocalAddr;
+	SYS_INET_ADDR RemoteAddr;
+	char szSpoolFile[SYS_MAX_PATH];
 };
 
+static int FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo & FMI);
+static void FilFreeMsgInfo(FilterMsgInfo & FMI);
+static int FilGetFilePath(char const *pszMode, char *pszFilePath, int iMaxPath);
+static int FilAddFilter(char **ppszFilters, int &iNumFilters, char const *pszFilterName);
+static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
+			    FilterMsgInfo const &FMI, char **ppszFilters, int iMaxFilters);
+static void FilFreeFilters(char **ppszFilters, int iNumFilters);
+static int FilGetFilterPath(char const *pszFileName, char *pszFilePath, int iMaxPath);
+static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
+			  QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FilterMsgInfo const &FMI);
+static int FilFilterMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool,
+				     FilterMsgInfo const &FMI);
 
-
-
-
-static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI);
-static void     FilFreeMsgInfo(FilterMsgInfo &FMI);
-static char    *FilGetFilterRejMessage(FilterMsgInfo const &FMI);
-static int      FilGetFilePath(char const *pszMode, char *pszFilePath, int iMaxPath);
-static int      FilAddFilter(char **ppszFilters, int &iNumFilters, char const *pszFilterName);
-static int      FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
-                                 FilterMsgInfo const &FMI, char **ppszFilters, int iMaxFilters);
-static void     FilFreeFilters(char **ppszFilters, int iNumFilters);
-static int      FilGetFilterPath(char const *pszFileName, char *pszFilePath, int iMaxPath);
-static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
-                               QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                               FilterMsgInfo const &FMI);
-static int      FilFilterMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool,
-                                          FilterMsgInfo const &FMI);
-
-
-
-
-
-
-
-static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI)
+static int FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo & FMI)
 {
 
-    UserInfo       *pUI;
-    char const     *const * ppszInfo = USmlGetInfo(hFSpool);
-    char const     *const * ppszFrom = USmlGetMailFrom(hFSpool);
-    char const     *const * ppszRcpt = USmlGetRcptTo(hFSpool);
-    char const     *pszSpoolFile = USmlGetSpoolFilePath(hFSpool);
-    int             iFromDomains = StrStringsCount(ppszFrom);
-    int             iRcptDomains = StrStringsCount(ppszRcpt);
-    char            szUser[MAX_ADDR_NAME] = "";
-    char            szDomain[MAX_ADDR_NAME] = "";
+	UserInfo *pUI;
+	char const *const *ppszInfo = USmlGetInfo(hFSpool);
+	char const *const *ppszFrom = USmlGetMailFrom(hFSpool);
+	char const *const *ppszRcpt = USmlGetRcptTo(hFSpool);
+	char const *pszSpoolFile = USmlGetSpoolFilePath(hFSpool);
+	int iFromDomains = StrStringsCount(ppszFrom);
+	int iRcptDomains = StrStringsCount(ppszRcpt);
+	char szUser[MAX_ADDR_NAME] = "";
+	char szDomain[MAX_ADDR_NAME] = "";
 
-    ZeroData(FMI);
+	ZeroData(FMI);
 
-    if ((iFromDomains > 0) &&
-        (USmtpSplitEmailAddr(ppszFrom[iFromDomains - 1], szUser, szDomain) == 0))
-    {
-        if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL)
-        {
-            UsrGetAddress(pUI, FMI.szSender);
+	if ((iFromDomains > 0) &&
+	    (USmtpSplitEmailAddr(ppszFrom[iFromDomains - 1], szUser, szDomain) == 0)) {
+		if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL) {
+			UsrGetAddress(pUI, FMI.szSender);
 
-            UsrFreeUserInfo(pUI);
-        }
-        else
-            StrSNCpy(FMI.szSender, ppszFrom[iFromDomains - 1]);
-    }
-    else
-        SetEmptyString(FMI.szSender);
+			UsrFreeUserInfo(pUI);
+		} else
+			StrSNCpy(FMI.szSender, ppszFrom[iFromDomains - 1]);
+	} else
+		SetEmptyString(FMI.szSender);
 
+	if ((iRcptDomains > 0) &&
+	    (USmtpSplitEmailAddr(ppszRcpt[iRcptDomains - 1], szUser, szDomain) == 0)) {
+		if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL) {
+			UsrGetAddress(pUI, FMI.szRecipient);
 
-    if ((iRcptDomains > 0) &&
-        (USmtpSplitEmailAddr(ppszRcpt[iRcptDomains - 1], szUser, szDomain) == 0))
-    {
-        if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL)
-        {
-            UsrGetAddress(pUI, FMI.szRecipient);
+			UsrFreeUserInfo(pUI);
+		} else
+			StrSNCpy(FMI.szRecipient, ppszRcpt[iRcptDomains - 1]);
+	} else
+		SetEmptyString(FMI.szRecipient);
 
-            UsrFreeUserInfo(pUI);
-        }
-        else
-            StrSNCpy(FMI.szRecipient, ppszRcpt[iRcptDomains - 1]);
-    }
-    else
-        SetEmptyString(FMI.szRecipient);
+	if ((MscGetServerAddress(ppszInfo[smiServerAddr], FMI.LocalAddr) < 0) ||
+	    (MscGetServerAddress(ppszInfo[smiClientAddr], FMI.RemoteAddr) < 0))
+		return (ErrGetErrorCode());
 
+	StrSNCpy(FMI.szSpoolFile, pszSpoolFile);
 
-    if ((MscGetServerAddress(ppszInfo[smiServerAddr], FMI.LocalAddr) < 0) ||
-        (MscGetServerAddress(ppszInfo[smiClientAddr], FMI.RemoteAddr) < 0))
-        return (ErrGetErrorCode());
-
-
-    StrSNCpy(FMI.szSpoolFile, pszSpoolFile);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-
-static void     FilFreeMsgInfo(FilterMsgInfo &FMI)
+static void FilFreeMsgInfo(FilterMsgInfo & FMI)
 {
-
-
 
 }
 
-
-
-
-static char    *FilGetFilterRejMessage(FilterMsgInfo const &FMI)
+char *FilGetFilterRejMessage(char const *pszSpoolFile)
 {
 
-    FILE           *pFile;
-    char            szRejFilePath[SYS_MAX_PATH] = "";
-    char            szRejMsg[512] = "";
+	FILE *pFile;
+	char szRejFilePath[SYS_MAX_PATH] = "";
+	char szRejMsg[512] = "";
 
-    SysSNPrintf(szRejFilePath, sizeof(szRejFilePath) - 1, "%s.rej", FMI.szSpoolFile);
-    if ((pFile = fopen(szRejFilePath, "rb")) == NULL)
-        return NULL;
+	SysSNPrintf(szRejFilePath, sizeof(szRejFilePath) - 1, "%s.rej", pszSpoolFile);
+	if ((pFile = fopen(szRejFilePath, "rb")) == NULL)
+		return NULL;
 
-    MscFGets(szRejMsg, sizeof(szRejMsg) - 1, pFile);
+	MscFGets(szRejMsg, sizeof(szRejMsg) - 1, pFile);
 
-    fclose(pFile);
-    SysRemove(szRejFilePath);
+	fclose(pFile);
+	SysRemove(szRejFilePath);
 
-    return (SysStrDup(szRejMsg));
+	return (SysStrDup(szRejMsg));
 
 }
 
-
-
-
-static int      FilGetFilePath(char const *pszMode, char *pszFilePath, int iMaxPath)
+static int FilGetFilePath(char const *pszMode, char *pszFilePath, int iMaxPath)
 {
 
-    char            szMailRootPath[SYS_MAX_PATH] = "";
+	char szMailRootPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szMailRootPath, sizeof(szMailRootPath));
+	CfgGetRootPath(szMailRootPath, sizeof(szMailRootPath));
 
-    SysSNPrintf(pszFilePath, iMaxPath - 1, "%sfilters.%s.tab", szMailRootPath, pszMode);
+	SysSNPrintf(pszFilePath, iMaxPath - 1, "%sfilters.%s.tab", szMailRootPath, pszMode);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-
-static int      FilAddFilter(char **ppszFilters, int &iNumFilters, char const *pszFilterName)
+static int FilAddFilter(char **ppszFilters, int &iNumFilters, char const *pszFilterName)
 {
 
-    for (int ii = 0; ii < iNumFilters; ii++)
-        if (strcmp(ppszFilters[ii], pszFilterName) == 0)
-            return (0);
+	for (int ii = 0; ii < iNumFilters; ii++)
+		if (strcmp(ppszFilters[ii], pszFilterName) == 0)
+			return (0);
 
-    if ((ppszFilters[iNumFilters] = SysStrDup(pszFilterName)) == NULL)
-        return (ErrGetErrorCode());
+	if ((ppszFilters[iNumFilters] = SysStrDup(pszFilterName)) == NULL)
+		return (ErrGetErrorCode());
 
-    iNumFilters++;
+	iNumFilters++;
 
-    return (0);
+	return (0);
 
 }
 
-
-
-
-static int      FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
-                                 FilterMsgInfo const &FMI, char **ppszFilters, int iMaxFilters)
+static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
+			    FilterMsgInfo const &FMI, char **ppszFilters, int iMaxFilters)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock the filter table file
 ///////////////////////////////////////////////////////////////////////////////
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilterFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(pszFilterFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Get local and remote IP addresses
 ///////////////////////////////////////////////////////////////////////////////
-    NET_ADDRESS     LocalAddr;
-    NET_ADDRESS     RemoteAddr;
+	NET_ADDRESS LocalAddr;
+	NET_ADDRESS RemoteAddr;
 
-    SysGetAddrAddress(FMI.LocalAddr, LocalAddr);
-    SysGetAddrAddress(FMI.RemoteAddr, RemoteAddr);
+	SysGetAddrAddress(FMI.LocalAddr, LocalAddr);
+	SysGetAddrAddress(FMI.RemoteAddr, RemoteAddr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Open the filter database. Fail smootly if the file does not exist
 ///////////////////////////////////////////////////////////////////////////////
-    FILE           *pFile = fopen(pszFilterFilePath, "rt");
+	FILE *pFile = fopen(pszFilterFilePath, "rt");
 
-    if (pFile == NULL)
-    {
-        RLckUnlockSH(hResLock);
-        return (0);
-    }
+	if (pFile == NULL) {
+		RLckUnlockSH(hResLock);
+		return (0);
+	}
 
-    int             iNumFilters = 0;
-    char            szLine[FILTER_DB_LINE_MAX] = "";
+	int iNumFilters = 0;
+	char szLine[FILTER_DB_LINE_MAX] = "";
 
-    while ((iNumFilters < iMaxFilters) &&
-           (MscGetConfigLine(szLine, sizeof(szLine) - 1, pFile) != NULL))
-    {
-        char          **ppszTokens = StrGetTabLineStrings(szLine);
+	while ((iNumFilters < iMaxFilters) &&
+	       (MscGetConfigLine(szLine, sizeof(szLine) - 1, pFile) != NULL)) {
+		char **ppszTokens = StrGetTabLineStrings(szLine);
 
-        if (ppszTokens == NULL)
-            continue;
+		if (ppszTokens == NULL)
+			continue;
 
-        int             iFieldsCount = StrStringsCount(ppszTokens);
+		int iFieldsCount = StrStringsCount(ppszTokens);
 
-        if ((iFieldsCount >= filMax) &&
-            StrIWildMatch(FMI.szSender, ppszTokens[filSender]) &&
-            StrIWildMatch(FMI.szRecipient, ppszTokens[filRecipient]))
-        {
-            AddressFilter   AFRemote;
-            AddressFilter   AFLocal;
+		if ((iFieldsCount >= filMax) &&
+		    StrIWildMatch(FMI.szSender, ppszTokens[filSender]) &&
+		    StrIWildMatch(FMI.szRecipient, ppszTokens[filRecipient])) {
+			AddressFilter AFRemote;
+			AddressFilter AFLocal;
 
-            if ((MscLoadAddressFilter(&ppszTokens[filRemoteAddr], 1, AFRemote) == 0) &&
-                MscAddressMatch(AFRemote, RemoteAddr) &&
-                (MscLoadAddressFilter(&ppszTokens[filLocalAddr], 1, AFLocal) == 0) &&
-                MscAddressMatch(AFLocal, LocalAddr))
-            {
+			if ((MscLoadAddressFilter(&ppszTokens[filRemoteAddr], 1, AFRemote) == 0)
+			    && MscAddressMatch(AFRemote, RemoteAddr) &&
+			    (MscLoadAddressFilter(&ppszTokens[filLocalAddr], 1, AFLocal) == 0) &&
+			    MscAddressMatch(AFLocal, LocalAddr)) {
 
-                FilAddFilter(ppszFilters, iNumFilters, ppszTokens[filFileName]);
+				FilAddFilter(ppszFilters, iNumFilters, ppszTokens[filFileName]);
 
-            }
-        }
+			}
+		}
 
-        StrFreeStrings(ppszTokens);
-    }
+		StrFreeStrings(ppszTokens);
+	}
 
-    fclose(pFile);
+	fclose(pFile);
 
-    RLckUnlockSH(hResLock);
+	RLckUnlockSH(hResLock);
 
-    return (iNumFilters);
+	return (iNumFilters);
 
 }
 
-
-
-
-static void     FilFreeFilters(char **ppszFilters, int iNumFilters)
+static void FilFreeFilters(char **ppszFilters, int iNumFilters)
 {
 
-    for (iNumFilters--; iNumFilters >= 0; iNumFilters--)
-        SysFree(ppszFilters[iNumFilters]);
+	for (iNumFilters--; iNumFilters >= 0; iNumFilters--)
+		SysFree(ppszFilters[iNumFilters]);
 
 }
 
-
-
-static int      FilGetFilterPath(char const *pszFileName, char *pszFilePath, int iMaxPath)
+static int FilGetFilterPath(char const *pszFileName, char *pszFilePath, int iMaxPath)
 {
 
-    char            szMailRootPath[SYS_MAX_PATH] = "";
+	char szMailRootPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szMailRootPath, sizeof(szMailRootPath));
+	CfgGetRootPath(szMailRootPath, sizeof(szMailRootPath));
 
-    SysSNPrintf(pszFilePath, iMaxPath - 1, "%s%s%s%s",
-                szMailRootPath, FILTER_STORAGE_DIR, SYS_SLASH_STR, pszFileName);
+	SysSNPrintf(pszFilePath, iMaxPath - 1, "%s%s%s%s",
+		    szMailRootPath, FILTER_STORAGE_DIR, SYS_SLASH_STR, pszFileName);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
-                               QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                               FilterMsgInfo const &FMI)
+static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
+			  QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FilterMsgInfo const &FMI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock the filter file
 ///////////////////////////////////////////////////////////////////////////////
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilterPath, szResLock,
-                                                          sizeof(szResLock)));
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(pszFilterPath, szResLock,
+							  sizeof(szResLock)));
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  This should not happen but if it happens we let the message pass through
 ///////////////////////////////////////////////////////////////////////////////
-    FILE           *pFiltFile = fopen(pszFilterPath, "rt");
+	FILE *pFiltFile = fopen(pszFilterPath, "rt");
 
-    if (pFiltFile == NULL)
-    {
-        RLckUnlockSH(hResLock);
-        return (0);
-    }
-
+	if (pFiltFile == NULL) {
+		RLckUnlockSH(hResLock);
+		return (0);
+	}
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter this message
 ///////////////////////////////////////////////////////////////////////////////
-    char            szFiltLine[FILTER_LINE_MAX] = "";
+	char szFiltLine[FILTER_LINE_MAX] = "";
 
-    while (MscGetConfigLine(szFiltLine, sizeof(szFiltLine) - 1, pFiltFile) != NULL)
-    {
-        char          **ppszCmdTokens = StrGetTabLineStrings(szFiltLine);
+	while (MscGetConfigLine(szFiltLine, sizeof(szFiltLine) - 1, pFiltFile) != NULL) {
+		char **ppszCmdTokens = StrGetTabLineStrings(szFiltLine);
 
-        if (ppszCmdTokens == NULL)
-            continue;
+		if (ppszCmdTokens == NULL)
+			continue;
 
-        int             iFieldsCount = StrStringsCount(ppszCmdTokens);
-        int             iExitFlags = 0;
+		int iFieldsCount = StrStringsCount(ppszCmdTokens);
+		int iExitFlags = 0;
 
-        if (iFieldsCount > 0)
-        {
+		if (iFieldsCount > 0) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Do filter line macro substitution
 ///////////////////////////////////////////////////////////////////////////////
-            FilFilterMacroSubstitutes(ppszCmdTokens, hFSpool, FMI);
+			FilFilterMacroSubstitutes(ppszCmdTokens, hFSpool, FMI);
 
+			int iExitCode = 0;
+			int iExecResult = SysExec(ppszCmdTokens[0], &ppszCmdTokens[0],
+						  iFilterTimeout, FILTER_PRIORITY, &iExitCode);
 
-            int             iExitCode = 0;
-            int             iExecResult = SysExec(ppszCmdTokens[0], &ppszCmdTokens[0],
-                                                  iFilterTimeout, FILTER_PRIORITY, &iExitCode);
-
-            if (iExecResult == 0)
-            {
-                SysLogMessage(LOG_LEV_MESSAGE,
-                              "Filter run: Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\" Retcode = %d\n",
-                              FMI.szSender, FMI.szRecipient, ppszCmdTokens[0], iExitCode);
+			if (iExecResult == 0) {
+				SysLogMessage(LOG_LEV_MESSAGE,
+					      "Filter run: Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\" Retcode = %d\n",
+					      FMI.szSender, FMI.szRecipient, ppszCmdTokens[0],
+					      iExitCode);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Separate code from flags
 ///////////////////////////////////////////////////////////////////////////////
-                iExitFlags = iExitCode & FILTER_FLAGS_MASK;
-                iExitCode &= ~FILTER_FLAGS_MASK;
+				iExitFlags = iExitCode & FILTER_FLAGS_MASK;
+				iExitCode &= ~FILTER_FLAGS_MASK;
 
-
-                if ((iExitCode == FILTER_OUT_EXITCODE) || (iExitCode == FILTER_OUT_NN_EXITCODE) ||
-                    (iExitCode == FILTER_OUT_NNF_EXITCODE))
-                {
-                    StrFreeStrings(ppszCmdTokens);
-                    fclose(pFiltFile);
-                    RLckUnlockSH(hResLock);
+				if ((iExitCode == FILTER_OUT_EXITCODE) ||
+				    (iExitCode == FILTER_OUT_NN_EXITCODE) ||
+				    (iExitCode == FILTER_OUT_NNF_EXITCODE)) {
+					StrFreeStrings(ppszCmdTokens);
+					fclose(pFiltFile);
+					RLckUnlockSH(hResLock);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter out message
 ///////////////////////////////////////////////////////////////////////////////
-                    char            *pszRejMsg = FilGetFilterRejMessage(FMI);
+					char *pszRejMsg = FilGetFilterRejMessage(FMI.szSpoolFile);
 
-                    if (iExitCode == FILTER_OUT_EXITCODE)
-                        QueUtNotifyPermErrDelivery(hQueue, hMessage, NULL,
-                                                   (pszRejMsg != NULL) ? pszRejMsg:
-                                                   ErrGetErrorString(ERR_FILTERED_MESSAGE),
-                                                   NULL, true);
-                    else if (iExitCode == FILTER_OUT_NN_EXITCODE)
-                        QueCleanupMessage(hQueue, hMessage, !QueUtRemoveSpoolErrors());
-                    else
-                        QueCleanupMessage(hQueue, hMessage, false);
+					if (iExitCode == FILTER_OUT_EXITCODE)
+						QueUtNotifyPermErrDelivery(hQueue, hMessage, NULL,
+									   (pszRejMsg !=
+									    NULL) ? pszRejMsg :
+									   ErrGetErrorString
+									   (ERR_FILTERED_MESSAGE),
+									   NULL, true);
+					else if (iExitCode == FILTER_OUT_NN_EXITCODE)
+						QueCleanupMessage(hQueue, hMessage,
+								  !QueUtRemoveSpoolErrors());
+					else
+						QueCleanupMessage(hQueue, hMessage, false);
 
-                    if (pszRejMsg != NULL)
-                        SysFree(pszRejMsg);
+					if (pszRejMsg != NULL)
+						SysFree(pszRejMsg);
 
-                    ErrSetErrorCode(ERR_FILTERED_MESSAGE);
-                    return (ERR_FILTERED_MESSAGE);
-                }
-                else if (iExitCode == FILTER_MODIFY_EXITCODE)
-                {
+					ErrSetErrorCode(ERR_FILTERED_MESSAGE);
+					return (ERR_FILTERED_MESSAGE);
+				} else if (iExitCode == FILTER_MODIFY_EXITCODE) {
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter modified the message, we need to reload the spool handle
 ///////////////////////////////////////////////////////////////////////////////
-                    if (USmlReloadHandle(hFSpool) < 0)
-                    {
-                        ErrorPush();
-                        StrFreeStrings(ppszCmdTokens);
-                        fclose(pFiltFile);
-                        RLckUnlockSH(hResLock);
+					if (USmlReloadHandle(hFSpool) < 0) {
+						ErrorPush();
+						StrFreeStrings(ppszCmdTokens);
+						fclose(pFiltFile);
+						RLckUnlockSH(hResLock);
 
-                        SysLogMessage(LOG_LEV_MESSAGE,
-                                      "Filter error [ Modified message corrupted ]: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
-                                      FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
+						SysLogMessage(LOG_LEV_MESSAGE,
+							      "Filter error [ Modified message corrupted ]: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
+							      FMI.szSender, FMI.szRecipient,
+							      ppszCmdTokens[0]);
 
-                        QueUtErrLogMessage(hQueue, hMessage,
-                                           "Filter error [ Modified message corrupted ]: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
-                                           FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
+						QueUtErrLogMessage(hQueue, hMessage,
+								   "Filter error [ Modified message corrupted ]: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
+								   FMI.szSender, FMI.szRecipient,
+								   ppszCmdTokens[0]);
 
-                        QueCleanupMessage(hQueue, hMessage, true);
+						QueCleanupMessage(hQueue, hMessage, true);
 
-                        return (ErrorPop());
-                    }
-                }
-            }
-            else
-            {
-                SysLogMessage(LOG_LEV_ERROR,
-                              "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
-                              iExecResult, FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
+						return (ErrorPop());
+					}
+				}
+			} else {
+				SysLogMessage(LOG_LEV_ERROR,
+					      "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
+					      iExecResult, FMI.szSender, FMI.szRecipient,
+					      ppszCmdTokens[0]);
 
-                QueUtErrLogMessage(hQueue, hMessage,
-                                   "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
-                                   iExecResult, FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
-            }
-        }
+				QueUtErrLogMessage(hQueue, hMessage,
+						   "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
+						   iExecResult, FMI.szSender, FMI.szRecipient,
+						   ppszCmdTokens[0]);
+			}
+		}
 
-        StrFreeStrings(ppszCmdTokens);
+		StrFreeStrings(ppszCmdTokens);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter list processing break required ?
 ///////////////////////////////////////////////////////////////////////////////
-        if (iExitFlags & FILTER_FLAGS_BREAK)
-        {
-            fclose(pFiltFile);
-            RLckUnlockSH(hResLock);
-            return (1);
-        }
-    }
+		if (iExitFlags & FILTER_FLAGS_BREAK) {
+			fclose(pFiltFile);
+			RLckUnlockSH(hResLock);
+			return (1);
+		}
+	}
 
-    fclose(pFiltFile);
-    RLckUnlockSH(hResLock);
+	fclose(pFiltFile);
+	RLckUnlockSH(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
-                                 QMSG_HANDLE hMessage, char const *pszMode)
+int FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
+		     QMSG_HANDLE hMessage, char const *pszMode)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get filter file path and returns immediately if no file is defined
 ///////////////////////////////////////////////////////////////////////////////
-    char            szFilterFilePath[SYS_MAX_PATH] = "";
+	char szFilterFilePath[SYS_MAX_PATH] = "";
 
-    FilGetFilePath(pszMode, szFilterFilePath, sizeof(szFilterFilePath));
+	FilGetFilePath(pszMode, szFilterFilePath, sizeof(szFilterFilePath));
 
-    if (!SysExistFile(szFilterFilePath))
-        return (0);
+	if (!SysExistFile(szFilterFilePath))
+		return (0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load the message info
 ///////////////////////////////////////////////////////////////////////////////
-    FilterMsgInfo   FMI;
+	FilterMsgInfo FMI;
 
-    if (FilLoadMsgInfo(hFSpool, FMI) < 0)
-        return (ErrGetErrorCode());
+	if (FilLoadMsgInfo(hFSpool, FMI) < 0)
+		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Select applicable filters
 ///////////////////////////////////////////////////////////////////////////////
-    int             iNumFilters;
-    char           *pszFilters[FILTER_SELECT_MAX];
+	int iNumFilters;
+	char *pszFilters[FILTER_SELECT_MAX];
 
-    if ((iNumFilters = FilSelectFilters(szFilterFilePath, pszMode, FMI, pszFilters,
-                                        CountOf(pszFilters))) < 0)
-    {
-        ErrorPush();
-        FilFreeMsgInfo(FMI);
-        return (ErrorPop());
-    }
-
+	if ((iNumFilters = FilSelectFilters(szFilterFilePath, pszMode, FMI, pszFilters,
+					    CountOf(pszFilters))) < 0) {
+		ErrorPush();
+		FilFreeMsgInfo(FMI);
+		return (ErrorPop());
+	}
 ///////////////////////////////////////////////////////////////////////////////
 //  Sequentially apply each selected filter
 ///////////////////////////////////////////////////////////////////////////////
-    for (int ii = 0; ii < iNumFilters; ii++)
-    {
-        int             iFilterResult;
-        char            szFilterPath[SYS_MAX_PATH] = "";
+	for (int ii = 0; ii < iNumFilters; ii++) {
+		int iFilterResult;
+		char szFilterPath[SYS_MAX_PATH] = "";
 
-        FilGetFilterPath(pszFilters[ii], szFilterPath, sizeof(szFilterPath));
+		FilGetFilterPath(pszFilters[ii], szFilterPath, sizeof(szFilterPath));
 
-        if ((iFilterResult = FilApplyFilter(szFilterPath, hFSpool, hQueue, hMessage, FMI)) < 0)
-        {
-            ErrorPush();
-            FilFreeFilters(pszFilters, iNumFilters);
-            FilFreeMsgInfo(FMI);
-            return (ErrorPop());
-        }
-
+		if ((iFilterResult =
+		     FilApplyFilter(szFilterPath, hFSpool, hQueue, hMessage, FMI)) < 0) {
+			ErrorPush();
+			FilFreeFilters(pszFilters, iNumFilters);
+			FilFreeMsgInfo(FMI);
+			return (ErrorPop());
+		}
 ///////////////////////////////////////////////////////////////////////////////
 //  A return code greater than zero means exit filter processing loop soon
 ///////////////////////////////////////////////////////////////////////////////
-        if (iFilterResult > 0)
-            break;
-    }
+		if (iFilterResult > 0)
+			break;
+	}
 
-    FilFreeFilters(pszFilters, iNumFilters);
-    FilFreeMsgInfo(FMI);
+	FilFreeFilters(pszFilters, iNumFilters);
+	FilFreeMsgInfo(FMI);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      FilFilterMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool,
-                                          FilterMsgInfo const &FMI)
+static int FilFilterMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool,
+				     FilterMsgInfo const &FMI)
 {
 
-    char const     *const * ppszInfo = USmlGetInfo(hFSpool);
-    char const     *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
-    char const     *const * ppszFrom = USmlGetMailFrom(hFSpool);
-    char const     *const * ppszRcpt = USmlGetRcptTo(hFSpool);
-    char const     *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
-    char const     *pszMessageID = USmlGetSpoolFile(hFSpool);
-    int             iFromDomains = StrStringsCount(ppszFrom);
-    int             iRcptDomains = StrStringsCount(ppszRcpt);
-    FileSection     FS;
+	char const *const *ppszInfo = USmlGetInfo(hFSpool);
+	char const *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
+	char const *const *ppszFrom = USmlGetMailFrom(hFSpool);
+	char const *const *ppszRcpt = USmlGetRcptTo(hFSpool);
+	char const *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
+	char const *pszMessageID = USmlGetSpoolFile(hFSpool);
+	int iFromDomains = StrStringsCount(ppszFrom);
+	int iRcptDomains = StrStringsCount(ppszRcpt);
+	FileSection FS;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  This function retrieve the spool file message section and sync the content.
 //  This is necessary before passing the file name to external programs
 ///////////////////////////////////////////////////////////////////////////////
-    if (USmlGetMsgFileSection(hFSpool, FS) < 0)
-        return (ErrGetErrorCode());
+	if (USmlGetMsgFileSection(hFSpool, FS) < 0)
+		return (ErrGetErrorCode());
 
-    for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++)
-    {
-        if (strcmp(ppszCmdTokens[ii], "@@FROM") == 0)
-        {
-            char           *pszNewValue = SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
+	for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++) {
+		if (strcmp(ppszCmdTokens[ii], "@@FROM") == 0) {
+			char *pszNewValue =
+			    SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@RCPT") == 0)
-        {
-            char           *pszNewValue = SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@RCPT") == 0) {
+			char *pszNewValue =
+			    SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@RFROM") == 0)
-        {
-            char           *pszNewValue = SysStrDup(FMI.szSender);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@RFROM") == 0) {
+			char *pszNewValue = SysStrDup(FMI.szSender);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@RRCPT") == 0)
-        {
-            char           *pszNewValue = SysStrDup(FMI.szRecipient);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@RRCPT") == 0) {
+			char *pszNewValue = SysStrDup(FMI.szRecipient);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@FILE") == 0)
-        {
-            char           *pszNewValue = SysStrDup(FS.szFilePath);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@FILE") == 0) {
+			char *pszNewValue = SysStrDup(FS.szFilePath);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@MSGID") == 0)
-        {
-            char           *pszNewValue = SysStrDup(pszMessageID);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@MSGID") == 0) {
+			char *pszNewValue = SysStrDup(pszMessageID);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@MSGREF") == 0)
-        {
-            char           *pszNewValue = SysStrDup(pszSmtpMessageID);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@MSGREF") == 0) {
+			char *pszNewValue = SysStrDup(pszSmtpMessageID);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@LOCALADDR") == 0)
-        {
-            char           *pszNewValue = SysStrDup(ppszInfo[smiServerAddr]);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@LOCALADDR") == 0) {
+			char *pszNewValue = SysStrDup(ppszInfo[smiServerAddr]);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@REMOTEADDR") == 0)
-        {
-            char           *pszNewValue = SysStrDup(ppszInfo[smiClientAddr]);
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@REMOTEADDR") == 0) {
+			char *pszNewValue = SysStrDup(ppszInfo[smiClientAddr]);
 
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
 
-            SysFree(ppszCmdTokens[ii]);
+			SysFree(ppszCmdTokens[ii]);
 
-            ppszCmdTokens[ii] = pszNewValue;
-        }
+			ppszCmdTokens[ii] = pszNewValue;
+		}
 
-    }
+	}
 
-    return (0);
+	return (0);
 
 }
-

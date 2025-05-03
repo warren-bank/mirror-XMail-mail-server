@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,8 @@
  *
  */
 
-
 #ifndef _SMTPSVR_H
 #define _SMTPSVR_H
-
-
 
 #define STD_SMTP_PORT               25
 #define MAX_SMTP_ACCEPT_ADDRESSES   32
@@ -32,31 +29,20 @@
 #define SMTPF_STOP_SERVER           (1 << 0)
 #define SMTPF_LOG_ENABLED           (1 << 1)
 
-
-
-
-struct SMTPConfig
-{
-    int             iPort;
-    unsigned long   ulFlags;
-    long            lThreadCount;
-    long            lMaxThreads;
-    int             iSessionTimeout;
-    int             iTimeout;
-    int             iMaxRcpts;
-    unsigned int    uPopAuthExpireTime;
-    int             iNumAddr;
-    SYS_INET_ADDR   SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
+struct SMTPConfig {
+	int iPort;
+	unsigned long ulFlags;
+	long lThreadCount;
+	long lMaxThreads;
+	int iSessionTimeout;
+	int iTimeout;
+	int iMaxRcpts;
+	unsigned int uPopAuthExpireTime;
+	int iNumAddr;
+	SYS_INET_ADDR SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
 
 };
 
-
-
-
-
-unsigned int    SMTPThreadProc(void *pThreadData);
-
-
-
+unsigned int SMTPThreadProc(void *pThreadData);
 
 #endif

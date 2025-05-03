@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,195 +20,160 @@
  *
  */
 
-
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
 #include "SList.h"
 
-
-
-
-void            ListInit(HSLIST & hList)
+void ListInit(HSLIST & hList)
 {
 
-    hList = INVALID_SLIST_PTR;
+	hList = INVALID_SLIST_PTR;
 
 }
 
-
-
-void            ListAddHead(HSLIST & hList, PLISTLINK pLLink)
+void ListAddHead(HSLIST & hList, PLISTLINK pLLink)
 {
 
-    pLLink->pNext = hList;
-    hList = pLLink;
+	pLLink->pNext = hList;
+	hList = pLLink;
 
 }
 
-
-
-void            ListAddTail(HSLIST & hList, PLISTLINK pLLink)
+void ListAddTail(HSLIST & hList, PLISTLINK pLLink)
 {
 
-    PLISTLINK       lpPrev = INVALID_SLIST_PTR,
-                    lpCurr = hList;
+	PLISTLINK lpPrev = INVALID_SLIST_PTR, lpCurr = hList;
 
-    while (lpCurr != INVALID_SLIST_PTR)
-    {
-        lpPrev = lpCurr;
-        lpCurr = lpCurr->pNext;
-    }
+	while (lpCurr != INVALID_SLIST_PTR) {
+		lpPrev = lpCurr;
+		lpCurr = lpCurr->pNext;
+	}
 
-    pLLink->pNext = INVALID_SLIST_PTR;
+	pLLink->pNext = INVALID_SLIST_PTR;
 
-    if (lpPrev == INVALID_SLIST_PTR)
-        hList = pLLink;
-    else
-        lpPrev->pNext = pLLink;
+	if (lpPrev == INVALID_SLIST_PTR)
+		hList = pLLink;
+	else
+		lpPrev->pNext = pLLink;
 
 }
 
-
-
-PLISTLINK       ListFirst(HSLIST & hList)
+PLISTLINK ListFirst(HSLIST & hList)
 {
 
-    return (hList);
+	return (hList);
 
 }
 
-
-
-PLISTLINK       ListNext(HSLIST & hList, PLISTLINK pLLink)
+PLISTLINK ListNext(HSLIST & hList, PLISTLINK pLLink)
 {
 
-    return (pLLink->pNext);
+	return (pLLink->pNext);
 
 }
 
-
-
-PLISTLINK       ListRemovePtr(HSLIST & hList, PLISTLINK pLLink)
+PLISTLINK ListRemovePtr(HSLIST & hList, PLISTLINK pLLink)
 {
 
-    PLISTLINK       lpPrev = INVALID_SLIST_PTR,
-                    lpCurr = hList;
+	PLISTLINK lpPrev = INVALID_SLIST_PTR, lpCurr = hList;
 
-    while (lpCurr != INVALID_SLIST_PTR)
-    {
-        if (lpCurr == pLLink)
-            break;
-        lpPrev = lpCurr;
-        lpCurr = lpCurr->pNext;
-    }
+	while (lpCurr != INVALID_SLIST_PTR) {
+		if (lpCurr == pLLink)
+			break;
+		lpPrev = lpCurr;
+		lpCurr = lpCurr->pNext;
+	}
 
-    if (lpCurr == INVALID_SLIST_PTR)
-        return (INVALID_SLIST_PTR);
+	if (lpCurr == INVALID_SLIST_PTR)
+		return (INVALID_SLIST_PTR);
 
-    if (lpPrev == INVALID_SLIST_PTR)
-        hList = lpCurr->pNext;
-    else
-        lpPrev->pNext = lpCurr->pNext;
+	if (lpPrev == INVALID_SLIST_PTR)
+		hList = lpCurr->pNext;
+	else
+		lpPrev->pNext = lpCurr->pNext;
 
-    lpCurr->pNext = INVALID_SLIST_PTR;
+	lpCurr->pNext = INVALID_SLIST_PTR;
 
-    return (lpCurr);
+	return (lpCurr);
 
 }
 
-
-
-PLISTLINK       ListRemove(HSLIST & hList)
+PLISTLINK ListRemove(HSLIST & hList)
 {
 
-    PLISTLINK       lpCurr = hList;
+	PLISTLINK lpCurr = hList;
 
-    if (lpCurr != INVALID_SLIST_PTR)
-        hList = lpCurr->pNext, lpCurr->pNext = INVALID_SLIST_PTR;
+	if (lpCurr != INVALID_SLIST_PTR)
+		hList = lpCurr->pNext, lpCurr->pNext = INVALID_SLIST_PTR;
 
-    return (lpCurr);
+	return (lpCurr);
 
 }
 
-
-
-void            ListPurgeFree(HSLIST & hList)
+void ListPurgeFree(HSLIST & hList)
 {
 
-    PLISTLINK       lpCurr;
+	PLISTLINK lpCurr;
 
-    while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR)
-        SysFree(lpCurr);
+	while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR)
+		SysFree(lpCurr);
 
 }
 
-
-
-void            ListPurge(HSLIST & hList)
+void ListPurge(HSLIST & hList)
 {
 
-    PLISTLINK       lpCurr;
+	PLISTLINK lpCurr;
 
-    while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR)
-        ;
+	while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR);
 
 }
 
-
-
-bool            ListIsEmpty(HSLIST & hList)
+bool ListIsEmpty(HSLIST & hList)
 {
 
-    return (hList == INVALID_SLIST_PTR);
+	return (hList == INVALID_SLIST_PTR);
 
 }
 
-
-
-int             ListGetCount(HSLIST & hList)
+int ListGetCount(HSLIST & hList)
 {
 
-    int             iListCount;
-    PLISTLINK       lpCurr = ListFirst(hList);
+	int iListCount;
+	PLISTLINK lpCurr = ListFirst(hList);
 
-    for (iListCount = 0; lpCurr != INVALID_SLIST_PTR;
-            lpCurr = ListNext(hList, lpCurr), iListCount++);
+	for (iListCount = 0; lpCurr != INVALID_SLIST_PTR;
+	     lpCurr = ListNext(hList, lpCurr), iListCount++);
 
-    return (iListCount);
+	return (iListCount);
 
 }
 
-
-
-PLISTLINK      *ListGetPointers(HSLIST & hList, int &iListCount)
+PLISTLINK *ListGetPointers(HSLIST & hList, int &iListCount)
 {
 
-    iListCount = ListGetCount(hList);
+	iListCount = ListGetCount(hList);
 
-    PLISTLINK      *pPointers = (PLISTLINK *) SysAlloc((iListCount + 1) * sizeof(PLISTLINK));
+	PLISTLINK *pPointers = (PLISTLINK *) SysAlloc((iListCount + 1) * sizeof(PLISTLINK));
 
-    if (pPointers != NULL)
-    {
-        int             ii;
-        PLISTLINK       lpCurr = ListFirst(hList);
+	if (pPointers != NULL) {
+		int ii;
+		PLISTLINK lpCurr = ListFirst(hList);
 
-        for (ii = 0; lpCurr != INVALID_SLIST_PTR;
-                lpCurr = ListNext(hList, lpCurr), ii++)
-            pPointers[ii] = lpCurr;
+		for (ii = 0; lpCurr != INVALID_SLIST_PTR; lpCurr = ListNext(hList, lpCurr), ii++)
+			pPointers[ii] = lpCurr;
 
-        pPointers[ii] = INVALID_SLIST_PTR;
-    }
+		pPointers[ii] = INVALID_SLIST_PTR;
+	}
 
-    return (pPointers);
+	return (pPointers);
 
 }
 
-
-
-void            ListReleasePointers(PLISTLINK * pPointers)
+void ListReleasePointers(PLISTLINK * pPointers)
 {
 
-    SysFree(pPointers);
+	SysFree(pPointers);
 
 }

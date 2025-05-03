@@ -1,11 +1,65 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.18
+XMail Change Log as of Version 1.19
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
+
+=head2 Mar 31, 2004 v 1.19
+
+=over 4
+
+=item *
+
+Implemented the "filter" command for custom mail processing (MAILPROC.TAB, cmdaliases
+and custom domains).
+
+=item *
+
+If "RemoveSpoolErrors" is set inside the SERVER.TAB file, messages are never frozen.
+Before there was a special case (delivery failure and delivery notification failure)
+that could have lead to frozen messages.
+
+=item *
+
+Made "aliasdomainadd" to check for the existence of the alias domain (and reject
+the command if existing).
+
+=item *
+
+Introduced a new environment variable recognized by XMail (XMAIL_PID_DIR), to let
+the user to specify a custom PID file directory (this is for Unix ports only).
+
+=item *
+
+Implemented ability to stop custom mail processing upon certain exit codes from
+external commands execution.
+
+=item *
+
+The SPAMMERS.TAB check is now bypassable (see doc for details).
+
+=item *
+
+'B<ATTENTION>': Changed the "aliasdomainlist" syntax and output format (see doc for details).
+
+=item *
+
+Made (on Unix setups) the PID file name to be dependent on the daemon file name.
+
+=item *
+
+Implemeted a domain-wise MAILPROC.TAB and extended its "redirect" and "lredirect"
+commands to support account specific (USER@DOMAIN) and domain targets (DOMAIN).
+
+=item *
+
+Implemented SMTP filters to allow users to reject the SMTP session before and
+after the remote client data has been received.
+
+=back
 
 =head2 Mar 27, 2004 v 1.18
 

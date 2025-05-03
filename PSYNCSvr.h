@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,35 +20,21 @@
  *
  */
 
-
 #ifndef _PSYNCSVR_H
 #define _PSYNCSVR_H
-
-
 
 #define PSYNCF_STOP_SERVER          (1 << 0)
 #define PSYNCF_LOG_ENABLED          (1 << 1)
 
-
-
-struct PSYNCConfig
-{
-    unsigned long   ulFlags;
-    long            lThreadCount;
-    int             iTimeout;
-    int             iSyncInterval;
-    int             iNumSyncThreads;
+struct PSYNCConfig {
+	unsigned long ulFlags;
+	long lThreadCount;
+	int iTimeout;
+	int iSyncInterval;
+	int iNumSyncThreads;
 
 };
 
-
-
-
-
-unsigned int    PSYNCThreadProc(void *pThreadData);
-
-
-
-
+unsigned int PSYNCThreadProc(void *pThreadData);
 
 #endif

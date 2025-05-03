@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,37 +20,32 @@
  *
  */
 
-
 #ifndef _FILTER_H
 #define _FILTER_H
 
+#define FILTER_MODE_INBOUND         "in"
+#define FILTER_MODE_OUTBOUND        "out"
 
+#define FILTER_PRIORITY             SYS_PRIORITY_NORMAL
+#define FILTER_OUT_NNF_EXITCODE     4
+#define FILTER_OUT_NN_EXITCODE      5
+#define FILTER_OUT_EXITCODE         6
+#define FILTER_MODIFY_EXITCODE      7
+#define FILTER_FLAGS_BREAK          (1 << 4)
+#define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
-#define FILTER_MODE_INBOUND     "in"
-#define FILTER_MODE_OUTBOUND    "out"
+enum FilterFields {
+	filSender = 0,
+	filRecipient,
+	filRemoteAddr,
+	filLocalAddr,
+	filFileName,
 
-
-
-
-enum FilterFields
-{
-    filSender = 0,
-    filRecipient,
-    filRemoteAddr,
-    filLocalAddr,
-    filFileName,
-
-    filMax
+	filMax
 };
 
-
-
-
-int             FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
-                                 QMSG_HANDLE hMessage, char const *pszMode);
-
-
-
+char *FilGetFilterRejMessage(char const *pszSpoolFile);
+int FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
+		     QMSG_HANDLE hMessage, char const *pszMode);
 
 #endif
-

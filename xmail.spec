@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.18
+Version: 1.19
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -38,11 +38,11 @@ mkdir -p $RPM_BUILD_ROOT/var/MailRoot/docs
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
 cp -R MailRoot $RPM_BUILD_ROOT/var/MailRoot.sample
 
-install -m 755 XMail $RPM_BUILD_ROOT/var/MailRoot/bin/XMail
-install -m 755 XMCrypt $RPM_BUILD_ROOT/var/MailRoot/bin/XMCrypt
-install -m 755 CtrlClnt $RPM_BUILD_ROOT/var/MailRoot/bin/CtrlClnt
-install -m 755 MkUsers $RPM_BUILD_ROOT/var/MailRoot/bin/MkUsers
-install -m 4755 sendmail $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail
+install -m 755 bin/XMail $RPM_BUILD_ROOT/var/MailRoot/bin/XMail
+install -m 755 bin/XMCrypt $RPM_BUILD_ROOT/var/MailRoot/bin/XMCrypt
+install -m 755 bin/CtrlClnt $RPM_BUILD_ROOT/var/MailRoot/bin/CtrlClnt
+install -m 755 bin/MkUsers $RPM_BUILD_ROOT/var/MailRoot/bin/MkUsers
+install -m 4755 bin/sendmail $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail
 install -m 755 sendmail.sh $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail.sh
 
 install -m 644 docs/Readme.txt $RPM_BUILD_ROOT/var/MailRoot/docs/Readme.txt
@@ -133,6 +133,26 @@ fi
 
 
 %changelog
+
+* Sat May 29 2004 Davide Libenzi <davidel@xmailserver.org>
+    Implemented the "filter" command for custom mail processing (MAILPROC.TAB, cmdaliases
+    and custom domains).
+    If "RemoveSpoolErrors" is set inside the SERVER.TAB file, messages are never frozen.
+    Before there was a special case (delivery failure and delivery notification failure)
+    that could have lead to frozen messages.
+    Made "aliasdomainadd" to check for the existence of the alias domain (and reject
+    the command if existing).
+    Introduced a new environment variable recognized by XMail (XMAIL_PID_DIR), to let
+    the user to specify a custom PID file directory (this is for Unix ports only).
+    Implemented ability to stop custom mail processing upon certain exit codes from
+    external commands execution.
+    The SPAMMERS.TAB check is now bypassable (see doc for details).
+    ATTENTION: Changed the "aliasdomainlist" syntax and output format (see doc for details).
+    Made (on Unix setups) the PID file name to be dependent on the daemon file name.
+    Implemeted a domain-wise MAILPROC.TAB and extended its "redirect" and "lredirect"
+    commands to support account specific (USER@DOMAIN) and domain targets (DOMAIN).
+    Implemented SMTP filters to allow users to reject the SMTP session before and
+    after the remote client data has been received.
 
 * Sat Mar 27 2004 Davide Libenzi <davidel@xmailserver.org>
     Restructured the external program execution environment on Unix ports. Simplified,
@@ -352,6 +372,7 @@ fi
     Fixed a bug in the XMail's  sendmail  implementation that made it to skip cascaded command line
     parameters ( -Ooet ).
     Implemented a new XMail's  sendmail  switch -i to relax the <CR><LF>.<CR><LF> ond of message indicator.
+
 * Tue Oct 10 2001 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug in the XMail version of  sendmail  that made messages to be double sent.
     The macro @@TMPFILE has been removed from filters coz it's useless.
@@ -362,6 +383,7 @@ fi
     ************************************************************************************************	
     Added CTRL commands "aliasdomainadd", "aliasdomaindel" and "aliasdomainlist" to handle domain aliases
     through the CTRL protocol.
+
 * Tue Sep 4 2001 Davide Libenzi <davidel@xmailserver.org>
     Added wildcard matching in the domain part of ALIASES.TAB ( see ALIASES.TAB section ).
     Changed the PSYNC scheduling behaviour to allow sync interval equal to zero ( disabled ) and
@@ -369,6 +391,7 @@ fi
     Solaris on Intel support added.
     A new filter return code ( 98 ) has been added to give the ability to reject message without notify the sender.
     It's finally time, after about 70 releases, to go 1.0 !!
+
 * Mon Jul 2 2001 Davide Libenzi <davidel@xmailserver.org>
     A stack shifting call method has been implemented to make virtually impossible for attackers
     to guess the stack frame pointer.
@@ -382,17 +405,20 @@ fi
     A new SERVER.TAB variable has been added  "CustMapsList"  to enable the user to enter custom maps checking
     ( look at the section "SERVER.TAB variables" ).
     Fixed a bug in "frozdel" CTRL command.
+
 * Sun Jun 10 2001 Davide Libenzi <davidel@xmailserver.org>
+
 * Fri Jun 8 2001 Davide Libenzi <davidel@xmailserver.org>
     Fixed a possible buffer overflow bug inside the DNS resolver.
+
 * Tue May 29 2001 Davide Libenzi <davidel@xmailserver.org>
-	Fixed build errors in MkUsers.cpp and SendMail.cpp ( FreeBSD version ).
-	Added the ability to specify a list of matching domains when using PSYNC with
-	masquerading domains ( see POP3LINKS.TAB section ).
-	The auxiliary program  sendmail  now read the MAIL_ROOT environment from
-	registry ( Win32 version ) and if it fails it reads from the environment.
-	Fixed a bug that made XMail to crash if the first line of ALIASES.TAB was empty.
-	RPM packaging added.
+    Fixed build errors in MkUsers.cpp and SendMail.cpp ( FreeBSD version ).
+    Added the ability to specify a list of matching domains when using PSYNC with
+    masquerading domains ( see POP3LINKS.TAB section ).
+    The auxiliary program  sendmail  now read the MAIL_ROOT environment from
+    registry ( Win32 version ) and if it fails it reads from the environment.
+    Fixed a bug that made XMail to crash if the first line of ALIASES.TAB was empty.
+    RPM packaging added.
     Added a new feature to the custom domain commands "redirect" and "lredirect"
     that will accept email addresses as redirection target.
     Fixed a bug in MkUsers.

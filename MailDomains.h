@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,45 +20,26 @@
  *
  */
 
-
 #ifndef _MAILDOMAINS_H
 #define _MAILDOMAINS_H
 
-
-
-
-
 #define INVALID_DOMLS_HANDLE            ((DOMLS_HANDLE) 0)
 
+typedef struct DOMLS_HANDLE_struct {
+} *DOMLS_HANDLE;
 
-
-
-typedef struct DOMLS_HANDLE_struct
-{
-}              *DOMLS_HANDLE;
-
-
-
-
-
-
-int             MDomCheckDomainsIndexes(void);
-char           *MDomGetDomainPath(char const * pszDomain, char *pszDomainPath, int iMaxPath,
-                                  int iFinalSlash);
-int             MDomLookupDomain(char const * pszDomain);
-int             MDomAddDomain(char const * pszDomain);
-int             MDomRemoveDomain(char const * pszDomain);
-int             MDomGetDomainsFileSnapShot(const char *pszFileName);
-DOMLS_HANDLE    MDomOpenDB(void);
-void            MDomCloseDB(DOMLS_HANDLE hDomainsDB);
-char const     *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB);
-char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB);
-int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain,
-                                    int iMaxDomain);
-int             MDomIsHandledDomain(char const * pszDomain);
-
-
-
-
+int MDomCheckDomainsIndexes(void);
+char *MDomGetDomainPath(char const *pszDomain, char *pszDomainPath, int iMaxPath,
+			int iFinalSlash);
+int MDomLookupDomain(char const *pszDomain);
+int MDomAddDomain(char const *pszDomain);
+int MDomRemoveDomain(char const *pszDomain);
+int MDomGetDomainsFileSnapShot(const char *pszFileName);
+DOMLS_HANDLE MDomOpenDB(void);
+void MDomCloseDB(DOMLS_HANDLE hDomainsDB);
+char const *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB);
+char const *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB);
+int MDomGetClientDomain(char const *pszFQDN, char *pszClientDomain, int iMaxDomain);
+int MDomIsHandledDomain(char const *pszDomain);
 
 #endif

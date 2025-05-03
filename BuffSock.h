@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,39 +20,27 @@
  *
  */
 
-
 #ifndef _BUFFSOCK_H
 #define _BUFFSOCK_H
-
 
 #define STD_SOCK_BUFFER_SIZE        4096
 
 #define INVALID_BSOCK_HANDLE        ((BSOCK_HANDLE) 0)
 
+typedef struct BSOCK_HANDLE_struct {
+} *BSOCK_HANDLE;
 
-
-typedef struct BSOCK_HANDLE_struct
-{
-}              *BSOCK_HANDLE;
-
-
-
-
-BSOCK_HANDLE    BSckAttach(SYS_SOCKET SockFD, int iBufferSize = STD_SOCK_BUFFER_SIZE);
-SYS_SOCKET      BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket = 0);
-int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout);
-char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                                int *pLineLength = NULL, int *piGotNL = NULL);
-char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                              int *pLineLength = NULL, int *piGotNL = NULL);
-int             BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout);
-int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat,...);
-int             BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout);
-int             BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout);
-SYS_SOCKET      BSckGetAttachedSocket(BSOCK_HANDLE hBSock);
-
-
-
+BSOCK_HANDLE BSckAttach(SYS_SOCKET SockFD, int iBufferSize = STD_SOCK_BUFFER_SIZE);
+SYS_SOCKET BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket = 0);
+int BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout);
+char *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+		      int *pLineLength = NULL, int *piGotNL = NULL);
+char *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+		    int *pLineLength = NULL, int *piGotNL = NULL);
+int BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout);
+int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ...);
+int BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout);
+int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout);
+SYS_SOCKET BSckGetAttachedSocket(BSOCK_HANDLE hBSock);
 
 #endif
-

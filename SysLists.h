@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,8 @@
  *
  */
 
-
 #ifndef _SYSLISTS_H
 #define _SYSLISTS_H
-
-
 
 #define SYS_LIST_HEAD_INIT(name)        { &(name), &(name) }
 
@@ -100,16 +97,9 @@ do { \
     if ((srch)->pPrev != NULL) (srch)->pPrev->pNext = dsth; \
 } while (0)
 
-
-
-struct SysListHead
-{
-    struct SysListHead *    pNext;
-    struct SysListHead *    pPrev;
+struct SysListHead {
+	struct SysListHead *pNext;
+	struct SysListHead *pPrev;
 };
-
-
-
-
 
 #endif

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,20 +20,13 @@
  *
  */
 
-
 #ifndef _SVRDEFINES_H
 #define _SVRDEFINES_H
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Include configuration options
 ///////////////////////////////////////////////////////////////////////////////
 #include "SvrConfig.h"
-
-
-
-
 
 #define TAB_COMMENT_CHAR            '#'
 #define MAX_SMTP_ADDRESS            1024
@@ -44,8 +37,5 @@
 #define LOG_ROTATE_HOURS            24
 #define STD_SERVER_TIMEOUT          90
 #define LOCAL_ADDRESS               "127.0.0.1"
-
-
-
 
 #endif

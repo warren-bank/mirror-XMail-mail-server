@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,13 +20,8 @@
  *
  */
 
-
 #ifndef _SYSMACROS_H
 #define _SYSMACROS_H
-
-
-
-
 
 #define SRand()                 srand((unsigned int) (SysMsTime() * SysGetCurrentThreadId()))
 #define NbrCeil(n, a)           ((((n) + (a) - 1) / (a)) * (a))
@@ -61,124 +56,101 @@
 #define IsDotFilename(f)        ((f)[0] == '.')
 #define IsEmailAddress(a)       (strchr((a), '@') != NULL)
 
-
-
-
-
-
-
-
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Inline functions
 ///////////////////////////////////////////////////////////////////////////////
 
-inline char    *StrNCat(char *pszDest, char const *pszSrc, int iMaxSize)
+inline char *StrNCat(char *pszDest, char const *pszSrc, int iMaxSize)
 {
 
-    int             iDestLength = strlen(pszDest);
+	int iDestLength = strlen(pszDest);
 
-    if (iDestLength < iMaxSize)
-        StrNCpy(pszDest + iDestLength, pszSrc, iMaxSize - iDestLength);
+	if (iDestLength < iMaxSize)
+		StrNCpy(pszDest + iDestLength, pszSrc, iMaxSize - iDestLength);
 
-    return (pszDest);
+	return (pszDest);
 
 }
 
-
-inline int      StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
+inline int StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
 {
 
-    return (((strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0) &&
-            ((pszCmdLine[iCmdLength] == '\0') || (pszCmdLine[iCmdLength] == ' ') ||
-            (pszCmdLine[iCmdLength] == '\t'))) ? 1: 0);
+	return (((strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0) &&
+		 ((pszCmdLine[iCmdLength] == '\0') || (pszCmdLine[iCmdLength] == ' ') ||
+		  (pszCmdLine[iCmdLength] == '\t'))) ? 1 : 0);
 
 }
 
-
-inline char    *AppendChar(char *pszString, int iChar)
+inline char *AppendChar(char *pszString, int iChar)
 {
 
-    int             iStrLength = strlen(pszString);
+	int iStrLength = strlen(pszString);
 
-    if ((iStrLength == 0) || (pszString[iStrLength - 1] != iChar))
-    {
-        pszString[iStrLength] = iChar;
-        pszString[iStrLength + 1] = '\0';
-    }
+	if ((iStrLength == 0) || (pszString[iStrLength - 1] != iChar)) {
+		pszString[iStrLength] = iChar;
+		pszString[iStrLength + 1] = '\0';
+	}
 
-    return (pszString);
+	return (pszString);
 
 }
 
-
-inline char    *AppendSlash(char *pszPath)
+inline char *AppendSlash(char *pszPath)
 {
 
-    return (AppendChar(pszPath, SYS_SLASH_CHAR));
+	return (AppendChar(pszPath, SYS_SLASH_CHAR));
 
 }
 
-
-inline char    *DelFinalChar(char *pszString, int iChar)
+inline char *DelFinalChar(char *pszString, int iChar)
 {
 
-    int             iStrLength = strlen(pszString);
+	int iStrLength = strlen(pszString);
 
-    if ((iStrLength > 0) && (pszString[iStrLength - 1] == iChar))
-        pszString[iStrLength - 1] = '\0';
+	if ((iStrLength > 0) && (pszString[iStrLength - 1] == iChar))
+		pszString[iStrLength - 1] = '\0';
 
-    return (pszString);
+	return (pszString);
 
 }
 
-
-inline char    *DelFinalSlash(char *pszPath)
+inline char *DelFinalSlash(char *pszPath)
 {
 
-    return (DelFinalChar(pszPath, SYS_SLASH_CHAR));
+	return (DelFinalChar(pszPath, SYS_SLASH_CHAR));
 
 }
 
-
-inline int      ToUpper(int iChar)
+inline int ToUpper(int iChar)
 {
 
-    return (((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')): iChar);
+	return (((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')) : iChar);
 
 }
 
-
-inline int      ToLower(int iChar)
+inline int ToLower(int iChar)
 {
 
-    return (((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')): iChar);
+	return (((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')) : iChar);
 
 }
 
-
-inline int      IsPrimeNumber(int iNumber)
+inline int IsPrimeNumber(int iNumber)
 {
 
-    if (iNumber > 3)
-    {
-        if (iNumber & 1)
-        {
-            int             iHalfNumber = iNumber / 2;
+	if (iNumber > 3) {
+		if (iNumber & 1) {
+			int iHalfNumber = iNumber / 2;
 
-            for (int ii = 3; ii < iHalfNumber; ii += 2)
-                if ((iNumber % ii) == 0)
-                    return (0);
-        }
-        else
-            return (0);
-    }
+			for (int ii = 3; ii < iHalfNumber; ii += 2)
+				if ((iNumber % ii) == 0)
+					return (0);
+		} else
+			return (0);
+	}
 
-    return (1);
+	return (1);
 
 }
-
-
-
 
 #endif

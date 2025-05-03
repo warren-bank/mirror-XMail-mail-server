@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  *
  */
 
-
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
@@ -38,871 +37,741 @@
 #include "TabIndex.h"
 #include "ExtAliases.h"
 
-
-
-
-
 #define SVR_EXT_ALIAS_FILE          "extaliases.tab"
 #define ALIAS_TABLE_LINE_MAX        1024
 
+enum ExtAliasFields {
+	ealRmtDomain = 0,
+	ealRmtName,
+	ealDomain,
+	ealName,
 
-
-
-
-
-
-enum ExtAliasFields
-{
-    ealRmtDomain = 0,
-    ealRmtName,
-    ealDomain,
-    ealName,
-
-    ealMax
+	ealMax
 };
 
-struct ExAlDBScanData
-{
-    char            szTmpDBFile[SYS_MAX_PATH];
-    FILE           *pDBFile;
+struct ExAlDBScanData {
+	char szTmpDBFile[SYS_MAX_PATH];
+	FILE *pDBFile;
 };
 
-
-
-
-
-
-
-
-static int      ExAlRebuildAliasIndexes(char const *pszAliasFilePath);
-static char    *ExAlGetTableFilePath(char *pszLnkFilePath, int iMaxPath);
+static int ExAlRebuildAliasIndexes(char const *pszAliasFilePath);
+static char *ExAlGetTableFilePath(char *pszLnkFilePath, int iMaxPath);
 static ExtAlias *ExAlGetAliasFromStrings(char **ppszStrings);
-static int      ExAlWriteAlias(FILE *pAliasFile, ExtAlias *pExtAlias);
+static int ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias);
 
+static int iIdxExAlias_RmtDomain_RmtName[] = {
+	ealRmtDomain,
+	ealRmtName,
 
-
-
-
-
-
-
-static int      iIdxExAlias_RmtDomain_RmtName[] =
-{
-    ealRmtDomain,
-    ealRmtName,
-
-    INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
-
-
-
-
-
-
-
-int             ExAlCheckAliasIndexes(void)
+int ExAlCheckAliasIndexes(void)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align RmtDomain-RmtName index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCheckIndex(szAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCheckIndex(szAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static int      ExAlRebuildAliasIndexes(char const *pszAliasFilePath)
+static int ExAlRebuildAliasIndexes(char const *pszAliasFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild RmtDomain-RmtName index
 ///////////////////////////////////////////////////////////////////////////////
-    if (TbixCreateIndex(pszAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false) < 0)
-        return (ErrGetErrorCode());
+	if (TbixCreateIndex(pszAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false) < 0)
+		return (ErrGetErrorCode());
 
-
-
-    return (0);
+	return (0);
 
 }
 
-
-
-static char    *ExAlGetTableFilePath(char *pszLnkFilePath, int iMaxPath)
+static char *ExAlGetTableFilePath(char *pszLnkFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszLnkFilePath, iMaxPath);
+	CfgGetRootPath(pszLnkFilePath, iMaxPath);
 
-    StrNCat(pszLnkFilePath, SVR_EXT_ALIAS_FILE, iMaxPath);
+	StrNCat(pszLnkFilePath, SVR_EXT_ALIAS_FILE, iMaxPath);
 
-    return (pszLnkFilePath);
+	return (pszLnkFilePath);
 
 }
-
-
 
 static ExtAlias *ExAlGetAliasFromStrings(char **ppszStrings)
 {
 
-    int             iFieldsCount = StrStringsCount(ppszStrings);
+	int iFieldsCount = StrStringsCount(ppszStrings);
 
-    if (iFieldsCount < ealMax)
-        return (NULL);
+	if (iFieldsCount < ealMax)
+		return (NULL);
 
-    ExtAlias       *pExtAlias = (ExtAlias *) SysAlloc(sizeof(ExtAlias));
+	ExtAlias *pExtAlias = (ExtAlias *) SysAlloc(sizeof(ExtAlias));
 
-    if (pExtAlias == NULL)
-        return (NULL);
+	if (pExtAlias == NULL)
+		return (NULL);
 
-    pExtAlias->pszRmtDomain = SysStrDup(ppszStrings[ealRmtDomain]);
-    pExtAlias->pszRmtName = SysStrDup(ppszStrings[ealRmtName]);
-    pExtAlias->pszDomain = SysStrDup(ppszStrings[ealDomain]);
-    pExtAlias->pszName = SysStrDup(ppszStrings[ealName]);
+	pExtAlias->pszRmtDomain = SysStrDup(ppszStrings[ealRmtDomain]);
+	pExtAlias->pszRmtName = SysStrDup(ppszStrings[ealRmtName]);
+	pExtAlias->pszDomain = SysStrDup(ppszStrings[ealDomain]);
+	pExtAlias->pszName = SysStrDup(ppszStrings[ealName]);
 
-    return (pExtAlias);
+	return (pExtAlias);
 
 }
 
-
-
-ExtAlias       *ExAlAllocAlias(void)
+ExtAlias *ExAlAllocAlias(void)
 {
 
-    ExtAlias       *pExtAlias = (ExtAlias *) SysAlloc(sizeof(ExtAlias));
+	ExtAlias *pExtAlias = (ExtAlias *) SysAlloc(sizeof(ExtAlias));
 
-    if (pExtAlias == NULL)
-        return (NULL);
+	if (pExtAlias == NULL)
+		return (NULL);
 
-    pExtAlias->pszRmtDomain = NULL;
-    pExtAlias->pszRmtName = NULL;
-    pExtAlias->pszDomain = NULL;
-    pExtAlias->pszName = NULL;
+	pExtAlias->pszRmtDomain = NULL;
+	pExtAlias->pszRmtName = NULL;
+	pExtAlias->pszDomain = NULL;
+	pExtAlias->pszName = NULL;
 
-    return (pExtAlias);
+	return (pExtAlias);
 
 }
 
-
-
-void            ExAlFreeAlias(ExtAlias *pExtAlias)
+void ExAlFreeAlias(ExtAlias * pExtAlias)
 {
 
-    if (pExtAlias->pszDomain != NULL)
-        SysFree(pExtAlias->pszDomain);
+	if (pExtAlias->pszDomain != NULL)
+		SysFree(pExtAlias->pszDomain);
 
-    if (pExtAlias->pszName != NULL)
-        SysFree(pExtAlias->pszName);
+	if (pExtAlias->pszName != NULL)
+		SysFree(pExtAlias->pszName);
 
-    if (pExtAlias->pszRmtDomain != NULL)
-        SysFree(pExtAlias->pszRmtDomain);
+	if (pExtAlias->pszRmtDomain != NULL)
+		SysFree(pExtAlias->pszRmtDomain);
 
-    if (pExtAlias->pszRmtName != NULL)
-        SysFree(pExtAlias->pszRmtName);
+	if (pExtAlias->pszRmtName != NULL)
+		SysFree(pExtAlias->pszRmtName);
 
-    SysFree(pExtAlias);
+	SysFree(pExtAlias);
 
 }
 
-
-
-static int      ExAlWriteAlias(FILE *pAliasFile, ExtAlias *pExtAlias)
+static int ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Remote domain
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszQuoted = StrQuote(pExtAlias->pszRmtDomain, '"');
+	char *pszQuoted = StrQuote(pExtAlias->pszRmtDomain, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAliasFile, "%s\t", pszQuoted);
+	fprintf(pAliasFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Remote user
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pExtAlias->pszRmtName, '"');
+	pszQuoted = StrQuote(pExtAlias->pszRmtName, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAliasFile, "%s\t", pszQuoted);
+	fprintf(pAliasFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
-
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Domain
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pExtAlias->pszDomain, '"');
+	pszQuoted = StrQuote(pExtAlias->pszDomain, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAliasFile, "%s\t", pszQuoted);
+	fprintf(pAliasFile, "%s\t", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Local user
 ///////////////////////////////////////////////////////////////////////////////
-    pszQuoted = StrQuote(pExtAlias->pszName, '"');
+	pszQuoted = StrQuote(pExtAlias->pszName, '"');
 
-    if (pszQuoted == NULL)
-        return (ErrGetErrorCode());
+	if (pszQuoted == NULL)
+		return (ErrGetErrorCode());
 
-    fprintf(pAliasFile, "%s\n", pszQuoted);
+	fprintf(pAliasFile, "%s\n", pszQuoted);
 
-    SysFree(pszQuoted);
+	SysFree(pszQuoted);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             ExAlAddAlias(ExtAlias *pExtAlias)
+int ExAlAddAlias(ExtAlias * pExtAlias)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	FILE *pAliasFile = fopen(szAliasFilePath, "r+t");
 
+	if (pAliasFile == NULL) {
+		RLckUnlockEX(hResLock);
 
-    FILE           *pAliasFile = fopen(szAliasFilePath, "r+t");
+		ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
+		return (ERR_EXTALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAliasFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
-        return (ERR_EXTALIAS_FILE_NOT_FOUND);
-    }
+	while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= ealMax) &&
+		    (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
+		    (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
+		    (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
+		    (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0)) {
+			StrFreeStrings(ppszStrings);
+			fclose(pAliasFile);
+			RLckUnlockEX(hResLock);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			ErrSetErrorCode(ERR_EXTALIAS_EXIST);
+			return (ERR_EXTALIAS_EXIST);
+		}
 
-        if ((iFieldsCount >= ealMax) && (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-            (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
-            (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
-            (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
-        {
-            StrFreeStrings(ppszStrings);
-            fclose(pAliasFile);
-            RLckUnlockEX(hResLock);
+		StrFreeStrings(ppszStrings);
+	}
 
-            ErrSetErrorCode(ERR_EXTALIAS_EXIST);
-            return (ERR_EXTALIAS_EXIST);
-        }
+	fseek(pAliasFile, 0, SEEK_END);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (ExAlWriteAlias(pAliasFile, pExtAlias) < 0) {
+		fclose(pAliasFile);
+		RLckUnlockEX(hResLock);
 
-    fseek(pAliasFile, 0, SEEK_END);
+		ErrSetErrorCode(ERR_WRITE_EXTALIAS_FILE);
+		return (ERR_WRITE_EXTALIAS_FILE);
+	}
 
-    if (ExAlWriteAlias(pAliasFile, pExtAlias) < 0)
-    {
-        fclose(pAliasFile);
-        RLckUnlockEX(hResLock);
-
-        ErrSetErrorCode(ERR_WRITE_EXTALIAS_FILE);
-        return (ERR_WRITE_EXTALIAS_FILE);
-    }
-
-    fclose(pAliasFile);
+	fclose(pAliasFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-ExtAlias       *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName)
+ExtAlias *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
-
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (NULL);
-
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (NULL);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index
 ///////////////////////////////////////////////////////////////////////////////
-    char          **ppszTabTokens = TbixLookup(szAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false,
-                                               pszRmtDomain,
-                                               pszRmtName,
-                                               NULL);
+	char **ppszTabTokens = TbixLookup(szAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false,
+					  pszRmtDomain,
+					  pszRmtName,
+					  NULL);
 
-    if (ppszTabTokens == NULL)
-    {
-        RLckUnlockSH(hResLock);
-        ErrSetErrorCode(ERR_EXTALIAS_NOT_FOUND);
+	if (ppszTabTokens == NULL) {
+		RLckUnlockSH(hResLock);
+		ErrSetErrorCode(ERR_EXTALIAS_NOT_FOUND);
 
-        return (NULL);
-    }
+		return (NULL);
+	}
 
+	ExtAlias *pExtAlias = ExAlGetAliasFromStrings(ppszTabTokens);
 
-    ExtAlias       *pExtAlias = ExAlGetAliasFromStrings(ppszTabTokens);
+	StrFreeStrings(ppszTabTokens);
 
+	RLckUnlockSH(hResLock);
 
-    StrFreeStrings(ppszTabTokens);
-
-    RLckUnlockSH(hResLock);
-
-    return (pExtAlias);
+	return (pExtAlias);
 
 }
 
-
-
-int             ExAlRemoveAlias(ExtAlias *pExtAlias)
+int ExAlRemoveAlias(ExtAlias * pExtAlias)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	FILE *pAliasFile = fopen(szAliasFilePath, "rt");
 
+	if (pAliasFile == NULL) {
+		RLckUnlockEX(hResLock);
 
-    FILE           *pAliasFile = fopen(szAliasFilePath, "rt");
+		ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
+		return (ERR_EXTALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAliasFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
-        return (ERR_EXTALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAliasFile);
+		RLckUnlockEX(hResLock);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAliasFile);
-        RLckUnlockEX(hResLock);
+	int iAliasFound = 0;
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    int             iAliasFound = 0;
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= ealMax) &&
+		    (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
+		    (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
+		    (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
+		    (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0)) {
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			++iAliasFound;
 
-        if ((iFieldsCount >= ealMax) && (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-            (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
-            (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
-            (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
-        {
+		} else
+			fprintf(pTmpFile, "%s\n", szAliasLine);
 
-            ++iAliasFound;
+		StrFreeStrings(ppszStrings);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAliasLine);
+	fclose(pAliasFile);
+	fclose(pTmpFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
 
-    fclose(pAliasFile);
-    fclose(pTmpFile);
+		ErrSetErrorCode(ERR_EXTALIAS_NOT_FOUND);
+		return (ERR_EXTALIAS_NOT_FOUND);
+	}
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
+	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-        ErrSetErrorCode(ERR_EXTALIAS_NOT_FOUND);
-        return (ERR_EXTALIAS_NOT_FOUND);
-    }
+	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+		    szAliasFilePath);
 
-    char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-                szAliasFilePath);
+	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
+		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
+		RLckUnlockEX(hResLock);
+		return (ErrGetErrorCode());
+	}
 
-    if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
-    {
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    if (MscMoveFile(szTmpFile, szAliasFilePath) < 0)
-    {
-        MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
-        RLckUnlockEX(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-    SysRemove(szTmpAliasFilePath);
+	SysRemove(szTmpAliasFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName)
+int ExAlRemoveUserAliases(const char *pszDomain, const char *pszName)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pAliasFile = fopen(szAliasFilePath, "rt");
 
+	if (pAliasFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pAliasFile = fopen(szAliasFilePath, "rt");
+		ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
+		return (ERR_EXTALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAliasFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
-        return (ERR_EXTALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAliasFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAliasFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	int iAliasFound = 0;
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    int             iAliasFound = 0;
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= ealMax) && (stricmp(pszDomain, ppszStrings[ealDomain]) == 0)
+		    && (stricmp(pszName, ppszStrings[ealName]) == 0)) {
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			++iAliasFound;
 
-        if ((iFieldsCount >= ealMax) && (stricmp(pszDomain, ppszStrings[ealDomain]) == 0) &&
-            (stricmp(pszName, ppszStrings[ealName]) == 0))
-        {
+		} else
+			fprintf(pTmpFile, "%s\n", szAliasLine);
 
-            ++iAliasFound;
+		StrFreeStrings(ppszStrings);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAliasLine);
+	fclose(pAliasFile);
+	fclose(pTmpFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (0);
+	}
 
-    fclose(pAliasFile);
-    fclose(pTmpFile);
+	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (0);
-    }
+	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+		    szAliasFilePath);
 
-    char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-                szAliasFilePath);
+	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpAliasFilePath);
+	SysRemove(szTmpAliasFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             ExAlRemoveDomainAliases(const char *pszDomain)
+int ExAlRemoveDomainAliases(const char *pszDomain)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
-    char            szTmpFile[SYS_MAX_PATH] = "";
+	char szTmpFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(szTmpFile);
+	SysGetTmpFile(szTmpFile);
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE) {
+		ErrorPush();
+		CheckRemoveFile(szTmpFile);
+		return (ErrorPop());
+	}
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-    {
-        ErrorPush();
-        CheckRemoveFile(szTmpFile);
-        return (ErrorPop());
-    }
+	FILE *pAliasFile = fopen(szAliasFilePath, "rt");
 
+	if (pAliasFile == NULL) {
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pAliasFile = fopen(szAliasFilePath, "rt");
+		ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
+		return (ERR_EXTALIAS_FILE_NOT_FOUND);
+	}
 
-    if (pAliasFile == NULL)
-    {
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	FILE *pTmpFile = fopen(szTmpFile, "wt");
 
-        ErrSetErrorCode(ERR_EXTALIAS_FILE_NOT_FOUND);
-        return (ERR_EXTALIAS_FILE_NOT_FOUND);
-    }
+	if (pTmpFile == NULL) {
+		fclose(pAliasFile);
+		RLckUnlockEX(hResLock);
+		CheckRemoveFile(szTmpFile);
 
-    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+		ErrSetErrorCode(ERR_FILE_CREATE);
+		return (ERR_FILE_CREATE);
+	}
 
-    if (pTmpFile == NULL)
-    {
-        fclose(pAliasFile);
-        RLckUnlockEX(hResLock);
-        CheckRemoveFile(szTmpFile);
+	int iAliasFound = 0;
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
-        return (ERR_FILE_CREATE);
-    }
+	while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    int             iAliasFound = 0;
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+		if (ppszStrings == NULL)
+			continue;
 
-    while (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pAliasFile) != NULL)
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        if (ppszStrings == NULL)
-            continue;
+		if ((iFieldsCount >= ealMax) && (stricmp(pszDomain, ppszStrings[ealDomain]) == 0)) {
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+			++iAliasFound;
 
-        if ((iFieldsCount >= ealMax) && (stricmp(pszDomain, ppszStrings[ealDomain]) == 0))
-        {
+		} else
+			fprintf(pTmpFile, "%s\n", szAliasLine);
 
-            ++iAliasFound;
+		StrFreeStrings(ppszStrings);
+	}
 
-        }
-        else
-            fprintf(pTmpFile, "%s\n", szAliasLine);
+	fclose(pAliasFile);
+	fclose(pTmpFile);
 
-        StrFreeStrings(ppszStrings);
-    }
+	if (iAliasFound == 0) {
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (0);
+	}
 
-    fclose(pAliasFile);
-    fclose(pTmpFile);
+	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-    if (iAliasFound == 0)
-    {
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (0);
-    }
+	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+		    szAliasFilePath);
 
+	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
+		ErrorPush();
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
+	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
+		ErrorPush();
+		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
+		SysRemove(szTmpFile);
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-                szAliasFilePath);
-
-    if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
-    {
-        ErrorPush();
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    if (MscMoveFile(szTmpFile, szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
-        SysRemove(szTmpFile);
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    SysRemove(szTmpAliasFilePath);
+	SysRemove(szTmpAliasFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild indexes
 ///////////////////////////////////////////////////////////////////////////////
-    if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0)
-    {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
+	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
+		ErrorPush();
+		RLckUnlockEX(hResLock);
+		return (ErrorPop());
+	}
 
-    RLckUnlockEX(hResLock);
+	RLckUnlockEX(hResLock);
 
-    return (0);
+	return (0);
 
 }
 
-
-
-
-int             ExAlGetDBFileSnapShot(const char *pszFileName)
+int ExAlGetDBFileSnapShot(const char *pszFileName)
 {
 
-    char            szAliasFilePath[SYS_MAX_PATH] = "";
+	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-    ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
+	ExAlGetTableFilePath(szAliasFilePath, sizeof(szAliasFilePath));
 
+	char szResLock[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
+							  sizeof(szResLock)));
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
-                                                          sizeof(szResLock)));
+	if (hResLock == INVALID_RLCK_HANDLE)
+		return (ErrGetErrorCode());
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+	if (MscCopyFile(pszFileName, szAliasFilePath) < 0) {
+		RLckUnlockSH(hResLock);
+		return (ErrGetErrorCode());
+	}
 
+	RLckUnlockSH(hResLock);
 
-    if (MscCopyFile(pszFileName, szAliasFilePath) < 0)
-    {
-        RLckUnlockSH(hResLock);
-        return (ErrGetErrorCode());
-    }
-
-
-    RLckUnlockSH(hResLock);
-
-    return (0);
+	return (0);
 
 }
 
-
-
-EXAL_HANDLE     ExAlOpenDB(void)
+EXAL_HANDLE ExAlOpenDB(void)
 {
 
-    ExAlDBScanData *pGLSD = (ExAlDBScanData *) SysAlloc(sizeof(ExAlDBScanData));
+	ExAlDBScanData *pGLSD = (ExAlDBScanData *) SysAlloc(sizeof(ExAlDBScanData));
 
-    if (pGLSD == NULL)
-        return (INVALID_EXAL_HANDLE);
+	if (pGLSD == NULL)
+		return (INVALID_EXAL_HANDLE);
 
-    SysGetTmpFile(pGLSD->szTmpDBFile);
+	SysGetTmpFile(pGLSD->szTmpDBFile);
 
-    if (ExAlGetDBFileSnapShot(pGLSD->szTmpDBFile) < 0)
-    {
-        SysFree(pGLSD);
-        return (INVALID_EXAL_HANDLE);
-    }
+	if (ExAlGetDBFileSnapShot(pGLSD->szTmpDBFile) < 0) {
+		SysFree(pGLSD);
+		return (INVALID_EXAL_HANDLE);
+	}
 
-    if ((pGLSD->pDBFile = fopen(pGLSD->szTmpDBFile, "rt")) == NULL)
-    {
-        SysRemove(pGLSD->szTmpDBFile);
-        SysFree(pGLSD);
-        return (INVALID_EXAL_HANDLE);
-    }
+	if ((pGLSD->pDBFile = fopen(pGLSD->szTmpDBFile, "rt")) == NULL) {
+		SysRemove(pGLSD->szTmpDBFile);
+		SysFree(pGLSD);
+		return (INVALID_EXAL_HANDLE);
+	}
 
-    return ((EXAL_HANDLE) pGLSD);
+	return ((EXAL_HANDLE) pGLSD);
 
 }
 
-
-
-void            ExAlCloseDB(EXAL_HANDLE hLinksDB)
+void ExAlCloseDB(EXAL_HANDLE hLinksDB)
 {
 
-    ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
+	ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
 
-    fclose(pGLSD->pDBFile);
+	fclose(pGLSD->pDBFile);
 
-    SysRemove(pGLSD->szTmpDBFile);
+	SysRemove(pGLSD->szTmpDBFile);
 
-    SysFree(pGLSD);
+	SysFree(pGLSD);
 
 }
 
-
-
-ExtAlias       *ExAlGetFirstAlias(EXAL_HANDLE hLinksDB)
+ExtAlias *ExAlGetFirstAlias(EXAL_HANDLE hLinksDB)
 {
 
-    ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
+	ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
 
-    rewind(pGLSD->pDBFile);
+	rewind(pGLSD->pDBFile);
 
+	ExtAlias *pExtAlias = NULL;
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-    ExtAlias       *pExtAlias = NULL;
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+	while ((pExtAlias == NULL) &&
+	       (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    while ((pExtAlias == NULL) &&
-           (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= ealMax)
+			pExtAlias = ExAlGetAliasFromStrings(ppszStrings);
 
-        if (iFieldsCount >= ealMax)
-            pExtAlias = ExAlGetAliasFromStrings(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pExtAlias);
+	return (pExtAlias);
 
 }
 
-
-
-ExtAlias       *ExAlGetNextAlias(EXAL_HANDLE hLinksDB)
+ExtAlias *ExAlGetNextAlias(EXAL_HANDLE hLinksDB)
 {
 
-    ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
+	ExAlDBScanData *pGLSD = (ExAlDBScanData *) hLinksDB;
 
+	ExtAlias *pExtAlias = NULL;
+	char szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
-    ExtAlias       *pExtAlias = NULL;
-    char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
+	while ((pExtAlias == NULL) &&
+	       (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL)) {
+		char **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
-    while ((pExtAlias == NULL) &&
-           (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
-    {
-        char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
+		if (ppszStrings == NULL)
+			continue;
 
-        if (ppszStrings == NULL)
-            continue;
+		int iFieldsCount = StrStringsCount(ppszStrings);
 
-        int             iFieldsCount = StrStringsCount(ppszStrings);
+		if (iFieldsCount >= ealMax)
+			pExtAlias = ExAlGetAliasFromStrings(ppszStrings);
 
-        if (iFieldsCount >= ealMax)
-            pExtAlias = ExAlGetAliasFromStrings(ppszStrings);
+		StrFreeStrings(ppszStrings);
+	}
 
-        StrFreeStrings(ppszStrings);
-    }
-
-    return (pExtAlias);
+	return (pExtAlias);
 
 }
-

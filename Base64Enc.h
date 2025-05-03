@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,18 +20,10 @@
  *
  */
 
-
 #ifndef _BASE64ENC_H
 #define _BASE64ENC_H
 
-
-
-
-int             encode64(const char *_in, unsigned inlen,
-                         char *_out, unsigned outmax, unsigned *outlen);
-int             decode64(const char *in, unsigned inlen, char *out, unsigned *outlen);
-
-
-
+int encode64(const char *_in, unsigned inlen, char *_out, unsigned outmax, unsigned *outlen);
+int decode64(const char *in, unsigned inlen, char *out, unsigned *outlen);
 
 #endif

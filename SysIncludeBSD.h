@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,8 @@
  *
  */
 
-
 #ifndef _SYSINCLUDEFREEBSD_H
 #define _SYSINCLUDEFREEBSD_H
-
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -40,6 +38,8 @@
 #include <sys/vmmeter.h>
 #if defined(__FREEBSD__)
 #include <vm/vm_param.h>
+#elif defined(__DARWIN__)
+#include <mach/machine/vm_param.h>
 #else
 #include <uvm/uvm_param.h>
 #endif
@@ -69,8 +69,5 @@
 #include <sched.h>
 #include <pthread.h>
 #include <kvm.h>
-
-
-
 
 #endif

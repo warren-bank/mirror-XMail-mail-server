@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,62 +20,44 @@
  *
  */
 
-
 #ifndef _POP3GWLINK_H
 #define _POP3GWLINK_H
 
-
-
-
 #define INVALID_GWLKF_HANDLE         ((GWLKF_HANDLE) 0)
 
-
-
-
-
-struct POP3Link
-{
-    char           *pszDomain;
-    char           *pszName;
-    char           *pszRmtDomain;
-    char           *pszRmtName;
-    char           *pszRmtPassword;
-    char           *pszAuthType;
+struct POP3Link {
+	char *pszDomain;
+	char *pszName;
+	char *pszRmtDomain;
+	char *pszRmtName;
+	char *pszRmtPassword;
+	char *pszAuthType;
 };
 
-typedef struct GWLKF_HANDLE_struct
-{
-}              *GWLKF_HANDLE;
+typedef struct GWLKF_HANDLE_struct {
+} *GWLKF_HANDLE;
 
-
-
-
-
-POP3Link       *GwLkAllocLink(char const *pszDomain, char const *pszName,
-                              char const *pszRmtDomain, char const *pszRmtName,
-                              char const *pszRmtPassword, char const *pszAuthType);
-void            GwLkFreePOP3Link(POP3Link *pPopLnk);
-int             GwLkAddLink(POP3Link *pPopLnk);
-int             GwLkRemoveLink(POP3Link *pPopLnk);
-int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName);
-int             GwLkRemoveDomainLinks(const char *pszDomain);
-int             GwLkGetDBFileSnapShot(const char *pszFileName);
-GWLKF_HANDLE    GwLkOpenDB(void);
-void            GwLkCloseDB(GWLKF_HANDLE hLinksDB);
-POP3Link       *GwLkGetFirstUser(GWLKF_HANDLE hLinksDB);
-POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB);
-int             GwLkLinkLock(POP3Link const *pPopLnk);
-void            GwLkLinkUnlock(POP3Link const *pPopLnk);
-int             GwLkClearLinkLocksDir(void);
-int             GwLkLocalDomain(POP3Link const *pPopLnk);
-int             GwLkMasqueradeDomain(POP3Link const *pPopLnk);
-int             GwLkCheckEnabled(POP3Link const *pPopLnk);
-int             GwLkEnable(POP3Link const *pPopLnk, bool bEnable);
-int             GwLkEnable(char const *pszDomain, char const *pszName,
-                           char const *pszRmtDomain, char const *pszRmtName, bool bEnable);
-
-
-
-
+POP3Link *GwLkAllocLink(char const *pszDomain, char const *pszName,
+			char const *pszRmtDomain, char const *pszRmtName,
+			char const *pszRmtPassword, char const *pszAuthType);
+void GwLkFreePOP3Link(POP3Link * pPopLnk);
+int GwLkAddLink(POP3Link * pPopLnk);
+int GwLkRemoveLink(POP3Link * pPopLnk);
+int GwLkRemoveUserLinks(const char *pszDomain, const char *pszName);
+int GwLkRemoveDomainLinks(const char *pszDomain);
+int GwLkGetDBFileSnapShot(const char *pszFileName);
+GWLKF_HANDLE GwLkOpenDB(void);
+void GwLkCloseDB(GWLKF_HANDLE hLinksDB);
+POP3Link *GwLkGetFirstUser(GWLKF_HANDLE hLinksDB);
+POP3Link *GwLkGetNextUser(GWLKF_HANDLE hLinksDB);
+int GwLkLinkLock(POP3Link const *pPopLnk);
+void GwLkLinkUnlock(POP3Link const *pPopLnk);
+int GwLkClearLinkLocksDir(void);
+int GwLkLocalDomain(POP3Link const *pPopLnk);
+int GwLkMasqueradeDomain(POP3Link const *pPopLnk);
+int GwLkCheckEnabled(POP3Link const *pPopLnk);
+int GwLkEnable(POP3Link const *pPopLnk, bool bEnable);
+int GwLkEnable(char const *pszDomain, char const *pszName,
+	       char const *pszRmtDomain, char const *pszRmtName, bool bEnable);
 
 #endif

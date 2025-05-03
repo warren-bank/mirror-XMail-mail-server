@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,..,2003  Davide Libenzi
+ *  Copyright (C) 1999,..,2004  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,13 +20,15 @@
  *
  */
 
-
 #ifndef _SYSTYPESWIN_H
 #define _SYSTYPESWIN_H
 
-
-
-#define SYS_OS_PORT             "Win32/" SYS_CPU_PORT
+#ifdef MACH_BIG_ENDIAN_WORDS
+#define BIG_ENDIAN_CPU
+#endif
+#ifdef MACH_BIG_ENDIAN_BITFIELD
+#define BIG_ENDIAN_BITFIELD
+#endif
 
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
 #define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
@@ -57,15 +59,11 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
-
-
-
-
-typedef char    SYS_INT8;
+typedef char SYS_INT8;
 typedef unsigned char SYS_UINT8;
 typedef short int SYS_INT16;
 typedef unsigned short int SYS_UINT16;
-typedef int     SYS_INT32;
+typedef int SYS_INT32;
 typedef unsigned int SYS_UINT32;
 typedef __int64 SYS_INT64;
 typedef unsigned __int64 SYS_UINT64;
@@ -73,44 +71,36 @@ typedef unsigned __int64 SYS_LONGLONG;
 typedef unsigned int SYS_PTRUINT;
 typedef unsigned long SYS_HANDLE;
 typedef int SYS_TLSKEY;
-typedef SOCKET  SYS_SOCKET;
-typedef int     socklen_t;
-typedef HANDLE  SYS_SEMAPHORE;
-typedef HANDLE  SYS_MUTEX;
-typedef HANDLE  SYS_EVENT;
+typedef SOCKET SYS_SOCKET;
+typedef int socklen_t;
+typedef HANDLE SYS_SEMAPHORE;
+typedef HANDLE SYS_MUTEX;
+typedef HANDLE SYS_EVENT;
 typedef unsigned long SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 
-
-struct SYS_THREAD_ONCE
-{
-    LONG            lOnce;
-    LONG            lDone;
+struct SYS_THREAD_ONCE {
+	LONG lOnce;
+	LONG lDone;
 };
 
-struct SYS_INET_ADDR
-{
-    struct sockaddr_in Addr;
+struct SYS_INET_ADDR {
+	struct sockaddr_in Addr;
 };
 
-enum SysFileTypes
-{
-    ftNormal = 1,
-    ftDirectory,
-    ftLink,
-    ftOther,
+enum SysFileTypes {
+	ftNormal = 1,
+	ftDirectory,
+	ftLink,
+	ftOther,
 
-    ftMax
+	ftMax
 };
 
-struct SYS_FILE_INFO
-{
-    int             iFileType;
-    unsigned long   ulSize;
-    time_t          tMod;
+struct SYS_FILE_INFO {
+	int iFileType;
+	unsigned long ulSize;
+	time_t tMod;
 };
-
-
-
 
 #endif
