@@ -1,7 +1,7 @@
 
 			< XMail Server >
 
-Version      : 1.1
+Version      : 1.2
 Release type : Gnu Public License	http://www.gnu.org
 Date         : 09-10-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
@@ -536,7 +536,23 @@ Date 09-10-2001	1.1
 	************************************************************************************************	
 	Added CTRL commands "aliasdomainadd", "aliasdomaindel" and "aliasdomainlist" to handle domain aliases
 	through the CTRL protocol.
-
+Date 12-11-2001	1.2
+	A problem with log file names generation has been fixed.
+	Added a new CTRL command "userstat".
+	Implemented Linux/SPARC port and relative makefile ( Makefile.slx ).
+	Extended the XMail version of  sendmail  to support a filename as input ( both XMail format that
+	raw email format ) and to accept a filename as recipient list.
+	Added a new kind of aliases named "cmdaliases" that implements a sort of custom domains commands
+	on a per-user basis ( look at the  CmdAliases  section ).
+	************************************************************************************************
+	* You've to create the directory "cmdaliases" inside $MAIL_ROOT to have 1.2 working correctly
+	************************************************************************************************	
+	Fixed a bug that had XMail to not check for the user variable SmtpPerms with CRAM-MD5 authetication.
+	Fixed a bug in the XMail's  sendmail  implementation that made it unable to detect the "."
+	end of message condition.
+	Fixed a bug in the XMail's  sendmail  implementation that made it to skip cascaded command line
+	parameters ( -Ooet ).
+	Implemented a new XMail's  sendmail  switch -i to relax the <CR><LF>.<CR><LF> ond of message indicator.
 
 
 
@@ -945,6 +961,7 @@ Part 7			Configuration
 	this directories :
 
 		bin		<dir>
+		cmdaliases	<dir>
 		tabindex	<dir>
 		dnscache	<dir>
 			mx	<dir>
@@ -1801,7 +1818,42 @@ Part 10			Custom domain mail processing
 
 
 
-Part 11			SERVER.TAB variables
+Part 11			CmdAliases
+
+	 CmdAliases implements aliases that are handled only through commands and can be thought like
+	 a user level implementation of custom domain processing commands.
+	 The command set is the same of the one that is described above about custom domain processing
+	 and it won't be explained again ( look at the "Custom domain mail processing" section above ).
+	 For every handled domain ( listed inside  domains.tab  ) a directory with the same domain name
+	 is created inside the  cmdaliases  subdirectory.
+	 This directory is automatically created and removed when You add/remove domains through the
+	 CTRL protocol ( or CtrlClnt ).
+	 When a mail from  USER@DOMAIN  is received by the server and the domain DOMAIN results to be
+	 handled locally, it the standard users/aliases lookup fails, a file named USER.tab is searched
+	 inside $MAIL_ROOT/cmdaliases/DOMAIN.
+	 If such file is found, commands listed inside the file ( whose format must follow the one
+	 described in the previous section ) are executed by the server as a matter of mail message processing.
+	 An important thing to remember is that all domain and user names, when applied to the file
+	 system, must be lower case.
+	 The use of the command [SMTP] must be considered with high attention because it could create
+	 mail loops within the server.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Part 12			SERVER.TAB variables
 
 	[RootDomain]
 	Indicate the primary domain for the server.
@@ -1972,7 +2024,7 @@ Part 11			SERVER.TAB variables
 
 
 
-Part 12			Domain message filters
+Part 13			Domain message filters
 
 	This feature offer the way to filter out messages by providing the ability to
 	execute external programs, such as scripts or real executables, that examines
@@ -2045,7 +2097,7 @@ Part 12			Domain message filters
 
 
 
-Part 13			USER.TAB variables
+Part 14			USER.TAB variables
 
 	[RealName]
 	Full user name, ie. :
@@ -2097,7 +2149,7 @@ Part 13			USER.TAB variables
 
 
 
-Part 14			Mail Routing Through Addresses
+Part 15			Mail Routing Through Addresses
 
 	A full implementation of SMTP protocol comprise the ability to perform mail routing
 	bypassing DNS MX records by means of setting in a ruled way the "RCPT TO: <>" request.
@@ -2120,7 +2172,7 @@ Part 14			Mail Routing Through Addresses
 
 
 
-Part 15			XMail spool design
+Part 16			XMail spool design
 
 	The new spool fs tree format has been designed to enable XMail to handle very
 	large queues.
@@ -2169,7 +2221,7 @@ Part 15			XMail spool design
 
 
 
-Part 16			SMTP commands
+Part 17			SMTP commands
 
 	These are commands understood by ESMTP server :
 
@@ -2201,7 +2253,7 @@ Part 16			SMTP commands
 
 
 
-Part 17			POP3 commands
+Part 18			POP3 commands
 
 	These are commands understood by POP3 server :
 
@@ -2239,7 +2291,7 @@ Part 17			POP3 commands
 
 
 
-Part 18			Command line
+Part 19			Command line
 
 	Most of XMail configuration settings are command line tunables.
 	These are command line switches organized by server.
@@ -2274,16 +2326,17 @@ Part 18			Command line
 
 	[SMAIL]
 	-Qn nthreads	= Set the number of mailer threads
-	-Qt timeout	= Set the timeout to be waited for a next try after send failure
+	-Qt timeout	= Set the timeout to be waited for a next try after send failure. Default 480
 	-Qi ratio	= Set the increment ratio of the reschedule time in sending a messages.
 				At every failure in delivery a message, reschedule time T is incremented
 				by ( T / ratio ), therefore  T(i) = T(i-1) + T(i-1)/ratio.
 				If You set this ratio to zero, T remain unchanged over delivery tentatives.
-	-Qr nretries	= Set the maximum number of times to try to send the message
+				Default 16
+	-Qr nretries	= Set the maximum number of times to try to send the message. Default 32
 	-Ql		= Enable SMAIL logging
 
 	[PSYNC]
-	-Yi timeout	= Set external POP3 accounts sync timout
+	-Yi timeout	= Set external POP3 accounts sync timout. Default 120
 	-Yt nthreads	= Set the number of POP3 sync threads
 
 	[FINGER]
@@ -2316,7 +2369,7 @@ Part 18			Command line
 
 
 
-Part 19			XMail admin protocol
+Part 20			XMail admin protocol
 
 	It's possible to remote admin XMail due to the existence of a "controller server"
 	that run with XMail and that wait for TCP/IP connections on a port ( 6017 or tunable
@@ -2435,6 +2488,30 @@ Part 19			XMail admin protocol
 	password	= password
 
 	The result will be a RESSTRING.
+
+
+	*) Retrieve user statistics
+
+	"userstat"[TAB]"domain"[TAB]"username"<CR><LF>
+
+	where :
+
+	domain		= domain name
+	username	= username/alias
+
+	The result will be a RESSTRING.
+	In success case ( 00100 ) a formatted matching users list will follow, until a line
+	containing a single dot ( <CR><LF>.<CR><LF> ).
+	This is the format of the listing :
+
+	"variable"[TAB]"value"<CR><LF>
+
+	Where valid variables are :
+
+	RealAddress			  = real address ( maybe different is the supplied username is an alias )
+	MailboxSize			  = total size of the mailbox in bytes
+	MailboxMessages		  = total number of messages
+	LastLoginIP			  = last user login IP address
 
 
 	*) Adding an alias
@@ -3002,7 +3079,7 @@ Part 19			XMail admin protocol
 
 
 
-Part 20			XMail local mailer
+Part 21			XMail local mailer
 
 	XMail has the ability to deliver locally prepared mail files that if founds
 	inside the  spool/local  directory.
@@ -3058,7 +3135,7 @@ Part 20			XMail local mailer
 
 
 
-Part 21			CtrlClnt ( XMail administration )
+Part 22			CtrlClnt ( XMail administration )
 
 	You can use CtrlClnt to send administration commands to XMail.
 	These commands are defined in the previous section.
@@ -3094,7 +3171,7 @@ Part 21			CtrlClnt ( XMail administration )
 
 
 
-Part 22			Server Shutdown
+Part 23			Server Shutdown
 
 	[Linux]
 	Under Linux XMail creates a file named XMail.pid under /var/run that contain the PID
@@ -3138,7 +3215,7 @@ Part 22			Server Shutdown
 
 
 
-Part 23			MkUsers
+Part 24			MkUsers
 
 	This command line utility enable You to create user accounts structure by giving
 	it a formatted list of users parameters ( or a formatted text file ).
@@ -3219,7 +3296,7 @@ Part 23			MkUsers
 
 
 
-Part 24			sendmail
+Part 25			sendmail
 
 	When building XMail an executable called sendmail is also created.
 	This is a replacement of the sendmail program used mostly on Unix systems and that use the local mail delivery
@@ -3232,9 +3309,16 @@ Part 24			sendmail
 	
 	The syntax is :
 	
-	sendmail [-t] [-f...] [-F...] recipient ...
+	sendmail [-t] [-f...] [-F...] [--input-file fname] [--xinput-file fname] [--rcpt-file fname] [--] recipient ...
 	
 	the message content is read from the standard input and must be RFC compliant.
+	The following parameters are XMail extensions meant to be used with mailing lists managers ( using
+	sendmail as a mail list exploder ) :
+
+	--input-file fname		= take the message from the specified file instead from stdin ( RFC format )
+	--xinput-file fname		= take the message from the specified file instead from stdin ( XMail format )
+	--rcpt-file fname		= add recipients listed inside the specified file ( list exploder )
+
 	To be RFC compliant means that the message MUST be :
 	
 	[Headers]
@@ -3246,6 +3330,10 @@ Part 24			sendmail
 	
 	sendmail -fxmailuser@smartdomain user1@dom1 user2@dom2 < msg.txt
 	
+	or
+
+	sendmail -fxmailuser@smartdomain --input-file msg.txt user1@dom1 user2@dom2
+
 	
 	
 	
@@ -3263,7 +3351,7 @@ Part 24			sendmail
 
 
 
-Part 25			Miscellaneous
+Part 26			Miscellaneous
 
 	[1]
 	To handle multiple POP3 domains the server makes a reverse lookup of the IP address
@@ -3350,7 +3438,7 @@ Part 25			Miscellaneous
 
 
 
-Part 26			Known bugs
+Part 27			Known bugs
 
 	Version 0.1 ( Alpha-1 ) :
 
@@ -3379,7 +3467,7 @@ Part 26			Known bugs
 
 
 
-Part 27			Thanks
+Part 28			Thanks
 
 	My mother Adelisa, to give me the light.
 	My cat Grace, for her patience to wait for food while I'm coding.

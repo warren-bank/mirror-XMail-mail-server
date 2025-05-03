@@ -56,6 +56,8 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
+#define SYS_SPINLOCK_UNLOCKED   0
+
 
 
 

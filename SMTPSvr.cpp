@@ -207,6 +207,7 @@ static char    *SMTPGetAuthFilePath(char *pszFilePath);
 static char    *SMTPGetExtAuthFilePath(char *pszFilePath);
 static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
                         char const * pszPassword, char * pszPerms);
+static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms);
 static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const * pszChallenge,
                         char const * pszUsername, char const * pszDigest, char *pszPerms);
 static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
@@ -1519,8 +1520,85 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
             UserInfo       *pUI = UsrGetUserByNameOrAlias(szDestDomain, szDestUser);
 
-            if (pUI == NULL)
+            if (pUI != NULL)
             {
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the account is enabled for receiving
+///////////////////////////////////////////////////////////////////////////////
+                if (!UsrGetUserInfoVarInt(pUI, "ReceiveEnable", 1))
+                {
+                    UsrFreeUserInfo(pUI);
+
+                    if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EDSBL", 0);
+
+                    pszSMTPError = StrSprint("550 Account disabled <%s@%s>",
+                            szDestUser, szDestDomain);
+
+                    ErrSetErrorCode(ERR_USER_DISABLED);
+                    return (ERR_USER_DISABLED);
+                }
+
+
+                if (UsrGetUserType(pUI) == usrTypeUser)
+                {
+///////////////////////////////////////////////////////////////////////////////
+//  Target is a normal user
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check user mailbox size
+///////////////////////////////////////////////////////////////////////////////
+                    if (UPopCheckMailboxSize(pUI) < 0)
+                    {
+                        ErrorPush();
+                        UsrFreeUserInfo(pUI);
+
+                        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EFULL", 0);
+
+                        pszSMTPError = StrSprint("452 Mailbox full <%s@%s>",
+                                szDestUser, szDestDomain);
+
+                        return (ErrorPop());
+                    }
+
+                }
+                else
+                {
+///////////////////////////////////////////////////////////////////////////////
+//  Target is a mailing list
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check if client can post to this mailing list
+///////////////////////////////////////////////////////////////////////////////
+                    if (UsrMLCheckUserPost(pUI, SMTPS.pszFrom) < 0)
+                    {
+                        ErrorPush();
+                        UsrFreeUserInfo(pUI);
+
+                        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EACCESS", 0);
+
+                        pszSMTPError = StrSprint("557 Access denied <%s@%s> for user <%s>",
+                                szDestUser, szDestDomain, SMTPS.pszFrom);
+
+                        return (ErrorPop());
+                    }
+
+                }
+
+
+                UsrFreeUserInfo(pUI);
+            }
+            else if (USmlIsCmdAliasAccount(szDestDomain, szDestUser) < 0)
+            {
+///////////////////////////////////////////////////////////////////////////////
+//  Recipient domain is local but no account is found inside the standard
+//  users/aliases database and the account is not handled with cmdaliases.
+//  It's pretty much time to report a recipient error
+///////////////////////////////////////////////////////////////////////////////
                 if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
                     SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EAVAIL", 0);
 
@@ -1530,76 +1608,6 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                 ErrSetErrorCode(ERR_USER_NOT_LOCAL);
                 return (ERR_USER_NOT_LOCAL);
             }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Check if the account is enabled for receiving
-///////////////////////////////////////////////////////////////////////////////
-            if (!UsrGetUserInfoVarInt(pUI, "ReceiveEnable", 1))
-            {
-                UsrFreeUserInfo(pUI);
-
-                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                    SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EDSBL", 0);
-
-                pszSMTPError = StrSprint("550 Account disabled <%s@%s>",
-                        szDestUser, szDestDomain);
-
-                ErrSetErrorCode(ERR_USER_DISABLED);
-                return (ERR_USER_DISABLED);
-            }
-
-
-            if (UsrGetUserType(pUI) == usrTypeUser)
-            {
-///////////////////////////////////////////////////////////////////////////////
-//  Target is a normal user
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-//  Check user mailbox size
-///////////////////////////////////////////////////////////////////////////////
-                if (UPopCheckMailboxSize(pUI) < 0)
-                {
-                    ErrorPush();
-                    UsrFreeUserInfo(pUI);
-
-                    if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EFULL", 0);
-
-                    pszSMTPError = StrSprint("452 Mailbox full <%s@%s>",
-                            szDestUser, szDestDomain);
-
-                    return (ErrorPop());
-                }
-
-            }
-            else
-            {
-///////////////////////////////////////////////////////////////////////////////
-//  Target is a mailing list
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-//  Check if client can post to this mailing list
-///////////////////////////////////////////////////////////////////////////////
-                if (UsrMLCheckUserPost(pUI, SMTPS.pszFrom) < 0)
-                {
-                    ErrorPush();
-                    UsrFreeUserInfo(pUI);
-
-                    if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EACCESS", 0);
-
-                    pszSMTPError = StrSprint("557 Access denied <%s@%s> for user <%s>",
-                            szDestUser, szDestDomain, SMTPS.pszFrom);
-
-                    return (ErrorPop());
-                }
-
-            }
-
-
-            UsrFreeUserInfo(pUI);
         }
         else
         {
@@ -2915,39 +2923,17 @@ static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUse
     {
         if (strcmp(pUI->pszPassword, pszPassword) == 0)
         {
-            char           *pszUserPerms = UsrGetUserInfoVar(pUI, "SmtpPerms");
-
-            if (pszUserPerms != NULL)
+            if (SMTPGetUserSmtpPerms(pUI, hSvrConfig, pszPerms) < 0)
             {
-                strcpy(pszPerms, pszUserPerms);
-
-                SysFree(pszUserPerms);
+                ErrorPush();
+                UsrFreeUserInfo(pUI);
+                return (ErrorPop());
             }
-            else
-            {
-///////////////////////////////////////////////////////////////////////////////
-//  Match found, get the default permissions
-///////////////////////////////////////////////////////////////////////////////
-                char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig,
-                                        "DefaultSmtpPerms", "MR");
-
-                if (pszDefultPerms != NULL)
-                {
-                    strcpy(pszPerms, pszDefultPerms);
-
-                    SysFree(pszDefultPerms);
-                }
-                else
-                    SetEmptyString(pszPerms);
-
-            }
-
 
             UsrFreeUserInfo(pUI);
 
             return (0);
         }
-
 
         UsrFreeUserInfo(pUI);
 
@@ -2956,6 +2942,43 @@ static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUse
 
     ErrSetErrorCode(ERR_SMTP_AUTH_FAILED);
     return (ERR_SMTP_AUTH_FAILED);
+
+}
+
+
+
+
+static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms)
+{
+
+    char           *pszUserPerms = UsrGetUserInfoVar(pUI, "SmtpPerms");
+
+    if (pszUserPerms != NULL)
+    {
+        strcpy(pszPerms, pszUserPerms);
+
+        SysFree(pszUserPerms);
+    }
+    else
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Match found, get the default permissions
+///////////////////////////////////////////////////////////////////////////////
+        char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig,
+                                "DefaultSmtpPerms", "MR");
+
+        if (pszDefultPerms != NULL)
+        {
+            strcpy(pszPerms, pszDefultPerms);
+
+            SysFree(pszDefultPerms);
+        }
+        else
+            SetEmptyString(pszPerms);
+
+    }
+
+    return (0);
 
 }
 
@@ -2991,26 +3014,22 @@ static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const *
             return (ErrGetErrorCode());
         }
 
-        UsrFreeUserInfo(pUI);
-
         if (stricmp(szCurrDigest, pszDigest) == 0)
         {
-///////////////////////////////////////////////////////////////////////////////
-//  Match found, get the default permissions
-///////////////////////////////////////////////////////////////////////////////
-            char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig, "DefaultSmtpPerms", "MR");
-
-            if (pszDefultPerms != NULL)
+            if (SMTPGetUserSmtpPerms(pUI, hSvrConfig, pszPerms) < 0)
             {
-                strcpy(pszPerms, pszDefultPerms);
-
-                SysFree(pszDefultPerms);
+                ErrorPush();
+                UsrFreeUserInfo(pUI);
+                return (ErrorPop());
             }
-            else
-                SetEmptyString(pszPerms);
+
+            UsrFreeUserInfo(pUI);
 
             return (0);
         }
+
+        UsrFreeUserInfo(pUI);
+
     }
 
 
@@ -3470,25 +3489,33 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     UserInfo       *pUI = UsrGetUserByNameOrAlias(szVrfyDomain, szVrfyUser);
 
-    if (pUI == NULL)
+    if (pUI != NULL)
     {
-        BSckSendString(hBSock, "550 String does not match anything", SMTPS.pSMTPCfg->iTimeout);
+        char           *pszRealName = UsrGetUserInfoVar(pUI, "RealName", "Unknown");
 
-        ErrSetErrorCode(ERR_USER_NOT_LOCAL);
-        return (ERR_USER_NOT_LOCAL);
+
+        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
+                "250 %s <%s@%s>", pszRealName, pUI->pszName, pUI->pszDomain);
+
+
+        SysFree(pszRealName);
+
+        UsrFreeUserInfo(pUI);
     }
+    else
+    {
+        if (USmlIsCmdAliasAccount(szVrfyDomain, szVrfyUser) < 0)
+        {
+            BSckSendString(hBSock, "550 String does not match anything", SMTPS.pSMTPCfg->iTimeout);
 
+            ErrSetErrorCode(ERR_USER_NOT_LOCAL);
+            return (ERR_USER_NOT_LOCAL);
+        }
 
-    char           *pszRealName = UsrGetUserInfoVar(pUI, "RealName", "Unknown");
+        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
+                "250 Local account <%s@%s>", szVrfyUser, szVrfyDomain);
 
-
-    BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-            "250 %s <%s@%s>", pszRealName, pUI->pszName, pUI->pszDomain);
-
-
-    SysFree(pszRealName);
-
-    UsrFreeUserInfo(pUI);
+    }
 
     return (0);
 

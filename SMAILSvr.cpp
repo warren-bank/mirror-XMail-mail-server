@@ -87,10 +87,11 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
                         char const * pszDestDomain, SMTPError * pSMTPE = NULL);
 static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszDestDomain);
+                        char const * pszDestDomain, char const * pszDestUser);
 static int      SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszDestDomain, char const * pszCustFilePath);
+                        char const * pszDestDomain, char const * pszDestUser,
+                        char const * pszCustFilePath);
 static int      SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool);
 static int      SMAILCmd_external(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
@@ -438,7 +439,8 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                     iRcptDomains = StrStringsCount(ppszRcpt);
 
     char            szDestUser[MAX_ADDR_NAME] = "",
-                    szDestDomain[MAX_ADDR_NAME] = "";
+                    szDestDomain[MAX_ADDR_NAME] = "",
+                    szAliasFilePath[SYS_MAX_PATH] = "";
 
     if ((iRcptDomains < 1) ||
             (USmtpSplitEmailAddr(ppszRcpt[0], szDestUser, szDestDomain) < 0))
@@ -488,6 +490,17 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 
             UsrFreeUserInfo(pUI);
         }
+        else if (USmlGetCmdAliasCustomFile(hFSpool, hQueue, hMessage, szDestDomain,
+                szDestUser, szAliasFilePath) == 0)
+        {
+///////////////////////////////////////////////////////////////////////////////
+//  Do cmd alias processing
+///////////////////////////////////////////////////////////////////////////////
+            if (SMAILCustomProcessMessage(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+                    szDestDomain, szDestUser, szAliasFilePath) < 0)
+                return (ErrGetErrorCode());
+
+        }
         else
         {
             ErrorPush();
@@ -512,7 +525,7 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 //  Remote user case ( or custom domain user )
 ///////////////////////////////////////////////////////////////////////////////
         if (SMAILHandleRemoteUserMessage(hSvrConfig, hShbSMAIL, hFSpool,
-                        hQueue, hMessage, szDestDomain) < 0)
+                        hQueue, hMessage, szDestDomain, szDestUser) < 0)
             return (ErrGetErrorCode());
 
     }
@@ -886,48 +899,46 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
 
 static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszDestDomain)
+                        char const * pszDestDomain, char const * pszDestUser)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
-//  If not exist domain custom processing use standard SMTP delivery
+//  Try domain custom processing
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustFilePath[SYS_MAX_PATH] = "";
 
-    if (USmlGetDomainMsgCustomFile(hFSpool, hQueue, hMessage, pszDestDomain, szCustFilePath) < 0)
+    if (USmlGetDomainMsgCustomFile(hFSpool, hQueue, hMessage, pszDestDomain,
+            szCustFilePath) == 0)
+        return (SMAILCustomProcessMessage(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+                    pszDestDomain, pszDestUser, szCustFilePath));
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Fall down to use standard SMTP delivery
+///////////////////////////////////////////////////////////////////////////////
+    SMTPError       SMTPE;
+
+    USmtpInitError(&SMTPE);
+
+    if (SMAILRemoteMsgSMTPSend(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+            pszDestDomain, &SMTPE) < 0)
     {
-        SMTPError       SMTPE;
-
-        USmtpInitError(&SMTPE);
-
-        if (SMAILRemoteMsgSMTPSend(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
-                        pszDestDomain, &SMTPE) < 0)
-        {
-            ErrorPush();
+        ErrorPush();
 ///////////////////////////////////////////////////////////////////////////////
 //  If a permanent SMTP error has been detected, then notify the message
 //  sender and remove the spool file
 ///////////////////////////////////////////////////////////////////////////////
-            if (USmtpIsFatalError(&SMTPE))
+        if (USmtpIsFatalError(&SMTPE))
                 QueUtCleanupNotifyErrDelivery(hQueue, hMessage, USmtpGetErrorMessage(&SMTPE));
-
-            USmtpCleanupError(&SMTPE);
-
-            return (ErrorPop());
-        }
 
         USmtpCleanupError(&SMTPE);
 
-        return (0);
+        return (ErrorPop());
     }
 
+    USmtpCleanupError(&SMTPE);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Do custom message processing
-///////////////////////////////////////////////////////////////////////////////
-
-    return (SMAILCustomProcessMessage(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
-                    pszDestDomain, szCustFilePath));
+    return (0);
 
 }
 
@@ -936,7 +947,8 @@ static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDL
 
 static int      SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszDestDomain, char const * pszCustFilePath)
+                        char const * pszDestDomain, char const * pszDestUser,
+                        char const * pszCustFilePath)
 {
 
     FILE           *pCPFile = fopen(pszCustFilePath, "rt");

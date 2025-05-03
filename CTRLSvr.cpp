@@ -138,6 +138,8 @@ static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_mluserdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
@@ -898,6 +900,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_usersetmproc(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "userauth") == 0)
         iCmdResult = CTRLDo_userauth(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "userstat") == 0)
+        iCmdResult = CTRLDo_userstat(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "aliasadd") == 0)
         iCmdResult = CTRLDo_aliasadd(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "aliasdel") == 0)
@@ -1706,6 +1710,79 @@ static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
 
     UsrFreeUserInfo(pUI);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 3)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check real user account existence
+///////////////////////////////////////////////////////////////////////////////
+    char            szRealAddress[MAX_ADDR_NAME] = "";
+    UserInfo       *pUI = UsrGetUserByNameOrAlias(ppszTokens[1], ppszTokens[2],
+                            szRealAddress);
+
+    if (pUI == NULL)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get mailbox infos
+///////////////////////////////////////////////////////////////////////////////
+    unsigned long   ulMBSize = 0,
+                    ulNumMessages = 0;
+
+    if (UPopGetMailboxSize(pUI, ulMBSize, ulNumMessages) < 0)
+    {
+        ErrorPush();
+        UsrFreeUserInfo(pUI);
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+    SYS_INET_ADDR   LastLoginAddr;
+    char            szIPAddr[128] = "0.0.0.0";
+
+    if (UPopGetLastLoginAddress(pUI, &LastLoginAddr) == 0)
+        SysInetNToA(LastLoginAddr, szIPAddr);
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+
+    if ((BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"RealAddress\"\t\"%s\"",
+            szRealAddress) < 0) ||
+            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxSize\"\t\"%lu\"",
+            ulMBSize) < 0) ||
+            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
+            ulNumMessages) < 0) ||
+            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
+            szIPAddr) < 0))
+    {
+        ErrorPush();
+        UsrFreeUserInfo(pUI);
+        return (ErrorPop());
+    }
+
+    UsrFreeUserInfo(pUI);
+
+    BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
 
     return (0);
 

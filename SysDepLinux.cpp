@@ -139,7 +139,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
-static SYS_SPINLOCK WaitPIDSpin = 0;
+static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
 static          SYS_LIST_HEAD(WaitPIDList);
 
 
@@ -177,6 +177,7 @@ static void     SysIgnoreProc(int iSignal)
 int             SysInitLibrary(void)
 {
 
+    tzset();
 
     if (SysThreadSetup(NULL) < 0)
         return (ErrGetErrorCode());
@@ -2596,16 +2597,39 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
 
 
 
+unsigned long   SysGetTimeZone(void)
+{
+
+    return ((unsigned long) timezone);
+
+}
+
+
+
 static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 {
 
     unsigned int    uValue;
+
+#if defined(XMAIL_SPARC)
+
+    __asm__ __volatile__("ldstub %1,%0":
+            "=r"(uValue), "=m"(*pSpinLock):
+            "m"(*pSpinLock));
+
+#elif defined(XMAIL_X86)
 
     __asm__  __volatile__(
             "xchgl %0, %1":
             "=r"(uValue), "=m"(*pSpinLock):
             "0"(1), "m"(*pSpinLock):
             "memory");
+
+#else
+
+#error CPU type not defined
+
+#endif
 
     return (uValue);
 
@@ -2717,6 +2741,23 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
     uResult = pProc(pData);
 
 #else
+#if defined(XMAIL_SPARC)
+
+    __asm__ __volatile__(
+            "sub %%sp, %0, %%sp\n":
+            :
+            "r"(uStkDisp));
+
+
+    uResult = pProc(pData);
+
+
+    __asm__ __volatile__(
+            "add %%sp, %0, %%sp\n":
+            :
+            "r"(uStkDisp));
+
+#elif defined(XMAIL_X86)
 
     __asm__ __volatile__(
             "sub %0, %%esp\n":
@@ -2732,6 +2773,11 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
             :
             "r"(uStkDisp));
 
+#else
+
+#error CPU type not defined
+
+#endif
 #endif
 
     return (uResult);

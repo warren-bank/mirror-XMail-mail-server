@@ -46,7 +46,8 @@ typedef struct POP3_HANDLE_struct
 
 
 
-int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize);
+int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize,
+                        unsigned long &ulNumMessages);
 int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace = NULL);
 int             UPopAuthenticateAPOP(const char *pszDomain, const char *pszUsrName,
                         const char *pszTimeStamp, const char *pszDigest);
@@ -76,6 +77,7 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
                         const char * pszErrorAccount = NULL);
 int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
                         unsigned int uExpireTime);
+int             UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress);
 
 
 

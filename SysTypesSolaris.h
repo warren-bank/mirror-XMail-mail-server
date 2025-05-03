@@ -57,6 +57,8 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
+#define SYS_SPINLOCK_UNLOCKED   0
+
 #if !defined(INADDR_NONE)
 #define INADDR_NONE             0xffffffff
 #endif

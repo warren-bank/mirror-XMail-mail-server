@@ -225,6 +225,7 @@ int             SysInitLibrary(void)
     PCFreq /= 1000;
     PCSysStart = *(SYS_INT64 *) & PerfCntCurr;
 
+    _tzset();
     time(&tSysStart);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2337,6 +2338,15 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
     pszBuffer[iBufferSize - 1] = '\0';
 
     return (pszBuffer);
+
+}
+
+
+
+unsigned long   SysGetTimeZone(void)
+{
+
+    return ((unsigned long) _timezone);
 
 }
 

@@ -352,7 +352,8 @@ int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
 
 
 
-int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigned long &ulDirSize)
+int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigned long &ulDirSize,
+                        unsigned long &ulNumFiles, int (*pFNValidate) (char const *))
 {
 
     char            szFileName[SYS_MAX_PATH] = "";
@@ -369,25 +370,32 @@ int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigne
         {
             if (bRecurse && SYS_IS_VALID_FILENAME(szFileName))
             {
-                unsigned long   ulSubDirSize = 0;
+                unsigned long   ulSubDirSize = 0,
+                                ulSubNumFiles = 0;
                 char            szSubPath[SYS_MAX_PATH] = "";
 
                 strcpy(szSubPath, pszPath);
                 AppendSlash(szSubPath);
                 strcat(szSubPath, szFileName);
 
-                if (MscGetDirectorySize(szSubPath, bRecurse, ulSubDirSize) < 0)
+                if (MscGetDirectorySize(szSubPath, bRecurse, ulSubDirSize,
+                        ulSubNumFiles, pFNValidate) < 0)
                 {
                     ErrorPush();
                     SysFindClose(hFind);
                     return (ErrorPop());
                 }
 
+                ulNumFiles += ulSubNumFiles;
                 ulDirSize += ulSubDirSize;
             }
         }
-        else
+        else if ((pFNValidate == NULL) || pFNValidate(szFileName))
+        {
+            ++ulNumFiles;
+
             ulDirSize += SysGetSize(hFind);
+        }
 
     } while (SysNextFile(hFind, szFileName));
 
@@ -876,8 +884,10 @@ char           *MscLogFilePath(char const * pszLogFile, char *pszLogFilePath)
 
     time(&tCurrent);
 
-    unsigned long   ulRotStep = (unsigned long) (3600L * iLogRotateHours);
-    time_t          tLogFileTime = (time_t) NbrFloor((unsigned long) tCurrent, ulRotStep);
+    unsigned long   ulRotStep = (unsigned long) (3600L * iLogRotateHours),
+                    ulTimeZone = SysGetTimeZone();
+    time_t          tLogFileTime = (time_t) (NbrFloor((unsigned long) tCurrent - ulTimeZone,
+                            ulRotStep) + ulTimeZone);
     struct tm       tmLogFileTime;
     char            szLogsDir[SYS_MAX_PATH] = "";
 

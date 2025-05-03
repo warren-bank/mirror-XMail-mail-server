@@ -107,6 +107,13 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 
 }
 
+void            SysMsSleep(int iMsTimeout)
+{
+
+    Sleep(iMsTimeout);
+
+}
+
 char           *SysGetEnv(const char *pszVarName)
 {
 
@@ -230,6 +237,13 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 
 }
 
+void            SysMsSleep(int iMsTimeout)
+{
+
+    usleep(iMsTimeout * 1000);
+
+}
+
 char           *SysGetEnv(const char *pszVarName)
 {
 
@@ -253,8 +267,34 @@ char           *SysGetEnv(const char *pszVarName)
 #define ENV_MAIL_ROOT           "MAIL_ROOT"
 #define LOCAL_TEMP_SUBPATH      "spool" SYS_SLASH_STR "temp" SYS_SLASH_STR
 #define LOCAL_SUBPATH           "spool" SYS_SLASH_STR "local" SYS_SLASH_STR
+#define MAIL_DATA_TAG           "<<MAIL-DATA>>"
+#define MAX_ADDR_NAME           256
+#define SAPE_OPEN_TENTATIVES    5
+#define SAPE_OPEN_DELAY         500
+
+#define SetEmptyString(s)       (s)[0] = '\0'
+#define IsEmptyString(s)        (*(s) == '\0')
+#define StrNCpy(t, s, n)        do { strncpy(t, s, n); (t)[(n) - 1] = '\0'; } while (0)
+#define StrSNCpy(t, s)          StrNCpy(t, s, sizeof(t))
 
 
+
+static FILE    *SafeOpenFile(char const * pszFilePath, char const * pszMode)
+{
+
+    FILE           *pFile;
+
+    for (int ii = 0; ii < SAPE_OPEN_TENTATIVES; ii++)
+    {
+        if ((pFile = fopen(pszFilePath, pszMode)) != NULL)
+            return (pFile);
+
+        SysMsSleep(SAPE_OPEN_DELAY);
+    }
+
+    return (NULL);
+
+}
 
 
 
@@ -321,6 +361,7 @@ int             main(int iArgCount, char *pszArgs[])
 //  Get the mail root path
 ///////////////////////////////////////////////////////////////////////////////
     int             iVarLength = 0;
+    FILE           *pInFile = stdin;
     char           *pszMailRoot = SysGetEnv(ENV_MAIL_ROOT);
     char            szMailRoot[SYS_MAX_PATH] = "";
 
@@ -343,68 +384,120 @@ int             main(int iArgCount, char *pszArgs[])
 //  Parse command line
 ///////////////////////////////////////////////////////////////////////////////
     int             ii;
-    bool            bExtractRcpts = false;
+    bool            bExtractRcpts = false,
+                    bXMailFormat = false,
+                    bDotMode = true;
     char            szMailFrom[256] = "",
-                    szExtMailFrom[256] = "";
+                    szExtMailFrom[256] = "",
+                    szInputFile[SYS_MAX_PATH] = "",
+                    szRcptFile[SYS_MAX_PATH] = "";
 
     for (ii = 1; ii < iArgCount; ii++)
     {
         if (pszArgs[ii][0] != '-')
             break;
 
-        if ((strcmp(pszArgs[ii], "-N") == 0) || (strcmp(pszArgs[ii], "-O") == 0) ||
-                (strcmp(pszArgs[ii], "-o") == 0) || (strcmp(pszArgs[ii], "-R") == 0) ||
-                (strcmp(pszArgs[ii], "-V") == 0) || (strcmp(pszArgs[ii], "-X") == 0))
+        if (strcmp(pszArgs[ii], "--") == 0)
         {
             ++ii;
-
-            continue;
+            break;
         }
 
-        if (strncmp(pszArgs[ii], "-t", 2) == 0)
+        if (pszArgs[ii][1] != '-')
         {
-            bExtractRcpts = true;
+            int             iSkipParam = 0;
 
-            continue;
-        }
-
-        if (strncmp(pszArgs[ii], "-f", 2) == 0)
-        {
-            strcpy(szMailFrom, pszArgs[ii] + 2);
-
-            continue;
-        }
-
-        if (strncmp(pszArgs[ii], "-F", 2) == 0)
-        {
-            strcpy(szExtMailFrom, pszArgs[ii] + 2);
-
-
-            char const     *pszOpen = strchr(pszArgs[ii] + 2, '<');
-
-            if (pszOpen == NULL)
-                strcpy(szMailFrom, pszArgs[ii] + 2);
-            else
+            for (int jj = 1; pszArgs[ii][jj] != '\0'; jj++)
             {
-                strcpy(szMailFrom, pszOpen + 1);
+                switch (pszArgs[ii][jj])
+                {
+                    case ('N'):
+                    case ('O'):
+                    case ('o'):
+                    case ('R'):
+                    case ('V'):
+                    case ('X'):
+                        iSkipParam = 1;
+                        break;
 
-                char           *pszClose = (char *) strchr(szMailFrom, '>');
+                    case ('i'):
+                        bDotMode = false;
+                        break;
 
-                if (pszClose != NULL)
-                    *pszClose = '\0';
+                    case ('t'):
+                        bExtractRcpts = true;
+                        break;
+
+                    case ('f'):
+                        StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                        break;
+
+                    case ('F'):
+                        {
+                            StrSNCpy(szExtMailFrom, pszArgs[ii] + jj + 1);
+
+                            char const     *pszOpen = strchr(pszArgs[ii] + jj + 1, '<');
+
+                            if (pszOpen == NULL)
+                                StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                            else
+                            {
+                                StrSNCpy(szMailFrom, pszOpen + 1);
+
+                                char           *pszClose = (char *) strchr(szMailFrom, '>');
+
+                                if (pszClose != NULL)
+                                    *pszClose = '\0';
+                            }
+                        }
+                        break;
+                }
             }
 
-            continue;
+            if (iSkipParam)
+                ++ii;
         }
+        else
+        {
+            if (strcmp(pszArgs[ii], "--rcpt-file") == 0)
+            {
+                if (++ii < iArgCount)
+                    StrSNCpy(szRcptFile, pszArgs[ii]);
+            }
+            else if (strcmp(pszArgs[ii], "--xinput-file") == 0)
+            {
+                if (++ii < iArgCount)
+                {
+                    StrSNCpy(szInputFile, pszArgs[ii]);
+
+                    bXMailFormat = true;
+                }
+            }
+            else if (strcmp(pszArgs[ii], "--input-file") == 0)
+            {
+                if (++ii < iArgCount)
+                    StrSNCpy(szInputFile, pszArgs[ii]);
+            }
+        }
+
     }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if recipients are supplied
 ///////////////////////////////////////////////////////////////////////////////
-    if (!bExtractRcpts && (ii >= iArgCount))
+    if (!bExtractRcpts && (ii >= iArgCount) && IsEmptyString(szRcptFile))
     {
         fprintf(stderr, "empty recipient list\n");
         return (2);
+    }
+
+    if (!IsEmptyString(szInputFile))
+    {
+        if ((pInFile = fopen(szInputFile, "rb")) == NULL)
+        {
+            perror(szInputFile);
+            return (3);
+        }
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -439,7 +532,8 @@ int             main(int iArgCount, char *pszArgs[])
     if (pDataFile == NULL)
     {
         perror(szDataFile);
-        return (3);
+        if (pInFile != stdin) fclose(pInFile);
+        return (4);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -451,7 +545,8 @@ int             main(int iArgCount, char *pszArgs[])
     {
         perror(szMailFile);
         fclose(pDataFile), remove(szDataFile);
-        return (4);
+        if (pInFile != stdin) fclose(pInFile);
+        return (5);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -473,7 +568,7 @@ int             main(int iArgCount, char *pszArgs[])
                     bRcptSource = false;
     char            szBuffer[1536] = "";
 
-    while (fgets(szBuffer, sizeof(szBuffer) - 1, stdin) != NULL)
+    while (fgets(szBuffer, sizeof(szBuffer) - 1, pInFile) != NULL)
     {
         int             iLineLength = strlen(szBuffer);
 
@@ -482,6 +577,22 @@ int             main(int iArgCount, char *pszArgs[])
 
         szBuffer[iLineLength] = '\0';
 
+///////////////////////////////////////////////////////////////////////////////
+//  Is it time to stop reading ?
+///////////////////////////////////////////////////////////////////////////////
+        if (bDotMode && (strcmp(szBuffer, ".") == 0))
+            break;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Decode XMail spool file format
+///////////////////////////////////////////////////////////////////////////////
+        if (bXMailFormat)
+        {
+            if (strcmp(szBuffer, MAIL_DATA_TAG) == 0)
+                bXMailFormat = false;
+
+            continue;
+        }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract mail from
@@ -542,6 +653,56 @@ int             main(int iArgCount, char *pszArgs[])
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Close input file if different from stdin
+///////////////////////////////////////////////////////////////////////////////
+    if (pInFile != stdin) fclose(pInFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump recipient file
+///////////////////////////////////////////////////////////////////////////////
+    if (!IsEmptyString(szRcptFile))
+    {
+        FILE           *pRcptFile = SafeOpenFile(szRcptFile, "rb");
+
+        if (pRcptFile == NULL)
+        {
+            perror(szRcptFile);
+            fclose(pDataFile), remove(szDataFile);
+            fclose(pMailFile), remove(szMailFile);
+            return (6);
+        }
+
+        while (fgets(szBuffer, sizeof(szBuffer) - 1, pRcptFile) != NULL)
+        {
+            int             iLineLength = strlen(szBuffer);
+
+            for (;(iLineLength > 0) &&
+                    ((szBuffer[iLineLength - 1] == '\r') || (szBuffer[iLineLength - 1] == '\n')); iLineLength--);
+
+            szBuffer[iLineLength] = '\0';
+
+            if (iLineLength >= MAX_ADDR_NAME)
+                continue;
+
+            char           *pszAt = strchr(szBuffer, '@');
+
+            if (pszAt == NULL)
+                continue;
+
+            char            szRecipient[MAX_ADDR_NAME] = "";
+
+            if (AddressFromAtPtr(pszAt, szBuffer, szRecipient) != NULL)
+            {
+                fprintf(pMailFile, "rcpt to:<%s>\r\n", szRecipient);
+
+                ++iRcptCount;
+            }
+        }
+
+        fclose(pRcptFile);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
 //  Check the number of recipients
 ///////////////////////////////////////////////////////////////////////////////
     if (iRcptCount == 0)
@@ -549,7 +710,7 @@ int             main(int iArgCount, char *pszArgs[])
         fprintf(stderr, "empty recipient list\n");
         fclose(pDataFile), remove(szDataFile);
         fclose(pMailFile), remove(szMailFile);
-        return (5);
+        return (7);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -572,7 +733,7 @@ int             main(int iArgCount, char *pszArgs[])
             perror(szMailFile);
             fclose(pDataFile), remove(szDataFile);
             fclose(pMailFile), remove(szMailFile);
-            return (6);
+            return (8);
         }
 
     } while (uReaded == sizeof(szBuffer));
@@ -586,7 +747,7 @@ int             main(int iArgCount, char *pszArgs[])
     {
         remove(szMailFile);
         fprintf(stderr, "cannot write file: %s\n", szMailFile);
-        return (7);
+        return (9);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -605,7 +766,7 @@ int             main(int iArgCount, char *pszArgs[])
     {
         remove(szMailFile);
         fprintf(stderr, "cannot move file: %s\n", szMailFile);
-        return (8);
+        return (10);
     }
 
 

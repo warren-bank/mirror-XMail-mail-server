@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.1
+Version: 1.2
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -16,10 +16,10 @@ XMail is an Internet and intranet mail server featuring an SMTP server, POP3 ser
 finger server, multiple domains, no need for users to have a real system account,
 SMTP relay checking, RBL/RSS/ORBS/DUL and custom ( IP and address based ) spam protection,
 SMTP authentication ( PLAIN LOGIN CRAM-MD5 POP3-before-SMTP and custom ),
-POP3 mail fecthing of external POP3 accounts, aliases, custom mail processing,
-direct mail files delivery, custom mail filters, mailing lists, remote administration,
-custom mail exchangers, logging, and multi-platform code.
-XMail sources compile under GNU/Linux, FreeBSD, Solaris and NT.
+POP3 mail fecthing of external POP3 accounts, account aliases, domain
+aliases, custom mail processing, direct mail files delivery, custom mail filters,
+mailing lists, remote administration, custom mail exchangers, logging, and multi-platform code.
+XMail sources compile under GNU/Linux, FreeBSD, Solaris and NT/2000/XP.
 
 
 %prep
@@ -117,6 +117,23 @@ fi
 
 
 %changelog
+* Mon Nov 12 2001 Davide Libenzi <davidel@xmailserver.org>
+    A problem with log file names generation has been fixed.
+    Added a new CTRL command "userstat".
+    Implemented Linux/SPARC port and relative makefile ( Makefile.slx ).
+    Extended the XMail version of  sendmail  to support a filename as input ( both XMail format that
+    raw email format ) and to accept a filename as recipient list.
+    Added a new kind of aliases named "cmdaliases" that implements a sort of custom domains commands
+    on a per-user basis ( look at the  CmdAliases  section ).
+    ************************************************************************************************
+    * You've to create the directory "cmdaliases" inside $MAIL_ROOT to have 1.2 working correctly
+    ************************************************************************************************	
+    Fixed a bug that had XMail to not check for the user variable SmtpPerms with CRAM-MD5 authetication.
+    Fixed a bug in the XMail's  sendmail  implementation that made it unable to detect the "."
+    end of message condition.
+    Fixed a bug in the XMail's  sendmail  implementation that made it to skip cascaded command line
+    parameters ( -Ooet ).
+    Implemented a new XMail's  sendmail  switch -i to relax the <CR><LF>.<CR><LF> ond of message indicator.
 * Tue Oct 10 2001 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug in the XMail version of  sendmail  that made messages to be double sent.
     The macro @@TMPFILE has been removed from filters coz it's useless.

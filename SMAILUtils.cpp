@@ -55,6 +55,7 @@
 #define CUSTOM_CMD_LINE_MAX             512
 #define SMAIL_DOMAIN_PROC_DIR           "custdomains"
 #define SMAIL_DOMAIN_FILTER_DIR         "filters"
+#define SMAIL_CMDALIAS_DIR              "cmdaliases"
 #define SMAIL_DEFAULT_FILTER            ".tab"
 #define SMAIL_LOG_FILE                  "smail"
 #define MAX_MTA_OPS                     16
@@ -1941,6 +1942,178 @@ int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash)
     return (0);
 
 }
+
+
+
+
+int             USmlGetCmdAliasDir(char *pszAliasDir, int iFinalSlash)
+{
+
+    CfgGetRootPath(pszAliasDir);
+
+    strcat(pszAliasDir, SMAIL_CMDALIAS_DIR);
+    if (iFinalSlash)
+        AppendSlash(pszAliasDir);
+
+    return (0);
+
+}
+
+
+
+
+int             USmlGetCmdAliasFile(char const *pszDomain, char const *pszUser,
+                        char *pszAliasFile)
+{
+
+    char            szAliasDir[SYS_MAX_PATH] = "";
+
+    USmlGetCmdAliasDir(szAliasDir, 1);
+
+    SysSNPrintf(pszAliasFile, SYS_MAX_PATH - 1, "%s%s%s%s.tab",
+            szAliasDir, pszDomain, SYS_SLASH_STR, pszUser);
+
+    StrLower(pszAliasFile + strlen(szAliasDir));
+
+    return (0);
+
+}
+
+
+
+
+int             USmlIsCmdAliasAccount(char const *pszDomain, char const *pszUser,
+                        char *pszAliasFile)
+{
+
+    char            szAliasFile[SYS_MAX_PATH] = "";
+
+    if (pszAliasFile == NULL)
+        pszAliasFile = szAliasFile;
+
+    if (USmlGetCmdAliasFile(pszDomain, pszUser, pszAliasFile) < 0)
+        return (ErrGetErrorCode());
+
+    if (!SysExistFile(pszAliasFile))
+    {
+        ErrSetErrorCode(ERR_NOT_A_CMD_ALIAS);
+        return (ERR_NOT_A_CMD_ALIAS);
+    }
+
+    return (0);
+
+}
+
+
+
+
+int             USmlCreateCmdAliasDomainDir(char const *pszDomain)
+{
+
+    char            szAliasDir[SYS_MAX_PATH] = "",
+                    szDomainAliasDir[SYS_MAX_PATH] = "";
+
+    USmlGetCmdAliasDir(szAliasDir, 1);
+
+    SysSNPrintf(szDomainAliasDir, sizeof(szDomainAliasDir) - 1, "%s%s",
+            szAliasDir, pszDomain);
+
+    StrLower(szDomainAliasDir + strlen(szAliasDir));
+
+    if (SysMakeDir(szDomainAliasDir) < 0)
+        return (ErrGetErrorCode());
+
+
+    return (0);
+
+}
+
+
+
+
+int             USmlDeleteCmdAliasDomainDir(char const *pszDomain)
+{
+
+    char            szAliasDir[SYS_MAX_PATH] = "",
+                    szDomainAliasDir[SYS_MAX_PATH] = "";
+
+    USmlGetCmdAliasDir(szAliasDir, 1);
+
+    SysSNPrintf(szDomainAliasDir, sizeof(szDomainAliasDir) - 1, "%s%s",
+            szAliasDir, pszDomain);
+
+    StrLower(szDomainAliasDir + strlen(szAliasDir));
+
+    if (MscClearDirectory(szDomainAliasDir) < 0)
+        return (ErrGetErrorCode());
+
+    if (SysRemoveDir(szDomainAliasDir) < 0)
+        return (ErrGetErrorCode());
+
+
+    return (0);
+
+}
+
+
+
+int             USmlGetCmdAliasSpoolFile(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        char *pszAliasFilePath)
+{
+
+    return (QueGetFilePath(hQueue, hMessage, pszAliasFilePath, QUEUE_CUST_DIR));
+
+}
+
+
+
+
+int             USmlGetCmdAliasCustomFile(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, char const *pszDomain, char const *pszUser,
+                        char *pszAliasFilePath)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check if exist a spooled copy
+///////////////////////////////////////////////////////////////////////////////
+    char const     *pszSpoolFilePath = USmlGetSpoolFilePath(hFSpool);
+
+    USmlGetCmdAliasSpoolFile(hQueue, hMessage, pszAliasFilePath);
+
+    if (SysExistFile(pszAliasFilePath))
+        return (0);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check if this is a cmd alias
+///////////////////////////////////////////////////////////////////////////////
+    char            szAliasFile[SYS_MAX_PATH] = "";
+
+    if (USmlIsCmdAliasAccount(pszDomain, pszUser, szAliasFile) < 0)
+        return (ErrGetErrorCode());
+
+
+    RLCK_HANDLE     hResLock = RLckLockSH(szAliasFile);
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+        return (ErrGetErrorCode());
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Make a copy into the spool
+///////////////////////////////////////////////////////////////////////////////
+    if (MscCopyFile(pszAliasFilePath, szAliasFile) < 0)
+    {
+        ErrorPush();
+        RLckUnlockSH(hResLock);
+        return (ErrorPop());
+    }
+
+
+    RLckUnlockSH(hResLock);
+
+    return (0);
+
+}
+
 
 
 

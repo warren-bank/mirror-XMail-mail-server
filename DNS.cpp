@@ -519,15 +519,15 @@ static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
 static SYS_UINT16 DNS_GetUniqueQueryId(void)
 {
 
-    static SYS_SPINLOCK IdLock = 0;
+    static SYS_SPINLOCK IDSpin = SYS_SPINLOCK_UNLOCKED;
     static SYS_UINT16   uDnsQueryId = 0;
+    SYS_UINT16      uQueryId;
 
-    SysSpinAcquire(&IdLock);
+    SysSpinAcquire(&IDSpin);
 
-    SYS_UINT16      uQueryId = ++uDnsQueryId;
+    uQueryId = ++uDnsQueryId;
 
-    SysSpinRelease(&IdLock);
-
+    SysSpinRelease(&IDSpin);
 
     return (uQueryId);
 

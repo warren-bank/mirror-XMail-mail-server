@@ -86,6 +86,7 @@ struct POP3SessionData
 
 
 
+static int      UPopMailFileNameFilter(char const * pszFileName);
 static int      UPopFillMessageList(char const * pszBasePath, char const * pszSubPath,
                         HSLIST & hMessageList, int &iMsgCount, unsigned long &ulMBSize);
 static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
@@ -128,9 +129,17 @@ static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath);
 
 
 
+static int      UPopMailFileNameFilter(char const * pszFileName)
+{
+
+    return ((*pszFileName != '.') ? 1: 0);
+
+}
 
 
-int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize)
+
+int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize,
+                        unsigned long &ulNumMessages)
 {
 
     char            szMBPath[SYS_MAX_PATH] = "";
@@ -144,7 +153,11 @@ int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize)
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
 
-    if (MscGetDirectorySize(szMBPath, true, ulMBSize) < 0)
+    ulMBSize = 0;
+    ulNumMessages = 0;
+
+    if (MscGetDirectorySize(szMBPath, true, ulMBSize, ulNumMessages,
+            UPopMailFileNameFilter) < 0)
     {
         ErrorPush();
         RLckUnlockSH(hResLock);
@@ -164,9 +177,10 @@ int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize)
 int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace)
 {
 
-    unsigned long   ulMBSize = 0;
+    unsigned long   ulMBSize = 0,
+                    ulNumMessages = 0;
 
-    if (UPopGetMailboxSize(pUI, ulMBSize) < 0)
+    if (UPopGetMailboxSize(pUI, ulMBSize, ulNumMessages) < 0)
         return (ErrGetErrorCode());
 
 
@@ -1480,5 +1494,36 @@ int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
     }
 
     return (0);
+
+}
+
+
+
+int             UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress)
+{
+
+    char            szIpFilePath[SYS_MAX_PATH] = "";
+
+    UPopGetIpLogFilePath(pUI, szIpFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Load IP from file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pIpFile = fopen(szIpFilePath, "rt");
+
+    if (pIpFile == NULL)
+    {
+        ErrSetErrorCode(ERR_NO_POP3_IP);
+        return (ERR_NO_POP3_IP);
+    }
+
+    char            szIP[128] = "";
+
+    MscFGets(szIP, sizeof(szIP) - 1, pIpFile);
+
+    fclose(pIpFile);
+
+
+    return (SysSetupAddress(*pAddress, AF_INET, SysInetAddr(szIP), 0));
 
 }

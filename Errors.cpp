@@ -274,6 +274,7 @@ static ErrorStrings Errors[] =
     {ERR_ADOMAIN_FILE_NOT_FOUND, "Domain aliases file not found"},
     {ERR_ADOMAIN_EXIST, "Domain alias already exist"},
     {ERR_ADOMAIN_NOT_FOUND, "Domain alias not found"},
+    {ERR_NOT_A_CMD_ALIAS, "Cmd alias not found"},
 
 };
 

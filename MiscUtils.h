@@ -71,7 +71,8 @@ int             MscGetTimeNbrString(char *pszTimeStr, int iStringSize, time_t tT
 int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
                         time_t tCurr = 0);
 int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr = 0);
-int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigned long &ulDirSize);
+int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigned long &ulDirSize,
+                        unsigned long &ulNumFiles, int (*pFNValidate) (char const *) = NULL);
 FSCAN_HANDLE    MscFirstFile(char const * pszPath, int iListDirs, char *pszFileName);
 int             MscNextFile(FSCAN_HANDLE hFileScan, char *pszFileName);
 void            MscCloseFindFile(FSCAN_HANDLE hFileScan);

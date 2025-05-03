@@ -40,6 +40,7 @@
 #include "UsrAuth.h"
 #include "TabIndex.h"
 #include "AliasDomain.h"
+#include "SMAILUtils.h"
 #include "MailDomains.h"
 
 
@@ -301,11 +302,24 @@ int             MDomAddDomain(char const * pszDomain)
         return (ErrorPop());
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Create domain directory
+///////////////////////////////////////////////////////////////////////////////
     char            szDomainPath[SYS_MAX_PATH] = "";
 
     MDomGetDomainPath(pszDomain, szDomainPath, 0);
 
     if (SysMakeDir(szDomainPath) < 0)
+    {
+        ErrorPush();
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Create cmd alias directory
+///////////////////////////////////////////////////////////////////////////////
+    if (USmlCreateCmdAliasDomainDir(pszDomain) < 0)
     {
         ErrorPush();
         RLckUnlockEX(hResLock);
@@ -471,6 +485,13 @@ int             MDomRemoveDomain(char const * pszDomain)
 
     if (SysRemoveDir(szDomainPath) < 0)
         return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
+//  Remove the cmd alias directory
+///////////////////////////////////////////////////////////////////////////////
+    if (USmlDeleteCmdAliasDomainDir(pszDomain) < 0)
+        return (ErrGetErrorCode());
+
 
     return (0);
 

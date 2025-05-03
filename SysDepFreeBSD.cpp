@@ -133,7 +133,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
-static SYS_SPINLOCK WaitPIDSpin = 0;
+static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
 static          SYS_LIST_HEAD(WaitPIDList);
 
 
@@ -171,6 +171,7 @@ static void     SysIgnoreProc(int iSignal)
 int             SysInitLibrary(void)
 {
 
+    tzset();
 
     if (SysThreadSetup(NULL) < 0)
         return (ErrGetErrorCode());
@@ -2541,6 +2542,15 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
 {
 
     return (asctime_r(pTStruct, pszBuffer));
+
+}
+
+
+
+unsigned long   SysGetTimeZone(void)
+{
+
+    return ((unsigned long) timezone);
 
 }
 
