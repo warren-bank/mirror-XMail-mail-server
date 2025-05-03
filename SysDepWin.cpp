@@ -36,6 +36,9 @@
 #define SOCK_VERSION_REQUESTED          MAKEWORD(2, 0)
 #define SHUTDOWN_RECV_TIMEOUT           2
 
+#define MAX_SPIN_COUNT                  64
+#define SPIN_SLEEP_TIME                 50
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Under certain circumstances ( M$ Proxy installed ?! ) a waiting operation
 //  may be unlocked even if the IO terminal is not ready to perform following
@@ -327,12 +330,7 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
     Ling.l_onoff = 0;
     Ling.l_linger = 0;
 
-    if (setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling,
-                    sizeof(Ling)) != 0)
-    {
-        ErrSetErrorCode(ERR_SETSOCKOPT);
-        return (ERR_SETSOCKOPT);
-    }
+    setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling, sizeof(Ling));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set KEEPALIVE if supported
@@ -2247,5 +2245,43 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
     pszBuffer[iBufferSize - 1] = '\0';
 
     return (pszBuffer);
+
+}
+
+
+
+int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock)
+{
+
+    int             iCount = 0;
+
+    while (InterlockedExchange(pSpinLock, 1) != 0)
+    {
+        if (iCount < MAX_SPIN_COUNT)
+        {
+            ++iCount;
+
+            Sleep(0);
+        }
+        else
+        {
+            Sleep(SPIN_SLEEP_TIME);
+
+            iCount = 0;
+        }
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
+{
+
+    InterlockedExchange(pSpinLock, 0);
+
+    return (0);
 
 }

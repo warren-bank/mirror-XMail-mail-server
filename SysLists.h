@@ -37,10 +37,12 @@ do { \
 
 #define SYS_LIST_ADD(new, prev, next) \
 do { \
-    (next)->pPrev = new; \
-	(new)->pNext = next; \
-	(new)->pPrev = prev; \
-	(prev)->pNext = new; \
+    struct SysListHead *    pPrev = prev; \
+    struct SysListHead *    pNext = next; \
+    pNext->pPrev = new; \
+	(new)->pNext = pNext; \
+	(new)->pPrev = pPrev; \
+	pPrev->pNext = new; \
 } while (0)
 
 #define SYS_LIST_ADDH(new, head)        SYS_LIST_ADD(new, head, (head)->pNext)
@@ -73,6 +75,10 @@ do { \
 #define SYS_LIST_ENTRY(ptr, type, member)   ((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
 
 #define SYS_LIST_FOR_EACH(pos, head)        for (pos = (head)->pNext; pos != (head); pos = (pos)->pNext)
+
+#define SYS_LIST_FIRST(head)                (((head)->pNext != (head)) ? (head)->pNext: NULL)
+
+#define SYS_LIST_LAST(head)                 (((head)->pPrev != (head)) ? (head)->pPrev: NULL)
 
 
 

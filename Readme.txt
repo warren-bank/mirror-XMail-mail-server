@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.65 ( Beta-19 )
+Version      : 0.66 ( Beta-20 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 25-11-2000
+Date         : 08-12-2000
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -395,6 +395,21 @@ Date 25-11-2000		0.65
 	( see "XMail local mailer" section ).
 	Two new directories  "local"  and  "temp"  must be created inside the  "spool"  directory.
 	The meaning of the command line param "-Mr ..." has changed from days to hours.
+Date 08-12-2000		0.66
+	The SMTP command RSET no more clean the authentication status of the client.
+	Improved MX records resolution and fixed a bug in MD5 algo.
+	A new USER.TAB variable ( for Mailing Lists ) "ListSender" has been added to hide
+	real senders from SMTP protocol.
+	If this variable does not exist the "MAIL FROM:<>" command will contain the "real" sender address.
+	This variable should be set to the email address of the mailing list admin that will receive
+	all the notification and error messages, preventing this error to reach real senders.
+	Fixed an RFC conformance bug in SMTP protocol that made XMail to accept the MAIL_FROM command
+	even if the HELO ( or EHLO ) command was not issued.
+	Fixed a bug in SysExec() in Linux and Solaris versions that made all external programs to
+	have a bad behaviour or fail. This bug was introduced in 0.65 version.
+	Fixed a bug in the Windows version that results in a failure to resolve MX queries.
+	This bug was introduced in 0.65.
+
 
 
 
@@ -903,7 +918,7 @@ Part 7			Configuration
 	"maticad"	"dlibenzi"	"XYZ..."	1	"dlibenzi"	"U"
 
 	define an account "dlibenzi" in domain "maticad" with the encrypted password "XYZ...", 
-	user id "1" and mail directory "dlibenzi" inside $MAIL_ROOT/maticad.
+	user id "1" and mail directory "dlibenzi" inside $MAIL_ROOT/domains/maticad.
 	To allow multiple domains handling the POP3 client must use the entire email address
 	for the POP3 user account, ex. if a user has email user@domain it must supply :
 
@@ -1748,6 +1763,16 @@ Part 13			USER.TAB variables
 
 	"ClosedML"	"1"
 
+	[ListSender]
+	Specify the mailing list sender or administrator :
+
+	"ListSender"	"ml-admin@mycio.com"
+
+	This variable should be set to avoid delivery error notifications to reach the
+	original message senders.
+
+
+
 
 
 
@@ -2314,7 +2339,7 @@ Part 19			XMail admin protocol
 
 	*) Deleting a domain
 
-	"domainadd"[TAB]"domain"<CR><LF>
+	"domaindel"[TAB]"domain"<CR><LF>
 
 	where :
 

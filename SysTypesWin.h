@@ -77,6 +77,7 @@ typedef int     socklen_t;
 typedef HANDLE  SYS_SEMAPHORE;
 typedef HANDLE  SYS_MUTEX;
 typedef HANDLE  SYS_EVENT;
+typedef LONG    SYS_SPINLOCK;
 typedef unsigned long SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 

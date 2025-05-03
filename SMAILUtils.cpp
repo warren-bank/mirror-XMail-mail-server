@@ -2087,6 +2087,8 @@ int             USmlParseAddress(char const * pszAddress, char *pszPreAddr, char
 
             strncpy(pszPreAddr, pszAddress, iPreCount);
             pszPreAddr[iPreCount] = '\0';
+
+            StrTrim(pszPreAddr, " \t");
         }
 
         if (pszEmailAddr != NULL)
@@ -2109,6 +2111,8 @@ int             USmlParseAddress(char const * pszAddress, char *pszPreAddr, char
 
             strncpy(pszEmailAddr, pszOpen + 1, iEmailCount);
             pszEmailAddr[iEmailCount] = '\0';
+
+            StrTrim(pszEmailAddr, " \t");
         }
     }
     else
@@ -2120,7 +2124,7 @@ int             USmlParseAddress(char const * pszAddress, char *pszPreAddr, char
         {
             strcpy(pszEmailAddr, pszAddress);
 
-            StrRTrim(pszEmailAddr);
+            StrTrim(pszEmailAddr, " \t");
         }
     }
 
@@ -2137,21 +2141,15 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr)
 //  the "MAIL FROM: <>" part of the spool message
 ///////////////////////////////////////////////////////////////////////////////
     MessageTagData *pMTD = USmlFindTag(hTagList, "Return-Path");
-    char            szFromAddr[MAX_ADDR_NAME] = "";
 
     if ((pMTD != NULL) &&
-            (USmlParseAddress(pMTD->pszTagData, NULL, szFromAddr) == 0))
-    {
-        strcpy(pszFromAddr, szFromAddr);
+            (USmlParseAddress(pMTD->pszTagData, NULL, pszFromAddr) == 0))
         return (0);
-    }
+
 
     if (((pMTD = USmlFindTag(hTagList, "From")) != NULL) &&
-            (USmlParseAddress(pMTD->pszTagData, NULL, szFromAddr) == 0))
-    {
-        strcpy(pszFromAddr, szFromAddr);
+            (USmlParseAddress(pMTD->pszTagData, NULL, pszFromAddr) == 0))
         return (0);
-    }
 
 
     ErrSetErrorCode(ERR_MAILFROM_UNKNOWN);
@@ -2200,7 +2198,7 @@ static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagLi
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "?" + masquerade-domain
 ///////////////////////////////////////////////////////////////////////////////
-        char            szToAddr[MAX_ADDR_NAME] = "",
+        char            szToAddr[MAX_SMTP_ADDRESS] = "",
                         szToUser[MAX_ADDR_NAME] = "";
 
         if ((USmlExtractToAddress(hTagList, szToAddr) < 0) ||
@@ -2216,7 +2214,7 @@ static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagLi
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "&" + add-domain
 ///////////////////////////////////////////////////////////////////////////////
-        char            szToAddr[MAX_ADDR_NAME] = "";
+        char            szToAddr[MAX_SMTP_ADDRESS] = "";
 
         if (USmlExtractToAddress(hTagList, szToAddr) < 0)
             return (ErrGetErrorCode());
@@ -2263,14 +2261,14 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract "MAIL FROM: <>" address
 ///////////////////////////////////////////////////////////////////////////////
-    char            szFromAddr[MAX_ADDR_NAME] = "";
+    char            szFromAddr[MAX_SMTP_ADDRESS] = "";
 
     USmlExtractFromAddress(hTagList, szFromAddr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  If the recipient is NULL try to extract the "To:" tag from the message
 ///////////////////////////////////////////////////////////////////////////////
-    char            szToAddr[MAX_ADDR_NAME] = "";
+    char            szToAddr[MAX_SMTP_ADDRESS] = "";
 
     if (USmlBuildTargetRecipient(pszRcptTo, hTagList, szToAddr) < 0)
     {

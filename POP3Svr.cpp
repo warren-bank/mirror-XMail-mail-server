@@ -131,8 +131,7 @@ static int      POP3HandleCmd_LAST(const char *pszCommand, BSOCK_HANDLE hBSock,
                         POP3Session & POP3S);
 static int      POP3HandleCmd_RSET(const char *pszCommand, BSOCK_HANDLE hBSock,
                         POP3Session & POP3S);
-static int      POP3HandleCmd_RSET(const char *pszCommand, BSOCK_HANDLE hBSock,
-                        POP3Session & POP3S);
+
 
 
 

@@ -649,8 +649,8 @@ static int      LMAILAddReceived(FILE * pSpoolFile, char const * pszSMTPDomain,
                         char const * pszTime)
 {
 
-    char            szFrom[MAX_SPOOL_LINE] = "",
-                    szRcpt[MAX_SPOOL_LINE] = "";
+    char            szFrom[MAX_SMTP_ADDRESS] = "",
+                    szRcpt[MAX_SMTP_ADDRESS] = "";
 
     if ((USmlParseAddress(pszMailFrom, NULL, szFrom) < 0) ||
             (USmlParseAddress(pszRcptTo, NULL, szRcpt) < 0))

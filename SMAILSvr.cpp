@@ -493,11 +493,21 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
     if (USmtpSplitEmailAddr(ppszRcpt[0], szDestUser, szDestDomain) < 0)
         return (ErrGetErrorCode());
 
+///////////////////////////////////////////////////////////////////////////////
+//  Get Mailing List Sender address. If this account variable does not exist
+//  the sender will be the "real" message sender
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszMLSender = UsrGetUserInfoVar(pUI, "ListSender");
+
 
     USRML_HANDLE    hUsersDB = UsrMLOpenDB(pUI);
 
     if (hUsersDB == INVALID_USRML_HANDLE)
-        return (ErrGetErrorCode());
+    {
+        ErrorPush();
+        SysFreeCheck(pszMLSender);
+        return (ErrorPop());
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Mailing list scan
@@ -514,17 +524,19 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
         if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
         {
             ErrorPush();
+            SysFreeCheck(pszMLSender);
             UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create spool file
+//  Create spool file. If "pszMLSender" is NULL the original sender is kept
 ///////////////////////////////////////////////////////////////////////////////
-        if (USmlCreateSpoolFile(hFSpool, NULL, pMLUI->pszAddress, szSpoolTmpFile) < 0)
+        if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szSpoolTmpFile) < 0)
         {
             ErrorPush();
+            SysFreeCheck(pszMLSender);
             UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
@@ -537,6 +549,7 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);
+            SysFreeCheck(pszMLSender);
             UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
@@ -547,6 +560,7 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 
     UsrMLCloseDB(hUsersDB);
 
+    SysFreeCheck(pszMLSender);
 
     return (0);
 

@@ -49,9 +49,9 @@ char           *StrVSprint(char const * pszFormat, va_list Args);
 char           *StrSprint(char const * pszFormat,...);
 int             StrSplitString(char const * pszString, char const * pszSplitters,
                         char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);
-char           *StrLTrim(char *pszString);
-char           *StrRTrim(char *pszString);
-char           *StrTrim(char *pszString);
+char           *StrLTrim(char *pszString, char const *pszTrimChars);
+char           *StrRTrim(char *pszString, char const *pszTrimChars);
+char           *StrTrim(char *pszString, char const *pszTrimChars);
 char           *StrEOLTrim(char *pszString);
 int             StrAdd(char *&pszString, int &iSize, char const *pszAdd);
 

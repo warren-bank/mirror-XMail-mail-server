@@ -35,7 +35,9 @@
 
 #define SCHED_PRIORITY_INC          5
 
-#define WAITPID_WAIT_STEP           1
+#define WAIT_PID_TIME_STEP          250
+#define MAX_SPIN_COUNT              64
+#define SPIN_SLEEP_TIME             (50 * 1000)
 
 #define MIN_TCP_SEND_SIZE           1024
 #define MAX_TCP_SEND_SIZE           (1024 * 8)
@@ -95,6 +97,14 @@ struct FileFindData
     struct stat     FS;
 };
 
+struct PIDWaitData
+{
+    SysListHead     LLink;
+    pthread_t       WaitThreadId;
+    pid_t           PID;
+    int             iExitCode;
+};
+
 
 
 
@@ -110,7 +120,10 @@ static void    *SysThreadStartup(void *pThreadData);
 static void     SysSigChildHandler(int iSignal);
 static int      SysThreadSetup(ThrData * pTD);
 static void     SysThreadCleanup(ThrData * pTD);
+static int      SysExitPID(pid_t PID, int iExitCode);
+static int      SysWaitPID(pid_t PID, int * piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
+static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
 
 
 
@@ -122,6 +135,9 @@ static void     SysBreakHandlerRoutine(int iSignal);
 
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
+static SYS_SPINLOCK WaitPIDSpin = 0;
+static SYS_LIST_HEAD(WaitPIDList);
+
 
 
 
@@ -1481,6 +1497,7 @@ static void     SysSigChildHandler(int iSignal)
 
     while ((iExitPid = waitpid(0, &iExitStatus, WUNTRACED | WNOHANG)) > 0)
     {
+        SysExitPID((pid_t) iExitPid, WEXITSTATUS(iExitStatus));
 
     }
 
@@ -1682,6 +1699,89 @@ unsigned long   SysGetCurrentThreadId(void)
 
 
 
+static int      SysExitPID(pid_t PID, int iExitCode)
+{
+
+    SysSpinAcquire(&WaitPIDSpin);
+
+    SysListHead    *pLLink;
+
+    SYS_LIST_FOR_EACH(pLLink, &WaitPIDList)
+    {
+        PIDWaitData    *pPWD = SYS_LIST_ENTRY(pLLink, PIDWaitData, LLink);
+
+        if (pPWD->PID == PID)
+        {
+            pPWD->PID = 0;
+            pPWD->iExitCode = iExitCode;
+        }
+    }
+
+    SysSpinRelease(&WaitPIDSpin);
+
+    return (0);
+
+}
+
+
+
+static int      SysWaitPID(pid_t PID, int * piExitCode, int iTimeout)
+{
+
+    PIDWaitData     PWD;
+
+    ZeroData(PWD);
+    SYS_INIT_LIST_HEAD(&PWD.LLink);
+    PWD.WaitThreadId = pthread_self();
+    PWD.PID = PID;
+    PWD.iExitCode = -1;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Insert into waiting list
+///////////////////////////////////////////////////////////////////////////////
+    SysSpinAcquire(&WaitPIDSpin);
+
+    SYS_LIST_ADDT(&PWD.LLink, &WaitPIDList);
+
+    SysSpinRelease(&WaitPIDSpin);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Wait for PID exit
+///////////////////////////////////////////////////////////////////////////////
+    iTimeout *= 1000;
+
+    while ((iTimeout > 0) && (PWD.PID != 0))
+    {
+        SysMsSleep(WAIT_PID_TIME_STEP);
+
+        iTimeout -= WAIT_PID_TIME_STEP;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Remove from waiting list
+///////////////////////////////////////////////////////////////////////////////
+    SysSpinAcquire(&WaitPIDSpin);
+
+    SYS_LIST_DEL(&PWD.LLink);
+
+    SysSpinRelease(&WaitPIDSpin);
+
+
+    if (iTimeout <= 0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    if (piExitCode != NULL)
+        *piExitCode = PWD.iExitCode;
+
+    return (0);
+
+}
+
+
+
 int             SysExec(char const * pszCommand, char const * const * pszArgs, int iWaitTimeout,
                         int iPriority, int *piExitStatus)
 {
@@ -1721,28 +1821,22 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
     {
         int             iExitStatus = 0;
 
-        while ((waitpid((pid_t) ProcessID, &iExitStatus, WUNTRACED | WNOHANG) != ProcessID) &&
-                (errno != ECHILD) && (iWaitTimeout > 0))
+        if (waitpid((pid_t) ProcessID, &iExitStatus, WUNTRACED | WNOHANG) != ProcessID)
         {
-            SysSleep(WAITPID_WAIT_STEP);
+            if ((errno == ECHILD) || (WEXITSTATUS(iExitStatus) < 0))
+            {
+                ErrSetErrorCode(ERR_PROCESS_EXECUTE);
+                return (ERR_PROCESS_EXECUTE);
+            }
 
-            iWaitTimeout -= WAITPID_WAIT_STEP;
+            if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout) < 0)
+                return (ErrGetErrorCode());
         }
-
-        if (iWaitTimeout < 0)
-        {
-            ErrSetErrorCode(ERR_TIMEOUT);
-            return (ERR_TIMEOUT);
-        }
-
-        if ((errno == ECHILD) || (WEXITSTATUS(iExitStatus) < 0))
-        {
-            ErrSetErrorCode(ERR_PROCESS_EXECUTE);
-            return (ERR_PROCESS_EXECUTE);
-        }
+        else
+            iExitStatus = WEXITSTATUS(iExitStatus);
 
         if (piExitStatus != NULL)
-            *piExitStatus = WEXITSTATUS(iExitStatus);
+            *piExitStatus = iExitStatus;
     }
     else if (piExitStatus != NULL)
         *piExitStatus = -1;
@@ -2439,5 +2533,60 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
 {
 
     return (asctime_r(pTStruct, pszBuffer));
+
+}
+
+
+
+static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
+{
+
+    unsigned int    uValue;
+
+    __asm__ __volatile__(
+            "xchgl %0, %1"
+          : "=r"(uValue), "=m"(*pSpinLock)
+          : "0"(1), "m"(*pSpinLock)
+          : "memory");
+
+    return (uValue);
+
+}
+
+
+
+int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock)
+{
+
+    int             iCount = 0;
+
+    while (SysTestAndSet(pSpinLock))
+    {
+        if (iCount < MAX_SPIN_COUNT)
+        {
+            ++iCount;
+
+            sched_yield();
+        }
+        else
+        {
+            usleep(SPIN_SLEEP_TIME);
+
+            iCount = 0;
+        }
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
+{
+
+    *pSpinLock = 0;
+
+    return (0);
 
 }

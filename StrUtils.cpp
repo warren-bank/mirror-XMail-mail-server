@@ -632,12 +632,12 @@ int             StrSplitString(char const * pszString, char const * pszSplitters
 
 
 
-char           *StrLTrim(char *pszString)
+char           *StrLTrim(char *pszString, char const *pszTrimChars)
 {
 
     int             ii;
 
-    for (ii = 0; (pszString[ii] == ' ') || (pszString[ii] == '\t'); ii++);
+    for (ii = 0; (pszString[ii] != '\0') && (strchr(pszTrimChars, pszString[ii]) != NULL); ii++);
 
     if ((ii > 0) && (pszString[ii] != '\0'))
     {
@@ -656,12 +656,12 @@ char           *StrLTrim(char *pszString)
 
 
 
-char           *StrRTrim(char *pszString)
+char           *StrRTrim(char *pszString, char const *pszTrimChars)
 {
 
     int             ii = strlen(pszString) - 1;
 
-    for (; (ii >= 0) && ((pszString[ii] == ' ') || (pszString[ii] == '\t')); ii--)
+    for (; (ii >= 0) && (strchr(pszTrimChars, pszString[ii]) != NULL); ii--)
         pszString[ii] = '\0';
 
 
@@ -672,10 +672,10 @@ char           *StrRTrim(char *pszString)
 
 
 
-char           *StrTrim(char *pszString)
+char           *StrTrim(char *pszString, char const *pszTrimChars)
 {
 
-    return (StrRTrim(StrLTrim(pszString)));
+    return (StrRTrim(StrLTrim(pszString, pszTrimChars), pszTrimChars));
 
 }
 

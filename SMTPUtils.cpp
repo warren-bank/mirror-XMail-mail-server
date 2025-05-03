@@ -760,9 +760,9 @@ char          **USmtpGetPathStrings(const char *pszMailCmd)
         return (NULL);
     }
 
-    int             iPathLength = (int) (pszClose - pszOpen - 1);
+    int             iPathLength = (int) (pszClose - pszOpen) - 1;
 
-    if (iPathLength < 0)
+    if ((iPathLength < 0) || (iPathLength >= MAX_SMTP_ADDRESS))
     {
         ErrSetErrorCode(ERR_SMTP_PATH_PARSE_ERROR, pszMailCmd);
         return (NULL);
@@ -2242,8 +2242,8 @@ char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * 
                         char const * pszRcptTo)
 {
 
-    char            szFrom[MAX_SPOOL_LINE] = "",
-                    szRcpt[MAX_SPOOL_LINE] = "";
+    char            szFrom[MAX_SMTP_ADDRESS] = "",
+                    szRcpt[MAX_SMTP_ADDRESS] = "";
 
     if ((USmlParseAddress(pszMailFrom, NULL, szFrom) < 0) ||
             (USmlParseAddress(pszRcptTo, NULL, szRcpt) < 0))

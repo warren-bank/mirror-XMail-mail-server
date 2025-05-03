@@ -81,7 +81,8 @@ struct DNSResourceRecord
 struct DNSNameNode
 {
     LISTLINK        LL;
-    char           *pszName;
+    char           *pszServer;
+    char           *pszQuery;
 };
 
 
@@ -89,11 +90,11 @@ struct DNSNameNode
 
 
 
-static DNSNameNode *DNS_AllocNameNode(char const * pszName);
+static DNSNameNode *DNS_AllocNameNode(char const * pszServer, char const * pszQuery);
 static void     DNS_FreeNameNode(DNSNameNode * pDNSNN);
 static void     DNS_FreeNameList(HSLIST & hNameList);
-static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszName);
-static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszName);
+static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
+static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
 static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
                         DNSResourceRecord * pRR = NULL);
 static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
@@ -135,7 +136,7 @@ static char    *DNS_GetRootsFile(char *pszRootsFilePath);
 
 
 
-static DNSNameNode *DNS_AllocNameNode(char const * pszName)
+static DNSNameNode *DNS_AllocNameNode(char const * pszServer, char const * pszQuery)
 {
 
     DNSNameNode    *pDNSNN = (DNSNameNode *) SysAlloc(sizeof(DNSNameNode));
@@ -145,8 +146,15 @@ static DNSNameNode *DNS_AllocNameNode(char const * pszName)
 
     ListLinkInit(pDNSNN);
 
-    if ((pDNSNN->pszName = SysStrDup(pszName)) == NULL)
+    if ((pDNSNN->pszServer = SysStrDup(pszServer)) == NULL)
     {
+        SysFree(pDNSNN);
+        return (NULL);
+    }
+
+    if ((pDNSNN->pszQuery = SysStrDup(pszQuery)) == NULL)
+    {
+        SysFree(pDNSNN->pszServer);
         SysFree(pDNSNN);
         return (NULL);
     }
@@ -161,7 +169,9 @@ static DNSNameNode *DNS_AllocNameNode(char const * pszName)
 static void     DNS_FreeNameNode(DNSNameNode * pDNSNN)
 {
 
-    SysFree(pDNSNN->pszName);
+    SysFree(pDNSNN->pszQuery);
+
+    SysFree(pDNSNN->pszServer);
 
     SysFree(pDNSNN);
 
@@ -183,14 +193,15 @@ static void     DNS_FreeNameList(HSLIST & hNameList)
 
 
 
-static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszName)
+static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery)
 {
 
     DNSNameNode    *pDNSNN = (DNSNameNode *) ListFirst(hNameList);
 
     for (; pDNSNN != INVALID_SLIST_PTR; pDNSNN = (DNSNameNode *)
             ListNext(hNameList, (PLISTLINK) pDNSNN))
-        if (stricmp(pDNSNN->pszName, pszName) == 0)
+        if ((stricmp(pDNSNN->pszServer, pszServer) == 0) &&
+                (stricmp(pDNSNN->pszQuery, pszQuery) == 0))
             return (pDNSNN);
 
     return (NULL);
@@ -199,10 +210,10 @@ static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszName)
 
 
 
-static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszName)
+static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery)
 {
 
-    DNSNameNode    *pDNSNN = DNS_AllocNameNode(pszName);
+    DNSNameNode    *pDNSNN = DNS_AllocNameNode(pszServer, pszQuery);
 
     if (pDNSNN == NULL)
         return (ErrGetErrorCode());
@@ -796,7 +807,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 ///////////////////////////////////////////////////////////////////////////////
 //  Recursively try authority name servers
 ///////////////////////////////////////////////////////////////////////////////
-        if ((DNS_GetNameNode(hNameList, szNSName) == NULL) &&
+        if ((DNS_GetNameNode(hNameList, szNSName, pszDomain) == NULL) &&
                 DNS_FindDomainMX(szNSName, pszDomain, hNameList, pszRespFile, pTTL) == 0)
             return (0);
 
@@ -1101,7 +1112,7 @@ static int      DNS_FindDomainMX(char const * pszDNSServer, char const * pszDoma
 ///////////////////////////////////////////////////////////////////////////////
 //  Add this server to the visited list
 ///////////////////////////////////////////////////////////////////////////////
-    DNS_AddNameNode(hNameList, pszDNSServer);
+    DNS_AddNameNode(hNameList, pszDNSServer, pszDomain);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Decode server response ( recursive )
@@ -1247,7 +1258,7 @@ static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * psz
 ///////////////////////////////////////////////////////////////////////////////
 //  Add this server to the visited list
 ///////////////////////////////////////////////////////////////////////////////
-    DNS_AddNameNode(hNameList, pszDNSServer);
+    DNS_AddNameNode(hNameList, pszDNSServer, pszDomain);
 
 
     FILE           *pNSFile = fopen(szRespFile, "rt");
@@ -1264,7 +1275,7 @@ static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * psz
 
     while (MscFGets(szNS, sizeof(szNS) - 1, pNSFile) != NULL)
     {
-        if ((DNS_GetNameNode(hNameList, szNS) == NULL) &&
+        if ((DNS_GetNameNode(hNameList, szNS, pszDomain) == NULL) &&
                 (DNS_GetNameServersLL(szNS, pszDomain, pszRespFile, hNameList, pTTL) == 0))
         {
             fclose(pNSFile);

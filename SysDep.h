@@ -151,6 +151,9 @@ struct tm      *SysLocalTime(time_t * pTimer, struct tm * pTStruct);
 struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct);
 char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize);
 
+int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock);
+int             SysSpinRelease(SYS_SPINLOCK * pSpinLock);
+
 
 
 

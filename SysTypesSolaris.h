@@ -83,6 +83,7 @@ typedef int     SYS_SOCKET;
 typedef void   *SYS_SEMAPHORE;
 typedef void   *SYS_MUTEX;
 typedef void   *SYS_EVENT;
+typedef unsigned int    SYS_SPINLOCK;
 typedef void   *SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 

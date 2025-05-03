@@ -31,11 +31,11 @@
 
 
 
-#ifdef LITTLE_ENDIAN_CPU
-#define WORDS_LITTLEENDIAN
+#ifdef BIG_ENDIAN_CPU
+#define WORDS_BIG_ENDIAN
 #endif
 
-#ifdef WORDS_LITTLEENDIAN
+#ifdef WORDS_BIG_ENDIAN
 #define SWAP(n)                     \
         (((n) << 24) | (((n) & 0xff00) << 8) | (((n) >> 8) & 0xff00) | ((n) >> 24))
 #else
@@ -45,9 +45,20 @@
 
 
 
+
 /* This array contains the bytes used to pad the buffer to the next
    64-byte boundary.  (RFC 1321, 3.1: Step 1)  */
-static unsigned char fillbuf[64] = {0x80, 0 /* , 0, 0, ...  */ };
+static unsigned char fillbuf[64] =
+{
+    0x80, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
+};
 
 
 

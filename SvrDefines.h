@@ -36,6 +36,7 @@
 
 
 #define TAB_COMMENT_CHAR            '#'
+#define MAX_SMTP_ADDRESS            1024
 #define MAX_ADDR_NAME               256
 #define MAX_HOST_NAME               256
 #define MAX_MESSAGE_ID              SYS_MAX_PATH

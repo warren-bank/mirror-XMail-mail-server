@@ -71,6 +71,7 @@
 
 #define SMTPF_RELAY_ENABLED     (1 << 0)
 #define SMTPF_MAIL_LOCKED       (1 << 1)
+#define SMTPF_AUTHENTICATED     (1 << 2)
 
 
 
@@ -81,7 +82,8 @@
 
 enum SMTPStates
 {
-    stateInit,
+    stateInit = 0,
+    stateHelo,
     stateAuthenticated,
     stateMail,
     stateRcpt,
@@ -809,7 +811,7 @@ static void     SMTPClearSession(SMTPSession & SMTPS)
 static void     SMTPResetSession(SMTPSession & SMTPS)
 {
 
-    SMTPS.ulFlags = SMTPS.ulSetupFlags;
+    SMTPS.ulFlags = SMTPS.ulSetupFlags | (SMTPS.ulFlags & SMTPF_AUTHENTICATED);
     SMTPS.ullMessageID = 0;
     SMTPS.iRcptCount = 0;
     SetEmptyString(SMTPS.szMessageID);
@@ -831,7 +833,8 @@ static void     SMTPResetSession(SMTPSession & SMTPS)
         SysFree(SMTPS.pszSendRcpt), SMTPS.pszSendRcpt = NULL;
 
 
-    SMTPS.iSMTPState = stateInit;
+    SMTPS.iSMTPState = (SMTPS.ulFlags & SMTPF_AUTHENTICATED) ? stateAuthenticated:
+            Min(SMTPS.iSMTPState, stateHelo);
 
 }
 
@@ -948,7 +951,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
 
-    if ((SMTPS.iSMTPState != stateInit) && (SMTPS.iSMTPState != stateAuthenticated))
+    if ((SMTPS.iSMTPState != stateHelo) && (SMTPS.iSMTPState != stateAuthenticated))
     {
         SMTPResetSession(SMTPS);
 
@@ -1665,7 +1668,7 @@ static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
 
-    if (SMTPS.iSMTPState != stateInit)
+    if ((SMTPS.iSMTPState != stateInit) && (SMTPS.iSMTPState != stateHelo))
     {
         SMTPResetSession(SMTPS);
 
@@ -1711,6 +1714,8 @@ static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     SysFree(pszDomain);
 
+    SMTPS.iSMTPState = stateHelo;
+
     return (0);
 
 }
@@ -1721,7 +1726,7 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
 
-    if (SMTPS.iSMTPState != stateInit)
+    if ((SMTPS.iSMTPState != stateInit) && (SMTPS.iSMTPState != stateHelo))
     {
         SMTPResetSession(SMTPS);
 
@@ -1827,6 +1832,7 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
     fclose(pRespFile);
     SysRemove(szRespFile);
 
+    SMTPS.iSMTPState = stateHelo;
 
     return (0);
 
@@ -2117,6 +2123,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
     SMTPApplyPerms(SMTPS, szPerms);
 
 
+    SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
     SMTPS.iSMTPState = stateAuthenticated;
 
     BSckSendString(hBSock, "235 Authentication successful", SMTPS.pSMTPCfg->iTimeout);
@@ -2242,6 +2249,7 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     SMTPApplyPerms(SMTPS, szPerms);
 
 
+    SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
     SMTPS.iSMTPState = stateAuthenticated;
 
     BSckSendString(hBSock, "235 Authentication successful", SMTPS.pSMTPCfg->iTimeout);
@@ -2332,6 +2340,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     SMTPApplyPerms(SMTPS, szPerms);
 
 
+    SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
     SMTPS.iSMTPState = stateAuthenticated;
 
     BSckSendString(hBSock, "235 Authentication successful", SMTPS.pSMTPCfg->iTimeout);
@@ -2599,6 +2608,7 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     }
 
 
+    SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
     SMTPS.iSMTPState = stateAuthenticated;
 
     BSckSendString(hBSock, "235 Authentication successful", SMTPS.pSMTPCfg->iTimeout);
@@ -2613,7 +2623,7 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
 
-    if (SMTPS.iSMTPState != stateInit)
+    if (SMTPS.iSMTPState != stateHelo)
     {
         SMTPResetSession(SMTPS);
 
