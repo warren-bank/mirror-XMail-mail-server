@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -120,17 +120,20 @@ static SYS_UINT8 *DNS_QuerySendStream(char const *pszDNSServer, int iPortNo, int
 static SYS_UINT8 *DNS_QuerySendDGram(char const *pszDNSServer, int iPortNo, int iTimeout,
                                      DNSQuery const & DNSQ, int iQueryLenght, bool & bTruncated);
 static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain,
-                                     HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL = NULL);
-static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
-                                     SYS_UINT32 *pTTL = NULL);
+                                     HSLIST & hNameList, char const *pszRespFile,
+                                     char *pszCName, SYS_UINT32 *pTTL = NULL);
+static int      DNS_DecodeDirResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                        SYS_UINT32 *pTTL = NULL);
 static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFile,
-                                     bool & bAuth, SYS_UINT32 *pTTL = NULL);
+                                     bool & bAuth, char *pszCName, SYS_UINT32 *pTTL = NULL);
 static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain,
-                                 HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL = NULL);
+                                 HSLIST & hNameList, char const *pszRespFile, char *pszCName,
+                                 SYS_UINT32 *pTTL = NULL);
 static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomain,
-                                  char *&pszMXDomains, SYS_UINT32 *pTTL = NULL);
+                                  char *&pszMXDomains, char *pszCName, SYS_UINT32 *pTTL = NULL);
 static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
-                                     char const *pszRespFile, HSLIST & hNameList, SYS_UINT32 *pTTL = NULL);
+                                     char const *pszRespFile, HSLIST & hNameList,
+                                     char *pszCName, SYS_UINT32 *pTTL = NULL);
 static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath);
 
 
@@ -519,17 +522,9 @@ static int      DNS_NameCopy(SYS_UINT8 *pDNSQName, char const *pszInetName)
 static SYS_UINT16 DNS_GetUniqueQueryId(void)
 {
 
-    static SYS_SPINLOCK IDSpin = SYS_SPINLOCK_UNLOCKED;
     static SYS_UINT16   uDnsQueryId = 0;
-    SYS_UINT16      uQueryId;
 
-    SysSpinAcquire(&IDSpin);
-
-    uQueryId = ++uDnsQueryId;
-
-    SysSpinRelease(&IDSpin);
-
-    return (uQueryId);
+    return ((SYS_UINT16) (++uDnsQueryId * SysGetCurrentThreadId()));
 
 }
 
@@ -803,7 +798,8 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const *pszDNSServer, int iPortNo, int 
 
 
 static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain,
-                                     HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL)
+                                     HSLIST & hNameList, char const *pszRespFile,
+                                     char *pszCName, SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -889,9 +885,9 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
 
         pMXData += sizeof(SYS_UINT16);
 
-        char            szMXDomain[MAX_HOST_NAME] = "";
+        char            szRRName[MAX_HOST_NAME] = "";
 
-        if (DNS_GetName(pBaseData, pMXData, szMXDomain) < 0)
+        if (DNS_GetName(pBaseData, pMXData, szRRName) < 0)
         {
             ErrorPush();
             fclose(pMXFile);
@@ -902,14 +898,24 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
         if (RR.Type == QTYPE_MX)
         {
             if (ii == 0)
-                fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
+                fprintf(pMXFile, "%d:%s", (int) Preference, szRRName);
             else
-                fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
+                fprintf(pMXFile, ",%d:%s", (int) Preference, szRRName);
 
             if ((TTL == 0) || (RR.TTL < TTL))
                 TTL = RR.TTL;
 
             ++iMXRecords;
+        }
+        else if (RR.Type == QTYPE_CNAME)
+        {
+            if (pszCName != NULL)
+                strcpy(pszCName, szRRName);
+            fclose(pMXFile);
+            SysRemove(pszRespFile);
+
+            ErrSetErrorCode(ERR_DNS_IS_CNAME);
+            return (ERR_DNS_IS_CNAME);
         }
     }
 
@@ -955,9 +961,11 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
         if (DNS_GetNameNode(hNameList, szNSName, pszDomain) == NULL)
         {
             int             iFindResult = DNS_FindDomainMX(szNSName, pszDomain,
-                                                           hNameList, pszRespFile, pTTL);
+                                                           hNameList, pszRespFile,
+                                                           pszCName, pTTL);
 
-            if ((iFindResult == 0) || (iFindResult == ERR_DNS_NXDOMAIN))
+            if ((iFindResult == 0) || (iFindResult == ERR_DNS_NXDOMAIN) ||
+                (iFindResult == ERR_DNS_IS_CNAME))
                 return (iFindResult);
         }
     }
@@ -986,8 +994,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
 
 
 
-static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
-                                     SYS_UINT32 *pTTL)
+static int      DNS_DecodeDirResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                        SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -1120,7 +1128,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFi
 
 
 static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFile,
-                                     bool & bAuth, SYS_UINT32 *pTTL)
+                                     bool & bAuth, char *pszCName, SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -1202,9 +1210,9 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
 
         SYS_UINT8 const     *pNSData = RR.pRespData;
 
-        char            szNSName[MAX_HOST_NAME] = "";
+        char            szRRName[MAX_HOST_NAME] = "";
 
-        if (DNS_GetName(pBaseData, pNSData, szNSName) < 0)
+        if (DNS_GetName(pBaseData, pNSData, szRRName) < 0)
         {
             ErrorPush();
             fclose(pNSFile);
@@ -1213,12 +1221,21 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
 
         if (RR.Type == QTYPE_NS)
         {
-            fprintf(pNSFile, "%s\n", szNSName);
+            fprintf(pNSFile, "%s\n", szRRName);
 
             if ((TTL == 0) || (RR.TTL < TTL))
                 TTL = RR.TTL;
 
             ++iNSRecords;
+        }
+        else if (RR.Type == QTYPE_CNAME)
+        {
+            if (pszCName != NULL)
+                strcpy(pszCName, szRRName);
+            fclose(pNSFile);
+
+            ErrSetErrorCode(ERR_DNS_IS_CNAME);
+            return (ERR_DNS_IS_CNAME);
         }
     }
 
@@ -1255,9 +1272,9 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
 
         SYS_UINT8 const     *pNSData = RR.pRespData;
 
-        char            szNSName[MAX_HOST_NAME] = "";
+        char            szRRName[MAX_HOST_NAME] = "";
 
-        if (DNS_GetName(pBaseData, pNSData, szNSName) < 0)
+        if (DNS_GetName(pBaseData, pNSData, szRRName) < 0)
         {
             ErrorPush();
             fclose(pNSFile);
@@ -1266,7 +1283,7 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
 
         if (RR.Type == QTYPE_NS)
         {
-            fprintf(pNSFile, "%s\n", szNSName);
+            fprintf(pNSFile, "%s\n", szRRName);
 
             if ((TTL == 0) || (RR.TTL < TTL))
                 TTL = RR.TTL;
@@ -1318,7 +1335,8 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
 
 
 static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain,
-                                 HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL)
+                                 HSLIST & hNameList, char const *pszRespFile,
+                                 char *pszCName, SYS_UINT32 *pTTL)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1339,7 +1357,8 @@ static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain
 //  Decode server response ( recursive )
 ///////////////////////////////////////////////////////////////////////////////
     int             iDecodeResult = DNS_DecodeResponseMX(pRespData, pszDomain,
-                                                         hNameList, pszRespFile, pTTL);
+                                                         hNameList, pszRespFile,
+                                                         pszCName, pTTL);
 
 
     DNS_FreeRespData(pRespData);
@@ -1351,7 +1370,7 @@ static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain
 
 
 static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomain,
-                                  char *&pszMXDomains, SYS_UINT32 *pTTL)
+                                  char *&pszMXDomains, char *pszCName, SYS_UINT32 *pTTL)
 {
 
     HSLIST          hNameList;
@@ -1362,7 +1381,8 @@ static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomai
     ListInit(hNameList);
 
 
-    if (DNS_FindDomainMX(pszDNSServer, pszDomain, hNameList, szMXFileName, pTTL) < 0)
+    if (DNS_FindDomainMX(pszDNSServer, pszDomain, hNameList,
+                         szMXFileName, pszCName, pTTL) < 0)
     {
         ErrorPush();
         DNS_FreeNameList(hNameList);
@@ -1411,8 +1431,10 @@ static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomai
 
 
 int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
-                                     char const *pszRespFile, bool & bAuth, SYS_UINT32 *pTTL)
+                                     char const *pszRespFile, bool & bAuth, char *pszCName,
+                                     SYS_UINT32 *pTTL)
 {
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Send query and read result
 ///////////////////////////////////////////////////////////////////////////////
@@ -1422,15 +1444,12 @@ int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDo
     if (pRespData == NULL)
         return (ErrGetErrorCode());
 
-
-    if (DNS_DecodeResponseNS(pRespData, pszRespFile, bAuth, pTTL) < 0)
+    if (DNS_DecodeResponseNS(pRespData, pszRespFile, bAuth, pszCName, pTTL) < 0)
     {
         ErrorPush();
         DNS_FreeRespData(pRespData);
-
         return (ErrorPop());
     }
-
 
     DNS_FreeRespData(pRespData);
 
@@ -1443,7 +1462,8 @@ int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDo
 
 
 static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
-                                     char const *pszRespFile, HSLIST & hNameList, SYS_UINT32 *pTTL)
+                                     char const *pszRespFile, HSLIST & hNameList,
+                                     char *pszCName, SYS_UINT32 *pTTL)
 {
 
     char            szRespFile[SYS_MAX_PATH] = "";
@@ -1453,7 +1473,8 @@ static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDo
 
     bool            bAuth = false;
 
-    if (DNS_QueryNameServers(pszDNSServer, pszDomain, szRespFile, bAuth, pTTL) < 0)
+    if (DNS_QueryNameServers(pszDNSServer, pszDomain, szRespFile, bAuth,
+                             pszCName, pTTL) < 0)
     {
         ErrorPush();
         CheckRemoveFile(szRespFile);
@@ -1499,9 +1520,11 @@ static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDo
         if (DNS_GetNameNode(hNameList, szNS, pszDomain) == NULL)
         {
             int             iQueryResult = DNS_GetNameServersLL(szNS, pszDomain,
-                                                                pszRespFile, hNameList, pTTL);
+                                                                pszRespFile, hNameList,
+                                                                pszCName, pTTL);
 
-            if ((iQueryResult == 0) || (iQueryResult == ERR_DNS_NXDOMAIN))
+            if ((iQueryResult == 0) || (iQueryResult == ERR_DNS_NXDOMAIN) ||
+                (iQueryResult == ERR_DNS_IS_CNAME))
             {
                 fclose(pNSFile);
                 SysRemove(szRespFile);
@@ -1523,7 +1546,7 @@ static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDo
 
 
 int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
-                                   char const *pszRespFile, SYS_UINT32 *pTTL)
+                                   char const *pszRespFile, char *pszCName, SYS_UINT32 *pTTL)
 {
 
     HSLIST          hNameList;
@@ -1532,7 +1555,7 @@ int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDoma
 
 
     int             iQueryResult = DNS_GetNameServersLL(pszDNSServer, pszDomain,
-                                                        pszRespFile, hNameList, pTTL);
+                                                        pszRespFile, hNameList, pszCName, pTTL);
 
 
     DNS_FreeNameList(hNameList);
@@ -1545,7 +1568,7 @@ int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDoma
 
 
 int             DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
-                                      SYS_UINT32 *pTTL)
+                                      char *pszCName, SYS_UINT32 *pTTL)
 {
 
     char            szRootsFile[SYS_MAX_PATH] = "";
@@ -1596,11 +1619,20 @@ int             DNS_DomainNameServers(char const *pszDomain, char const *pszResp
         while (MscFGets(szNS, sizeof(szNS) - 1, pNSFile) != NULL)
         {
             iNSGetResult = DNS_GetNameServers(szNS, szCurrDomain,
-                                              szRespFile2, pTTL);
+                                              szRespFile2, pszCName, pTTL);
 
             if ((iNSGetResult == 0) || (iNSGetResult == ERR_DNS_NXDOMAIN))
                 break;
 
+            if (iNSGetResult == ERR_DNS_IS_CNAME)
+            {
+                fclose(pNSFile);
+                StrFreeStrings(ppszDomains);
+                if (strcmp(szRespFile, szRootsFile) != 0)
+                    SysRemove(szRespFile);
+                ErrSetErrorCode(iNSGetResult);
+                return (iNSGetResult);
+            }
         }
 
         fclose(pNSFile);
@@ -1666,21 +1698,22 @@ static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath)
 int             DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile)
 {
 
-    return (DNS_GetNameServers(pszDNSServer, ".", pszRespFile));
+    return (DNS_GetNameServers(pszDNSServer, ".", pszRespFile, NULL));
 
 }
 
 
 
 
-int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains, SYS_UINT32 *pTTL)
+int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
+                                char *pszCName, SYS_UINT32 *pTTL)
 {
 
     char            szRespFile[SYS_MAX_PATH] = "";
 
     SysGetTmpFile(szRespFile);
 
-    if (DNS_DomainNameServers(pszDomain, szRespFile) < 0)
+    if (DNS_DomainNameServers(pszDomain, szRespFile, pszCName) < 0)
     {
         ErrorPush();
         SysRemove(szRespFile);
@@ -1703,9 +1736,11 @@ int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains, SYS_
 
     while (MscFGets(szNS, sizeof(szNS) - 1, pNSFile) != NULL)
     {
-        int             iQueryResult = DNS_QueryDomainMX(szNS, pszDomain, pszMXDomains, pTTL);
+        int             iQueryResult = DNS_QueryDomainMX(szNS, pszDomain, pszMXDomains,
+                                                         pszCName, pTTL);
 
-        if ((iQueryResult == 0) || (iQueryResult == ERR_DNS_NXDOMAIN))
+        if ((iQueryResult == 0) || (iQueryResult == ERR_DNS_NXDOMAIN) ||
+            (iQueryResult == ERR_DNS_IS_CNAME))
         {
             fclose(pNSFile);
             SysRemove(szRespFile);
@@ -1779,7 +1814,7 @@ int             DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszD
 
     SysGetTmpFile(szRespFile);
 
-    if (DNS_DecodeResponseMX(pRespData, szRespFile, pTTL) < 0)
+    if (DNS_DecodeDirResponseMX(pRespData, szRespFile, pTTL) < 0)
     {
         ErrorPush();
         DNS_FreeRespData(pRespData);

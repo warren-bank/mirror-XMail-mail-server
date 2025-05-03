@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -373,17 +373,20 @@ int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
     QueGetFilePath(hQueue, hMessage, szSlogFilePath, QUEUE_SLOG_DIR);
 
 
-    va_list         Args;
+    char           *pszMessage = NULL;
 
-    va_start(Args, pszFormat);
+    STRSPRINTF(pszMessage, pszFormat, pszFormat);
 
-    if (ErrFileVLogMessage(szSlogFilePath, pszFormat, Args) < 0)
+    if (pszMessage == NULL)
+        return (ErrGetErrorCode());
+
+    if (ErrFileLogString(szSlogFilePath, pszMessage) < 0)
     {
-        va_end(Args);
+        SysFree(pszMessage);
         return (ErrGetErrorCode());
     }
 
-    va_end(Args);
+    SysFree(pszMessage);
 
     return (0);
 

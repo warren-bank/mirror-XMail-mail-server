@@ -1,10 +1,24 @@
 NAME
 
-    XMail Change Log as of Version 1.17
+    XMail Change Log as of Version 1.18
 
     [top]
 
 CHANGE LOG
+
+  Mar 27, 2004 v 1.18
+
+    *   Restructured the external program execution environment on Unix
+        ports. Simplified, as a consequence of this, the system dependent
+        portion of XMail (SysDep*).
+
+    *   Fixed a bug in the address range parsing (x.y.w.z/s).
+
+    *   Fixed the alias lookup to perform a better "best match" wildcard
+        selection.
+
+    *   Fixed a bug in the DNS resolved that made XMail to not correctly
+        handle domain CNAMEs.
 
   Sep 14, 2003 v 1.17
 

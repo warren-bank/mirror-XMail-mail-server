@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -85,6 +85,8 @@ int             ShbCloseBlock(SHB_HANDLE hBlock)
     SharedBlock    *pSHB = (SharedBlock *) hBlock;
 
     SysCloseMutex(pSHB->hMutex);
+
+    SysFree(pSHB->pData);
 
     SysFree(pSHB);
 

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,6 +25,34 @@
 #define _STRUTILS_H
 
 
+
+
+#define STRSPRINTF(r, l, f) \
+do \
+{ \
+    int             iCurrSize = 256; \
+    int             iPSize; \
+    va_list         Args; \
+    for (;;) \
+    { \
+        r = (char *) SysAlloc(iCurrSize); \
+        if (r == NULL) \
+            break; \
+        va_start(Args, l); \
+        if (((iPSize = SysVSNPrintf(r, iCurrSize - 1, f, Args)) >= 0) && \
+            iPSize < iCurrSize) \
+        { \
+            va_end(Args); \
+            break; \
+        } \
+        va_end(Args); \
+        if (iPSize > 0) \
+            iCurrSize = (4 * iPSize) / 3 + 2; \
+        else \
+            iCurrSize *= 2; \
+        SysFree(r); \
+    } \
+} while (0)
 
 
 
@@ -61,7 +89,6 @@ int             StrWriteCRLFString(FILE *pFile, const char *pszString);
 int             StrWildMatch(char const *pszString, char const *pszMatch);
 int             StrIWildMatch(char const *pszString, char const *pszMatch);
 char           *StrLoadFile(FILE *pFile);
-char           *StrVSprint(char const *pszFormat, va_list Args);
 char           *StrSprint(char const *pszFormat,...);
 int             StrSplitString(char const *pszString, char const *pszSplitters,
                                char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -318,15 +318,9 @@ int             BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int i
 int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat,...)
 {
 
-    va_list         Args;
+    char           *pszBuffer = NULL;
 
-    va_start(Args, pszFormat);
-
-
-    char           *pszBuffer = StrVSprint(pszFormat, Args);
-
-
-    va_end(Args);
+    STRSPRINTF(pszBuffer, pszFormat, pszFormat);
 
     if (pszBuffer == NULL)
         return (ErrGetErrorCode());

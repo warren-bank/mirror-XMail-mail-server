@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -708,18 +708,32 @@ int             USmtpSplitEmailAddr(const char *pszAddr, char *pszUser, char *ps
         return (ERR_BAD_EMAIL_ADDR);
     }
 
+    int             iUserLength = (int) (pszAT - pszAddr);
+    int             iDomainLength = strlen(pszAT + 1);
+
     if (pszUser != NULL)
     {
-        int             iUserLength = (int) (pszAT - pszAddr);
+        if (iUserLength == 0)
+        {
+            ErrSetErrorCode(ERR_BAD_EMAIL_ADDR);
+            return (ERR_BAD_EMAIL_ADDR);
+        }
 
         iUserLength = Min(iUserLength, MAX_ADDR_NAME - 1);
-
         strncpy(pszUser, pszAddr, iUserLength);
         pszUser[iUserLength] = '\0';
     }
 
     if (pszDomain != NULL)
+    {
+        if (iDomainLength == 0)
+        {
+            ErrSetErrorCode(ERR_BAD_EMAIL_ADDR);
+            return (ERR_BAD_EMAIL_ADDR);
+        }
+
         StrNCpy(pszDomain, pszAT + 1, MAX_ADDR_NAME);
+    }
 
     return (0);
 

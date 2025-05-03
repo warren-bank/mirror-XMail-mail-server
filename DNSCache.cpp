@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -174,9 +174,9 @@ static char    *CDNS_GetCacheFilePath(char const *pszDomain, char const *pszSubD
 ///////////////////////////////////////////////////////////////////////////////
 //  Build cache file path
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszFilePath, "%s%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "%u" SYS_SLASH_STR "%s",
-            szRootPath, DNS_CACHE_DIRCTORY, pszSubDir,
-            (unsigned int) (uStringHash % iNumCacheDirs), pszLwrDomain);
+    SysSNPrintf(pszFilePath, SYS_MAX_PATH - 1, "%s%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "%u" SYS_SLASH_STR "%s",
+                szRootPath, DNS_CACHE_DIRCTORY, pszSubDir,
+                (unsigned int) (uStringHash % iNumCacheDirs), pszLwrDomain);
 
 
     SysFree(pszLwrDomain);
@@ -349,8 +349,18 @@ int             CDNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
 
     if (pszSmartDNS == NULL)
     {
-        if (DNS_GetDomainMX(pszDomain, pszMXDomains, &TTL) < 0)
-            return (ErrGetErrorCode());
+        char            szCName[MAX_HOST_NAME] = "";
+        int             iResult = DNS_GetDomainMX(pszDomain, pszMXDomains,
+                                                  szCName, &TTL);
+
+        if (iResult < 0)
+        {
+            if (iResult != ERR_DNS_IS_CNAME)
+                return (ErrGetErrorCode());
+
+            if (DNS_GetDomainMX(szCName, pszMXDomains, NULL, &TTL) < 0)
+                return (ErrGetErrorCode());
+        }
 
         return (CDNS_MxSave(pszDomain, pszMXDomains, TTL));
     }

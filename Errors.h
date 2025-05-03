@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -249,6 +249,7 @@
 #define ERR_MESSAGE_DELETED         (-233)
 #define ERR_PIPE                    (-234)
 #define ERR_WAITPID                 (-235)
+#define ERR_DNS_IS_CNAME            (-236)
 
 
 
@@ -259,9 +260,7 @@ const char     *ErrGetErrorString(int iError);
 const char     *ErrGetErrorString(void);
 char           *ErrGetErrorStringInfo(int iError);
 int             ErrLogMessage(int iLogLevel, char const *pszFormat,...);
-int             ErrFileVLogMessage(char const *pszFileName, char const *pszFormat,
-                        va_list Args);
-
+int             ErrFileLogString(char const *pszFileName, char const *pszMessage);
 
 
 

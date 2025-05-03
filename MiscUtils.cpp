@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1271,7 +1271,7 @@ int             MscLoadAddressFilter(char const *const *ppszFilter, int iNumToke
             for (ii = 0; (ii + 8) <= iMaskBits; ii += 8)
                 AF.Mask[ii / 8] = 0xff;
             if (ii < iMaskBits)
-                AF.Mask[ii / 8] = (SYS_UINT8) (1 << (iMaskBits - ii)) - 1;
+                AF.Mask[ii / 8] = (SYS_UINT8) (((1 << (iMaskBits - ii)) - 1) << (8 - iMaskBits + ii));
         }
         else
         {

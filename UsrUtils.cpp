@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -829,6 +829,7 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
     if (hIndexLookup != INVALID_INDEX_HANDLE)
     {
         int             iNumRecords = TbixLookedUpRecords(hIndexLookup);
+        int             iMaxLength = -1;
 
         for (int ii = 0; ii < iNumRecords; ii++)
         {
@@ -844,21 +845,26 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
                 StrIWildMatch(pszDomain, ppszTabTokens[alsDomain]) &&
                 StrIWildMatch(pszAlias, ppszTabTokens[alsAlias]))
             {
-                if (pszName != NULL)
-                    strcpy(pszName, ppszTabTokens[alsName]);
+                int             iLength = strlen(ppszTabTokens[alsDomain]) +
+                    strlen(ppszTabTokens[alsAlias]);
 
-                StrFreeStrings(ppszTabTokens);
-                TbixCloseHandle(hIndexLookup);
+                if (iLength > iMaxLength)
+                {
+                    iMaxLength = iLength;
 
-                return (1);
+                    if (pszName != NULL)
+                        strcpy(pszName, ppszTabTokens[alsName]);
+                }
             }
 
             StrFreeStrings(ppszTabTokens);
         }
 
         TbixCloseHandle(hIndexLookup);
-    }
 
+        if (iMaxLength > 0)
+            return (1);
+    }
 
     return (0);
 

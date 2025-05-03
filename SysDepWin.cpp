@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,9 +35,6 @@
 
 #define SOCK_VERSION_REQUESTED          MAKEWORD(2, 0)
 #define SHUTDOWN_RECV_TIMEOUT           2
-
-#define MAX_SPIN_COUNT                  64
-#define SPIN_SLEEP_TIME                 50
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Under certain circumstances ( M$ Proxy installed ?! ) a waiting operation
@@ -2587,44 +2584,6 @@ long            SysGetDayLight(void)
     struct tm       tmCurr = *localtime(&tCurr);
 
     return ((long) ((tmCurr.tm_isdst <= 0) ? 0: 3600));
-
-}
-
-
-
-int             SysSpinAcquire(SYS_SPINLOCK *pSpinLock)
-{
-
-    int             iCount = 0;
-
-    while (InterlockedExchange(pSpinLock, 1) != 0)
-    {
-        if (iCount < MAX_SPIN_COUNT)
-        {
-            ++iCount;
-
-            Sleep(0);
-        }
-        else
-        {
-            Sleep(SPIN_SLEEP_TIME);
-
-            iCount = 0;
-        }
-    }
-
-    return (0);
-
-}
-
-
-
-int             SysSpinRelease(SYS_SPINLOCK *pSpinLock)
-{
-
-    InterlockedExchange(pSpinLock, 0);
-
-    return (0);
 
 }
 

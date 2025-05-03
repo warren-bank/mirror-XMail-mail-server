@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,15 +38,15 @@
 
 #define SCHED_PRIORITY_INC          5
 
-#define WAIT_PID_TIME_STEP          250
-#define MAX_SPIN_COUNT              64
-#define SPIN_SLEEP_TIME             (50 * 1000)
-
 #define MIN_TCP_SEND_SIZE           (1024 * 8)
 #define MAX_TCP_SEND_SIZE           (1024 * 128)
 #define K_IO_TIME_RATIO             8
 
 #define MAX_SWAP_NAME_SIZE          256
+
+#define WAIT_PID_TIME_STEP          250
+#define WAIT_TIMEO_EXIT_STATUS      255
+#define WAIT_ERROR_EXIT_STATUS      254
 
 #define MAX_STACK_SHIFT             2048
 #define STACK_ALIGN_BYTES           sizeof(int)
@@ -78,6 +78,12 @@ struct EventData
     int             iManualReset;
 };
 
+struct WaitData
+{
+    pthread_mutex_t Mtx;
+    pthread_cond_t  WaitCond;
+};
+
 struct ThrData
 {
     pthread_t       ThreadId;
@@ -98,34 +104,27 @@ struct FileFindData
     struct stat     FS;
 };
 
-struct PIDWaitData
-{
-    SysListHead     LLink;
-    pthread_t       WaitThreadId;
-    pid_t           PID;
-    int             iExitCode;
-};
 
 
 
 
 
 
-
-
+static int      SysSetSignal(int iSigNo, void (*pSigProc)(int));
 static char const *SysGetLastError(void);
 static void     SysIgnoreProc(int iSignal);
 static int      SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay);
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD);
 static int      SysFreeThreadData(ThrData *pTD);
 static void    *SysThreadStartup(void *pThreadData);
-static void     SysSigChildHandler(int iSignal);
 static int      SysThreadSetup(ThrData *pTD);
 static void     SysThreadCleanup(ThrData *pTD);
-static int      SysExitPID(pid_t PID, int iExitCode);
-static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout, int iSyncFD);
+static int      SysSafeMsSleep(int iMsTimeout);
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
-static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK *pSpinLock);
+static int      SysSetupWait(WaitData *pWD);
+static int      SysWait(WaitData *pWD, int iMsTimeout);
+static void     SysCleanupWait(WaitData *pWD);
 static int      SysGetSwapInfo(SYS_INT64 *pSwapTotal, SYS_INT64 *pSwapFree);
 static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData);
 
@@ -140,15 +139,20 @@ static volatile int iShutDown = 0;
 static unsigned int uSRandBase;
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
-static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
-static          SYS_LIST_HEAD(WaitPIDList);
 static int      iSndBufSize = -1, iRcvBufSize = -1;
 
 
 
 
 
+static int      SysSetSignal(int iSigNo, void (*pSigProc)(int))
+{
 
+    signal(iSigNo, pSigProc);
+
+    return (0);
+
+}
 
 
 
@@ -169,7 +173,7 @@ static char const *SysGetLastError(void)
 static void     SysIgnoreProc(int iSignal)
 {
 
-    signal(iSignal, SysIgnoreProc);
+    SysSetSignal(iSignal, SysIgnoreProc);
 
 }
 
@@ -186,7 +190,6 @@ int             SysInitLibrary(void)
 
     if (SysThreadSetup(NULL) < 0)
         return (ErrGetErrorCode());
-
 
     return (0);
 
@@ -1587,24 +1590,6 @@ SYS_THREAD      SysCreateServiceThread(unsigned int (*pThreadProc) (void *), SYS
 
 
 
-static void     SysSigChildHandler(int iSignal)
-{
-
-    int             iExitStatus;
-    int             iExitPid;
-
-    while ((iExitPid = waitpid(0, &iExitStatus, WUNTRACED | WNOHANG)) > 0)
-    {
-        SysExitPID((pid_t) iExitPid, WEXITSTATUS(iExitStatus));
-
-    }
-
-    signal(iSignal, SysSigChildHandler);
-
-}
-
-
-
 static int      SysThreadSetup(ThrData *pTD)
 {
 
@@ -1615,6 +1600,7 @@ static int      SysThreadSetup(ThrData *pTD)
     sigaddset(&SigMask, SIGINT);
     sigaddset(&SigMask, SIGHUP);
     sigaddset(&SigMask, SIGSTOP);
+    sigaddset(&SigMask, SIGCHLD);
 
     pthread_sigmask(SIG_BLOCK, &SigMask, NULL);
 
@@ -1625,11 +1611,11 @@ static int      SysThreadSetup(ThrData *pTD)
     pthread_sigmask(SIG_UNBLOCK, &SigMask, NULL);
 
 
-    signal(SIGQUIT, SysIgnoreProc);
+    SysSetSignal(SIGQUIT, SysIgnoreProc);
 
-    signal(SIGPIPE, SysIgnoreProc);
+    SysSetSignal(SIGPIPE, SysIgnoreProc);
 
-    signal(SIGCHLD, SysSigChildHandler);
+    SysSetSignal(SIGCHLD, SysIgnoreProc);
 
     if (pTD != NULL)
     {
@@ -1805,114 +1791,48 @@ unsigned long   SysGetCurrentThreadId(void)
 
 
 
-static int      SysExitPID(pid_t PID, int iExitCode)
+static int      SysSafeMsSleep(int iMsTimeout)
 {
 
-    SysSpinAcquire(&WaitPIDSpin);
+    struct pollfd  Dummy;
 
-    SysListHead    *pLLink;
+    ZeroData(Dummy);
 
-    SYS_LIST_FOR_EACH(pLLink, &WaitPIDList)
-        {
-            PIDWaitData    *pPWD = SYS_LIST_ENTRY(pLLink, PIDWaitData, LLink);
-
-            if (pPWD->PID == PID)
-            {
-                pPWD->PID = 0;
-                pPWD->iExitCode = iExitCode;
-            }
-        }
-
-    SysSpinRelease(&WaitPIDSpin);
-
-    return (0);
+    return ((poll(&Dummy, 0, iMsTimeout) == 0) ? 1: 0);
 
 }
 
 
 
-static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout, int iSyncFD)
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
 {
 
-    PIDWaitData     PWD;
+    pid_t           ExitPID;
+    int             iExitStatus;
+    int             iStatus;
 
-    ZeroData(PWD);
-    SYS_INIT_LIST_LINK(&PWD.LLink);
-    PWD.WaitThreadId = pthread_self();
-    PWD.PID = PID;
-    PWD.iExitCode = -1;
-
-///////////////////////////////////////////////////////////////////////////////
-//  Insert into waiting list
-///////////////////////////////////////////////////////////////////////////////
-    SysSpinAcquire(&WaitPIDSpin);
-
-    SYS_LIST_ADDT(&PWD.LLink, &WaitPIDList);
-
-    SysSpinRelease(&WaitPIDSpin);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Let the child go since we already dropped the link inside our PID list
-///////////////////////////////////////////////////////////////////////////////
-    write(iSyncFD, "X", 1);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for PID exit
-///////////////////////////////////////////////////////////////////////////////
-    pid_t           ExitTaskPID;
-    int             iExitStatus = 0;
-
-    if ((ExitTaskPID = waitpid((pid_t) PID, &iExitStatus, WUNTRACED | WNOHANG)) != PID)
+    iTimeout *= 1000;
+    do
     {
-        if ((long) ExitTaskPID < 0)
+        if ((ExitPID = (pid_t) waitpid(PID, &iStatus, WNOHANG)) == PID)
         {
-            SysSpinAcquire(&WaitPIDSpin);
-            SYS_LIST_DEL(&PWD.LLink);
-            SysSpinRelease(&WaitPIDSpin);
+            if (!WIFEXITED(iStatus))
+                return (ERR_WAITPID);
 
-            if ((errno == ECHILD) && (PWD.PID != 0))
-            {
-                ErrSetErrorCode(ERR_PROCESS_EXECUTE);
-                return (ERR_PROCESS_EXECUTE);
-            }
-
-            ErrSetErrorCode(ERR_WAITPID);
-            return (ERR_WAITPID);
+            iExitStatus = WEXITSTATUS(iStatus);
+            break;
         }
 
-        iTimeout *= 1000;
+        SysSafeMsSleep(WAIT_PID_TIME_STEP);
+        iTimeout -= WAIT_PID_TIME_STEP;
 
-        while ((iTimeout > 0) && (PWD.PID != 0))
-        {
-            SysMsSleep(WAIT_PID_TIME_STEP);
+    } while (iTimeout > 0);
 
-            iTimeout -= WAIT_PID_TIME_STEP;
-        }
-    }
-    else
-    {
-        PWD.PID = 0;
-        PWD.iExitCode = WEXITSTATUS(iExitStatus);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Remove from waiting list
-///////////////////////////////////////////////////////////////////////////////
-    SysSpinAcquire(&WaitPIDSpin);
-
-    SYS_LIST_DEL(&PWD.LLink);
-
-    SysSpinRelease(&WaitPIDSpin);
-
-
-    if (PWD.PID != 0)
-    {
-        ErrSetErrorCode(ERR_TIMEOUT);
+    if (PID != ExitPID)
         return (ERR_TIMEOUT);
-    }
 
     if (piExitCode != NULL)
-        *piExitCode = PWD.iExitCode;
+        *piExitCode = iExitStatus;
 
     return (0);
 
@@ -1924,97 +1844,155 @@ int             SysExec(char const *pszCommand, char const *const *pszArgs, int 
                         int iPriority, int *piExitStatus)
 {
 
-///////////////////////////////////////////////////////////////////////////////
-//  Pipe used to syncronize with the child
-///////////////////////////////////////////////////////////////////////////////
-    int             iPipeFds[2];
+    int             iExitStatus;
+    pid_t           ChildID;
+    pid_t           ExitPID;
+    pid_t           ProcessID;
+    int             iPPipe[2];
+    int             iCPipe[2];
 
-    if (pipe(iPipeFds) == -1)
+    if (pipe(iPPipe) == -1)
     {
         ErrSetErrorCode(ERR_PIPE);
         return (ERR_PIPE);
     }
+    if (pipe(iCPipe) == -1)
+    {
+        close(iPPipe[1]);
+        close(iPPipe[0]);
+        ErrSetErrorCode(ERR_PIPE);
+        return (ERR_PIPE);
+    }
 
-
-    pid_t           ProcessID = (pid_t) fork();
-
+    ProcessID = fork();
     if (ProcessID == 0)
     {
-///////////////////////////////////////////////////////////////////////////////
-//  Syncronize with the parent
-///////////////////////////////////////////////////////////////////////////////
-        unsigned char   bSync;
+        ChildID = fork();
+        if (ChildID == 0)
+        {
+            close(iPPipe[1]);
+            close(iPPipe[0]);
 
-        read(iPipeFds[0], &bSync, 1);
-        close(iPipeFds[0]);
-        close(iPipeFds[1]);
+///////////////////////////////////////////////////////////////////////////////
+//  Wait for the unlock from the parent
+///////////////////////////////////////////////////////////////////////////////
+            read(iCPipe[0], &ChildID, sizeof(ChildID));
+
+            close(iCPipe[1]);
+            close(iCPipe[0]);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Execute the command
 ///////////////////////////////////////////////////////////////////////////////
-        execv(pszCommand, (char **) pszArgs);
+            execv(pszCommand, (char **) pszArgs);
 
-        SysEventLog("execv error: cmd='%s' errno=%d errstr='%s'\n",
-                    pszCommand, errno, strerror(errno));
+///////////////////////////////////////////////////////////////////////////////
+//  We can only use async-signal safe functions, so we use write() directly
+///////////////////////////////////////////////////////////////////////////////
+            write(2, "execv error: cmd='", 18);
+            write(2, pszCommand, strlen(pszCommand));
+            write(2, "'\n", 2);
 
-        exit(errno);
+            _exit(WAIT_ERROR_EXIT_STATUS);
+        }
+
+        close(iCPipe[1]);
+        close(iCPipe[0]);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Tell the parent about the child-child PID
+///////////////////////////////////////////////////////////////////////////////
+        write(iPPipe[1], &ChildID, sizeof(ChildID));
+
+        close(iPPipe[1]);
+        close(iPPipe[0]);
+
+        if (ChildID == (pid_t) -1)
+            _exit(WAIT_ERROR_EXIT_STATUS);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Wait for the child
+///////////////////////////////////////////////////////////////////////////////
+        iExitStatus = WAIT_TIMEO_EXIT_STATUS;
+        if (iWaitTimeout > 0)
+            SysWaitPID(ChildID, &iExitStatus, iWaitTimeout);
+
+        _exit(iExitStatus);
     }
 
-    if (ProcessID == (pid_t) (-1))
+    if ((ProcessID == (pid_t) -1) ||
+        (read(iPPipe[0], &ChildID, sizeof(ChildID)) != sizeof(ChildID)))
     {
-        close(iPipeFds[0]);
-        close(iPipeFds[1]);
+        close(iCPipe[1]);
+        close(iCPipe[0]);
+        close(iPPipe[1]);
+        close(iPPipe[0]);
         ErrSetErrorCode(ERR_FORK);
         return (ERR_FORK);
     }
 
+    close(iPPipe[1]);
+    close(iPPipe[0]);
 
-    switch (iPriority)
+    if (ChildID != (pid_t) -1)
     {
-    case (SYS_PRIORITY_NORMAL):
-        setpriority(PRIO_PROCESS, ProcessID, 0);
-        break;
+///////////////////////////////////////////////////////////////////////////////
+//  Set process priority
+///////////////////////////////////////////////////////////////////////////////
+        switch (iPriority)
+        {
+        case (SYS_PRIORITY_NORMAL):
+            setpriority(PRIO_PROCESS, ChildID, 0);
+            break;
 
-    case (SYS_PRIORITY_LOWER):
-        setpriority(PRIO_PROCESS, ProcessID, SCHED_PRIORITY_INC);
-        break;
+        case (SYS_PRIORITY_LOWER):
+            setpriority(PRIO_PROCESS, ChildID, SCHED_PRIORITY_INC);
+            break;
 
-    case (SYS_PRIORITY_HIGHER):
-        setpriority(PRIO_PROCESS, ProcessID, -SCHED_PRIORITY_INC);
-        break;
+        case (SYS_PRIORITY_HIGHER):
+            setpriority(PRIO_PROCESS, ChildID, -SCHED_PRIORITY_INC);
+            break;
+        }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Unlock the child
+///////////////////////////////////////////////////////////////////////////////
+        write(iCPipe[1], &ChildID, sizeof(ChildID));
     }
 
+    close(iCPipe[1]);
+    close(iCPipe[0]);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Wait for completion (or timeout)
+///////////////////////////////////////////////////////////////////////////////
+    while (((ExitPID = (pid_t) waitpid(ProcessID, &iExitStatus, 0)) != ProcessID) &&
+           (errno == EINTR));
+
+    if ((ExitPID == ProcessID) && WIFEXITED(iExitStatus))
+        iExitStatus = WEXITSTATUS(iExitStatus);
+    else
+        iExitStatus = WAIT_TIMEO_EXIT_STATUS;
 
     if (iWaitTimeout > 0)
     {
-        int             iExitStatus = 0;
-
-        if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout, iPipeFds[1]) < 0)
+        if (iExitStatus == WAIT_TIMEO_EXIT_STATUS)
         {
-            close(iPipeFds[0]);
-            close(iPipeFds[1]);
-            return (ErrGetErrorCode());
+            ErrSetErrorCode(ERR_TIMEOUT);
+            return (ERR_TIMEOUT);
         }
 
-        close(iPipeFds[0]);
-        close(iPipeFds[1]);
-
-        if (piExitStatus != NULL)
-            *piExitStatus = iExitStatus;
+        if (iExitStatus == WAIT_ERROR_EXIT_STATUS)
+        {
+            ErrSetErrorCode(ERR_FORK);
+            return (ERR_FORK);
+        }
     }
     else
-    {
-///////////////////////////////////////////////////////////////////////////////
-//  Let the child go
-///////////////////////////////////////////////////////////////////////////////
-        write(iPipeFds[1], "X", 1);
+        iExitStatus = -1;
 
-        close(iPipeFds[0]);
-        close(iPipeFds[1]);
-
-        if (piExitStatus != NULL)
-            *piExitStatus = -1;
-    }
+    if (piExitStatus != NULL)
+        *piExitStatus = iExitStatus;
 
     return (0);
 
@@ -2028,7 +2006,7 @@ static void     SysBreakHandlerRoutine(int iSignal)
     if (SysBreakHandler != NULL)
         SysBreakHandler();
 
-    signal(iSignal, SysBreakHandlerRoutine);
+    SysSetSignal(iSignal, SysBreakHandlerRoutine);
 
 }
 
@@ -2042,8 +2020,8 @@ void            SysSetBreakHandler(void (*BreakHandler) (void))
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup signal handlers and enable signals
 ///////////////////////////////////////////////////////////////////////////////
-    signal(SIGINT, SysBreakHandlerRoutine);
-    signal(SIGHUP, SysBreakHandlerRoutine);
+    SysSetSignal(SIGINT, SysBreakHandlerRoutine);
+    SysSetSignal(SIGHUP, SysBreakHandlerRoutine);
 
 
     sigset_t        SigMask;
@@ -2345,12 +2323,29 @@ void            SysSleep(int iTimeout)
 }
 
 
-
-void            SysMsSleep(int iMsTimeout)
+static int      SysSetupWait(WaitData *pWD)
 {
 
-    pthread_mutex_t LK = PTHREAD_MUTEX_INITIALIZER;
-    pthread_cond_t  CD = PTHREAD_COND_INITIALIZER;
+    if (pthread_mutex_init(&pWD->Mtx, NULL) != 0)
+    {
+        ErrSetErrorCode(ERR_MUTEXINIT);
+        return (ERR_MUTEXINIT);
+    }
+
+    if (pthread_cond_init(&pWD->WaitCond, NULL) != 0)
+    {
+        pthread_mutex_destroy(&pWD->Mtx);
+        ErrSetErrorCode(ERR_CONDINIT);
+        return (ERR_CONDINIT);
+    }
+
+    return (0);
+
+}
+
+
+static int      SysWait(WaitData *pWD, int iMsTimeout)
+{
     struct timespec TV;
     struct timeval  TmNow;
     int             iErrorCode;
@@ -2365,21 +2360,44 @@ void            SysMsSleep(int iMsTimeout)
     TV.tv_sec = TmNow.tv_sec;
     TV.tv_nsec = TmNow.tv_usec * 1000;
 
-    pthread_mutex_lock(&LK);
-    pthread_cleanup_push((void (*) (void *)) pthread_mutex_unlock, &LK);
+    pthread_mutex_lock(&pWD->Mtx);
+    pthread_cleanup_push((void (*) (void *)) pthread_mutex_unlock, &pWD->Mtx);
 
-    iErrorCode = pthread_cond_timedwait(&CD, &LK, &TV);
+    iErrorCode = pthread_cond_timedwait(&pWD->WaitCond, &pWD->Mtx, &TV);
 
     pthread_cleanup_pop(1);
 
     if (iErrorCode == ETIMEDOUT)
     {
-
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
     }
 
-    pthread_mutex_destroy(&LK);
+    return (0);
 
-    pthread_cond_destroy(&CD);
+}
+
+
+static void     SysCleanupWait(WaitData *pWD)
+{
+
+    pthread_mutex_destroy(&pWD->Mtx);
+    pthread_cond_destroy(&pWD->WaitCond);
+
+}
+
+
+
+void            SysMsSleep(int iMsTimeout)
+{
+
+    WaitData        WD;
+
+    if (SysSetupWait(&WD) == 0)
+    {
+        SysWait(&WD, iMsTimeout);
+        SysCleanupWait(&WD);
+    }
 
 }
 
@@ -2816,76 +2834,6 @@ long            SysGetDayLight(void)
 
 
 
-static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK *pSpinLock)
-{
-
-    unsigned int    uValue;
-
-#if defined(XMAIL_SPARC)
-
-    __asm__ __volatile__(
-        "ldstub %1,%0;\n":
-        "=r"(uValue), "=m"(*pSpinLock):
-        "m"(*pSpinLock));
-
-#elif defined(XMAIL_X86)
-
-    __asm__  __volatile__(
-        "xchgl %0, %1;\n":
-        "=r"(uValue), "=m"(*pSpinLock):
-        "0"(1), "m"(*pSpinLock):
-        "memory");
-
-#else
-
-#error CPU type not defined
-
-#endif
-
-    return (uValue);
-
-}
-
-
-
-int             SysSpinAcquire(SYS_SPINLOCK *pSpinLock)
-{
-
-    int             iCount = 0;
-
-    while (SysTestAndSet(pSpinLock))
-    {
-        if (iCount < MAX_SPIN_COUNT)
-        {
-            ++iCount;
-
-            sched_yield();
-        }
-        else
-        {
-            usleep(SPIN_SLEEP_TIME);
-
-            iCount = 0;
-        }
-    }
-
-    return (0);
-
-}
-
-
-
-int             SysSpinRelease(SYS_SPINLOCK *pSpinLock)
-{
-
-    *pSpinLock = 0;
-
-    return (0);
-
-}
-
-
-
 int             SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)
 {
 
@@ -3013,53 +2961,9 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData)
 
     unsigned int    uResult;
     unsigned int    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
-
-#if !defined(USE_ASM_STK_DISP)
-
     void           *pStkSpace = alloca(uStkDisp);
 
-
     uResult = pProc(pData);
-
-#else
-#if defined(XMAIL_SPARC)
-
-    __asm__ __volatile__(
-        "sub %%sp, %0, %%sp\n":
-        :
-        "r"(uStkDisp));
-
-
-    uResult = pProc(pData);
-
-
-    __asm__ __volatile__(
-        "add %%sp, %0, %%sp\n":
-        :
-        "r"(uStkDisp));
-
-#elif defined(XMAIL_X86)
-
-    __asm__ __volatile__(
-        "sub %0, %%esp\n":
-        :
-        "r"(uStkDisp));
-
-
-    uResult = pProc(pData);
-
-
-    __asm__ __volatile__(
-        "add %0, %%esp\n":
-        :
-        "r"(uStkDisp));
-
-#else
-
-#error CPU type not defined
-
-#endif
-#endif
 
     return (uResult);
 

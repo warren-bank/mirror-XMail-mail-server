@@ -1,6 +1,6 @@
 /*
  *  XMCrypt by Davide Libenzi ( XMail password crypter )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

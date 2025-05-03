@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.17
+1.18
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-09-14-2003
+03-27-2004
 
 =head2 project by
 

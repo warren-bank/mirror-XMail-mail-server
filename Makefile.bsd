@@ -1,6 +1,6 @@
 #
 #  XMail by Davide Libenzi ( Intranet and Internet mail server )
-#  Copyright (C) 1999  Davide Libenzi
+#  Copyright (C) 1999,..,2003  Davide Libenzi
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,11 +18,6 @@
 #
 #  Davide Libenzi <davidel@xmailserver.org>
 #
-ifeq ($(OSTYPE),OpenBSD)
-	SYSTYPE = openbsd
-else
-	SYSTYPE = freebsd
-endif
 O = o
 A = a
 CPP = cpp
@@ -30,16 +25,22 @@ CC = g++
 LD = g++
 
 ifeq ($(OSTYPE),OpenBSD)
+	SYSTYPE = openbsd
 	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__OPENBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
-else
-	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
-endif
-
-ifeq ($(OSTYPE),OpenBSD)
 	LDFLAGS = -lkvm -pthread -lc_r
 else
+ifeq ($(OSTYPE),NetBSD)
+	SYSTYPE = netbsd
+	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__NETBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
+	LDFLAGS = -lkvm -pthread -lc_r
+else
+	SYSTYPE = freebsd
+	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
 	LDFLAGS = -lkvm -lcrypt -pthread -lc_r
 endif
+endif
+
+
 MAILSVR = XMail
 CRTLCLNT = CtrlClnt
 XMCRYPT = XMCrypt

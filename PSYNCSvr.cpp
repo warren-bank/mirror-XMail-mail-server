@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -299,14 +299,17 @@ static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
 //  Check if link is enabled
 ///////////////////////////////////////////////////////////////////////////////
         if (GwLkCheckEnabled(pPopLnk) < 0)
+        {
+            GwLkFreePOP3Link(pPopLnk);
             continue;
+        }
 
-
-        if (SysWaitSemaphore(hSyncSem, SYS_INFINITE_TIMEOUT) < 0)
+        if ((SysWaitSemaphore(hSyncSem, SYS_INFINITE_TIMEOUT) < 0) ||
+            PSYNCTimeToStop(hShbPSYNC))
+        {
+            GwLkFreePOP3Link(pPopLnk);
             break;
-
-        if (PSYNCTimeToStop(hShbPSYNC))
-            break;
+        }
 
 
         SYS_THREAD      hClientThread = PSYNCCreateSyncThread(hShbPSYNC, pPopLnk);

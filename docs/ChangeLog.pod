@@ -1,11 +1,34 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.17
+XMail Change Log as of Version 1.18
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
+
+=head2 Mar 27, 2004 v 1.18
+
+=over 4
+
+=item *
+
+Restructured the external program execution environment on Unix ports. Simplified,
+as a consequence of this, the system dependent portion of XMail (SysDep*).
+
+=item *
+
+Fixed a bug in the address range parsing (x.y.w.z/s).
+
+=item *
+
+Fixed the alias lookup to perform a better "best match" wildcard selection.
+
+=item *
+
+Fixed a bug in the DNS resolved that made XMail to not correctly handle domain CNAMEs.
+
+=back
 
 =head2 Sep 14, 2003 v 1.17
 

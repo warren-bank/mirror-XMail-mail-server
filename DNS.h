@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -67,23 +67,11 @@ struct DNS_HEADER
 {
     SYS_UINT16      Id;
 #ifdef LITTLE_ENDIAN_BITFIELD
-    SYS_UINT8       RD:1,
-                       TC:1,
-                          AA:1,
-                             OpCode:4,
-                                    QR:1;
-    SYS_UINT8       RCode:4,
-                          Z:3,
-                            RA:1;
+    SYS_UINT8       RD:1, TC:1, AA:1, OpCode:4, QR:1;
+    SYS_UINT8       RCode:4, Z:3, RA:1;
 #else
-    SYS_UINT8       QR:1,
-                       OpCode:4,
-                              AA:1,
-                                 TC:1,
-                                    RD:1;
-    SYS_UINT8       RA:1,
-                       Z:3,
-                         RCode:4;
+    SYS_UINT8       QR:1, OpCode:4, AA:1, TC:1, RD:1;
+    SYS_UINT8       RA:1, Z:3, RCode:4;
 #endif // #ifdef LITTLE_ENDIAN_BITFIELD
     SYS_UINT16      QDCount;
     SYS_UINT16      ANCount;
@@ -95,14 +83,16 @@ struct DNS_HEADER
 
 
 int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
-                                     char const *pszRespFile, bool & bAuth, SYS_UINT32 *pTTL = NULL);
+                                     char const *pszRespFile, bool & bAuth, char *pszCName,
+                                     SYS_UINT32 *pTTL = NULL);
 int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
-                                   char const *pszRespFile, SYS_UINT32 *pTTL = NULL);
+                                   char const *pszRespFile, char *pszCName,
+                                   SYS_UINT32 *pTTL = NULL);
 int             DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
-                                      SYS_UINT32 *pTTL = NULL);
+                                      char *pszCName, SYS_UINT32 *pTTL = NULL);
 int             DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile);
 int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
-                                SYS_UINT32 *pTTL = NULL);
+                                char *pszCName, SYS_UINT32 *pTTL = NULL);
 int             DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszDomain,
                                       int iQuerySockType, char *&pszMXDomains, SYS_UINT32 *pTTL = NULL);
 

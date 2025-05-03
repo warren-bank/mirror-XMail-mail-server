@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -163,9 +163,6 @@ struct tm      *SysGMTime(time_t *pTimer, struct tm *pTStruct);
 char           *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize);
 long            SysGetTimeZone(void);
 long            SysGetDayLight(void);
-
-int             SysSpinAcquire(SYS_SPINLOCK *pSpinLock);
-int             SysSpinRelease(SYS_SPINLOCK *pSpinLock);
 
 int             SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree);
 int             SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,

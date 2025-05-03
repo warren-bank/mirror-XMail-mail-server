@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -283,6 +283,7 @@ static ErrorStrings Errors[] =
     {ERR_MESSAGE_DELETED, "Message marked for deletion"},
     {ERR_PIPE, "Pipe creation error"},
     {ERR_WAITPID, "Error in function {waitpid}"},
+    {ERR_DNS_IS_CNAME, "CNAME DNS record detected"},
 
 };
 
@@ -489,14 +490,9 @@ int             ErrLogMessage(int iLogLevel, char const *pszFormat,...)
         return (ErrGetErrorCode());
 
 
-    va_list         Args;
+    char           *pszUserMessage = NULL;
 
-    va_start(Args, pszFormat);
-
-    char           *pszUserMessage = StrVSprint(pszFormat, Args);
-
-    va_end(Args);
-
+    STRSPRINTF(pszUserMessage, pszFormat, pszFormat);
 
     if (pszUserMessage == NULL)
     {
@@ -522,8 +518,7 @@ int             ErrLogMessage(int iLogLevel, char const *pszFormat,...)
 
 
 
-int             ErrFileVLogMessage(char const *pszFileName, char const *pszFormat,
-                                   va_list Args)
+int             ErrFileLogString(char const *pszFileName, char const *pszMessage)
 {
 
     char           *pszErrorInfo = ErrGetErrorStringInfo(ErrGetErrorCode());
@@ -532,21 +527,10 @@ int             ErrFileVLogMessage(char const *pszFileName, char const *pszForma
         return (ErrGetErrorCode());
 
 
-    char           *pszUserMessage = StrVSprint(pszFormat, Args);
-
-
-    if (pszUserMessage == NULL)
-    {
-        SysFree(pszErrorInfo);
-        return (ErrGetErrorCode());
-    }
-
-
     FILE           *pLogFile = fopen(pszFileName, "a+t");
 
     if (pLogFile == NULL)
     {
-        SysFree(pszUserMessage);
         SysFree(pszErrorInfo);
 
         ErrSetErrorCode(ERR_FILE_CREATE, pszFileName);
@@ -558,11 +542,10 @@ int             ErrFileVLogMessage(char const *pszFileName, char const *pszForma
             "<<\n"
             "%s\n"
             "%s"
-            ">>\n", pszErrorInfo, pszUserMessage);
+            ">>\n", pszErrorInfo, pszMessage);
 
 
     fclose(pLogFile);
-    SysFree(pszUserMessage);
     SysFree(pszErrorInfo);
 
     return (0);

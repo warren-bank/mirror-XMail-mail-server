@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  Copyright (C) 1999,..,2003  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -58,7 +58,6 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
-#define SYS_SPINLOCK_UNLOCKED   0
 
 #if !defined(INADDR_NONE)
 #define INADDR_NONE             0xffffffff
@@ -84,7 +83,6 @@ typedef int     SYS_SOCKET;
 typedef void   *SYS_SEMAPHORE;
 typedef void   *SYS_MUTEX;
 typedef void   *SYS_EVENT;
-typedef unsigned int    SYS_SPINLOCK;
 typedef void   *SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 

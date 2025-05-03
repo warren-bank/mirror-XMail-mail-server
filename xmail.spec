@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.17
+Version: 1.18
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,13 @@ fi
 
 
 %changelog
+
+* Sat Mar 27 2004 Davide Libenzi <davidel@xmailserver.org>
+    Restructured the external program execution environment on Unix ports. Simplified,
+    as a consequence of this, the system dependent portion of XMail (SysDep*).
+    Fixed a bug in the address range parsing (x.y.w.z/s).
+    Fixed the alias lookup to perform a better "best match" wildcard selection.
+    Fixed a bug in the DNS resolved that made XMail to not correctly handle domain CNAMEs.
 
 * Sun Sep 14 2003 Davide Libenzi <davidel@xmailserver.org>
     Added Bcc: removal from message headers in XMail's sendmail.
