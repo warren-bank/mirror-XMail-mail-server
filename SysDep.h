@@ -144,6 +144,7 @@ int             SysRemoveDir(const char *pszPath);
 int             SysMoveFile(char const * pszOldName, char const * pszNewName);
 
 int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args);
+int             SysFileSync(FILE *pFile);
 
 char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSavePtr);
 char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize);

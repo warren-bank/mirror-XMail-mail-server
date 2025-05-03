@@ -21,34 +21,46 @@
  */
 
 
-#ifndef _LMAILSVR_H
-#define _LMAILSVR_H
+#ifndef _ALIASDOMAIN_H
+#define _ALIASDOMAIN_H
 
 
 
 
-#define LMAILF_STOP_SERVER          (1 << 0)
-#define LMAILF_LOG_ENABLED          (1 << 1)
+
+#define INVALID_ADOMAIN_HANDLE          ((ADOMAIN_HANDLE) 0)
 
 
 
 
-struct LMAILConfig
+enum ADomainFileds
 {
-    unsigned long   ulFlags;
-    long            lNumThreads;
-    int             iSleepTimeout;
-    long            lThreadCount;
+    adomADomain = 0,
+    adomDomain,
 
+    adomMax
 };
 
 
 
 
+typedef struct ADOMAIN_HANDLE_struct
+{
+}              *ADOMAIN_HANDLE;
 
-char           *LMAILGetSpoolDir(char *pszSpoolPath);
-unsigned int    LMAILThreadProc(void *pThreadData);
 
+
+
+
+int             ADomCheckDomainsIndexes(void);
+int             ADomLookupDomain(const char *pszADomain, char *pszDomain, bool bWildMatch);
+int             ADomAddADomain(char const * pszADomain, char const * pszDomain);
+int             ADomRemoveADomain(char const * pszADomain);
+int             ADomGetADomainFileSnapShot(const char *pszFileName);
+ADOMAIN_HANDLE  ADomOpenDB(void);
+void            ADomCloseDB(ADOMAIN_HANDLE hDomainsDB);
+char const * const *ADomGetFirstDomain(ADOMAIN_HANDLE hDomainsDB);
+char const * const *ADomGetNextDomain(ADOMAIN_HANDLE hDomainsDB);
 
 
 

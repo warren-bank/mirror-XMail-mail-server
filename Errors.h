@@ -236,6 +236,9 @@
 #define ERR_MESSAGE_SIZE            (-216)
 #define ERR_SMTPSRV_MSG_SIZE        (-217)
 #define ERR_MAPS_CONTAINED          (-218)
+#define ERR_ADOMAIN_FILE_NOT_FOUND  (-219)
+#define ERR_ADOMAIN_EXIST           (-220)
+#define ERR_ADOMAIN_NOT_FOUND       (-221)
 
 
 

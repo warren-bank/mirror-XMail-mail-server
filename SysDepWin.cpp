@@ -2275,6 +2275,21 @@ int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat,
 
 
 
+int             SysFileSync(FILE *pFile)
+{
+
+    if (fflush(pFile) || _commit(_fileno(pFile)))
+    {
+        ErrSetErrorCode(ERR_FILE_WRITE);
+        return (ERR_FILE_WRITE);
+    }
+
+    return (0);
+
+}
+
+
+
 char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSavePtr)
 {
 

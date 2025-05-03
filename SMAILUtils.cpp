@@ -386,8 +386,6 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
 
                 SetEmptyString(szTagName);
                 StrDynTruncate(&TagDS);
-
-                ulFilePos = (unsigned long) ftell(pSpoolFile);
             }
 
             break;
@@ -427,8 +425,6 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
 
                 SetEmptyString(szTagName);
                 StrDynTruncate(&TagDS);
-
-                ulFilePos = (unsigned long) ftell(pSpoolFile);
             }
 
             char           *pszEndTag = strchr(szSpoolLine, ':');
@@ -459,6 +455,8 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
                 return (ErrorPop());
             }
         }
+
+        ulFilePos = (unsigned long) ftell(pSpoolFile);
     }
 
     StrDynFree(&TagDS);
@@ -1025,8 +1023,20 @@ static int      USmlFlushMessageFile(SpoolFileData * pSFD)
 
     fclose(pMessFile);
 
-    SysFileSync(pMsgFile);
-    fclose(pMsgFile);
+    if (SysFileSync(pMsgFile) < 0)
+    {
+        ErrorPush();
+        fclose(pMsgFile);
+        CheckRemoveFile(szTmpMsgFile);
+        return (ErrorPop());
+    }
+
+    if (fclose(pMsgFile))
+    {
+        CheckRemoveFile(szTmpMsgFile);
+        ErrSetErrorCode(ERR_FILE_WRITE, szTmpMsgFile);
+        return (ERR_FILE_WRITE);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Move the file

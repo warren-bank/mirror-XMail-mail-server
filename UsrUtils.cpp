@@ -42,6 +42,7 @@
 #include "Maildir.h"
 #include "TabIndex.h"
 #include "SMTPUtils.h"
+#include "AliasDomain.h"
 #include "UsrAuth.h"
 
 
@@ -1449,7 +1450,7 @@ static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszD
 
 
 
-UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
+UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName)
 {
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
@@ -1475,9 +1476,34 @@ UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
 
 
 
+UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check for alias domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szADomain[MAX_HOST_NAME] = "";
+
+    if (ADomLookupDomain(pszDomain, szADomain, true))
+        pszDomain = szADomain;
+
+
+    return (UsrLookupUser(pszDomain, pszName));
+
+}
+
+
+
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
                         char *pszRealAddr)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Check for alias domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szADomain[MAX_HOST_NAME] = "";
+
+    if (ADomLookupDomain(pszDomain, szADomain, true))
+        pszDomain = szADomain;
+
 
     char const     *pszAliasedUser = NULL,
                    *pszAliasedDomain = NULL;

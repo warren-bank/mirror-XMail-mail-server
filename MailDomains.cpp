@@ -39,6 +39,7 @@
 #include "UsrUtils.h"
 #include "UsrAuth.h"
 #include "TabIndex.h"
+#include "AliasDomain.h"
 #include "MailDomains.h"
 
 
@@ -192,7 +193,7 @@ static char    *MDomGetDomainsFilePath(char *pszDomainsFilePath)
 
 
 
-int             MDomIsHandledDomain(char const * pszDomain)
+int             MDomLookupDomain(char const * pszDomain)
 {
 
     char            szDomainsFilePath[SYS_MAX_PATH] = "";
@@ -646,5 +647,22 @@ int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain
 
     ErrSetErrorCode(ERR_NO_HANDLED_DOMAIN);
     return (ERR_NO_HANDLED_DOMAIN);
+
+}
+
+
+
+int             MDomIsHandledDomain(char const * pszDomain)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check for alias domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szADomain[MAX_HOST_NAME] = "";
+
+    if (ADomLookupDomain(pszDomain, szADomain, true))
+        pszDomain = szADomain;
+
+
+    return (MDomLookupDomain(pszDomain));
 
 }

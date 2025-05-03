@@ -37,11 +37,19 @@
 #define SYS_SLASH_CHAR              '\\'
 #define SYS_SLASH_STR               "\\"
 #define SYS_MAX_PATH                256
-#define SysFileSync(fp)             do { fflush(fp); _commit(_fileno(fp)); } while (0)
 
 
 
 
+int             SysFileSync(FILE *pFile)
+{
+
+    if (fflush(pFile) || _commit(_fileno(pFile)))
+        return (-1);
+
+    return (0);
+
+}
 
 int             SysPathExist(char const * pszPathName)
 {
@@ -152,15 +160,21 @@ char           *SysGetEnv(const char *pszVarName)
 #define SYS_SLASH_STR               "/"
 #define SYS_MAX_PATH                256
 
-#define SysFileSync(fp)             do { fflush(fp); fsync(fileno(fp)); } while (0)
-
 #define stricmp                     strcasecmp
 #define strnicmp                    strncasecmp
 
 
 
 
+int             SysFileSync(FILE *pFile)
+{
 
+    if (fflush(pFile) || fsync(fileno(pFile)))
+        return (-1);
+
+    return (0);
+
+}
 
 int             SysPathExist(char const * pszPathName)
 {
@@ -493,7 +507,7 @@ int             main(int iArgCount, char *pszArgs[])
 
             if ((szBuffer[0] == ' ') || (szBuffer[0] == '\t'))
             {
-                if (bRcptSource)
+                if (bExtractRcpts && bRcptSource)
                 {
                     int             iRcptCurr = EmitRecipients(pMailFile, szBuffer);
 
@@ -507,7 +521,7 @@ int             main(int iArgCount, char *pszArgs[])
                         (strnicmp(szBuffer, "Cc:", 3) == 0) ||
                         (strnicmp(szBuffer, "Bcc:", 4) == 0);
 
-                if (bRcptSource)
+                if (bExtractRcpts && bRcptSource)
                 {
                     int             iRcptCurr = EmitRecipients(pMailFile, szBuffer);
 
@@ -568,8 +582,12 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync and close the mail file
 ///////////////////////////////////////////////////////////////////////////////
-    SysFileSync(pMailFile);
-    fclose(pMailFile);
+    if ((SysFileSync(pMailFile) < 0) || fclose(pMailFile))
+    {
+        remove(szMailFile);
+        fprintf(stderr, "cannot write file: %s\n", szMailFile);
+        return (7);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Move the mail file
@@ -587,7 +605,7 @@ int             main(int iArgCount, char *pszArgs[])
     {
         remove(szMailFile);
         fprintf(stderr, "cannot move file: %s\n", szMailFile);
-        return (7);
+        return (8);
     }
 
 

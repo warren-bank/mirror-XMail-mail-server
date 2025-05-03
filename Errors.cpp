@@ -271,6 +271,9 @@ static ErrorStrings Errors[] =
     {ERR_MESSAGE_SIZE, "Message exceeds fixed maximum message size"},
     {ERR_SMTPSRV_MSG_SIZE, "Message too big for the remote SMTP server"},
     {ERR_MAPS_CONTAINED, "The peer IP is mapped"},
+    {ERR_ADOMAIN_FILE_NOT_FOUND, "Domain aliases file not found"},
+    {ERR_ADOMAIN_EXIST, "Domain alias already exist"},
+    {ERR_ADOMAIN_NOT_FOUND, "Domain alias not found"},
 
 };
 

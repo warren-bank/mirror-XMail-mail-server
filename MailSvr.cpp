@@ -42,6 +42,7 @@
 #include "MessQueue.h"
 #include "QueueUtils.h"
 #include "ExtAliases.h"
+#include "AliasDomain.h"
 #include "MailDomains.h"
 #include "POP3GwLink.h"
 #include "CTRLSvr.h"
@@ -74,6 +75,7 @@
 #define MAX_CTRL_THREADS            512
 #define STD_LMAIL_THREADS           3
 #define MAX_LMAIL_THREADS           17
+#define STD_LMAILTHREAD_SLEEP_TIME  2
 #define SVR_EXIT_WAIT               480
 #define STD_SERVER_SESSION_TIMEOUT  90
 #define MAX_CLIENTS_WAIT            300
@@ -900,7 +902,8 @@ static void     SvrCleanupPSYNC(void)
 static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
 {
 
-    int             ii;
+    int             ii,
+                    iSleepTimeout = STD_LMAILTHREAD_SLEEP_TIME;
     unsigned long   ulFlags = 0;
 
     iNumLMAILThreads = STD_LMAIL_THREADS;
@@ -922,6 +925,11 @@ static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
             case ('l'):
                 ulFlags |= LMAILF_LOG_ENABLED;
                 break;
+
+            case ('t'):
+                if (++ii < iArgCount)
+                    iSleepTimeout = atoi(pszArgs[ii]);
+                break;
         }
     }
 
@@ -939,6 +947,7 @@ static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
     }
 
     pLMAILCfg->ulFlags = ulFlags;
+    pLMAILCfg->iSleepTimeout = iSleepTimeout;
     pLMAILCfg->lNumThreads = iNumLMAILThreads;
     pLMAILCfg->lThreadCount = 0;
 
@@ -1083,7 +1092,8 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
     if ((UsrCheckUsersIndexes() < 0) ||
             (UsrCheckAliasesIndexes() < 0) ||
             (ExAlCheckAliasIndexes() < 0) ||
-            (MDomCheckDomainsIndexes() < 0))
+            (MDomCheckDomainsIndexes() < 0) ||
+            (ADomCheckDomainsIndexes() < 0))
     {
         ErrorPush();
         RLckCleanupLockers();

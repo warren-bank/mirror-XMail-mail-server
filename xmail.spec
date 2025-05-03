@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.0
+Version: 1.1
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,16 @@ fi
 
 
 %changelog
+* Tue Oct 10 2001 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a bug in the XMail version of  sendmail  that made messages to be double sent.
+    The macro @@TMPFILE has been removed from filters coz it's useless.
+    The command line parameter  -Lt NSEC  has been added to set the sleep timeout of LMAIL threads.
+    Added domain aliasing ( see ALIASDOMAIN.TAB section ).
+    ************************************************************************************************
+    * You've to create the file ALIASDOMAIN.TAB inside $MAIL_ROOT ( even if empty )
+    ************************************************************************************************	
+    Added CTRL commands "aliasdomainadd", "aliasdomaindel" and "aliasdomainlist" to handle domain aliases
+    through the CTRL protocol.
 * Tue Sep 4 2001 Davide Libenzi <davidel@xmailserver.org>
     Added wildcard matching in the domain part of ALIASES.TAB ( see ALIASES.TAB section ).
     Changed the PSYNC scheduling behaviour to allow sync interval equal to zero ( disabled ) and

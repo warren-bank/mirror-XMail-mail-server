@@ -52,7 +52,6 @@
 
 #define LMAIL_SERVER_NAME           "[" APP_NAME_VERSION_OS_STR " LMAIL Server]"
 #define LOCAL_SPOOL_DIR             "local"
-#define STD_LMAILTHREAD_SLEEP_TIME  2
 #define LMAIL_LOG_FILE              "lmail"
 
 
@@ -193,8 +192,9 @@ unsigned int    LMAILThreadProc(void *pThreadData)
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get thread id
+//  Get thread id and sleep timeout
 ///////////////////////////////////////////////////////////////////////////////
+    int             iSleepTimeout = pLMAILCfg->iSleepTimeout;
     long            lThreadId = pLMAILCfg->lThreadCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -231,7 +231,7 @@ unsigned int    LMAILThreadProc(void *pThreadData)
         int             iProcessResult = LMAILProcessLocalSpool(hShbLMAIL, lThreadId);
 
         if (iProcessResult == ERR_NO_LOCAL_SPOOL_FILES)
-            SysSleep(STD_LMAILTHREAD_SLEEP_TIME);
+            SysSleep(iSleepTimeout);
 
     }
 
@@ -629,8 +629,24 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
             return (ErrorPop());
         }
 
-        SysFileSync(pSpoolFile);
-        fclose(pSpoolFile);
+        if (SysFileSync(pSpoolFile) < 0)
+        {
+            ErrorPush();
+            fclose(pSpoolFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
+            fclose(pMailFile);
+            return (ErrorPop());
+        }
+
+        if (fclose(pSpoolFile))
+        {
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
+            fclose(pMailFile);
+            ErrSetErrorCode(ERR_FILE_WRITE, szQueueFilePath);
+            return (ERR_FILE_WRITE);
+        }
 
         fseek(pMailFile, ulCurrOffset, SEEK_SET);
 

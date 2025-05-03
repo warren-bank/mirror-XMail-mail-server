@@ -45,7 +45,7 @@ typedef struct DOMLS_HANDLE_struct
 int             MDomCheckDomainsIndexes(void);
 char           *MDomGetDomainPath(char const * pszDomain, char *pszDomainPath,
                         int iFinalSlash = 1);
-int             MDomIsHandledDomain(char const * pszDomain);
+int             MDomLookupDomain(char const * pszDomain);
 int             MDomAddDomain(char const * pszDomain);
 int             MDomRemoveDomain(char const * pszDomain);
 int             MDomGetDomainsFileSnapShot(const char *pszFileName);
@@ -55,6 +55,7 @@ char const     *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB);
 char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB);
 int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain,
                         int iMaxDomain);
+int             MDomIsHandledDomain(char const * pszDomain);
 
 
 

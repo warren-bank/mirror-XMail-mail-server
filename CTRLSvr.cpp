@@ -40,6 +40,7 @@
 #include "UsrMailList.h"
 #include "POP3GwLink.h"
 #include "MailDomains.h"
+#include "AliasDomain.h"
 #include "SMAILUtils.h"
 #include "SMTPUtils.h"
 #include "MailConfig.h"
@@ -182,6 +183,12 @@ static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 
 
@@ -937,6 +944,12 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_frozgetlog(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "frozgetmsg") == 0)
         iCmdResult = CTRLDo_frozgetmsg(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "aliasdomainadd") == 0)
+        iCmdResult = CTRLDo_aliasdomainadd(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "aliasdomaindel") == 0)
+        iCmdResult = CTRLDo_aliasdomaindel(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "aliasdomainlist") == 0)
+        iCmdResult = CTRLDo_aliasdomainlist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "etrn") == 0)
         iCmdResult = CTRLDo_etrn(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "noop") == 0)
@@ -1926,7 +1939,7 @@ static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
 
-    char            szDomain[256] = "";
+    char            szDomain[MAX_HOST_NAME] = "";
 
     StrSNCpy(szDomain, ppszTokens[1]);
     StrLower(szDomain);
@@ -1960,7 +1973,7 @@ static int      CTRLDo_domaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
 
-    char            szDomain[256] = "";
+    char            szDomain[MAX_HOST_NAME] = "";
 
     StrSNCpy(szDomain, ppszTokens[1]);
     StrLower(szDomain);
@@ -2908,6 +2921,144 @@ static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
 
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 3)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Filter params
+///////////////////////////////////////////////////////////////////////////////
+    char            szDomain[MAX_HOST_NAME] = "",
+                    szADomain[MAX_HOST_NAME] = "";
+
+    StrSNCpy(szDomain, ppszTokens[1]);
+    StrLower(szDomain);
+
+    StrSNCpy(szADomain, ppszTokens[2]);
+    StrLower(szADomain);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Target domain MUST exit ( alias of aliases are not permitted )
+///////////////////////////////////////////////////////////////////////////////
+    if (MDomLookupDomain(szDomain) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Add alias domain
+///////////////////////////////////////////////////////////////////////////////
+    if (ADomAddADomain(szADomain, szDomain) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_aliasdomaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 2)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Filter params
+///////////////////////////////////////////////////////////////////////////////
+    char            szADomain[MAX_HOST_NAME] = "";
+
+    StrSNCpy(szADomain, ppszTokens[1]);
+    StrLower(szADomain);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Remove alias domain
+///////////////////////////////////////////////////////////////////////////////
+    if (ADomRemoveADomain(szADomain) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 1)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+
+    ADOMAIN_HANDLE  hADomainDB = ADomOpenDB();
+
+    if (hADomainDB == INVALID_ADOMAIN_HANDLE)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+
+    char const * const *ppszStrings = ADomGetFirstDomain(hADomainDB);
+
+    for (; ppszStrings != NULL; ppszStrings = ADomGetNextDomain(hADomainDB))
+    {
+        if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",
+                ppszStrings[adomADomain], ppszStrings[adomDomain]) < 0)
+        {
+            ErrorPush();
+            ADomCloseDB(hADomainDB);
+            return (ErrorPop());
+        }
+    }
+
+    ADomCloseDB(hADomainDB);
+
+    BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
 
     return (0);
 

@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.0
+Version      : 1.1
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 04-09-2001
+Date         : 09-10-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -526,6 +526,17 @@ Date 04-09-2001	1.0
 	let the file .psync-trigger to schedule syncs.
 	Solaris on Intel support added.
 	A new filter return code ( 98 ) has been added to give the ability to reject message without notify the sender.
+Date 09-10-2001	1.1
+	Fixed a bug in the XMail version of  sendmail  that made messages to be double sent.
+	The macro @@TMPFILE has been removed from filters coz it's useless.
+	The command line parameter  -Lt NSEC  has been added to set the sleep timeout of LMAIL threads.
+	Added domain aliasing ( see ALIASDOMAIN.TAB section ).
+	************************************************************************************************
+	* You've to create the file ALIASDOMAIN.TAB inside $MAIL_ROOT ( even if empty )
+	************************************************************************************************	
+	Added CTRL commands "aliasdomainadd", "aliasdomaindel" and "aliasdomainlist" to handle domain aliases
+	through the CTRL protocol.
+
 
 
 
@@ -682,16 +693,17 @@ Part 2			Features
 	12) SMTP authentication ( PLAIN LOGIN CRAM-MD5 POP3/SMTP and custom )
 	13) SMTP ETRN command support
 	14) POP3 account syncronizer with external POP3 accounts
-	15) Aliases
-	16) Mailing lists
-	17) Custom mail processing
-	18) Locally generated mail files delivery
-	19) Remote administration
-	20) Custom mail exchangers
-	21) Logging
-	22) Multi platform
-	23) Domain message filters
-	24) Custom ( external ) POP3 authentication
+	15) Account aliasing
+	16) Domain aliasing
+	17) Mailing lists
+	18) Custom mail processing
+	19) Locally generated mail files delivery
+	20) Remote administration
+	21) Custom mail exchangers
+	22) Logging
+	23) Multi platform
+	24) Domain message filters
+	25) Custom ( external ) POP3 authentication
 
 
 
@@ -908,6 +920,7 @@ Part 7			Configuration
 	Mail root directory contain this files :
 
 		aliases.tab	<file>
+		aliasdomain.tab	<file>
 		domains.tab	<file>
 		dnsroots	<file>
 		extaliases.tab	<file>
@@ -1017,6 +1030,20 @@ Part 7			Configuration
 	
 	"*"	"postmaster"	"postmaster@domain.net"
 	
+	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
+
+
+	ALIASDOMAIN.TAB :
+
+	"aliasdomain"[TAB]"realdomain"[NEWLINE]
+
+	where  aliasdomain  can use wildcards :
+
+	"simpson.org"	"simpson.com"
+	"*.homer.net"	"homer.net"
+
+	The first line define  simpson.org  as an alias of  simpson.com  while the second remap
+	all subdomains of  homer.net  to  homer.net
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
 
 
@@ -1303,6 +1330,8 @@ Part 7			Configuration
 
 	This file contain the accounts that are enable to remote administer XMail.
 	The password is encrypted with  XMCrypt  program supplied with the source distro.
+	REMEMBER THAT THIS HOLDS ADMIN ACCOUNTS, SO PLEASE CHOOSE COMPLEX USERNAMES AND PASSWORDS AND
+	USE CTRL.IPMAP.TAB TO RESTRICT IP ACCESS !
 	REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM THIS FILE !
 
 
@@ -1980,8 +2009,6 @@ Part 12			Domain message filters
 				the file if it's going to return 100 as command exit value )
 	@@MSGID		will be substituted with the ( XMail unique ) message id
 	@@MSGREF	will be substituted with the reference SMTP message id
-	@@TMPFILE	will create a copy of the message file to a temporary one.
-			It's external program responsibility to delete the temporary file.
 
 	Here  "command"  is the name of an external program that must process the message and
 	return its processing result. If it return  99  the message is rejected and a notification
@@ -2219,54 +2246,54 @@ Part 18			Command line
 
 	[XMAIL]
 	-Ms pathname	= Mail root path also settable with MAIL_ROOT environment
-	-Md				= Activate debug ( verbose ) mode
-	-Mr hours		= Set log rotate hours step
+	-Md		= Activate debug ( verbose ) mode
+	-Mr hours	= Set log rotate hours step
 	-Mx split-level	= Set the queue split level. The value You set here is rounded to the lower
-						prime number higher or equal than the value You've set
+				prime number higher or equal than the value You've set
 
 	[POP3]
-	-Pp port		= Set POP3 server port ( if You change this You must know what You're doing )
-	-Pt timeout		= Set POP3 session timeout ( seconds ) after which the server will close
-						the connection if not receive any commands
-	-Pl				= Enable POP3 logging
-	-Pw timeout		= Set the delay timeout in response to a bad POP3 login. Such time will be
-						doubled at the next bad login
-	-Ph				= Hang the connection in bad login response
+	-Pp port	= Set POP3 server port ( if You change this You must know what You're doing )
+	-Pt timeout	= Set POP3 session timeout ( seconds ) after which the server will close
+				the connection if not receive any commands
+	-Pl		= Enable POP3 logging
+	-Pw timeout	= Set the delay timeout in response to a bad POP3 login. Such time will be
+				doubled at the next bad login
+	-Ph		= Hang the connection in bad login response
 	-PI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-PX nthreads	= Set the maximum number of threads for POP3 server
 
 	[SMTP]
-	-Sp port		= Set SMTP server port ( if You change this You must know what You're doing )
-	-St timeout		= Set SMTP session timeout ( seconds ) after which the server will close
+	-Sp port	= Set SMTP server port ( if You change this You must know what You're doing )
+	-St timeout	= Set SMTP session timeout ( seconds ) after which the server will close
 						the connection if not receive any commands
 	-Sl				= Enable SMTP logging
-	-SI bindip		= Bind server to the specified ip address ( can be multiple )
+	-SI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-SX nthreads	= Set the maximum number of threads for SMTP server
 	-Sr maxrcpts	= Set the maximu number of recipients for a single SMTP message ( default 100 )
 	-Se nsecs		= Set the expire timeout for a POP3 authentication IP ( default 900 )
 
 	[SMAIL]
 	-Qn nthreads	= Set the number of mailer threads
-	-Qt timeout		= Set the timeout to be waited for a next try after send failure
-	-Qi ratio		= Set the increment ratio of the reschedule time in sending a messages.
-						At every failure in delivery a message, reschedule time T is incremented
-						by ( T / ratio ), therefore  T(i) = T(i-1) + T(i-1)/ratio.
-						If You set this ratio to zero, T remain unchanged over delivery tentatives.
+	-Qt timeout	= Set the timeout to be waited for a next try after send failure
+	-Qi ratio	= Set the increment ratio of the reschedule time in sending a messages.
+				At every failure in delivery a message, reschedule time T is incremented
+				by ( T / ratio ), therefore  T(i) = T(i-1) + T(i-1)/ratio.
+				If You set this ratio to zero, T remain unchanged over delivery tentatives.
 	-Qr nretries	= Set the maximum number of times to try to send the message
-	-Ql				= Enable SMAIL logging
+	-Ql		= Enable SMAIL logging
 
 	[PSYNC]
-	-Yi timeout		= Set external POP3 accounts sync timout
+	-Yi timeout	= Set external POP3 accounts sync timout
 	-Yt nthreads	= Set the number of POP3 sync threads
 
 	[FINGER]
-	-Fp port		= Set FINGER server port ( if You change this You must know what You're doing )
-	-Fl				= Enable FINGER logging
+	-Fp port	= Set FINGER server port ( if You change this You must know what You're doing )
+	-Fl		= Enable FINGER logging
 	-FI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 
 	[CTRL]
-	-Cp port		= Set CTRL server port ( if You change this You must know what You're doing )
-	-Ct timeout		= Set CTRL session timeout ( seconds ) after which the server will close
+	-Cp port	= Set CTRL server port ( if You change this You must know what You're doing )
+	-Ct timeout	= Set CTRL session timeout ( seconds ) after which the server will close
 			  			the connection if not receive any commands
 	-Cl				= Enable CTRL logging
 	-CI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
@@ -2274,7 +2301,8 @@ Part 18			Command line
 
 	[LMAIL]
 	-Ln nthreads	= Set the number of local mailer threads
-	-Ll				= Enable local mail logging
+	-Lt timeout	= Set the sleep timeout for LMAIL threads ( in seconds, default 2 )
+	-Ll		= Enable local mail logging
 
 
 
@@ -2642,6 +2670,41 @@ Part 19			XMail admin protocol
 
 	The result will be a RESSTRING.
 	In success case ( 00100 ) a formatted list of handled domains will follow, until a line
+	containing a single dot ( <CR><LF>.<CR><LF> ).
+
+
+	*) Adding a domain alias
+
+	"aliasdomainadd"[TAB]"realdomain"[TAB]"aliasdomain"<CR><LF>
+
+	Ex :
+
+	"aliasdomainadd"[TAB]"xmailserver.org"[TAB]"xmailserver.com"<CR><LF>
+
+	define  xmailserver.com  as an alias of  xmailserver.org , or :
+
+	"aliasdomainadd"[TAB]"xmailserver.org"[TAB]"*.xmailserver.org"<CR><LF>
+
+	define all subdomains of  xmailserver.org  as alises of  xmailserver.org.
+
+
+	*) Deleting a domain alias
+
+	"aliasdomaindel"[TAB]"aliasdomain"<CR><LF>
+
+	Ex :
+
+	"aliasdomaindel"[TAB]"*.xmailserver.org"<CR><LF>
+
+	remove the  *.xmailserver.org  domain alias.
+
+
+	*) Listing alias domains
+
+	"aliasdomainlist"<CR><LF>
+
+	The result will be a RESSTRING.
+	In success case ( 00100 ) a formatted list of alias domains will follow, until a line
 	containing a single dot ( <CR><LF>.<CR><LF> ).
 
 

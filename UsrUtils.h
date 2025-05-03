@@ -26,7 +26,6 @@
 
 
 
-
 #define INVALID_USRF_HANDLE         ((USRF_HANDLE) 0)
 #define INVALID_ALSF_HANDLE         ((ALSF_HANDLE) 0)
 
@@ -95,6 +94,7 @@ void            UsrFreeAlias(AliasInfo * pAI);
 int             UsrAddAlias(AliasInfo * pAI);
 int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias);
 int             UsrRemoveDomainAliases(const char *pszDomain);
+UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName);
 UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName);
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
                         char *pszRealAddr = NULL);

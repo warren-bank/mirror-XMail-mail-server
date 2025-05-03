@@ -138,9 +138,20 @@ int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize)
     UsrGetMailboxPath(pUI, szMBPath, 0);
 
 
-    if (MscGetDirectorySize(szMBPath, true, ulMBSize) < 0)
+    char            szResLock[SYS_MAX_PATH] = "";
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMBPath, szResLock));
+
+    if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
 
+    if (MscGetDirectorySize(szMBPath, true, ulMBSize) < 0)
+    {
+        ErrorPush();
+        RLckUnlockSH(hResLock);
+        return (ErrorPop());
+    }
+
+    RLckUnlockSH(hResLock);
 
     return (0);
 

@@ -1732,13 +1732,33 @@ static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
 ///////////////////////////////////////////////////////////////////////////////
 //  Wait for PID exit
 ///////////////////////////////////////////////////////////////////////////////
-    iTimeout *= 1000;
+    int             iExitStatus = 0;
 
-    while ((iTimeout > 0) && (PWD.PID != 0))
+    if (waitpid((pid_t) PID, &iExitStatus, WUNTRACED | WNOHANG) != PID)
     {
-        SysMsSleep(WAIT_PID_TIME_STEP);
+        if (errno == ECHILD)
+        {
+            SysSpinAcquire(&WaitPIDSpin);
+            SYS_LIST_DEL(&PWD.LLink);
+            SysSpinRelease(&WaitPIDSpin);
 
-        iTimeout -= WAIT_PID_TIME_STEP;
+            ErrSetErrorCode(ERR_PROCESS_EXECUTE);
+            return (ERR_PROCESS_EXECUTE);
+        }
+
+        iTimeout *= 1000;
+
+        while ((iTimeout > 0) && (PWD.PID != 0))
+        {
+            SysMsSleep(WAIT_PID_TIME_STEP);
+
+            iTimeout -= WAIT_PID_TIME_STEP;
+        }
+    }
+    else
+    {
+        PWD.PID = 0;
+        PWD.iExitCode = WEXITSTATUS(iExitStatus);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1805,19 +1825,8 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
     {
         int             iExitStatus = 0;
 
-        if (waitpid((pid_t) ProcessID, &iExitStatus, WUNTRACED | WNOHANG) != ProcessID)
-        {
-            if ((errno == ECHILD) || (WEXITSTATUS(iExitStatus) < 0))
-            {
-                ErrSetErrorCode(ERR_PROCESS_EXECUTE);
-                return (ERR_PROCESS_EXECUTE);
-            }
-
-            if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout) < 0)
-                return (ErrGetErrorCode());
-        }
-        else
-            iExitStatus = WEXITSTATUS(iExitStatus);
+        if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout) < 0)
+            return (ErrGetErrorCode());
 
         if (piExitStatus != NULL)
             *piExitStatus = iExitStatus;
@@ -2472,6 +2481,21 @@ int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat,
     int             iPrintResult = vsnprintf(pszBuffer, iSize, pszFormat, Args);
 
     return ((iPrintResult < iSize) ? iPrintResult : -1);
+
+}
+
+
+
+int             SysFileSync(FILE *pFile)
+{
+
+    if (fflush(pFile) || fsync(fileno(pFile)))
+    {
+        ErrSetErrorCode(ERR_FILE_WRITE);
+        return (ERR_FILE_WRITE);
+    }
+
+    return (0);
 
 }
 

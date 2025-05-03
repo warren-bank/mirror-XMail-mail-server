@@ -1865,7 +1865,13 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
         }
     }
 
-    fclose(SMTPS.pMsgFile), SMTPS.pMsgFile = NULL;
+///////////////////////////////////////////////////////////////////////////////
+//  Check fclose() return value coz data might be buffered and fail to flush
+///////////////////////////////////////////////////////////////////////////////
+    if (fclose(SMTPS.pMsgFile))
+        ErrSetErrorCode(iErrorCode = ERR_FILE_WRITE, SMTPS.szMsgFile);
+
+    SMTPS.pMsgFile = NULL;
 
     if (iErrorCode == 0)
     {
@@ -2107,8 +2113,26 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
             return (ErrorPop());
         }
 
-        SysFileSync(pSpoolFile);
-        fclose(pSpoolFile);
+        if (SysFileSync(pSpoolFile) < 0)
+        {
+            ErrorPush();
+            fclose(pSpoolFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
+            StrFreeStrings(ppszMsgInfo);
+            fclose(pPkgFile);
+            return (ErrorPop());
+        }
+
+        if (fclose(pSpoolFile))
+        {
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
+            StrFreeStrings(ppszMsgInfo);
+            fclose(pPkgFile);
+            ErrSetErrorCode(ERR_FILE_WRITE, szQueueFilePath);
+            return (ERR_FILE_WRITE);
+        }
 
         fseek(pPkgFile, ulCurrOffset, SEEK_SET);
 

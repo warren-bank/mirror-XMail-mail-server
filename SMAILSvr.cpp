@@ -499,6 +499,8 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
             SysSNPrintf(szBounceMsg, sizeof(szBounceMsg) - 1,
                     "Unknown user \"%s\" in domain \"%s\"", szDestUser, szDestDomain);
 
+            QueUtErrLogMessage(hQueue, hMessage, "%s\n", szBounceMsg);
+
             QueUtCleanupNotifyErrDelivery(hQueue, hMessage, szBounceMsg);
 
             return (ErrorPop());
@@ -1747,29 +1749,6 @@ static int      SMAILFilterMacroSubstitutes(char **ppszCmdTokens, char const * p
         else if (strcmp(ppszCmdTokens[ii], "@@MSGREF") == 0)
         {
             char           *pszNewValue = SysStrDup(SFH.szMessageID);
-
-            if (pszNewValue == NULL)
-                return (ErrGetErrorCode());
-
-            SysFree(ppszCmdTokens[ii]);
-
-            ppszCmdTokens[ii] = pszNewValue;
-        }
-        else if (strcmp(ppszCmdTokens[ii], "@@TMPFILE") == 0)
-        {
-            char            szTmpFile[SYS_MAX_PATH] = "";
-
-            SysGetTmpFile(szTmpFile);
-
-            if (MscCopyFile(szTmpFile, pszSpoolFilePath) < 0)
-            {
-                ErrorPush();
-                CheckRemoveFile(szTmpFile);
-                return (ErrorPop());
-            }
-
-
-            char           *pszNewValue = SysStrDup(szTmpFile);
 
             if (pszNewValue == NULL)
                 return (ErrGetErrorCode());
