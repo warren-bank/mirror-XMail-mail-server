@@ -1,0 +1,374 @@
+/*
+ *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999  Davide Libenzi
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Davide Libenzi <davidel@maticad.it>
+ *
+ */
+
+
+#include "SysInclude.h"
+#include "SysDep.h"
+#include "SvrDefines.h"
+#include "ShBlocks.h"
+#include "SList.h"
+#include "BuffSock.h"
+#include "MiscUtils.h"
+#include "SvrUtils.h"
+#include "UsrUtils.h"
+#include "POP3Svr.h"
+#include "POP3Utils.h"
+#include "AppDefines.h"
+#include "MailSvr.h"
+#include "POP3GwLink.h"
+#include "PSYNCSvr.h"
+
+
+
+
+
+#define PSYNC_WAKEUP_TIME           4
+#define PSYNC_SERVER_NAME           "[" APP_NAME_VERSION_OS_STR " PSYNC Server]"
+
+
+
+
+
+
+
+static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC);
+static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
+                        PSYNCConfig * pPSYNCCfg = NULL);
+static int      PSYNCTimeToStop(SHB_HANDLE hShbPSYNC);
+static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg);
+unsigned int    PSYNCThreadSyncProc(void *pThreadData);
+static int      PSYNCThreadNotifyExit(void);
+
+
+
+
+
+
+
+static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC)
+{
+
+    PSYNCConfig    *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
+
+    if (pPSYNCCfg == NULL)
+        return (NULL);
+
+    PSYNCConfig    *pNewPSYNCCfg = (PSYNCConfig *) SysAlloc(sizeof(PSYNCConfig));
+
+    if (pNewPSYNCCfg != NULL)
+        memcpy(pNewPSYNCCfg, pPSYNCCfg, sizeof(PSYNCConfig));
+
+    ShbUnlock(hShbPSYNC);
+
+    return (pNewPSYNCCfg);
+
+}
+
+
+
+static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
+                        PSYNCConfig * pPSYNCCfg)
+{
+
+    int             iDoUnlock = 0;
+
+    if (pPSYNCCfg == NULL)
+    {
+        if ((pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC)) == NULL)
+            return (ErrGetErrorCode());
+
+        ++iDoUnlock;
+    }
+
+    pPSYNCCfg->lThreadCount += lCount;
+
+    if (iDoUnlock)
+        ShbUnlock(hShbPSYNC);
+
+    return (0);
+
+}
+
+
+
+static int      PSYNCTimeToStop(SHB_HANDLE hShbPSYNC)
+{
+
+    PSYNCConfig    *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
+
+    if (pPSYNCCfg == NULL)
+        return (1);
+
+
+    int             iTimeToStop = (pPSYNCCfg->ulFlags & PSYNCF_STOP_SERVER) ? 1 : 0;
+
+
+    ShbUnlock(hShbPSYNC);
+
+    return (iTimeToStop);
+
+
+}
+
+
+
+unsigned int    PSYNCThreadProc(void *pThreadData)
+{
+
+    SysIgnoreThreadsExit();
+
+    SHB_HANDLE      hShbPSYNC = ShbConnectBlock(SHB_PSYNCSvr);
+
+    if (hShbPSYNC == SHB_INVALID_HANDLE)
+        return (ErrGetErrorCode());
+
+
+    SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", PSYNC_SERVER_NAME);
+
+
+    int             iElapsedTime = 0;
+
+    for (;;)
+    {
+        SysSleep(PSYNC_WAKEUP_TIME);
+
+        iElapsedTime += PSYNC_WAKEUP_TIME;
+
+
+        PSYNCConfig    *pPSYNCCfg = PSYNCGetConfigCopy(hShbPSYNC);
+
+        if (pPSYNCCfg == NULL)
+            break;
+
+        if (pPSYNCCfg->ulFlags & PSYNCF_STOP_SERVER)
+        {
+            SysFree(pPSYNCCfg);
+            break;
+        }
+
+        if ((pPSYNCCfg->iSyncInterval == 0) || (iElapsedTime < pPSYNCCfg->iSyncInterval))
+        {
+            SysFree(pPSYNCCfg);
+            continue;
+        }
+
+        iElapsedTime = 0;
+
+
+        PSYNCStartTransfer(hShbPSYNC, pPSYNCCfg);
+
+
+        SysFree(pPSYNCCfg);
+    }
+
+
+    ShbCloseBlock(hShbPSYNC);
+
+    SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", PSYNC_SERVER_NAME);
+
+    return (0);
+
+}
+
+
+
+static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
+{
+
+    SYS_SEMAPHORE   SemSyncID = SysConnectSemaphore(pPSYNCCfg->iNumSyncThreads,
+            SYS_DEFAULT_MAXCOUNT, SemPSYNCThreads);
+
+    if (SemSyncID == SYS_INVALID_SEMAPHORE)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
+        return (ErrorPop());
+    }
+
+
+    GWLKF_HANDLE    hLinksDB = GwLkOpenDB();
+
+    if (hLinksDB == INVALID_GWLKF_HANDLE)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
+        SysCloseSemaphore(SemSyncID);
+        return (ErrorPop());
+    }
+
+
+    POP3Link       *pPopLnk = GwLkGetFirstUser(hLinksDB);
+
+    for (; pPopLnk != NULL; pPopLnk = GwLkGetNextUser(hLinksDB))
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Check if link is enabled
+///////////////////////////////////////////////////////////////////////////////
+        if (GwLkCheckEnabled(pPopLnk) < 0)
+            continue;
+
+
+        if (SysWaitSemaphore(SemSyncID, SYS_INFINITE_TIMEOUT) < 0)
+            break;
+
+        if (PSYNCTimeToStop(hShbPSYNC))
+            break;
+
+
+        SYS_THREAD      hClientThread = SysCreateThread(PSYNCThreadSyncProc, pPopLnk);
+
+        if (hClientThread != SYS_INVALID_THREAD)
+            SysCloseThread(hClientThread, 0);
+        else
+        {
+            GwLkFreePOP3Link(pPopLnk);
+
+            SysReleaseSemaphore(SemSyncID, 1);
+        }
+    }
+
+    GwLkCloseDB(hLinksDB);
+
+
+    SysCloseSemaphore(SemSyncID);
+
+    return (0);
+
+}
+
+
+
+
+static int      PSYNCThreadNotifyExit(void)
+{
+
+    SYS_SEMAPHORE   SemSyncID = SysConnectSemaphore(0, SYS_DEFAULT_MAXCOUNT,
+            SemPSYNCThreads);
+
+    if (SemSyncID == SYS_INVALID_SEMAPHORE)
+        return (ErrGetErrorCode());
+
+    SysReleaseSemaphore(SemSyncID, 1);
+
+    SysCloseSemaphore(SemSyncID);
+
+    return (0);
+
+}
+
+
+
+unsigned int    PSYNCThreadSyncProc(void *pThreadData)
+{
+
+    POP3Link       *pPopLnk = (POP3Link *) pThreadData;
+
+    SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] entry\n");
+
+    if (GwLkLinkLock(pPopLnk) < 0)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
+
+        GwLkFreePOP3Link(pPopLnk);
+///////////////////////////////////////////////////////////////////////////////
+//  Notify thread exit semaphore
+///////////////////////////////////////////////////////////////////////////////
+        PSYNCThreadNotifyExit();
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Create handle to shared memory configuration
+///////////////////////////////////////////////////////////////////////////////
+    SHB_HANDLE      hShbPSYNC = ShbConnectBlock(SHB_PSYNCSvr);
+
+    if (hShbPSYNC == SHB_INVALID_HANDLE)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
+
+        GwLkLinkUnlock(pPopLnk);
+        GwLkFreePOP3Link(pPopLnk);
+///////////////////////////////////////////////////////////////////////////////
+//  Notify thread exit semaphore
+///////////////////////////////////////////////////////////////////////////////
+        PSYNCThreadNotifyExit();
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Increase threads count
+///////////////////////////////////////////////////////////////////////////////
+    PSYNCThreadCountAdd(+1, hShbPSYNC);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Verify user credentials
+///////////////////////////////////////////////////////////////////////////////
+    UserInfo       *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
+
+    if (pUI != NULL)
+    {
+        SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\"\n",
+                pPopLnk->pszName, pPopLnk->pszDomain);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Sync
+///////////////////////////////////////////////////////////////////////////////
+        if (UPopSyncRemoteLink(pUI, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+            ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
+                    pPopLnk->pszName, pPopLnk->pszDomain);
+
+
+        UsrFreeUserInfo(pUI);
+    }
+    else
+        SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n"
+                "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Decrease threads count
+///////////////////////////////////////////////////////////////////////////////
+    PSYNCThreadCountAdd(-1, hShbPSYNC);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Free handle to shared memory configuration
+///////////////////////////////////////////////////////////////////////////////
+    ShbCloseBlock(hShbPSYNC);
+
+
+    GwLkLinkUnlock(pPopLnk);
+    GwLkFreePOP3Link(pPopLnk);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Notify thread exit semaphore
+///////////////////////////////////////////////////////////////////////////////
+    PSYNCThreadNotifyExit();
+
+
+    SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] exit\n");
+
+    return (0);
+
+}

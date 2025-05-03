@@ -1,0 +1,107 @@
+/*
+ *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999  Davide Libenzi
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Davide Libenzi <davidel@maticad.it>
+ *
+ */
+
+#ifndef _SYSTYPESLINUX_H
+#define _SYSTYPESLINUX_H
+
+
+
+#define SYS_OS_PORT             "Linux"
+
+#define THRDLS
+
+#define BIG_ENDIAN_BITFIELD
+
+#define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
+#define SYS_DEFAULT_MAXCOUNT    512
+
+#define SYS_SLASH_CHAR          '/'
+#define SYS_SLASH_STR           "/"
+#define SYS_MAX_PATH            256
+
+#define SYS_IPC_COUNTER_BASE    16000
+
+#define SYS_LLU_FMT             "%llu"
+#define SYS_LLX_FMT             "%llX"
+
+#define SYS_INVALID_HANDLE      ((SYS_HANDLE) 0)
+#define SYS_INVALID_SOCKET      ((SYS_SOCKET) (-1))
+#define SYS_INVALID_SEMAPHORE   ((SYS_SEMAPHORE) 0)
+#define SYS_INVALID_THREAD      ((SYS_THREAD) (-1))
+#define SYS_INVALID_SHMEM       ((SYS_SHMEM) (-1))
+#define SYS_INVALID_NET_ADDRESS ((NET_ADDRESS) INADDR_NONE)
+#define SYS_INVALID_IPCNAME     ((SYS_IPCNAME) 0)
+
+#define SysSNPrintf             snprintf
+#define stricmp                 strcasecmp
+#define strnicmp                strncasecmp
+#define min(a, b)               (((a) < (b)) ? (a): (b))
+#define max(a, b)               (((a) > (b)) ? (a): (b))
+
+#define SYS_fd_set              fd_set
+#define SYS_FD_ZERO             FD_ZERO
+#define SYS_FD_CLR              FD_CLR
+#define SYS_FD_SET              FD_SET
+#define SYS_FD_ISSET            FD_ISSET
+
+
+
+
+
+typedef char    SYS_INT8;
+typedef unsigned char SYS_UINT8;
+typedef short int SYS_INT16;
+typedef unsigned short int SYS_UINT16;
+typedef int     SYS_INT32;
+typedef unsigned int SYS_UINT32;
+typedef long long int SYS_INT64;
+typedef unsigned long long int SYS_UINT64;
+typedef unsigned long long int SYS_LONGLONG;
+typedef unsigned int SYS_PTRUINT;
+typedef unsigned long SYS_HANDLE;
+typedef int     SYS_SOCKET;
+typedef key_t   SYS_IPCNAME;
+typedef int     SYS_SEMAPHORE;
+typedef pid_t   SYS_THREAD;
+typedef int     SYS_SHMEM;
+typedef unsigned long NET_ADDRESS;
+
+
+
+
+
+struct SYS_INET_ADDR
+{
+    struct sockaddr_in Addr;
+};
+
+struct SYS_FILE_INFO
+{
+    unsigned long   ulSize;
+    time_t          tCreat;
+    time_t          tMod;
+};
+
+
+
+
+#endif

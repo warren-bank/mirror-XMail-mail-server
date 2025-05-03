@@ -1,0 +1,6 @@
+"external"	"0"	"0"	"custom_delivery.sh"	"-f"	"@@FROM"	"-r"	"@@RCPT"	"-f"	"@@FILE"
+"redirect"	"home.bogus"	"remote.domain.net"
+"lredirect"	"home.bogus.net"	"remote.domain.org"
+"smtp"
+"wait"	"2"
+"external"	"0"	"0"	"custom_delivery-delfile.sh"	"-s"	"@@FROM"	"-r"	"@@RCPT"	"-f"	"@@TMPFILE"

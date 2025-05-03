@@ -1,0 +1,4 @@
+"plain"	"foouser"	"foopasswd"
+#"login"	"foouser"	"foopasswd"
+#"cram-md5"	"foosecret"
+#"external"	"RSA-AUTH"	"mysecret"	"/usr/bin/myrsa-auth"	"-c"	"@@CHALL"	"-s"	"@@SECRT"	"-f"	"@@RFILE"

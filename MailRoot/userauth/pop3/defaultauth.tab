@@ -1,0 +1,5 @@
+#"userauth"	"ldap-auth"	"-u"	"@@USER"	"-d"	"@@DOMAIN"
+#"useradd"	"ldap-add"	"-u"	"@@USER"	"-d"	"@@DOMAIN"	"-p"	"@@PASSWD"	"-P"	"@@PATH"
+#"useredit"	"ldap-add"	"-u"	"@@USER"	"-d"	"@@DOMAIN"	"-p"	"@@PASSWD"	"-P"	"@@PATH"
+#"userdel"	"ldap-del"	"-u"	"@@USER"	"-d"	"@@DOMAIN"
+#"domaindrop"	"ldap-domdrop"	"-d"	"@@DOMAIN"

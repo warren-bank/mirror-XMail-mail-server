@@ -1,0 +1,59 @@
+/*
+ *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999  Davide Libenzi
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Davide Libenzi <davidel@maticad.it>
+ *
+ */
+
+
+#ifndef _STRUTILS_H
+#define _STRUTILS_H
+
+
+
+
+
+int             StrCmdLineToken(char const * &pszCmdLine, char *pszToken);
+char          **StrGetArgs(char const * pszCmdLine, int &iArgsCount);
+char           *StrLower(char *pszString);
+char           *StrUpper(char *pszString);
+char           *StrCrypt(char const * pszString, char *pszCrypt);
+char           *StrDeCrypt(char const * pszString, char *pszDeCrypt);
+char          **StrTokenize(const char *pszString, const char *pszTokenizer);
+void            StrFreeStrings(char **ppszStrings);
+int             StrStringsCount(char const * const * ppszStrings);
+char           *StrConcat(char const * const * ppszStrings, char const * pszCStr);
+char           *StrDeQuote(char *pszString, int iChar);
+char           *StrQuote(const char *pszString, int iChar);
+char          **StrGetTabLineStrings(const char *pszUsrLine);
+int             StrWriteCRLFString(FILE * pFile, const char *pszString);
+int             StrWildMatch(char const * pszString, char const * pszMatch);
+int             StrIWildMatch(char const * pszString, char const * pszMatch);
+char           *StrLoadFile(FILE * pFile);
+char           *StrVSprint(char const * pszFormat, va_list Args);
+char           *StrSprint(char const * pszFormat,...);
+int             StrSplitString(char const * pszString, char const * pszSplitters,
+                        char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);
+char           *StrLTrim(char *pszString);
+char           *StrRTrim(char *pszString);
+char           *StrTrim(char *pszString);
+
+
+
+
+#endif

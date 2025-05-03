@@ -1,0 +1,59 @@
+/*
+ *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999  Davide Libenzi
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *  Davide Libenzi <davidel@maticad.it>
+ *
+ */
+
+
+#ifndef _MAILSVR_H
+#define _MAILSVR_H
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Defined in MailSvr.cpp
+///////////////////////////////////////////////////////////////////////////////
+extern SharedBlock SHB_CTRLSvr,
+                SHB_FINGSvr,
+                SHB_SMTPSvr,
+                SHB_SMAILSvr,
+                SHB_POP3Svr,
+                SHB_PSYNCSvr;
+extern char     szMailPath[SYS_MAX_PATH];
+extern unsigned int uKeyMagic;
+extern SYS_IPCNAME SemSMAILSpoolName,
+                SemPSYNCThreads;
+extern bool     bServerDebug;
+extern int      iLogRotateDays;
+
+
+
+
+
+int             SvrMain(int iArgCount, char *pszArgs[]);
+int             SvrStopServer(bool bWait = true);
+bool            SvrInShutdown(void);
+
+
+
+
+
+#endif

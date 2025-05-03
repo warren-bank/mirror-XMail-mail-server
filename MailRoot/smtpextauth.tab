@@ -1,0 +1,1 @@
+"RSA-AUTH"	"challenge-base"	"/usr/bin/myrsa-authenticate"	"-c"	"@@CHALL"	"-f"	"@@FSECRT"	"-d"	"@@DGEST"
