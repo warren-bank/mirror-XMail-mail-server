@@ -1,8 +1,10 @@
+<?xml version="1.0" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail mail server v 1.22</title>
+<title>XMail mail server v 1.23</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rev="made" href="mailto:root@localhost" />
 </head>
 
@@ -71,12 +73,14 @@
 			<li><a href="#smtp_ipprop_tab">SMTP.IPPROP.TAB</a></li>
 			<li><a href="#filters_in_tab">FILTERS.IN.TAB</a></li>
 			<li><a href="#filters_out_tab">FILTERS.OUT.TAB</a></li>
+			<li><a href="#filters_postrcpt_tab">FILTERS.POST-RCPT.TAB</a></li>
 			<li><a href="#filters_predata_tab">FILTERS.PRE-DATA.TAB</a></li>
 			<li><a href="#filters_postdata_tab">FILTERS.POST-DATA.TAB</a></li>
 		</ul>
 
 	</ul>
 
+	<li><a href="#macro_substitution">MACRO SUBSTITUTION</a></li>
 	<li><a href="#external_authentication">EXTERNAL AUTHENTICATION</a></li>
 	<li><a href="#smtp_client_authentication">SMTP CLIENT AUTHENTICATION</a></li>
 	<li><a href="#custom_domain_mail_processing">CUSTOM DOMAIN MAIL PROCESSING</a></li>
@@ -217,7 +221,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="current">current</a></h2>
-<p>1.22</p>
+<p>1.23</p>
 <p>
 </p>
 <h2><a name="release_type">release type</a></h2>
@@ -225,7 +229,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="release_date">release date</a></h2>
-<p>Oct 12, 2005</p>
+<p>Nov 19, 2006</p>
 <p>
 </p>
 <h2><a name="project_by">project by</a></h2>
@@ -244,7 +248,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
  ************************************************************
  *                     &lt;&lt;WARNING&gt;&gt;                          *
  *  If you're upgrading an existing version of XMail it's   *
- *  strongly suggested that you read all the ChangeLog.txt  *
+ *  strongly suggested that you read all the ChangeLog      *
  *  notes that range from existing version to the new one.  *
  ************************************************************</pre>
 <p>See the <a href="./ChangeLog.html"><b>Change Log</b></a>.</p><p>[<a href="#__index__">top</a>]</p>
@@ -278,81 +282,79 @@ continued lines and indenting the continuation line(s):</p>
 <hr />
 <h1><a name="features">FEATURES</a></h1>
 <ul>
-<li></li>
-ESMTP server
-<p></p>
-<li></li>
-POP3 server
-<p></p>
-<li></li>
-Finger server
-<p></p>
-<li></li>
-Multiple domains
-<p></p>
-<li></li>
-Users don't need a real system account
-<p></p>
-<li></li>
-SMTP relay checking
-<p></p>
-<li></li>
-SMTP RBL maps check (rbl.maps.vix.com)
-<p></p>
-<li></li>
-SMTP RSS maps check (relays.mail-abuse.org)
-<p></p>
-<li></li>
-SMTP ORBS relay check (relays.orbs.org)
-<p></p>
-<li></li>
-SMTP DUL map check (dialups.mail-abuse.org)
-<p></p>
-<li></li>
-SMTP protection over spammers (IP based and address based)
-<p></p>
-<li></li>
-SMTP authentication (PLAIN LOGIN CRAM-MD5 POP3/SMTP and custom)
-<p></p>
-<li></li>
-SMTP ETRN command support
-<p></p>
-<li></li>
-POP3 account synchronizer with external POP3 accounts
-<p></p>
-<li></li>
-Account aliasing
-<p></p>
-<li></li>
-Domain aliasing
-<p></p>
-<li></li>
-Mailing lists
-<p></p>
-<li></li>
-Custom mail processing
-<p></p>
-<li></li>
-Locally generated mail files delivery
-<p></p>
-<li></li>
-Remote administration
-<p></p>
-<li></li>
-Custom mail exchangers
-<p></p>
-<li></li>
-Logging
-<p></p>
-<li></li>
-Multi platform
-<p></p>
-<li></li>
-Domain message filters
-<p></p>
-<li></li>
-Custom (external) POP3 authentication
-<p></p></ul>
+<li>
+<p>ESMTP server</p>
+</li>
+<li>
+<p>POP3 server</p>
+</li>
+<li>
+<p>Finger server</p>
+</li>
+<li>
+<p>Multiple domains</p>
+</li>
+<li>
+<p>Users don't need a real system account</p>
+</li>
+<li>
+<p>SMTP relay checking</p>
+</li>
+<li>
+<p>SMTP RBL maps check (rbl.maps.vix.com)</p>
+</li>
+<li>
+<p>SMTP RSS maps check (relays.mail-abuse.org)</p>
+</li>
+<li>
+<p>SMTP DUL map check (dialups.mail-abuse.org)</p>
+</li>
+<li>
+<p>SMTP protection over spammers (IP based and address based)</p>
+</li>
+<li>
+<p>SMTP authentication (PLAIN LOGIN CRAM-MD5 POP3/SMTP and custom)</p>
+</li>
+<li>
+<p>SMTP ETRN command support</p>
+</li>
+<li>
+<p>POP3 account synchronizer with external POP3 accounts</p>
+</li>
+<li>
+<p>Account aliasing</p>
+</li>
+<li>
+<p>Domain aliasing</p>
+</li>
+<li>
+<p>Mailing lists</p>
+</li>
+<li>
+<p>Custom mail processing</p>
+</li>
+<li>
+<p>Locally generated mail files delivery</p>
+</li>
+<li>
+<p>Remote administration</p>
+</li>
+<li>
+<p>Custom mail exchangers</p>
+</li>
+<li>
+<p>Logging</p>
+</li>
+<li>
+<p>Multi platform</p>
+</li>
+<li>
+<p>Domain message filters</p>
+</li>
+<li>
+<p>Custom (external) POP3 authentication</p>
+</li>
+</ul>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -366,24 +368,25 @@ ones have not been tested as well as the previous OSs.</p>
 <hr />
 <h1><a name="requirements">REQUIREMENTS</a></h1>
 <ul>
-<li></li>
-Any version of Linux that has glibc.
-<p></p>
-<li></li>
-Windows NT with ws2_32.dll correctly installed.
-<p></p>
-<li></li>
-A working DNS and gateway to the Internet (if you plan to use it).
-<p></p>
-<li></li>
-To build from source for Linux you need any version of gcc and glibc installed.
-<p></p>
-<li></li>
-To build from source for Windows you need MS Visual C++ (project included).
-<p></p>
-<li></li>
--or- any other working compiler that provides support for the Win32 SDK.
-<p></p></ul>
+<li>
+<p>Any version of Linux that has glibc.</p>
+</li>
+<li>
+<p>Windows NT with ws2_32.dll correctly installed.</p>
+</li>
+<li>
+<p>A working DNS and gateway to the Internet (if you plan to use it).</p>
+</li>
+<li>
+<p>To build from source for Linux you need any version of gcc and glibc installed.</p>
+</li>
+<li>
+<p>To build from source for Windows you need MS Visual C++ (project included).</p>
+</li>
+<li>
+<p>-or- any other working compiler that provides support for the Win32 SDK.</p>
+</li>
+</ul>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -468,146 +471,148 @@ executing:</p>
 </p>
 <h2><a name="linux_solaris_freebsd_openbsd">Linux/Solaris/FreeBSD/OpenBSD</a></h2>
 <ol>
-<li></li>
-Build XMail.
-<p></p>
-<li></li>
-Log as root.
-<p></p>
-<li></li>
-Copy the supplied MailRoot directory where you want it to reside (normally /var).
-<p></p>
-<li></li>
-Do a
+<li>
+<p>Build XMail.</p>
+</li>
+<li>
+<p>Log as root.</p>
+</li>
+<li>
+<p>Copy the supplied MailRoot directory where you want it to reside (normally /var).</p>
+</li>
+<li>
+<p>Do a
  # chmod 700 /var/MailRoot
-to setup MailRoot directory access rights.
-<p></p>
-<li></li>
-Strip XMail executables if you want to reduce their sizes (strip filename).
-<p></p>
-<li></li>
-Copy XMail executables to  /var/MailRoot/bin.
-<p></p>
-<li></li>
-If you have '<strong>inetd</strong>' installed, comment out the lines of '<strong>/etc/inetd.conf</strong>'
-that involve SMTP, POP3, and Finger. Restart '<strong>inetd</strong>' (kill -HUP ...).
-<p></p>
-<li></li>
-Since XMail use syslog to log messages, enable syslogd if it's not running.
-<p></p>
-<li></li>
-Setup the '<strong>SERVER.TAB</strong>' configuration option (after reading the rest of this
-document well).
-<p></p>
-<li></li>
-Add your users and domains (after reading the rest of this
-document well).
-<p></p>
-<li></li>
-Change or comment out (#) the example account in '<strong>ctrlaccounts.tab</strong>' by using
-non-trivial username and password.
-<p></p>
-<li></li>
-Copy  the xmail startup script to your init.d directory
+to setup MailRoot directory access rights.</p>
+</li>
+<li>
+<p>Strip XMail executables if you want to reduce their sizes (strip filename).</p>
+</li>
+<li>
+<p>Copy XMail executables to  /var/MailRoot/bin.</p>
+</li>
+<li>
+<p>If you have '<strong>inetd</strong>' installed, comment out the lines of '<strong>/etc/inetd.conf</strong>'
+that involve SMTP, POP3, and Finger. Restart '<strong>inetd</strong>' (kill -HUP ...).</p>
+</li>
+<li>
+<p>Since XMail use syslog to log messages, enable syslogd if it's not running.</p>
+</li>
+<li>
+<p>Setup the '<strong>SERVER.TAB</strong>' configuration option (after reading the rest of this
+document well).</p>
+</li>
+<li>
+<p>Add your users and domains (after reading the rest of this
+document well).</p>
+</li>
+<li>
+<p>Change or comment out (#) the example account in '<strong>ctrlaccounts.tab</strong>' by using
+non-trivial username and password.</p>
+</li>
+<li>
+<p>Copy  the xmail startup script to your init.d directory
 (it's position depends on your distro).
 If you've setup XMail to work in a subdirectory other than '<strong>/var/MailRoot</strong>' you
-must edit  xmail  startup script to customize its boot.
-<p></p>
-<li></li>
-Use the '<strong>sysv_inst.sh</strong>' shell script (from root user) to create SysV boot script -
-unless your distro has other tools to do this.
-<p></p>
-<li></li>
-To start XMail without reboot you can run (from root):
+must edit  xmail  startup script to customize its boot.</p>
+</li>
+<li>
+<p>Use the '<strong>sysv_inst.sh</strong>' shell script (from root user) to create SysV boot script -
+unless your distro has other tools to do this.</p>
+</li>
+<li>
+<p>To start XMail without reboot you can run (from root):
  /etc/rc.d/init.d/xmail start
-otherwise reboot your machine.
-<p></p>
-<li></li>
-Setup the file '<strong>smtprelay.tab</strong>' if you want to extend mail relaying to IPs out
+otherwise reboot your machine.</p>
+</li>
+<li>
+<p>Setup the file '<strong>smtprelay.tab</strong>' if you want to extend mail relaying to IPs out
 of the internet's private IP blocks (or you want to deny even those - that comes enabled by
-default with XMail).
-<p></p></ol>
+default with XMail).</p>
+</li>
+</ol>
 <p>[<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <h2><a name="nt_win2k">NT/Win2K</a></h2>
 <ol>
-<li></li>
-Build XMail.
-<p></p>
-<li></li>
-Copy the supplied MailRoot directory where you want it to reside (normally '<strong>C:\MailRoot</strong>').
-<p></p>
-<li></li>
-Setup the MailRoot directory (and subdirectories and file) permissions to allow access
+<li>
+<p>Build XMail.</p>
+</li>
+<li>
+<p>Copy the supplied MailRoot directory where you want it to reside (normally '<strong>C:\MailRoot</strong>').</p>
+</li>
+<li>
+<p>Setup the MailRoot directory (and subdirectories and file) permissions to allow access
 only to System and Administrators. Doing this you can run XMail as a console startup only
-if you're Administrator (service startup as System).
-<p></p>
-<li></li>
-Copy XMail executables to '<strong>C:\MailRoot\bin</strong>'.
-<p></p>
-<li></li>
-With '<strong>regedit</strong>', create '<strong>GNU</strong>' key inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\</strong>' and then '<strong>XMail</strong>'
-key inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\GNU</strong>'.
-<p></p>
-<li></li>
-Create a new string value named '<strong>MAIL_ROOT</strong>' inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\GNU\XMail\</strong>'
-with value '<strong>C:\MailRoot</strong>'.
-<p></p>
-<li></li>
-Optionally create a new string value named '<strong>MAIL_CMD_LINE</strong>' inside
+if you're Administrator (service startup as System).</p>
+</li>
+<li>
+<p>Copy XMail executables to '<strong>C:\MailRoot\bin</strong>'.</p>
+</li>
+<li>
+<p>With '<strong>regedit</strong>', create '<strong>GNU</strong>' key inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\</strong>' and then '<strong>XMail</strong>'
+key inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\GNU</strong>'.</p>
+</li>
+<li>
+<p>Create a new string value named '<strong>MAIL_ROOT</strong>' inside '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\GNU\XMail\</strong>'
+with value '<strong>C:\MailRoot</strong>'.</p>
+</li>
+<li>
+<p>Optionally create a new string value named '<strong>MAIL_CMD_LINE</strong>' inside
 '<strong>HKEY_LOCAL_MACHINE\SOFTWARE\GNU\XMail\</strong>' to store your command line options
-(read well the rest of this document).
-<p></p>
-<li></li>
-Open an NT console (command prompt).
-<p></p>
-<li></li>
-Go inside '<strong>C:\MailRoot\bin</strong>' and run:
+(read well the rest of this document).</p>
+</li>
+<li>
+<p>Open an NT console (command prompt).</p>
+</li>
+<li>
+<p>Go inside '<strong>C:\MailRoot\bin</strong>' and run:
  XMail --install
 for a manual startup, or:
  XMail --install-auto
-for an automatic startup.
-<p></p>
-<li></li>
-If you have other services that give the same functionality of XMail, that is
-SMTP, POP3, or Finger servers, you must stop these services.
-<p></p>
-<li></li>
-Setup the '<strong>SERVER.TAB</strong>' configuration option after reading the rest of this document
-well.
-<p></p>
-<li></li>
-Add your users and domains (after reading to the rest of this document well).
-<p></p>
-<li></li>
-Setup file permissions of the '<strong>C:\MailRoot</strong>' directory to grant access only to
-'<strong>SYSTEM</strong>' and '<strong>Domain Admins</strong>'.
-<p></p>
-<li></li>
-Change or comment out (#) the example account in  ctrlaccounts.tab  by using a
-non-trivial username and password.
-<p></p>
-<li></li>
-To start XMail without reboot you can go to:
+for an automatic startup.</p>
+</li>
+<li>
+<p>If you have other services that give the same functionality of XMail, that is
+SMTP, POP3, or Finger servers, you must stop these services.</p>
+</li>
+<li>
+<p>Setup the '<strong>SERVER.TAB</strong>' configuration option after reading the rest of this document
+well.</p>
+</li>
+<li>
+<p>Add your users and domains (after reading to the rest of this document well).</p>
+</li>
+<li>
+<p>Setup file permissions of the '<strong>C:\MailRoot</strong>' directory to grant access only to
+'<strong>SYSTEM</strong>' and '<strong>Domain Admins</strong>'.</p>
+</li>
+<li>
+<p>Change or comment out (#) the example account in  ctrlaccounts.tab  by using a
+non-trivial username and password.</p>
+</li>
+<li>
+<p>To start XMail without reboot you can go to:
  ControlPanel -&gt; Services -&gt; XMail server
-and start the service, otherwise reboot your machine.
-<p></p>
-<li></li>
-Setup the file '<strong>smtprelay.tab</strong>' if you want to extend mail relaying to IPs out
+and start the service, otherwise reboot your machine.</p>
+</li>
+<li>
+<p>Setup the file '<strong>smtprelay.tab</strong>' if you want to extend mail relaying to IPs out
 of the internet's private IP blocks (or you want to deny even those - that comes enabled by
-default with XMail).
-<p></p></ol>
+default with XMail).</p>
+</li>
+</ol>
 <p>[<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <h2><a name="environment_variables">Environment variables</a></h2>
 <dl>
-<dt><strong><a name="item__5bmail_root_5d">[MAIL_ROOT]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bmail_root_5d">[MAIL_ROOT]</a></strong>
+
 <dd>
-If you want to start XMail as a simple test you must setup an environment variable 
-MAIL_ROOT that point to the XMail Server root directory.
+<p>If you want to start XMail as a simple test you must setup an environment variable 
+MAIL_ROOT that point to the XMail Server root directory.</p>
 </dd>
 <dd>
 <p>Linux/etc.:</p>
@@ -623,21 +628,22 @@ MAIL_ROOT that point to the XMail Server root directory.
 <pre>
  set MAIL_ROOT=C:\MailRoot</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bmail_cmd_line_5d">[MAIL_CMD_LINE]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bmail_cmd_line_5d">[MAIL_CMD_LINE]</a></strong>
+
 <dd>
-Let the user to specify extra command line parameters (they will be appended to the
-ones specified in the command line).
+<p>Let the user to specify extra command line parameters (they will be appended to the
+ones specified in the command line).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bxmail_pid_dir_5d">[XMAIL_PID_DIR]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bxmail_pid_dir_5d">[XMAIL_PID_DIR]</a></strong>
+
 <dd>
-Let the user to specify the PID directory (Unix only ports). The specified directory must
-NOT have the final slash (/) appended to the path.
+<p>Let the user to specify the PID directory (Unix only ports). The specified directory must
+NOT have the final slash (/) appended to the path.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -668,6 +674,7 @@ NOT have the final slash (/) appended to the path.
   finger.ipmap.tab    &lt;file&gt;
   filters.in.tab  &lt;file&gt;
   filters.out.tab &lt;file&gt;
+  filters.post-rcpt.tab &lt;file&gt;
   filters.pre-data.tab &lt;file&gt;
   filters.post-data.tab &lt;file&gt;
   smtp.ipprop.tab &lt;file&gt;</pre>
@@ -736,66 +743,68 @@ NOT have the final slash (/) appended to the path.
  &quot;value1&quot;[TAB]&quot;value2&quot;[TAB]...[NEWLINE]</pre>
 <p>The following sections explain each file's structure and use.</p>
 <dl>
-<dt><strong><a name="item__22aliases_2etab_22"><a href="#aliases_tab">ALIASES.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22aliasdomain_2etab_22"><a href="#aliasdomain_tab">ALIASDOMAIN.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22domains_2etab_22"><a href="#domains_tab">DOMAINS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22dnsroots_22"><a href="#dnsroots">DNSROOTS</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22extaliases_2etab_22"><a href="#extaliases_tab">EXTALIASES.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22mailusers_2etab_22"><a href="#mailusers_tab">MAILUSERS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22message_2eid_22"><a href="#message_id">MESSAGE.ID</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22pop3links_2etab_22"><a href="#pop3links_tab">POP3LINKS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22server_2etab_22"><a href="#server_tab">SERVER.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtpgw_2etab_22"><a href="#smtpgw_tab">SMTPGW.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtpfwd_2etab_22"><a href="#smtpfwd_tab">SMTPFWD.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtprelay_2etab_22"><a href="#smtprelay_tab">SMTPRELAY.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtpauth_2etab_22"><a href="#smtpauth_tab">SMTPAUTH.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtpextauth_2etab_22"><a href="#smtpextauth_tab">SMTPEXTAUTH.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22userdef_2etab_22"><a href="#userdef_tab">USERDEF.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22ctrlaccounts_2etab_22"><a href="#ctrlaccounts_tab">CTRLACCOUNTS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22spammers_2etab_22"><a href="#spammers_tab">SPAMMERS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22spam_2daddress_2etab_22"><a href="#spamaddress_tab">SPAM-ADDRESS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22pop3_2eipmap_2etab_22"><a href="#pop3_ipmap_tab">POP3.IPMAP.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtp_2eipmap_2etab_22"><a href="#smtp_ipmap_tab">SMTP.IPMAP.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22ctrl_2eipmap_2etab_22"><a href="#ctrl_ipmap_tab">CTRL.IPMAP.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22finger_2eipmap_2etab_22"><a href="#finger_ipmap_tab">FINGER.IPMAP.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22user_2etab_22"><a href="#user_tab">USER.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22mlusers_2etab_22"><a href="#mlusers_tab">MLUSERS.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22mailproc_2etab_22"><a href="#mailproc_tab">MAILPROC.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22smtp_2eipprop_2etab_22"><a href="#smtp_ipprop_tab">SMTP.IPPROP.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22filters_2ein_2etab_22"><a href="#filters_in_tab">FILTERS.IN.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22filters_2eout_2etab_22"><a href="#filters_out_tab">FILTERS.OUT.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22filters_2epre_2ddata_2etab_22"><a href="#filters_predata_tab">FILTERS.PRE-DATA.TAB</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22filters_2epost_2ddata_2etab_22"><a href="#filters_postdata_tab">FILTERS.POST-DATA.TAB</a></a></strong><br />
-</dt>
+<dt><strong><a name="item__22aliases_2etab_22"><a href="#aliases_tab">ALIASES.TAB</a></a></strong>
+
+<dt><strong><a name="item__22aliasdomain_2etab_22"><a href="#aliasdomain_tab">ALIASDOMAIN.TAB</a></a></strong>
+
+<dt><strong><a name="item__22domains_2etab_22"><a href="#domains_tab">DOMAINS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22dnsroots_22"><a href="#dnsroots">DNSROOTS</a></a></strong>
+
+<dt><strong><a name="item__22extaliases_2etab_22"><a href="#extaliases_tab">EXTALIASES.TAB</a></a></strong>
+
+<dt><strong><a name="item__22mailusers_2etab_22"><a href="#mailusers_tab">MAILUSERS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22message_2eid_22"><a href="#message_id">MESSAGE.ID</a></a></strong>
+
+<dt><strong><a name="item__22pop3links_2etab_22"><a href="#pop3links_tab">POP3LINKS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22server_2etab_22"><a href="#server_tab">SERVER.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtpgw_2etab_22"><a href="#smtpgw_tab">SMTPGW.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtpfwd_2etab_22"><a href="#smtpfwd_tab">SMTPFWD.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtprelay_2etab_22"><a href="#smtprelay_tab">SMTPRELAY.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtpauth_2etab_22"><a href="#smtpauth_tab">SMTPAUTH.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtpextauth_2etab_22"><a href="#smtpextauth_tab">SMTPEXTAUTH.TAB</a></a></strong>
+
+<dt><strong><a name="item__22userdef_2etab_22"><a href="#userdef_tab">USERDEF.TAB</a></a></strong>
+
+<dt><strong><a name="item__22ctrlaccounts_2etab_22"><a href="#ctrlaccounts_tab">CTRLACCOUNTS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22spammers_2etab_22"><a href="#spammers_tab">SPAMMERS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22spam_2daddress_2etab_22"><a href="#spamaddress_tab">SPAM-ADDRESS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22pop3_2eipmap_2etab_22"><a href="#pop3_ipmap_tab">POP3.IPMAP.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtp_2eipmap_2etab_22"><a href="#smtp_ipmap_tab">SMTP.IPMAP.TAB</a></a></strong>
+
+<dt><strong><a name="item__22ctrl_2eipmap_2etab_22"><a href="#ctrl_ipmap_tab">CTRL.IPMAP.TAB</a></a></strong>
+
+<dt><strong><a name="item__22finger_2eipmap_2etab_22"><a href="#finger_ipmap_tab">FINGER.IPMAP.TAB</a></a></strong>
+
+<dt><strong><a name="item__22user_2etab_22"><a href="#user_tab">USER.TAB</a></a></strong>
+
+<dt><strong><a name="item__22mlusers_2etab_22"><a href="#mlusers_tab">MLUSERS.TAB</a></a></strong>
+
+<dt><strong><a name="item__22mailproc_2etab_22"><a href="#mailproc_tab">MAILPROC.TAB</a></a></strong>
+
+<dt><strong><a name="item__22smtp_2eipprop_2etab_22"><a href="#smtp_ipprop_tab">SMTP.IPPROP.TAB</a></a></strong>
+
+<dt><strong><a name="item__22filters_2ein_2etab_22"><a href="#filters_in_tab">FILTERS.IN.TAB</a></a></strong>
+
+<dt><strong><a name="item__22filters_2eout_2etab_22"><a href="#filters_out_tab">FILTERS.OUT.TAB</a></a></strong>
+
+<dt><strong><a name="item__22filters_2epost_2drcpt_2etab_22"><a href="#filters_postrcpt_tab">FILTERS.POST-RCPT.TAB</a></a></strong>
+
+<dt><strong><a name="item__22filters_2epre_2ddata_2etab_22"><a href="#filters_predata_tab">FILTERS.PRE-DATA.TAB</a></a></strong>
+
+<dt><strong><a name="item__22filters_2epost_2ddata_2etab_22"><a href="#filters_postdata_tab">FILTERS.POST-DATA.TAB</a></a></strong>
+
 </dl>
 <p>[<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -938,19 +947,20 @@ you can also have the option to setup a line like this one:</p>
    &quot;dlibenzi&quot;  &quot;XYZ...&quot;    &quot;CLR&quot;</pre>
 <p>and messages are dropped inside the spool by following these rules:</p>
 <ol>
-<li></li>
-XMail parse the message headers by searching for To:, Cc: and Bcc: addresses.
-<p></p>
-<li></li>
-Each address's domain is compared with the list of valid domains (felins.net, pets.org).
-<p></p>
-<li></li>
-For each valid address the username part is taken and joined with the '&#64;' and
-the masquerade domain name (the name following '?').
-<p></p>
-<li></li>
-The message is spooled with the above built destination address.
-<p></p></ol>
+<li>
+<p>XMail parse the message headers by searching for To:, Cc: and Bcc: addresses.</p>
+</li>
+<li>
+<p>Each address's domain is compared with the list of valid domains (felins.net, pets.org).</p>
+</li>
+<li>
+<p>For each valid address the username part is taken and joined with the '&#64;' and
+the masquerade domain name (the name following '?').</p>
+</li>
+<li>
+<p>The message is spooled with the above built destination address.</p>
+</li>
+</ol>
 <p>Obviously the masquerade domain ('home.bogus.com') MUST be handled by the server or MUST be
 a valid external mail domain.
 So if a message having as To: address  graycat&#64;felins.net  is fetched by the previous line a
@@ -1039,36 +1049,37 @@ to find the one matching (if exist).
 For this reason it's better to keep the number of entries in this file as low as possible.
 Permissions are a string that can contain:</p>
 <dl>
-<dt><strong><a name="item_m">M</a></strong><br />
-</dt>
+<dt><strong><a name="item_m">M</a></strong>
+
 <dd>
-open mailing features
+<p>open mailing features</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_r">R</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_r">R</a></strong>
+
 <dd>
-open relay features (bypass all other relay blocking traps)
+<p>open relay features (bypass all other relay blocking traps)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_v">V</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_v">V</a></strong>
+
 <dd>
-VRFY command enabled (bypass SERVER.TAB variable)
+<p>VRFY command enabled (bypass SERVER.TAB variable)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_t">T</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_t">T</a></strong>
+
 <dd>
-ETRN command enabled (bypass SERVER.TAB variable)
+<p>ETRN command enabled (bypass SERVER.TAB variable)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_z">Z</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_z">Z</a></strong>
+
 <dd>
-disable mail size checking (bypass SERVER.TAB variable)
+<p>disable mail size checking (bypass SERVER.TAB variable)</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>When PLAIN, LOGIN or CRAM-MD5 authentication mode are used, first a lookup in '<strong>MAILUSERS.TAB</strong>'
 accounts is performed to avoid duplicating information with '<strong>SMTPAUTH.TAB</strong>'.
 Therefore when using these authentication modes a user must use as username the full email address
@@ -1090,33 +1101,34 @@ the given format:</p>
  &quot;auth-name&quot;[TAB]&quot;base-challenge&quot;[TAB]&quot;program-path&quot;[TAB]&quot;arg-or-macro&quot;...[NEWLINE]</pre>
 <p>This file can contain multiple lines whose '<strong>auth-name</strong>' are listed during the
 EHLO command response.
-Where 'arg-or-macro' can be:</p>
+Where 'arg-or-macro' can be (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong><a name="item__40_40chall">@@CHALL</a></strong><br />
-</dt>
+<dt><strong><a name="item_chall">CHALL</a></strong>
+
 <dd>
-server challenge given by  base-challenge + ':' + server-timestamp
+<p>server challenge given by  base-challenge + ':' + server-timestamp</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40dgest">@@DGEST</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_dgest">DGEST</a></strong>
+
 <dd>
-client response to server challenge (&#64;CHALL)
+<p>client response to server challenge (&#64;CHALL)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40fsecrt">@@FSECRT</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_fsecrt">FSECRT</a></strong>
+
 <dd>
-a file containing all the lines (username + ':' + password) of SMTPAUTH.TAB
+<p>a file containing all the lines (username + ':' + password) of SMTPAUTH.TAB</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;RSA-AUTH&quot; &quot;foochallenge&quot; &quot;/usr/bin/myrsa-authenticate&quot;=&gt;
    &quot;-c&quot; &quot;@@CHALL&quot; &quot;-f&quot; &quot;@@FSECRT&quot; &quot;-d&quot; &quot;@@DGEST&quot;</pre>
-<p>The external program must test all lines of '<strong>@@FSECRT</strong>' to find the one (if it exists)
-that matches the client digest (<strong>@@DGEST</strong>).
-If it finds a match, it must return zero and overwrite '<strong>@@FSECRT</strong>' with the matching secret
+<p>The external program must test all lines of '<strong>FSECRT</strong>' to find the one (if it exists)
+that matches the client digest (<strong>DGEST</strong>).
+If it finds a match, it must return zero and overwrite '<strong>FSECRT</strong>' with the matching secret
 (username + ':' + password).
 If a match is not found, the program must return a value other than zero.</p>
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
@@ -1191,16 +1203,17 @@ with the record, separated by a comma:</p>
  &quot;param1=value1,param2=value2,...,paramN=valueN&quot;</pre>
 <p>Currently supported parameters are:</p>
 <dl>
-<dt><strong><a name="item_code">code</a></strong><br />
-</dt>
+<dt><strong><a name="item_code">code</a></strong>
+
 <dd>
-Specify the rejection code for the record. If the value is greater than zero, the connection
+<p>Specify the rejection code for the record. If the value is greater than zero, the connection
 is rejected soon, and the remote SMTP client is disconnected. If the value is zero, the
 connection is flagged as spammer but wait later stages for rejection, by allowing
 authenticated SMTP connections to bypass the SPAMMERS.TAB match. If the value is less than zero,
-XMail will insert an ``absolute value'' seconds delay between SMTP commands.
+XMail will insert an ``absolute value'' seconds delay between SMTP commands.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -1294,36 +1307,37 @@ and contain a list of users subscribed to this list. The file format is:</p>
  &quot;user&quot;[TAB]&quot;perms&quot;[NEWLINE]</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_user">user</a></strong><br />
-</dt>
+<dt><strong><a name="item_user">user</a></strong>
+
 <dd>
-subscriber email address.
+<p>subscriber email address.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_perms">perms</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_perms">perms</a></strong>
+
 <dd>
-subscriber permissions:
+<p>subscriber permissions:</p>
 </dd>
 <dl>
-<dt><strong>R</strong><br />
-</dt>
+<dt><strong>R</strong>
+
 <dd>
-read.
+<p>read.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_w">W</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_w">W</a></strong>
+
 <dd>
-write (check done using the 'MAIL FROM:&lt;...&gt;' SMTP return path).
+<p>write (check done using the 'MAIL FROM:&lt;...&gt;' SMTP return path).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_a">A</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_a">A</a></strong>
+
 <dd>
-write (check done using the email address used for SMTP authentication).
+<p>write (check done using the email address used for SMTP authentication).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 </dl>
 <p>Example:</p>
 <pre>
@@ -1344,59 +1358,60 @@ is to store the message in user mailbox. The '<strong>MAILPROC.TAB</strong>' fil
 user or per domain, depending where the file is stored. If stored inside the user
 directory it applies only to the user whose directory hosts the '<strong>MAILPROC.TAB</strong>', while
 if stored inside the domain directory it applies to all users of such domain.
-Each argument can be a macro also:</p>
+Each argument can be a macro also (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong><a name="item__40_40from">@@FROM</a></strong><br />
-</dt>
+<dt><strong><a name="item_from">FROM</a></strong>
+
 <dd>
-is substituted for the sender of the message
+<p>is substituted for the sender of the message</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40rcpt">@@RCPT</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_rcpt">RCPT</a></strong>
+
 <dd>
-is substituted for the recipient of the message
+<p>is substituted for the recipient of the message</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40rrcpt">@@RRCPT</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_rrcpt">RRCPT</a></strong>
+
 <dd>
-is substituted for the real recipient (@@RCPT could be an alias) of the message
+<p>is substituted for the real recipient ($(RCPT) could be an alias) of the message</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40file">@@FILE</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_file">FILE</a></strong>
+
 <dd>
-is substituted for the message file path (the external command _must_ only read the file)
+<p>is substituted for the message file path (the external command _must_ only read the file)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40msgid">@@MSGID</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_msgid">MSGID</a></strong>
+
 <dd>
-is substituted for the (XMail unique) message id
+<p>is substituted for the (XMail unique) message id</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40msgref">@@MSGREF</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_msgref">MSGREF</a></strong>
+
 <dd>
-is substituted for the reference SMTP message id
+<p>is substituted for the reference SMTP message id</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40tmpfile">@@TMPFILE</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_tmpfile">TMPFILE</a></strong>
+
 <dd>
-creates a copy of the message file to a temporary one. It can be
+<p>creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program
 responsibility to delete the temporary file. Do not use it with 'filter' commands
-since the filter will have no way to modify the real spool file
+since the filter will have no way to modify the real spool file</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40userauth">@@USERAUTH</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_userauth">USERAUTH</a></strong>
+
 <dd>
-name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
+<p>name of the SMTP authenticated user, or ``-'' if no authentication has been supplied</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Supported commands:</p>
 <p>[EXTERNAL]</p>
 <pre>
@@ -1404,64 +1419,66 @@ name of the SMTP authenticated user, or ``-'' if no authentication has been supp
    &quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_external">external</a></strong><br />
-</dt>
+<dt><strong><a name="item_external">external</a></strong>
+
 <dd>
-command keyword
+<p>command keyword</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_priority">priority</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_priority">priority</a></strong>
+
 <dd>
-process priority: 0 = normal  -1 = below normal  +1 = above normal
+<p>process priority: 0 = normal  -1 = below normal  +1 = above normal</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_wait_2dtimeout">wait-timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_wait_2dtimeout">wait-timeout</a></strong>
+
 <dd>
-wait timeout for process execution in seconds: 0 = nowait
+<p>wait timeout for process execution in seconds: 0 = nowait</p>
 </dd>
 <dd>
-<p>Be carefull if using @@FILE to give the external command enough timeout to complete,
+<p>Be carefull if using $(FILE) to give the external command enough timeout to complete,
 otherwise the file will be removed by XMail while the command is processing.
 This is because such file is a temporary one that is deleted when XMail exits
 from '<strong>MAILPROC.TAB</strong>' file processing. In case the external command exit code will
 be '<strong>16</strong>', the command processing will stop and all the following commands listed inside
 the file will be skipped.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[FILTER]</p>
 <pre>
  &quot;filter&quot;[TAB]&quot;priority&quot;[TAB]&quot;wait-timeout&quot;[TAB]&quot;command-path&quot;[TAB]=&gt;
    &quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_filter">filter</a></strong><br />
-</dt>
+<dt><strong><a name="item_filter">filter</a></strong>
+
 <dd>
-command keyword
+<p>command keyword</p>
 </dd>
-<p></p>
-<dt><strong>priority</strong><br />
-</dt>
+</li>
+<dt><strong>priority</strong>
+
 <dd>
-process priority: 0 = normal  -1 = below normal  +1 = above normal
+<p>process priority: 0 = normal  -1 = below normal  +1 = above normal</p>
 </dd>
-<p></p>
-<dt><strong>wait-timeout</strong><br />
-</dt>
+</li>
+<dt><strong>wait-timeout</strong>
+
 <dd>
-wait timeout for process execution in seconds: 0 = nowait
+<p>wait timeout for process execution in seconds: 0 = nowait</p>
 </dd>
 <dd>
-<p>With filters, it is not suggested to use @@TMPFILE, since the filter will never have
+<p>With filters, it is not suggested to use $(TMPFILE), since the filter will never have
 the ability to change the message content in that way. Also, to avoid problems very difficult to
 troubleshoot, it is suggested to give the filter '<strong>ENOUGH</strong>' timeout to complete (90 seconds
 or more). See [<a href="#message_filters">MESSAGE FILTERS</a>] for detailed information about return codes.
 In the filter command, the ``Stop Filter Processing'' return flag will make XMail to stop
 the execution of the current custom processing file.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The 'filter' command will pass the message file to a custom external filter, that
 after inspecting it, has the option to accept, reject or modify it. Care should
 be taken to properly re-format the message after changing it, to avoid message corruption.
@@ -1523,12 +1540,13 @@ valid bits inside the network mask. No space are allowed between the variable na
 and the '=' sign and between the '=' sign and the value. These are the currently
 defined variables:</p>
 <dl>
-<dt><strong><a name="item_whitelist">WhiteList</a></strong><br />
-</dt>
+<dt><strong><a name="item_whitelist">WhiteList</a></strong>
+
 <dd>
-If set to 1 and if the peer IP matches the address mask, all peer IP based checks will be skipped.
+<p>If set to 1 and if the peer IP matches the address mask, all peer IP based checks will be skipped.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -1542,6 +1560,11 @@ If set to 1 and if the peer IP matches the address mask, all peer IP based check
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
+<h3><a name="filters_postrcpt_tab">FILTERS.POST-RCPT.TAB</a></h3>
+<p>See [<a href="#smtp_message_filters">SMTP MESSAGE FILTERS</a>]</p>
+<p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
+<p>
+</p>
 <h3><a name="filters_predata_tab">FILTERS.PRE-DATA.TAB</a></h3>
 <p>See [<a href="#smtp_message_filters">SMTP MESSAGE FILTERS</a>]</p>
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
@@ -1550,6 +1573,18 @@ If set to 1 and if the peer IP matches the address mask, all peer IP based check
 <h3><a name="filters_postdata_tab">FILTERS.POST-DATA.TAB</a></h3>
 <p>See [<a href="#smtp_message_filters">SMTP MESSAGE FILTERS</a>]</p>
 <p>[<a href="#configuration_tables">table index</a>] [<a href="#configuration">configuration</a>] [<a href="#__index__">top</a>]</p>
+<p>
+</p>
+<hr />
+<h1><a name="macro_substitution">MACRO SUBSTITUTION</a></h1>
+<p>XMail support two kinds of macro declaration inside its TAB file. The old macro
+declaration done by prefixing the macro name with the '<strong>@@</strong>' sequence is still supported
+for backward compatibility, and has to be used when the macro is the only content of the
+parameter. Macro can also be declared as '<strong>$(MACRO)</strong>' and this form can be used anywhere
+inside the parameter declaration, like:</p>
+<pre>
+ &quot;/var/spool/mail/$(USER).dat&quot;</pre>
+<p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <hr />
@@ -1568,60 +1603,62 @@ The authentication file is a TAB file (see at the proper section in this documen
 the given structure:</p>
 <pre>
  &quot;auth-action&quot;[TAB]&quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
-<p>Each argument can be a macro also:</p>
+<p>Each argument can be a macro also (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong><a name="item__40_40user">@@USER</a></strong><br />
-</dt>
+<dt><strong><a name="item_user">USER</a></strong>
+
 <dd>
-the USERNAME to authenticate
+<p>the USERNAME to authenticate</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40domain">@@DOMAIN</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_domain">DOMAIN</a></strong>
+
 <dd>
-the DOMAIN to authenticate
+<p>the DOMAIN to authenticate</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40passwd">@@PASSWD</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_passwd">PASSWD</a></strong>
+
 <dd>
-the user password
+<p>the user password</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40path">@@PATH</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_path">PATH</a></strong>
+
 <dd>
-user path
+<p>user path</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The values for '<strong>auth-action</strong>'  can be one of:</p>
 <p>item userauth</p>
 <p>executed when user authentication is required</p>
 <dl>
-<dt><strong><a name="item_useradd">useradd</a></strong><br />
-</dt>
+<dt><strong><a name="item_useradd">useradd</a></strong>
+
 <dd>
-executed when a user need to be added
+<p>executed when a user need to be added</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_useredit">useredit</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_useredit">useredit</a></strong>
+
 <dd>
-executed when a user change is required
+<p>executed when a user change is required</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_userdel">userdel</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_userdel">userdel</a></strong>
+
 <dd>
-executed when a user deletion is required
+<p>executed when a user deletion is required</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_domaindrop">domaindrop</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_domaindrop">domaindrop</a></strong>
+
 <dd>
-executed when all domain users need to be deleted
+<p>executed when all domain users need to be deleted</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The first line that stores the handling command for the requested action is executed as:</p>
 <pre>
  command arg0 ... argN</pre>
@@ -1668,26 +1705,27 @@ and lines has this format:</p>
 <pre>
  &quot;external&quot;  &quot;auth-name&quot; &quot;secret&quot;    &quot;prog-path&quot; &quot;arg-or-macro&quot;  ...</pre>
 <p>Where  '<strong>auth-name</strong>' can be any symbolic name and '<strong>arg-or-macro</strong>' can be a program
-argument or one of these macros:</p>
+argument or one of these macros (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong>@@CHALL</strong><br />
-</dt>
+<dt><strong>CHALL</strong>
+
 <dd>
-server challenge string
+<p>server challenge string</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40secrt">@@SECRT</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_secrt">SECRT</a></strong>
+
 <dd>
-authentication secret
+<p>authentication secret</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40rfile">@@RFILE</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_rfile">RFILE</a></strong>
+
 <dd>
-output response file path
+<p>output response file path</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>For example:</p>
 <pre>
  &quot;external&quot; &quot;RSA-AUTH&quot; &quot;mysecret&quot; &quot;/usr/bin/myrsa-auth&quot; &quot;-c&quot; &quot;@@CHALL&quot; &quot;-s&quot;=&gt;
@@ -1701,7 +1739,7 @@ output response file path
 <p>Then XMail decodes '<strong>base64-challenge</strong>' and invokes the external program to get the response
 to send to the SMTP server.
 The external program must return zero upon success and must put the response into
-the file  @@RFILE (without new line termination).</p>
+the file $(RFILE) (without new line termination).</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -1725,56 +1763,57 @@ commands that are stored in such a file.</p>
 <p>These tables store commands (internals or externals) that have to be executed on the message file.
 The presence of one of these files is optional and if none exist the default processing
 is applied to the message via SMTP.</p>
-<p>Each argument can be a macro also:</p>
+<p>Each argument can be a macro also (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong>@@FROM</strong><br />
-</dt>
+<dt><strong>FROM</strong>
+
 <dd>
-the sender of the message
+<p>the sender of the message</p>
 </dd>
-<p></p>
-<dt><strong>@@RCPT</strong><br />
-</dt>
+</li>
+<dt><strong>RCPT</strong>
+
 <dd>
-the target of the message
+<p>the target of the message</p>
 </dd>
-<p></p>
-<dt><strong>@@FILE</strong><br />
-</dt>
+</li>
+<dt><strong>FILE</strong>
+
 <dd>
-the message file path (the external command '<strong>must only read</strong>' the file)
+<p>the message file path (the external command '<strong>must only read</strong>' the file)</p>
 </dd>
-<p></p>
-<dt><strong>@@MSGID</strong><br />
-</dt>
+</li>
+<dt><strong>MSGID</strong>
+
 <dd>
-the (XMail unique) message id
+<p>the (XMail unique) message id</p>
 </dd>
-<p></p>
-<dt><strong>@@MSGREF</strong><br />
-</dt>
+</li>
+<dt><strong>MSGREF</strong>
+
 <dd>
-the reference SMTP message id
+<p>the reference SMTP message id</p>
 </dd>
-<p></p>
-<dt><strong>@@TMPFILE</strong><br />
-</dt>
+</li>
+<dt><strong>TMPFILE</strong>
+
 <dd>
-creates a copy of the message file to a temporary one. It can be
+<p>creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program's
-responsibility to delete the temporary file
+responsibility to delete the temporary file</p>
 </dd>
-<p></p>
-<dt><strong>@@USERAUTH</strong><br />
-</dt>
+</li>
+<dt><strong>USERAUTH</strong>
+
 <dd>
-name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
+<p>name of the SMTP authenticated user, or ``-'' if no authentication has been supplied</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Supported commands:</p>
 <dl>
-<dt><strong><a name="item__5bexternal_5d">[EXTERNAL]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bexternal_5d">[EXTERNAL]</a></strong>
+
 <dd>
 <pre>
  &quot;external&quot;[TAB]&quot;priority&quot;[TAB]&quot;wait-timeout&quot;[TAB]&quot;command-path&quot;[TAB]=&gt;
@@ -1784,34 +1823,35 @@ name of the SMTP authenticated user, or ``-'' if no authentication has been supp
 <p>where:</p>
 </dd>
 <dl>
-<dt><strong>external</strong><br />
-</dt>
+<dt><strong>external</strong>
+
 <dd>
-command keyword
+<p>command keyword</p>
 </dd>
-<p></p>
-<dt><strong>priority</strong><br />
-</dt>
+</li>
+<dt><strong>priority</strong>
+
 <dd>
-process priority: 0 = normal  -1 = below normal  +1 = above normal
+<p>process priority: 0 = normal  -1 = below normal  +1 = above normal</p>
 </dd>
-<p></p>
-<dt><strong>wait-timeout</strong><br />
-</dt>
+</li>
+<dt><strong>wait-timeout</strong>
+
 <dd>
-wait timeout for process execution in seconds: 0 = nowait
+<p>wait timeout for process execution in seconds: 0 = nowait</p>
 </dd>
 <dd>
-<p>Be carefull if using @@FILE to give the external command enough timeout to complete,
+<p>Be carefull if using $(FILE) to give the external command enough timeout to complete,
 otherwise the file will be removed by XMail while the command is processing.
 This is because such file is a temporary one that is deleted when XMail exits
 from file processing. In case the external command exit code will be '<strong>16</strong>',
 the command processing will stop and all the following commands listed inside
 the file will be skipped.</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bfilter_5d">[FILTER]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bfilter_5d">[FILTER]</a></strong>
+
 <dd>
 <pre>
  &quot;filter&quot;[TAB]&quot;priority&quot;[TAB]&quot;wait-timeout&quot;[TAB]&quot;command-path&quot;[TAB]=&gt;
@@ -1821,39 +1861,40 @@ the file will be skipped.</p>
 <p>where:</p>
 </dd>
 <dl>
-<dt><strong>filter</strong><br />
-</dt>
+<dt><strong>filter</strong>
+
 <dd>
-command keyword
+<p>command keyword</p>
 </dd>
-<p></p>
-<dt><strong>priority</strong><br />
-</dt>
+</li>
+<dt><strong>priority</strong>
+
 <dd>
-process priority: 0 = normal  -1 = below normal  +1 = above normal
+<p>process priority: 0 = normal  -1 = below normal  +1 = above normal</p>
 </dd>
-<p></p>
-<dt><strong>wait-timeout</strong><br />
-</dt>
+</li>
+<dt><strong>wait-timeout</strong>
+
 <dd>
-wait timeout for process execution in seconds: 0 = nowait
+<p>wait timeout for process execution in seconds: 0 = nowait</p>
 </dd>
 <dd>
-<p>With filters, it is not suggested to use @@TMPFILE, since the filter will never have
+<p>With filters, it is not suggested to use $(TMPFILE), since the filter will never have
 the ability to change the message content in that way. Also, to avoid problems very difficult to
 troubleshoot, it is suggested to give the filter '<strong>ENOUGH</strong>' timeout to complete (90 seconds
 or more). See [<a href="#message_filters">MESSAGE FILTERS</a>] for detailed information about return codes.
 In the filter command, the ``Stop Filter Processing'' return flag will make XMail to stop
 the execution of the current custom processing file.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The 'filter' command will pass the message file to a custom external filter, that
 after inspecting it, has the option to accept, reject or modify it. Care should
 be taken to properly re-format the message after changing it, to avoid message corruption.
 The 'filter' command '<strong>CANNOT</strong>' successfully change the private XMail's header part of the
 spool message.</p>
-<dt><strong><a name="item__5bredirect_5d">[REDIRECT]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bredirect_5d">[REDIRECT]</a></strong>
+
 <dd>
 <pre>
  &quot;redirect&quot;[TAB]&quot;domain-or-emailaddress&quot;[TAB]...[NEWLINE]</pre>
@@ -1880,8 +1921,8 @@ contains a line:</p>
 <dd>
 <p>redirects the message to user&#64;target-domain.org.</p>
 </dd>
-<dt><strong><a name="item__5blredirect_5d">[LREDIRECT]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5blredirect_5d">[LREDIRECT]</a></strong>
+
 <dd>
 <pre>
  &quot;lredirect&quot;[TAB]&quot;domain-or-emailaddress&quot;[TAB]...[NEWLINE]</pre>
@@ -1912,8 +1953,8 @@ contains a line:</p>
 that has a redirect to E@F. With ``redirect'' E@F will see A@B has sender while with
 ``lredirect'' he will see C@D.</p>
 </dd>
-<dt><strong><a name="item__5bsmtprelay_5d">[SMTPRELAY]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bsmtprelay_5d">[SMTPRELAY]</a></strong>
+
 <dd>
 <pre>
  &quot;smtprelay&quot;[TAB]&quot;server[:port],server[:port],...&quot;[NEWLINE]</pre>
@@ -1931,8 +1972,8 @@ that has a redirect to E@F. With ``redirect'' E@F will see A@B has sender while 
 <dd>
 <p>To have XMail random-select the order the specified relays.</p>
 </dd>
-<dt><strong><a name="item__5bsmtp_5d">[SMTP]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bsmtp_5d">[SMTP]</a></strong>
+
 <dd>
 <pre>
  &quot;smtp&quot;[NEWLINE]</pre>
@@ -1972,95 +2013,95 @@ mail loops within the server.</p>
 <h1><a name="server_tab_variables">SERVER.TAB VARIABLES</a></h1>
 <p>The following variables are for use int the <a href="#server_tab">SERVER.TAB</a> configuration file.</p>
 <dl>
-<dt><strong><a name="item__5brootdomain_5d">[RootDomain]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5brootdomain_5d">[RootDomain]</a></strong>
+
 <dd>
-Indicate the primary domain for the server.
+<p>Indicate the primary domain for the server.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpserverdomain_5d">[SmtpServerDomain]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpserverdomain_5d">[SmtpServerDomain]</a></strong>
+
 <dd>
-If set, forces the domain name XMail uses inside the ESMTP banner used to support
-CRAM-MD5 ESMTP authentication.
+<p>If set, forces the domain name XMail uses inside the ESMTP banner used to support
+CRAM-MD5 ESMTP authentication.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bpop3domain_5d">[POP3Domain]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bpop3domain_5d">[POP3Domain]</a></strong>
+
 <dd>
-Set the default domain for POP3 client connections.
+<p>Set the default domain for POP3 client connections.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bpostmaster_5d">[PostMaster]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bpostmaster_5d">[PostMaster]</a></strong>
+
 <dd>
-Set the postmaster address.
+<p>Set the postmaster address.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5berrorsadmin_5d">[ErrorsAdmin]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5berrorsadmin_5d">[ErrorsAdmin]</a></strong>
+
 <dd>
-The email address that receives notification messages for every message that has had delivery errors.
-If it is empty (allowed), the notification message is sent to the sender only.
+<p>The email address that receives notification messages for every message that has had delivery errors.
+If it is empty (allowed), the notification message is sent to the sender only.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5btemperrorsadmin_5d">[TempErrorsAdmin]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5btemperrorsadmin_5d">[TempErrorsAdmin]</a></strong>
+
 <dd>
-The email address that receives notification for temporary delivery failures.
-In case it's empty the notification message is sent to the sender only.
+<p>The email address that receives notification for temporary delivery failures.
+In case it's empty the notification message is sent to the sender only.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bdefaultsmtpgateways_5d">[DefaultSMTPGateways]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bdefaultsmtpgateways_5d">[DefaultSMTPGateways]</a></strong>
+
 <dd>
-A comma separated list of SMTP servers XMail '<strong>must</strong>' use to send its mails.
-This has the precedence over MX records.
+<p>A comma separated list of SMTP servers XMail '<strong>must</strong>' use to send its mails.
+This has the precedence over MX records.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bhelodomain_5d">[HeloDomain]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bhelodomain_5d">[HeloDomain]</a></strong>
+
 <dd>
-If this variable is specified and is not empty, its content is sent as HELO domain.
+<p>If this variable is specified and is not empty, its content is sent as HELO domain.
 Otherwise the reverse lookup of the local IP is sent as HELO domain.
 This helps to deal with remote SMTP servers that are set to check the reverse lookup
-of the incoming IP.
+of the incoming IP.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bcheckmailerdomain_5d">[CheckMailerDomain]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bcheckmailerdomain_5d">[CheckMailerDomain]</a></strong>
+
 <dd>
-Enable validation of the sender domain ('MAIL FROM:&lt;...&#64;xxx&gt;') by looking up DNS/MX entries.
+<p>Enable validation of the sender domain ('MAIL FROM:&lt;...&#64;xxx&gt;') by looking up DNS/MX entries.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bremovespoolerrors_5d">[RemoveSpoolErrors]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bremovespoolerrors_5d">[RemoveSpoolErrors]</a></strong>
+
 <dd>
-Indicate if mail has to be removed or stored in '<strong>froz</strong>'  directory after a failure in
-delivery or filtering.
+<p>Indicate if mail has to be removed or stored in '<strong>froz</strong>'  directory after a failure in
+delivery or filtering.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnotifymsglinesextra_5d">[NotifyMsgLinesExtra]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnotifymsglinesextra_5d">[NotifyMsgLinesExtra]</a></strong>
+
 <dd>
-Number of lines of the bounced message that have to be listed inside the notify message
+<p>Number of lines of the bounced message that have to be listed inside the notify message
 (lines after
-the headers section). Default is zero.
+the headers section). Default is zero.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnotifysendlogtosender_5d">[NotifySendLogToSender]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnotifysendlogtosender_5d">[NotifySendLogToSender]</a></strong>
+
 <dd>
-Enable/Disable sending the message log file inside the notify message to the sender.
-Default is off (zero).
+<p>Enable/Disable sending the message log file inside the notify message to the sender.
+Default is off (zero).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnotifytrypattern_5d">[NotifyTryPattern]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnotifytrypattern_5d">[NotifyTryPattern]</a></strong>
+
 <dd>
-List of delivery attempts that require the system to send a notification to the sender
+<p>List of delivery attempts that require the system to send a notification to the sender
 (and eventually to '<strong>TempErrorsAdmin</strong>').
-The list is a comma separated list of numbers (with no extra spaces) as in:
+The list is a comma separated list of numbers (with no extra spaces) as in:</p>
 </dd>
 <dd>
 <pre>
@@ -2069,69 +2110,70 @@ The list is a comma separated list of numbers (with no extra spaces) as in:
 <dd>
 <p>Default is empty which means no notification is sent upon a delivery attempt failure.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5ballownullsender_5d">[AllowNullSender]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5ballownullsender_5d">[AllowNullSender]</a></strong>
+
 <dd>
-Enable null sender ('MAIL FROM:&lt;&gt;') messages to be accepted by XMail.
+<p>Enable null sender ('MAIL FROM:&lt;&gt;') messages to be accepted by XMail.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnosenderbounce_5d">[NoSenderBounce]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnosenderbounce_5d">[NoSenderBounce]</a></strong>
+
 <dd>
-When building bounce messages, use the null SMTP sender ('MAIL FROM:&lt;&gt;') instead
+<p>When building bounce messages, use the null SMTP sender ('MAIL FROM:&lt;&gt;') instead
 of the '<strong>PostMaster</strong>' address. This will affect only the SMTP sender, while the
-message RFC822 headers will still contain the correct From: header.
+message RFC822 headers will still contain the correct From: header.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bmaxmtaops_5d">[MaxMTAOps]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bmaxmtaops_5d">[MaxMTAOps]</a></strong>
+
 <dd>
-Set the maximum number of MTA relay steps before to declare the message as looped (default 16).
+<p>Set the maximum number of MTA relay steps before to declare the message as looped (default 16).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5breceivedhdrtype_5d">[ReceivedHdrType]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5breceivedhdrtype_5d">[ReceivedHdrType]</a></strong>
+
 <dd>
-Set the verbosity of the Received: message headers tag.
+<p>Set the verbosity of the Received: message headers tag.</p>
 </dd>
 <dl>
-<dt><strong><a name="item__270_27">'0'</a></strong><br />
-</dt>
+<dt><strong><a name="item__270_27">'0'</a></strong>
+
 <dd>
-Standard (client IP shown , server IP not). Default.
+<p>Standard (client IP shown , server IP not). Default.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__271_27">'1'</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__271_27">'1'</a></strong>
+
 <dd>
-Verbose (client IP shown , server IP shown)
+<p>Verbose (client IP shown , server IP shown)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__272_27">'2'</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__272_27">'2'</a></strong>
+
 <dd>
-Strict (no IP shown)
+<p>Strict (no IP shown)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__273_27">'3'</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__273_27">'3'</a></strong>
+
 <dd>
-Same as 0 but the client IP is not shown if the client authenticate itself.
+<p>Same as 0 but the client IP is not shown if the client authenticate itself.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__274_27">'4'</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__274_27">'4'</a></strong>
+
 <dd>
-Same as 1 but the client IP is not shown if the client authenticate itself.
+<p>Same as 1 but the client IP is not shown if the client authenticate itself.</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bfetchhdrtags_5d">[FetchHdrTags]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bfetchhdrtags_5d">[FetchHdrTags]</a></strong>
+
 <dd>
-Set the list of headers tags to be used to extract addresses from POP3 fetched messages
+<p>Set the list of headers tags to be used to extract addresses from POP3 fetched messages
 (<a href="#pop3links_tab">POP3LINKS.TAB</a>).
-This is a comma delimited list (no extra space or TABs must be included inside the list) as in:
+This is a comma delimited list (no extra space or TABs must be included inside the list) as in:</p>
 </dd>
 <dd>
 <pre>
@@ -2146,42 +2188,49 @@ This is a comma delimited list (no extra space or TABs must be included inside t
 <dd>
 <p>The string ``+X-Deliver-To,To,Cc'' is the default if nothing is specified.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtp_2dmaxerrors_5d">[SMTP-MaxErrors]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtp_2dmaxerrors_5d">[SMTP-MaxErrors]</a></strong>
+
 <dd>
-Set the maximum number of errors allowed in a single SMTP session. When the maximum
+<p>Set the maximum number of errors allowed in a single SMTP session. When the maximum
 number of allowed errors is exceeded, the connection will be automatically dropped.
 If such variable is not set, or it is set to zero, the maximum number of errors will
-be unlimited.
+be unlimited.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpmsgipbanspammers_5d">[SmtpMsgIPBanSpammers]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpmsgipbanspammers_5d">[SmtpMsgIPBanSpammers]</a></strong>
+
 <dd>
-Used to set the message that is sent to the SMTP client when the client IP is listed inside
-the file SPAMMER.TAB.
+<p>Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SPAMMER.TAB.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpmsgipbanspamaddress_5d">[SmtpMsgIPBanSpamAddress]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpmsgipbanspamaddress_5d">[SmtpMsgIPBanSpamAddress]</a></strong>
+
 <dd>
-Used to set the message that is sent to the SMTP client when the client IP is listed inside
-the file SPAM-ADDRESS.TAB.
+<p>Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SPAM-ADDRESS.TAB.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpmsgipbanmaps_5d">[SmtpMsgIPBanMaps]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpmsgipbanmaps_5d">[SmtpMsgIPBanMaps]</a></strong>
+
 <dd>
-Used to set the message that is sent to the SMTP client when the client IP is listed inside
-one of the ``CustMapsList''.
+<p>Used to set the message that is sent to the SMTP client when the client IP is listed inside
+one of the ``CustMapsList''.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bcustomsmtpmessage_5d">[CustomSMTPMessage]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpmsgipban_5d">[SmtpMsgIPBan]</a></strong>
+
 <dd>
-Set this to the message that you want to follow the standard SMTP error
-response sent by XMail, as in (one line, remember the =&gt;):
+<p>Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SMTP.IPMAP.TAB.</p>
+</dd>
+</li>
+<dt><strong><a name="item__5bcustomsmtpmessage_5d">[CustomSMTPMessage]</a></strong>
+
+<dd>
+<p>Set this to the message that you want to follow the standard SMTP error
+response sent by XMail, as in (one line, remember the =&gt;):</p>
 </dd>
 <dd>
 <pre>
@@ -2191,68 +2240,93 @@ response sent by XMail, as in (one line, remember the =&gt;):
 <dd>
 <p>Please be aware the RFC821 fix the maximum reply line length to 512 bytes.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5ballowsmtpvrfy_5d">[AllowSmtpVRFY]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtp_2dipmapdropcode_5d">[SMTP-IpMapDropCode]</a></strong>
+
 <dd>
-Enable the use of VRFY SMTP command. This flag may be forced by SMTP authentication.
+<p>Set the drop code for IPs blocked by the SMTP.IPMAP.TAB file:</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5ballowsmtpetrn_5d">[AllowSmtpETRN]</a></strong><br />
-</dt>
+<dl>
+<dt><strong>'1'</strong>
+
 <dd>
-Enable the use of ETRN SMTP command. This flag may be forced by SMTP authentication.
+<p>the connection is drooped soon</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpmindiskspace_5d">[SmtpMinDiskSpace]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__220_22">``0''</a></strong>
+
 <dd>
-Minimum disk space (in Kb) that is requested before accepting an SMTP connection.
+<p>the connection is kept alive but only authenticated users can send mail</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpminvirtmemspace_5d">[SmtpMinVirtMemSpace]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__27_2ds_27">'-S'</a></strong>
+
 <dd>
-Minimum virtual memory (in Kb) that is requested before accepting an SMTP connection.
+<p>the peer can send messages but a delay of S seconds is introduced between commands</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bpop3minvirtmemspace_5d">[Pop3MinVirtMemSpace]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5ballowsmtpvrfy_5d">[AllowSmtpVRFY]</a></strong>
+
 <dd>
-Minimum virtual memory (in Kb) that is requested before accepting a POP3 connection.
+<p>Enable the use of VRFY SMTP command. This flag may be forced by SMTP authentication.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bpop3syncerroraccount_5d">[Pop3SyncErrorAccount]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5ballowsmtpetrn_5d">[AllowSmtpETRN]</a></strong>
+
 <dd>
-This defines the email account (MUST be handled locally) that receives all
-fetched email that XMail has not been able to deliver.
+<p>Enable the use of ETRN SMTP command. This flag may be forced by SMTP authentication.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5benableauthsmtp_2dpop3_5d">[EnableAuthSMTP-POP3]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpmindiskspace_5d">[SmtpMinDiskSpace]</a></strong>
+
 <dd>
-Enable SMTP after POP3 authentication (default on).
+<p>Minimum disk space (in Kb) that is requested before accepting an SMTP connection.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bmaxmessagesize_5d">[MaxMessageSize]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpminvirtmemspace_5d">[SmtpMinVirtMemSpace]</a></strong>
+
 <dd>
-Set the maximum message size in Kb that is possible to send through the server.
+<p>Minimum virtual memory (in Kb) that is requested before accepting an SMTP connection.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bdefaultsmtpperms_5d">[DefaultSmtpPerms]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bpop3minvirtmemspace_5d">[Pop3MinVirtMemSpace]</a></strong>
+
 <dd>
-This list SMTP permissions assigned to users looked up inside <a href="#mailusers_tab">MAILUSERS.TAB</a>
+<p>Minimum virtual memory (in Kb) that is requested before accepting a POP3 connection.</p>
+</dd>
+</li>
+<dt><strong><a name="item__5bpop3syncerroraccount_5d">[Pop3SyncErrorAccount]</a></strong>
+
+<dd>
+<p>This defines the email account (MUST be handled locally) that receives all
+fetched email that XMail has not been able to deliver.</p>
+</dd>
+</li>
+<dt><strong><a name="item__5benableauthsmtp_2dpop3_5d">[EnableAuthSMTP-POP3]</a></strong>
+
+<dd>
+<p>Enable SMTP after POP3 authentication (default on).</p>
+</dd>
+</li>
+<dt><strong><a name="item__5bmaxmessagesize_5d">[MaxMessageSize]</a></strong>
+
+<dd>
+<p>Set the maximum message size in Kb that is possible to send through the server.</p>
+</dd>
+</li>
+<dt><strong><a name="item__5bdefaultsmtpperms_5d">[DefaultSmtpPerms]</a></strong>
+
+<dd>
+<p>This list SMTP permissions assigned to users looked up inside <a href="#mailusers_tab">MAILUSERS.TAB</a>
 during SMTP authentication.
-It also defines the permissions for users authenticated with SMTP after POP3.
+It also defines the permissions for users authenticated with SMTP after POP3.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bcustmapslist_5d">[CustMapsList]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bcustmapslist_5d">[CustMapsList]</a></strong>
+
 <dd>
-This is a list a user can use to set custom maps checking. The list has the given (strict) format:
+<p>This is a list a user can use to set custom maps checking. The list has the given (strict) format:</p>
 </dd>
 <dd>
 <p>maps-root:code,maps-root:code...</p>
@@ -2262,64 +2336,65 @@ This is a list a user can use to set custom maps checking. The list has the give
 and the code can be:</p>
 </dd>
 <dl>
-<dt><strong>'1'</strong><br />
-</dt>
+<dt><strong>'1'</strong>
+
 <dd>
-the connection is drooped soon
+<p>the connection is drooped soon</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__220_22">``0''</a></strong><br />
-</dt>
+</li>
+<dt><strong>``0''</strong>
+
 <dd>
-the connection is kept alive but only authenticated users can send mail
+<p>the connection is kept alive but only authenticated users can send mail</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__27_2ds_27">'-S'</a></strong><br />
-</dt>
+</li>
+<dt><strong>'-S'</strong>
+
 <dd>
-the peer can send messages but a delay of S seconds is introduced between commands
+<p>the peer can send messages but a delay of S seconds is introduced between commands</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bsmtp_2drdnscheck_5d">[SMTP-RDNSCheck]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bsmtp_2drdnscheck_5d">[SMTP-RDNSCheck]</a></strong>
+
 <dd>
-Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
+<p>Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
 If 0, the check is not performed; if 1 and the check fails,
 the user receives a 'server use forbidden'
 at MAIL_FROM time;
 if -S (S &gt; 0) and the check fails, a delay of S seconds between SMTP commands is used to prevent
-massive spamming.
+massive spamming.</p>
 </dd>
 <dd>
 <p>SMTP authentication overrides the denial set by this option by giving authenticated users
 the ability to access the server from 'mapped' IPs.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmartdnshost_5d">[SmartDNSHost]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmartdnshost_5d">[SmartDNSHost]</a></strong>
+
 <dd>
-Setup a list of smart DNS hosts to which are directed DNS queries with recursion
+<p>Setup a list of smart DNS hosts to which are directed DNS queries with recursion
 bit set to true. Such DNS hosts must support DNS recursion in queries.
-The format is:
+The format is:</p>
 </dd>
 <dd>
 <pre>
  dns.home.bogus.net:tcp,192.168.1.1:udp,...</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bdisableemitauthuser_5d">[DisableEmitAuthUser]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bdisableemitauthuser_5d">[DisableEmitAuthUser]</a></strong>
+
 <dd>
-Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
-Valid values are ``0'' or '1', default is ``0'' (emission enabled).
+<p>Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
+Valid values are ``0'' or '1', default is ``0'' (emission enabled).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bdyndnssetup_5d">[DynDnsSetup]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bdyndnssetup_5d">[DynDnsSetup]</a></strong>
+
 <dd>
-Give the possibility to handle dynamic IP domain registration to dynamic IP servers.
+<p>Give the possibility to handle dynamic IP domain registration to dynamic IP servers.
 One of these service providers is 'www.dyndns.org' whose site you can watch for
-registrations and more info.
+registrations and more info.</p>
 </dd>
 <dd>
 <p>The string has the format:</p>
@@ -2344,47 +2419,49 @@ registrations and more info.
 <p>where:</p>
 </dd>
 <dl>
-<dt><strong><a name="item_domain">DOMAIN</a></strong><br />
-</dt>
+<dt><strong>DOMAIN</strong>
+
 <dd>
-the domain you've registered
+<p>the domain you've registered</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_username">USERNAME</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_username">USERNAME</a></strong>
+
 <dd>
-the username you get from service provider
+<p>the username you get from service provider</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_password">PASSWORD</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_password">PASSWORD</a></strong>
+
 <dd>
-the password you get from service provider
+<p>the password you get from service provider</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The %s in HTTP-GET-String is replaced with the IP address to register.</p>
-<dt><strong><a name="item__5bsmtpconfig_5d">[SmtpConfig]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bsmtpconfig_5d">[SmtpConfig]</a></strong>
+
 <dd>
-Default SMTP server config loaded if specific server IP config is not found.
+<p>Default SMTP server config loaded if specific server IP config is not found.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpconfig_2dxxx_2eyyy_2ezzz_2ewww_5d">[SmtpConfig-XXX.YYY.ZZZ.WWW]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpconfig_2dxxx_2eyyy_2ezzz_2ewww_5d">[SmtpConfig-XXX.YYY.ZZZ.WWW]</a></strong>
+
 <dd>
-Specific IP SMTP server config.
+<p>Specific IP SMTP server config.
 The variable value is a comma separated sequence of configuration tokens whose
-meaning is:
+meaning is:</p>
 </dd>
 <dl>
-<dt><strong><a name="item_mail_2dauth">mail-auth</a></strong><br />
-</dt>
+<dt><strong><a name="item_mail_2dauth">mail-auth</a></strong>
+
 <dd>
-authentication required to send mail to the server.
+<p>authentication required to send mail to the server.
 Please note that by setting this value everything requires authentication,
-even for sending to local domains, and this is probably not what you want.
+even for sending to local domains, and this is probably not what you want.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 </dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
@@ -2405,12 +2482,13 @@ If the filter modifies the message it must return '<strong>7</strong>'.</p>
 by adding the flags value to the exits code above listed. The currently defined
 flags are :</p>
 <dl>
-<dt><strong><a name="item__2716_27">'16'</a></strong><br />
-</dt>
+<dt><strong><a name="item__2716_27">'16'</a></strong>
+
 <dd>
-Stop selected filter list processing.
+<p>Stop selected filter list processing.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Filter flags are additive and if more than one flag need to be specified, their values
 must be added together. If a filter ``raw'' exit code is <strong>RC</strong> and the filter needs
 to return extra flags <strong>FILTER-SUM</strong>, the final return code <strong>FRC</strong> must be :</p>
@@ -2449,75 +2527,84 @@ process to end. The '<strong>flags</strong>' parameter is a comma-separated list
 the filter execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
 supported flags are:</p>
 <dl>
-<dt><strong><a name="item_aex">aex</a></strong><br />
-</dt>
+<dt><strong><a name="item_aex">aex</a></strong>
+
 <dd>
-exclude filter execution in case of authenticated sender
+<p>exclude filter execution in case of authenticated sender</p>
 </dd>
-<p></p></dl>
-<p>Each argument can be a macro also:</p>
+</li>
+<dt><strong><a name="item_wlex">wlex</a></strong>
+
+<dd>
+<p>exclude filter execution in case the client IP is white-listed inside the SMTP.IPPROP.TAB file.
+This flag works only for SMTP filters.</p>
+</dd>
+</li>
+</dl>
+<p>Each argument can be a macro also (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong>@@FROM</strong><br />
-</dt>
+<dt><strong>FROM</strong>
+
 <dd>
-the sender of the message
+<p>the sender of the message</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40rfrom">@@RFROM</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_rfrom">RFROM</a></strong>
+
 <dd>
-the sender of the message resolved to the real account, when possible (alias resolution)
+<p>the sender of the message resolved to the real account, when possible (alias resolution)</p>
 </dd>
-<p></p>
-<dt><strong>@@RCPT</strong><br />
-</dt>
+</li>
+<dt><strong>RCPT</strong>
+
 <dd>
-the target of the message
+<p>the target of the message</p>
 </dd>
-<p></p>
-<dt><strong>@@RRCPT</strong><br />
-</dt>
+</li>
+<dt><strong>RRCPT</strong>
+
 <dd>
-the target of the message resolved to the real account, when possible (alias resolution)
+<p>the target of the message resolved to the real account, when possible (alias resolution)</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40remoteaddr">@@REMOTEADDR</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_remoteaddr">REMOTEADDR</a></strong>
+
 <dd>
-remote IP address and port of the sender
+<p>remote IP address and port of the sender</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__40_40localaddr">@@LOCALADDR</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_localaddr">LOCALADDR</a></strong>
+
 <dd>
-local IP address and port where the message has been accepted
+<p>local IP address and port where the message has been accepted</p>
 </dd>
-<p></p>
-<dt><strong>@@FILE</strong><br />
-</dt>
+</li>
+<dt><strong>FILE</strong>
+
 <dd>
-the message file path (the external command may modify the file if it returns '<strong>7</strong>'
-as command exit value.)
+<p>the message file path (the external command may modify the file if it returns '<strong>7</strong>'
+as command exit value.)</p>
 </dd>
-<p></p>
-<dt><strong>@@MSGID</strong><br />
-</dt>
+</li>
+<dt><strong>MSGID</strong>
+
 <dd>
-with the (XMail unique) message id
+<p>with the (XMail unique) message id</p>
 </dd>
-<p></p>
-<dt><strong>@@MSGREF</strong><br />
-</dt>
+</li>
+<dt><strong>MSGREF</strong>
+
 <dd>
-the reference SMTP message id
+<p>the reference SMTP message id</p>
 </dd>
-<p></p>
-<dt><strong>@@USERAUTH</strong><br />
-</dt>
+</li>
+<dt><strong>USERAUTH</strong>
+
 <dd>
-name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
+<p>name of the SMTP authenticated user, or ``-'' if no authentication has been supplied</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Here '<strong>command</strong>' is the name of an external program that processes the message and
 returns its processing result. If it returns '<strong>6</strong>' the message is rejected and a notification
 message is sent to the sender. By returning '<strong>5</strong>' the message is rejected
@@ -2530,7 +2617,7 @@ The filter command may also modify the file
 The filter '<strong>MUST</strong>' return '<strong>7</strong>' in case it modifies the message.
 If the filter changes the message file it '<strong>MUST</strong>' keep the message structure and
 it '<strong>MUST</strong>' terminate all line with &lt;CR&gt;&lt;LF&gt;. The filter has also the ability to return
-a one-line custom return message by creating a file named @@FILE.rej holding the message
+a one-line custom return message by creating a file named $(FILE).rej holding the message
 in the very first line. This file should be created '<strong>ONLY</strong>' when the filter returns a
 rejection code ('<strong>6, 5 and 4</strong>')and '<strong>NEVER</strong>' in case of passthru code ('<strong>7</strong>') or modify code.</p>
 <p>The spool files has this structure:</p>
@@ -2546,7 +2633,7 @@ rejection code ('<strong>6, 5 and 4</strong>')and '<strong>NEVER</strong>' in ca
 of a headers section and, after the first empty line, the message body. The format of the ``Info Data''
 line is:</p>
 <pre>
- ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo</pre>
+ [ClientIP]:ClientPort;[ServerIP]:ServerPort;Time</pre>
 <p>'<strong>EXTREME</strong>' care must be used when modifying the message because the filter will be working
 on the real message, and a badly reformatted file will lead to message loss. The spool file
 header (any data before &lt;&lt;MAIL-DATA&gt;&gt;) '<strong>MUST</strong>' be preserved as is by the filter in case of
@@ -2557,16 +2644,19 @@ message rewrite happens.</p>
 <hr />
 <h1><a name="smtp_message_filters">SMTP MESSAGE FILTERS</a></h1>
 <p>Besides having the ability to perform off-line message filtering, XMail gives the user
-the power to run filters during the SMTP session. Two files drive the SMTP on-line filtering,
-and these are '<strong>FILTERS.PRE-DATA.TAB</strong>' and '<strong>FILTERS.POST-DATA.TAB</strong>'. The file
-'<strong>FILTERS.PRE-DATA.TAB</strong>' contains one or more commands to be executed after the remote
+the power to run filters during the SMTP session. Three files drive the SMTP on-line filtering,
+and these are '<strong>FILTERS.POST-RCPT.TAB</strong>', '<strong>FILTERS.PRE-DATA.TAB</strong>' and '<strong>FILTERS.POST-DATA.TAB</strong>'.
+The file '<strong>FILTERS.POST-RCPT.TAB</strong>', contains one or more commands to be executed after the remote
+SMTP client sends the RCPT_TO command(s), and before XMail sends the response to the command.
+The file '<strong>FILTERS.PRE-DATA.TAB</strong>' contains one or more commands to be executed after the remote
 SMTP client sends the DATA command, and before XMail sends the response to the command.
-Using such filters, the user can tell XMail if or if not accept the following DATA transaction
+Using such filters, the user can tell XMail if or if not accept the following transaction
 and, in case of rejection, the user is also allowed to specify a custom message to be sent
 to the remote SMTP client. The file '<strong>FILTERS.POST-DATA.TAB</strong>' contains one or more commands
 to be executed after XMail received the whole client DATA, and before XMail sends the final
-response to the DATA command (final messages ack). The files '<strong>FILTERS.PRE-DATA.TAB</strong>'
-and '<strong>FILTERS.POST-DATA.TAB</strong>' conatins zero or more lines with the following format:</p>
+response to the DATA command (final messages ack). The files '<strong>FILTERS.POST-RCPT.TAB</strong>',
+'<strong>FILTERS.PRE-DATA.TAB</strong>' and '<strong>FILTERS.POST-DATA.TAB</strong>' contains zero or more lines with the
+following format:</p>
 <pre>
  &quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
 <p>or:</p>
@@ -2578,68 +2668,91 @@ process to end. The '<strong>flags</strong>' parameter is a comma-separated list
 the filter execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
 supported flags are:</p>
 <dl>
-<dt><strong>aex</strong><br />
-</dt>
+<dt><strong>aex</strong>
+
 <dd>
-exclude filter execution in case of authenticated sender
+<p>exclude filter execution in case of authenticated sender</p>
 </dd>
-<p></p></dl>
-<p>Each argument can be a macro also:</p>
+</li>
+<dt><strong>wlex</strong>
+
+<dd>
+<p>exclude filter execution in case the client IP is white-listed inside the SMTP.IPPROP.TAB file.</p>
+</dd>
+</li>
+</dl>
+<p>Each argument can be a macro also (see [<a href="#macro_substitution">MACRO SUBSTITUTION</a>]):</p>
 <dl>
-<dt><strong>@@FILE</strong><br />
-</dt>
+<dt><strong>FILE</strong>
+
 <dd>
-message file path
+<p>message file path</p>
 </dd>
-<p></p>
-<dt><strong>@@USERAUTH</strong><br />
-</dt>
+</li>
+<dt><strong>USERAUTH</strong>
+
 <dd>
-name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
+<p>name of the SMTP authenticated user, or ``-'' if no authentication has been supplied</p>
 </dd>
-<p></p>
-<dt><strong>@@REMOTEADDR</strong><br />
-</dt>
+</li>
+<dt><strong>REMOTEADDR</strong>
+
 <dd>
-remote IP address and port of the sender
+<p>remote IP address and port of the sender</p>
 </dd>
-<p></p>
-<dt><strong>@@LOCALADDR</strong><br />
-</dt>
+</li>
+<dt><strong>LOCALADDR</strong>
+
 <dd>
-local IP address and port where the message has been accepted
+<p>local IP address and port where the message has been accepted</p>
 </dd>
-<p></p></dl>
+</li>
+<dt><strong>FROM</strong>
+
+<dd>
+<p>message sender address</p>
+</dd>
+</li>
+<dt><strong><a name="item_crcpt">CRCPT</a></strong>
+
+<dd>
+<p>last recipient submitted by the client. For post-rcpt filters, this will be
+used as to-validate recipient</p>
+</dd>
+</li>
+</dl>
 <p>Filter commands have the ability to inspect and modify the content of the message
 (or info) file. The exit code of commands executed by XMail are used to tell XMail
-the action that has to be performed as a cosequence of the filter. The exit code
+the action that has to be performed as a consequence of the filter. The exit code
 is composed by a raw exit code and additional flags. Currently defined flags are:</p>
 <dl>
-<dt><strong>'16'</strong><br />
-</dt>
+<dt><strong>'16'</strong>
+
 <dd>
-Stop selected filter list processing.
+<p>Stop selected filter list processing.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Currently defined raw exit codes are:</p>
 <dl>
-<dt><strong>'3'</strong><br />
-</dt>
+<dt><strong>'3'</strong>
+
 <dd>
-Reject the message.
+<p>Reject the message.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Any other exit codes will make XMail to accept the message, and can be used also when
-changing the content of the @@FILE file. '<strong>EXTREME</strong>' care must be used when changing the
-@@FILE file, since XMail expect the file format to be correct. Also, it is important to
+changing the content of the $(FILE) file. '<strong>EXTREME</strong>' care must be used when changing the
+$(FILE) file, since XMail expect the file format to be correct. Also, it is important to
 preserve the &lt;CR&gt;&lt;LF&gt; line termination of the file itself.
 When rejecting the message, the filter command has the ability to specify the SMTP
 status code that XMail will send to the remote SMTP client, by creating a file named
-@@FILE.rej containing the message in the very first line. Such file will be automatically
-removed by XMail. The data passed to filter commands inside @@FILE varies depending
-if the command is listed inside '<strong>FILTERS.PRE-DATA.TAB</strong>' or inside '<strong>FILTERS.POST-DATA.TAB</strong>'.
-Commands listed inside '<strong>FILTERS.PRE-DATA.TAB</strong>' will receive the following data stored
-inside @@FILE:</p>
+$(FILE).rej containing the message in the very first line. Such file will be automatically
+removed by XMail. The data passed to filter commands inside $(FILE) varies depending
+if the command is listed inside '<strong>FILTERS.POST-RCPT.TAB</strong>', '<strong>FILTERS.PRE-DATA.TAB</strong>' or
+inside '<strong>FILTERS.POST-DATA.TAB</strong>'. Commands listed inside '<strong>FILTERS.POST-RCPT.TAB</strong>' and
+'<strong>FILTERS.PRE-DATA.TAB</strong>' will receive the following data stored inside $(FILE):</p>
 <pre>
  Info Data           [ 1th line ]
  SmtpDomain          [ 2nd line ]
@@ -2650,9 +2763,12 @@ inside @@FILE:</p>
 <p>The file can have one or more ``RCPT TO'' lines. The format of the ``Info Data''
 line is:</p>
 <pre>
- ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo</pre>
-<p>Commands listed inside '<strong>FILTERS.POST-DATA.TAB</strong>' will receive the following data stored
-inside @@FILE:</p>
+ ClientDomain;[ClientIP]:ClientPort;ServerDomain;[ServerIP]:ServerPort;Time;Logo</pre>
+<p>Note that in case of '<strong>FILTERS.POST-RCPT.TAB</strong>', the $(FILE) data does not yet contain the
+current recipient to be validated. This needs to be fetched and passed to the external program
+using the $(CRCPT) macro.
+Commands listed inside '<strong>FILTERS.POST-DATA.TAB</strong>' will receive the following data stored
+inside $(FILE):</p>
 <pre>
  Info Data           [ 1th line ]
  SmtpDomain          [ 2nd line ]
@@ -2668,7 +2784,9 @@ RCPT line is:</p>
 <pre>
  RCPT TO:&lt;address&gt; {ra=real-address}</pre>
 <p>where ``real-address'' is the ``address'' after it has been translated (if aliases applies)
-to the real local address. Otherwise it holds the same value of ``address''.</p>
+to the real local address. Otherwise it holds the same value of ``address''.
+In case one or more SMTP filter functionalities are not needed, avoid to create zero sized
+files altogether, since this will result in faster processing.</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -2676,50 +2794,50 @@ to the real local address. Otherwise it holds the same value of ``address''.</p>
 <h1><a name="user_tab_variables">USER.TAB VARIABLES</a></h1>
 <p>The following variables are for use in the <a href="#user_tab">USER.TAB</a> configuration file.</p>
 <dl>
-<dt><strong><a name="item__5brealname_5d">[RealName]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5brealname_5d">[RealName]</a></strong>
+
 <dd>
-Full user name, ie.:
+<p>Full user name, ie.:</p>
 </dd>
 <dd>
 <pre>
  &quot;RealName&quot;  &quot;Davide Libenzi&quot;</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bhomepage_5d">[HomePage]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bhomepage_5d">[HomePage]</a></strong>
+
 <dd>
-User home page, ie.:
+<p>User home page, ie.:</p>
 </dd>
 <dd>
 <pre>
  &quot;HomePage&quot;  &quot;<a href="http://www.xmailserver.org/davide.html&quot">http://www.xmailserver.org/davide.html&quot</a>;</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bmaxmbsize_5d">[MaxMBSize]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bmaxmbsize_5d">[MaxMBSize]</a></strong>
+
 <dd>
-Max user mailbox size in Kb, ie.:
+<p>Max user mailbox size in Kb, ie.:</p>
 </dd>
 <dd>
 <pre>
  &quot;MaxMBSize&quot; &quot;30000&quot;</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bclosedml_5d">[ClosedML]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bclosedml_5d">[ClosedML]</a></strong>
+
 <dd>
-Specify if the mailing list is closed only to subscribed users, ie.:
+<p>Specify if the mailing list is closed only to subscribed users, ie.:</p>
 </dd>
 <dd>
 <pre>
  &quot;ClosedML&quot;  &quot;1&quot;</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5blistsender_5d">[ListSender]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5blistsender_5d">[ListSender]</a></strong>
+
 <dd>
-Specify the mailing list sender or administrator:
+<p>Specify the mailing list sender or administrator:</p>
 </dd>
 <dd>
 <pre>
@@ -2729,46 +2847,54 @@ Specify the mailing list sender or administrator:
 <p>This variable should be set to avoid delivery error notifications to reach the
 original message senders.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bsmtpperms_5d">[SmtpPerms]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bsmtpperms_5d">[SmtpPerms]</a></strong>
+
 <dd>
-User SMTP permissions (see SMTPAUTH.TAB for info).
+<p>User SMTP permissions (see SMTPAUTH.TAB for info).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5breceiveenable_5d">[ReceiveEnable]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5breceiveenable_5d">[ReceiveEnable]</a></strong>
+
 <dd>
-Set to '1' if the account can receive email, '0' if you want to disable the account from receiving messages.
+<p>Set to '1' if the account can receive email, '0' if you want to disable the account from receiving messages.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bpopenable_5d">[PopEnable]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bpopenable_5d">[PopEnable]</a></strong>
+
 <dd>
-Set to '1' if you want to enable the account to fetch POP3 messages, '0' otherwise.
+<p>Set to '1' if you want to enable the account to fetch POP3 messages, '0' otherwise.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5busereplyto_5d">[UseReplyTo]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5busereplyto_5d">[UseReplyTo]</a></strong>
+
 <dd>
-Enable/Disable the emission of the Reply-To: header for mailing list's messages (default 1).
+<p>Enable/Disable the emission of the Reply-To: header for mailing list's messages (default 1).</p>
 </dd>
-<p></p>
-<dt><strong>[MaxMessageSize]</strong><br />
-</dt>
+</li>
+<dt><strong>[MaxMessageSize]</strong>
+
 <dd>
-Set the maximum message size (in Kb) that the user is able to send through the server.
-Overrides the SERVER.TAB variable.
+<p>Set the maximum message size (in Kb) that the user is able to send through the server.
+Overrides the SERVER.TAB variable.</p>
 </dd>
-<p></p>
-<dt><strong>[DisableEmitAuthUser]</strong><br />
-</dt>
+</li>
+<dt><strong>[DisableEmitAuthUser]</strong>
+
 <dd>
-Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
+<p>Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
 Valid values are '0' or '1', default is '0' (emission enabled). This variable overrides
-the SERVER.TAB one when present.
+the SERVER.TAB one when present.</p>
 </dd>
-<p></p></dl>
+</li>
+<dt><strong><a name="item__5bpop3scancur_5d">[Pop3ScanCur]</a></strong>
+
+<dd>
+<p>In case of Maildir mailbox structure, scan the ``cur'' directory during POP3 message list build.
+Set to ``0'' to disable ``cur'' directory scanning, or to ``1'' to enable it.</p>
+</dd>
+</li>
+</dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -2826,30 +2952,30 @@ of the '<strong>SERVER.TAB</strong>' file is off, the message file is moved into
 <h1><a name="smtp_commands">SMTP COMMANDS</a></h1>
 <p>These are commands understood by ESMTP server:</p>
 <dl>
-<dt><strong><a name="item_mail_from_3a_3c_3e">MAIL FROM:&lt;&gt;</a></strong><br />
-</dt>
-<dt><strong><a name="item_rcpt_to_3a_3c_3e">RCPT TO:&lt;&gt;</a></strong><br />
-</dt>
-<dt><strong><a name="item_data">DATA</a></strong><br />
-</dt>
-<dt><strong><a name="item_helo">HELO</a></strong><br />
-</dt>
-<dt><strong><a name="item_ehlo">EHLO</a></strong><br />
-</dt>
-<dt><strong><a name="item_auth">AUTH</a></strong><br />
-</dt>
-<dt><strong><a name="item_rset">RSET</a></strong><br />
-</dt>
-<dt><strong><a name="item_vrfy">VRFY</a></strong><br />
-</dt>
-<dt><strong><a name="item_etrn">ETRN</a></strong><br />
-</dt>
-<dt><strong><a name="item_noop">NOOP</a></strong><br />
-</dt>
-<dt><strong><a name="item_help">HELP</a></strong><br />
-</dt>
-<dt><strong><a name="item_quit">QUIT</a></strong><br />
-</dt>
+<dt><strong><a name="item_mail_from_3a_3c_3e">MAIL FROM:&lt;&gt;</a></strong>
+
+<dt><strong><a name="item_rcpt_to_3a_3c_3e">RCPT TO:&lt;&gt;</a></strong>
+
+<dt><strong><a name="item_data">DATA</a></strong>
+
+<dt><strong><a name="item_helo">HELO</a></strong>
+
+<dt><strong><a name="item_ehlo">EHLO</a></strong>
+
+<dt><strong><a name="item_auth">AUTH</a></strong>
+
+<dt><strong><a name="item_rset">RSET</a></strong>
+
+<dt><strong><a name="item_vrfy">VRFY</a></strong>
+
+<dt><strong><a name="item_etrn">ETRN</a></strong>
+
+<dt><strong><a name="item_noop">NOOP</a></strong>
+
+<dt><strong><a name="item_help">HELP</a></strong>
+
+<dt><strong><a name="item_quit">QUIT</a></strong>
+
 </dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
@@ -2858,32 +2984,32 @@ of the '<strong>SERVER.TAB</strong>' file is off, the message file is moved into
 <h1><a name="pop3_commands">POP3 COMMANDS</a></h1>
 <p>These are commands understood by POP3 server:</p>
 <dl>
-<dt><strong><a name="item_user">USER</a></strong><br />
-</dt>
-<dt><strong><a name="item_pass">PASS</a></strong><br />
-</dt>
-<dt><strong><a name="item_apop">APOP</a></strong><br />
-</dt>
-<dt><strong><a name="item_stat">STAT</a></strong><br />
-</dt>
-<dt><strong><a name="item_list">LIST</a></strong><br />
-</dt>
-<dt><strong><a name="item_uidl">UIDL</a></strong><br />
-</dt>
-<dt><strong>QUIT</strong><br />
-</dt>
-<dt><strong><a name="item_retr">RETR</a></strong><br />
-</dt>
-<dt><strong><a name="item_top">TOP</a></strong><br />
-</dt>
-<dt><strong><a name="item_dele">DELE</a></strong><br />
-</dt>
-<dt><strong>NOOP</strong><br />
-</dt>
-<dt><strong><a name="item_last">LAST</a></strong><br />
-</dt>
-<dt><strong>RSET</strong><br />
-</dt>
+<dt><strong>USER</strong>
+
+<dt><strong><a name="item_pass">PASS</a></strong>
+
+<dt><strong><a name="item_apop">APOP</a></strong>
+
+<dt><strong><a name="item_stat">STAT</a></strong>
+
+<dt><strong><a name="item_list">LIST</a></strong>
+
+<dt><strong><a name="item_uidl">UIDL</a></strong>
+
+<dt><strong>QUIT</strong>
+
+<dt><strong><a name="item_retr">RETR</a></strong>
+
+<dt><strong><a name="item_top">TOP</a></strong>
+
+<dt><strong><a name="item_dele">DELE</a></strong>
+
+<dt><strong>NOOP</strong>
+
+<dt><strong><a name="item_last">LAST</a></strong>
+
+<dt><strong>RSET</strong>
+
 </dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
@@ -2893,178 +3019,181 @@ of the '<strong>SERVER.TAB</strong>' file is off, the message file is moved into
 <p>Most of XMail configuration settings are command line tunables.
 These are command line switches organized by server.</p>
 <dl>
-<dt><strong><a name="item__5bxmail_5d">[XMAIL]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5bxmail_5d">[XMAIL]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dms_pathname">-Ms pathname</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dms_pathname">-Ms pathname</a></strong>
+
 <dd>
-Mail root path (also settable with MAIL_ROOT environment).
+<p>Mail root path (also settable with MAIL_ROOT environment).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmd">-Md</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmd">-Md</a></strong>
+
 <dd>
-Activate debug (verbose) mode.
+<p>Activate debug (verbose) mode.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmr_hours">-Mr hours</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmr_hours">-Mr hours</a></strong>
+
 <dd>
-Set log rotate hours step.
+<p>Set log rotate hours step.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmx_split_2dlevel">-Mx split-level</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmx_split_2dlevel">-Mx split-level</a></strong>
+
 <dd>
-Set the queue split level. The value you set here is rounded to the lower
-prime number higher or equal than the value you've set.
+<p>Set the queue split level. The value you set here is rounded to the lower
+prime number higher or equal than the value you've set.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmr_bytes">-MR bytes</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmr_bytes">-MR bytes</a></strong>
+
 <dd>
-Set the size of the socket's receive buffer in bytes (rounded up to 1024).
+<p>Set the size of the socket's receive buffer in bytes (rounded up to 1024).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dms_bytes">-MS bytes</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dms_bytes">-MS bytes</a></strong>
+
 <dd>
-Set the size of the socket's send buffer in bytes (rounded up to 1024).
+<p>Set the size of the socket's send buffer in bytes (rounded up to 1024).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmm">-MM</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmm">-MM</a></strong>
+
 <dd>
-Setup XMail to use 'Maildir' delivery (default on Unix).
+<p>Setup XMail to use 'Maildir' delivery (default on Unix).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmm">-Mm</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmm">-Mm</a></strong>
+
 <dd>
-Setup XMail to use 'mailbox' delivery (default on Windows).
+<p>Setup XMail to use 'mailbox' delivery (default on Windows).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dmd_ndirs">-MD ndirs</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dmd_ndirs">-MD ndirs</a></strong>
+
 <dd>
-Set the number of subdirectories allocated for the DNS cache files storage ( default 101 ).
+<p>Set the number of subdirectories allocated for the DNS cache files storage ( default 101 ).</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bpop3_5d">[POP3]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bpop3_5d">[POP3]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dpp_port">-Pp port</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dpp_port">-Pp port</a></strong>
+
 <dd>
-Set POP3 server port (if you change this you must know what you're doing).
+<p>Set POP3 server port (if you change this you must know what you're doing).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dpt_timeout">-Pt timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dpt_timeout">-Pt timeout</a></strong>
+
 <dd>
-Set POP3 session timeout (seconds) after which the server closes.
-the connection if it does not receive any commands.
+<p>Set POP3 session timeout (seconds) after which the server closes.
+the connection if it does not receive any commands.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dpl">-Pl</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dpl">-Pl</a></strong>
+
 <dd>
-Enable POP3 logging.
+<p>Enable POP3 logging.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dpw_timeout">-Pw timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dpw_timeout">-Pw timeout</a></strong>
+
 <dd>
-Set the delay timeout in response to a bad POP3 login. Such time is
-doubled at the next bad login.
+<p>Set the delay timeout in response to a bad POP3 login. Such time is
+doubled at the next bad login.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dph">-Ph</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dph">-Ph</a></strong>
+
 <dd>
-Hang the connection in bad login response.
+<p>Hang the connection in bad login response.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dpi_ip_5b_3aport_5d">-PI ip[:port]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dpi_ip_5b_3aport_5d">-PI ip[:port]</a></strong>
+
 <dd>
-Bind server to the specified ip address and (optional) port (can be multiple).
+<p>Bind server to the specified ip address and (optional) port (can be multiple).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dpx_nthreads">-PX nthreads</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dpx_nthreads">-PX nthreads</a></strong>
+
 <dd>
-Set the maximum number of threads for POP3 server.
+<p>Set the maximum number of threads for POP3 server.</p>
 </dd>
-<p></p></dl>
-<dt><strong>[SMTP]</strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong>[SMTP]</strong>
+
 <dl>
-<dt><strong><a name="item__2dsp_port">-Sp port</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dsp_port">-Sp port</a></strong>
+
 <dd>
-Set SMTP server port (if you change this you must know what you're doing).
+<p>Set SMTP server port (if you change this you must know what you're doing).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dst_timeout">-St timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dst_timeout">-St timeout</a></strong>
+
 <dd>
-Set SMTP session timeout (seconds) after which the server closes
-the connection if no commands are received.
+<p>Set SMTP session timeout (seconds) after which the server closes
+the connection if no commands are received.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dsl">-Sl</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dsl">-Sl</a></strong>
+
 <dd>
-Enable SMTP logging.
+<p>Enable SMTP logging.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dsi_ip_5b_3aport_5d">-SI ip[:port]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dsi_ip_5b_3aport_5d">-SI ip[:port]</a></strong>
+
 <dd>
-Bind server to the specified ip address and (optional) port (can be multiple).
+<p>Bind server to the specified ip address and (optional) port (can be multiple).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dsx_nthreads">-SX nthreads</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dsx_nthreads">-SX nthreads</a></strong>
+
 <dd>
-Set the maximum number of threads for SMTP server.
+<p>Set the maximum number of threads for SMTP server.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dsr_maxrcpts">-Sr maxrcpts</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dsr_maxrcpts">-Sr maxrcpts</a></strong>
+
 <dd>
-Set the maximu number of recipients for a single SMTP message (default 100).
+<p>Set the maximu number of recipients for a single SMTP message (default 100).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dse_nsecs">-Se nsecs</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dse_nsecs">-Se nsecs</a></strong>
+
 <dd>
-Set the expire timeout for a POP3 authentication IP (default 900).
+<p>Set the expire timeout for a POP3 authentication IP (default 900).</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bsmail_5d">[SMAIL]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bsmail_5d">[SMAIL]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dqn_nthreads">-Qn nthreads</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dqn_nthreads">-Qn nthreads</a></strong>
+
 <dd>
-Set the number of mailer threads.
+<p>Set the number of mailer threads.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dqt_timeout">-Qt timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dqt_timeout">-Qt timeout</a></strong>
+
 <dd>
-Set the time to be wait for a next try after send failure. Default 480.
+<p>Set the time to be wait for a next try after send failure. Default 480.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dqi_ratio">-Qi ratio</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dqi_ratio">-Qi ratio</a></strong>
+
 <dd>
-Set the increment ratio of the reschedule time in sending a messages.
+<p>Set the increment ratio of the reschedule time in sending a messages.
 At every failure in delivery a message, reschedule time T is incremented
-by (T / ratio), therefore :
+by (T / ratio), therefore :</p>
 </dd>
 <dd>
 <pre>
@@ -3074,129 +3203,134 @@ by (T / ratio), therefore :
 <p>If you set this ratio to zero, T remain unchanged over delivery tentatives.
 Default 16.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dqr_nretries">-Qr nretries</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dqr_nretries">-Qr nretries</a></strong>
+
 <dd>
-Set the maximum number of times to try to send the message. Default 32.
+<p>Set the maximum number of times to try to send the message. Default 32.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dql">-Ql</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dql">-Ql</a></strong>
+
 <dd>
-Enable SMAIL logging.
+<p>Enable SMAIL logging.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dqt_timeout">-QT timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dqt_timeout">-QT timeout</a></strong>
+
 <dd>
-Timeout value for filters commands in seconds. Default 90.
+<p>Timeout value for filters commands in seconds. Default 90.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dqg">-Qg</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dqg">-Qg</a></strong>
+
 <dd>
-Enable filter logging.
+<p>Enable filter logging.</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bpsync_5d">[PSYNC]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bpsync_5d">[PSYNC]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dyi_interval">-Yi interval</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dyi_interval">-Yi interval</a></strong>
+
 <dd>
-Set external POP3 accounts sync interval. Setting this to zero will disable
-the PSYNC task. Default 120.
+<p>Set external POP3 accounts sync interval. Setting this to zero will disable
+the PSYNC task. Default 120.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dyt_nthreads">-Yt nthreads</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dyt_nthreads">-Yt nthreads</a></strong>
+
 <dd>
-Set the number of POP3 sync threads.
+<p>Set the number of POP3 sync threads.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dyl">-Yl</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dyl">-Yl</a></strong>
+
 <dd>
-Enable PSYNC logging.
+<p>Enable PSYNC logging.</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bfinger_5d">[FINGER]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bfinger_5d">[FINGER]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dfp_port">-Fp port</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dfp_port">-Fp port</a></strong>
+
 <dd>
-Set FINGER server port (if you change this you must know what you're doing).
+<p>Set FINGER server port (if you change this you must know what you're doing).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dfl">-Fl</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dfl">-Fl</a></strong>
+
 <dd>
-Enable FINGER logging.
+<p>Enable FINGER logging.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dfi_ip_5b_3aport_5d">-FI ip[:port]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dfi_ip_5b_3aport_5d">-FI ip[:port]</a></strong>
+
 <dd>
-Bind server to the specified ip address and (optional) port (can be multiple).
+<p>Bind server to the specified ip address and (optional) port (can be multiple).</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5bctrl_5d">[CTRL]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5bctrl_5d">[CTRL]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dcp_port">-Cp port</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dcp_port">-Cp port</a></strong>
+
 <dd>
-Set CTRL server port (if you change this you must know what you're doing).
+<p>Set CTRL server port (if you change this you must know what you're doing).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dct_timeout">-Ct timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dct_timeout">-Ct timeout</a></strong>
+
 <dd>
-Set CTRL session timeout (seconds) after which the server closes
-the connection if no commands are received.
+<p>Set CTRL session timeout (seconds) after which the server closes
+the connection if no commands are received.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dcl">-Cl</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dcl">-Cl</a></strong>
+
 <dd>
-Enable CTRL logging.
+<p>Enable CTRL logging.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dci_ip_5b_3aport_5d">-CI ip[:port]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dci_ip_5b_3aport_5d">-CI ip[:port]</a></strong>
+
 <dd>
-Bind server to the specified ip address and (optional) port (can be multiple).
+<p>Bind server to the specified ip address and (optional) port (can be multiple).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dcx_nthreads">-CX nthreads</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dcx_nthreads">-CX nthreads</a></strong>
+
 <dd>
-Set the maximum number of threads for CTRL server.
+<p>Set the maximum number of threads for CTRL server.</p>
 </dd>
-<p></p></dl>
-<dt><strong><a name="item__5blmail_5d">[LMAIL]</a></strong><br />
-</dt>
+</li>
+</dl>
+<dt><strong><a name="item__5blmail_5d">[LMAIL]</a></strong>
+
 <dl>
-<dt><strong><a name="item__2dln_nthreads">-Ln nthreads</a></strong><br />
-</dt>
+<dt><strong><a name="item__2dln_nthreads">-Ln nthreads</a></strong>
+
 <dd>
-Set the number of local mailer threads.
+<p>Set the number of local mailer threads.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dlt_timeout">-Lt timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dlt_timeout">-Lt timeout</a></strong>
+
 <dd>
-Set the sleep timeout for LMAIL threads (in seconds, default 2).
+<p>Set the sleep timeout for LMAIL threads (in seconds, default 2).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dll">-Ll</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dll">-Ll</a></strong>
+
 <dd>
-Enable local mail logging.
+<p>Enable local mail logging.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 </dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
@@ -3208,90 +3342,90 @@ that runs with XMail and waits for TCP/IP connections on a port (6017 or tunable
 via a '-Cp nport') command line option.</p>
 <p>Admin protocol details:</p>
 <dl>
-<dt><strong><a name="item__22description_22"><a href="#description">Description</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_a_user_22"><a href="#adding_a_user">Adding a user</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_a_user_22"><a href="#deleting_a_user">Deleting a user</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22changing_a_user_27s_password_22"><a href="#changing_a_user_s_password">Changing a user's password</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22authenticate_user_22"><a href="#authenticate_user">Authenticate user</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22retrieve_user_statistics_22"><a href="#retrieve_user_statistics">Retrieve user statistics</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_an_alias_22"><a href="#adding_an_alias">Adding an alias</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_an_alias_22"><a href="#deleting_an_alias">Deleting an alias</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_aliases_22"><a href="#listing_aliases">Listing aliases</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_user_vars_22"><a href="#listing_user_vars">Listing user vars</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22setting_user_vars_22"><a href="#setting_user_vars">Setting user vars</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_users_22"><a href="#listing_users">Listing users</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22getting_mailproc_2etab_file_22"><a href="#getting_mailproc_tab_file">Getting mailproc.tab file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22setting_mailproc_2etab_file_22"><a href="#setting_mailproc_tab_file">Setting mailproc.tab file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_a_mailing_list_user_22"><a href="#adding_a_mailing_list_user">Adding a mailing list user</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_a_mailing_list_user_22"><a href="#deleting_a_mailing_list_user">Deleting a mailing list user</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_mailing_list_users_22"><a href="#listing_mailing_list_users">Listing mailing list users</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_a_domain_22"><a href="#adding_a_domain">Adding a domain</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_a_domain_22"><a href="#deleting_a_domain">Deleting a domain</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_handled_domains_22"><a href="#listing_handled_domains">Listing handled domains</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_a_domain_alias_22"><a href="#adding_a_domain_alias">Adding a domain alias</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_a_domain_alias_22"><a href="#deleting_a_domain_alias">Deleting a domain alias</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_alias_domains_22"><a href="#listing_alias_domains">Listing alias domains</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22getting_custom_domain_file_22"><a href="#getting_custom_domain_file">Getting custom domain file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22setting_custom_domain_file_22"><a href="#setting_custom_domain_file">Setting custom domain file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_custom_domains_22"><a href="#listing_custom_domains">Listing custom domains</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22adding_a_pop3_external_link_22"><a href="#adding_a_pop3_external_link">Adding a POP3 external link</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_a_pop3_external_link_22"><a href="#deleting_a_pop3_external_link">Deleting a POP3 external link</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_pop3_external_links_22"><a href="#listing_pop3_external_links">Listing POP3 external links</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22enabling_a_pop3_external_link_22"><a href="#enabling_a_pop3_external_link">Enabling a POP3 external link</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_files_22"><a href="#listing_files">Listing files</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22getting_configuration_file_22"><a href="#getting_configuration_file">Getting configuration file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22setting_configuration_file_22"><a href="#setting_configuration_file">Setting configuration file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22listing_frozen_messages_22"><a href="#listing_frozen_messages">Listing frozen messages</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22rescheduling_frozen_message_22"><a href="#rescheduling_frozen_message">Rescheduling frozen message</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22deleting_frozen_message_22"><a href="#deleting_frozen_message">Deleting frozen message</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22getting_frozen_message_log_file_22"><a href="#getting_frozen_message_log_file">Getting frozen message log file</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22getting_frozen_message_22"><a href="#getting_frozen_message">Getting frozen message</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22starting_a_queue_flush_22"><a href="#starting_a_queue_flush">Starting a queue flush</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22do_nothing_command_22"><a href="#do_nothing_command">Do nothing command</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22quit_the_connection_22"><a href="#quit_the_connection">Quit the connection</a></a></strong><br />
-</dt>
-<dt><strong><a name="item__22do_you_want_2e_2e_2e_3f_22"><a href="#do_you_want___">Do you want...?</a></a></strong><br />
-</dt>
+<dt><strong><a name="item__22description_22"><a href="#description">Description</a></a></strong>
+
+<dt><strong><a name="item__22adding_a_user_22"><a href="#adding_a_user">Adding a user</a></a></strong>
+
+<dt><strong><a name="item__22deleting_a_user_22"><a href="#deleting_a_user">Deleting a user</a></a></strong>
+
+<dt><strong><a name="item__22changing_a_user_27s_password_22"><a href="#changing_a_user_s_password">Changing a user's password</a></a></strong>
+
+<dt><strong><a name="item__22authenticate_user_22"><a href="#authenticate_user">Authenticate user</a></a></strong>
+
+<dt><strong><a name="item__22retrieve_user_statistics_22"><a href="#retrieve_user_statistics">Retrieve user statistics</a></a></strong>
+
+<dt><strong><a name="item__22adding_an_alias_22"><a href="#adding_an_alias">Adding an alias</a></a></strong>
+
+<dt><strong><a name="item__22deleting_an_alias_22"><a href="#deleting_an_alias">Deleting an alias</a></a></strong>
+
+<dt><strong><a name="item__22listing_aliases_22"><a href="#listing_aliases">Listing aliases</a></a></strong>
+
+<dt><strong><a name="item__22listing_user_vars_22"><a href="#listing_user_vars">Listing user vars</a></a></strong>
+
+<dt><strong><a name="item__22setting_user_vars_22"><a href="#setting_user_vars">Setting user vars</a></a></strong>
+
+<dt><strong><a name="item__22listing_users_22"><a href="#listing_users">Listing users</a></a></strong>
+
+<dt><strong><a name="item__22getting_mailproc_2etab_file_22"><a href="#getting_mailproc_tab_file">Getting mailproc.tab file</a></a></strong>
+
+<dt><strong><a name="item__22setting_mailproc_2etab_file_22"><a href="#setting_mailproc_tab_file">Setting mailproc.tab file</a></a></strong>
+
+<dt><strong><a name="item__22adding_a_mailing_list_user_22"><a href="#adding_a_mailing_list_user">Adding a mailing list user</a></a></strong>
+
+<dt><strong><a name="item__22deleting_a_mailing_list_user_22"><a href="#deleting_a_mailing_list_user">Deleting a mailing list user</a></a></strong>
+
+<dt><strong><a name="item__22listing_mailing_list_users_22"><a href="#listing_mailing_list_users">Listing mailing list users</a></a></strong>
+
+<dt><strong><a name="item__22adding_a_domain_22"><a href="#adding_a_domain">Adding a domain</a></a></strong>
+
+<dt><strong><a name="item__22deleting_a_domain_22"><a href="#deleting_a_domain">Deleting a domain</a></a></strong>
+
+<dt><strong><a name="item__22listing_handled_domains_22"><a href="#listing_handled_domains">Listing handled domains</a></a></strong>
+
+<dt><strong><a name="item__22adding_a_domain_alias_22"><a href="#adding_a_domain_alias">Adding a domain alias</a></a></strong>
+
+<dt><strong><a name="item__22deleting_a_domain_alias_22"><a href="#deleting_a_domain_alias">Deleting a domain alias</a></a></strong>
+
+<dt><strong><a name="item__22listing_alias_domains_22"><a href="#listing_alias_domains">Listing alias domains</a></a></strong>
+
+<dt><strong><a name="item__22getting_custom_domain_file_22"><a href="#getting_custom_domain_file">Getting custom domain file</a></a></strong>
+
+<dt><strong><a name="item__22setting_custom_domain_file_22"><a href="#setting_custom_domain_file">Setting custom domain file</a></a></strong>
+
+<dt><strong><a name="item__22listing_custom_domains_22"><a href="#listing_custom_domains">Listing custom domains</a></a></strong>
+
+<dt><strong><a name="item__22adding_a_pop3_external_link_22"><a href="#adding_a_pop3_external_link">Adding a POP3 external link</a></a></strong>
+
+<dt><strong><a name="item__22deleting_a_pop3_external_link_22"><a href="#deleting_a_pop3_external_link">Deleting a POP3 external link</a></a></strong>
+
+<dt><strong><a name="item__22listing_pop3_external_links_22"><a href="#listing_pop3_external_links">Listing POP3 external links</a></a></strong>
+
+<dt><strong><a name="item__22enabling_a_pop3_external_link_22"><a href="#enabling_a_pop3_external_link">Enabling a POP3 external link</a></a></strong>
+
+<dt><strong><a name="item__22listing_files_22"><a href="#listing_files">Listing files</a></a></strong>
+
+<dt><strong><a name="item__22getting_configuration_file_22"><a href="#getting_configuration_file">Getting configuration file</a></a></strong>
+
+<dt><strong><a name="item__22setting_configuration_file_22"><a href="#setting_configuration_file">Setting configuration file</a></a></strong>
+
+<dt><strong><a name="item__22listing_frozen_messages_22"><a href="#listing_frozen_messages">Listing frozen messages</a></a></strong>
+
+<dt><strong><a name="item__22rescheduling_frozen_message_22"><a href="#rescheduling_frozen_message">Rescheduling frozen message</a></a></strong>
+
+<dt><strong><a name="item__22deleting_frozen_message_22"><a href="#deleting_frozen_message">Deleting frozen message</a></a></strong>
+
+<dt><strong><a name="item__22getting_frozen_message_log_file_22"><a href="#getting_frozen_message_log_file">Getting frozen message log file</a></a></strong>
+
+<dt><strong><a name="item__22getting_frozen_message_22"><a href="#getting_frozen_message">Getting frozen message</a></a></strong>
+
+<dt><strong><a name="item__22starting_a_queue_flush_22"><a href="#starting_a_queue_flush">Starting a queue flush</a></a></strong>
+
+<dt><strong><a name="item__22do_nothing_command_22"><a href="#do_nothing_command">Do nothing command</a></a></strong>
+
+<dt><strong><a name="item__22quit_the_connection_22"><a href="#quit_the_connection">Quit the connection</a></a></strong>
+
+<dt><strong><a name="item__22do_you_want_2e_2e_2e_3f_22"><a href="#do_you_want___">Do you want...?</a></a></strong>
+
 </dl>
 <p>
 </p>
@@ -3355,30 +3489,31 @@ closed by the server.</p>
  &quot;useradd&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;password&quot;[TAB]&quot;usertype&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_domain">domain</a></strong><br />
-</dt>
+<dt><strong><a name="item_domain">domain</a></strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_username">username</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_username">username</a></strong>
+
 <dd>
-username to add.
+<p>username to add.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_password">password</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_password">password</a></strong>
+
 <dd>
-user password.
+<p>user password.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_usertype">usertype</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_usertype">usertype</a></strong>
+
 <dd>
-'U' for normal user and 'M' for mailing list.
+<p>'U' for normal user and 'M' for mailing list.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3389,18 +3524,19 @@ user password.
  &quot;userdel&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username to delete.
+<p>username to delete.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3410,24 +3546,25 @@ username to delete.
  &quot;userpasswd&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;password&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username (must exist).
+<p>username (must exist).</p>
 </dd>
-<p></p>
-<dt><strong>password</strong><br />
-</dt>
+</li>
+<dt><strong>password</strong>
+
 <dd>
-new password.
+<p>new password.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3437,24 +3574,25 @@ new password.
  &quot;userauth&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;password&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username.
+<p>username.</p>
 </dd>
-<p></p>
-<dt><strong>password</strong><br />
-</dt>
+</li>
+<dt><strong>password</strong>
+
 <dd>
-password.
+<p>password.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3464,18 +3602,19 @@ password.
  &quot;userstat&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username/alias.
+<p>username/alias.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.
 If successful (00100), a formatted matching users list follows terminated by a line
 containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).
@@ -3484,36 +3623,37 @@ This is the format of the listing:</p>
  &quot;variable&quot;[TAB]&quot;value&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>Where valid variables are:</p>
 <dl>
-<dt><strong><a name="item_realaddress">RealAddress</a></strong><br />
-</dt>
+<dt><strong><a name="item_realaddress">RealAddress</a></strong>
+
 <dd>
-real address (maybe different is the supplied username is an alias).
+<p>real address (maybe different is the supplied username is an alias).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_mailboxsize">MailboxSize</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_mailboxsize">MailboxSize</a></strong>
+
 <dd>
-total size of the mailbox in bytes.
+<p>total size of the mailbox in bytes.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_mailboxmessages">MailboxMessages</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_mailboxmessages">MailboxMessages</a></strong>
+
 <dd>
-total number of messages.
+<p>total number of messages.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_lastloginip">LastLoginIP</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_lastloginip">LastLoginIP</a></strong>
+
 <dd>
-last user login IP address.
+<p>last user login IP address.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_lastlogintimedate">LastLoginTimeDate</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_lastlogintimedate">LastLoginTimeDate</a></strong>
+
 <dd>
-time of the last login.
+<p>time of the last login.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -3522,25 +3662,26 @@ time of the last login.
  &quot;aliasadd&quot;[TAB]&quot;domain&quot;[TAB]&quot;alias&quot;[TAB]&quot;account&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_alias">alias</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_alias">alias</a></strong>
+
 <dd>
-alias to add.
+<p>alias to add.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_account">account</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_account">account</a></strong>
+
 <dd>
-real email account (locally handled). This can be a fully qualified email address
-or a username inside the same domain.
+<p>real email account (locally handled). This can be a fully qualified email address
+or a username inside the same domain.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3550,18 +3691,19 @@ or a username inside the same domain.
  &quot;aliasdel&quot;[TAB]&quot;domain&quot;[TAB]&quot;alias&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>alias</strong><br />
-</dt>
+</li>
+<dt><strong>alias</strong>
+
 <dd>
-alias to delete.
+<p>alias to delete.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3580,24 +3722,25 @@ alias to delete.
  &quot;aliaslist&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name, optional (can contain wild cards).
+<p>domain name, optional (can contain wild cards).</p>
 </dd>
-<p></p>
-<dt><strong>alias</strong><br />
-</dt>
+</li>
+<dt><strong>alias</strong>
+
 <dd>
-alias name, optional (can contain wildcards).
+<p>alias name, optional (can contain wildcards).</p>
 </dd>
-<p></p>
-<dt><strong>account</strong><br />
-</dt>
+</li>
+<dt><strong>account</strong>
+
 <dd>
-account, optional (can contain wildcards).
+<p>account, optional (can contain wildcards).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;aliaslist&quot;[TAB]&quot;foo.bar&quot;[TAB]&quot;*&quot;[TAB]&quot;mickey&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3616,18 +3759,19 @@ This is the format of the listing:</p>
  &quot;exaliasadd&quot;[TAB]&quot;local-address&quot;[TAB]&quot;remote-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_local_2daddress">local-address</a></strong><br />
-</dt>
+<dt><strong><a name="item_local_2daddress">local-address</a></strong>
+
 <dd>
-local email address.
+<p>local email address.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_remote_2daddress">remote-address</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_remote_2daddress">remote-address</a></strong>
+
 <dd>
-remote email address.
+<p>remote email address.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>For example, the following command string:</p>
 <pre>
  &quot;exaliasadd&quot;[TAB]&quot;dlibenzi@home.bogus&quot;[TAB]&quot;dlibenzi@xmailserver.org&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3641,12 +3785,13 @@ local email address '<strong>dlibenzi&#64;home.bogus</strong>'. The result is a 
  &quot;exaliasdel&quot;[TAB]&quot;remote-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>remote-address</strong><br />
-</dt>
+<dt><strong>remote-address</strong>
+
 <dd>
-remote email address.
+<p>remote email address.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3662,18 +3807,19 @@ remote email address.
  &quot;exaliaslist&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>local-address</strong><br />
-</dt>
+<dt><strong>local-address</strong>
+
 <dd>
-local email address. This can contain wildcard characters.
+<p>local email address. This can contain wildcard characters.</p>
 </dd>
-<p></p>
-<dt><strong>remote-address</strong><br />
-</dt>
+</li>
+<dt><strong>remote-address</strong>
+
 <dd>
-remote email address. This can contain wildcard characters.
+<p>remote email address. This can contain wildcard characters.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;exaliaslist&quot;[TAB]&quot;*@home.bogus&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3692,18 +3838,19 @@ This is the format of the listing:</p>
  &quot;uservars&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username.
+<p>username.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.
 In successfully cases (00100) a formatted list of user vars follow, terminated by a line
 containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).
@@ -3718,30 +3865,31 @@ This is the format of the listing:</p>
  &quot;uservarsset&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;varname&quot;[TAB]&quot;varvalue&quot; ... &lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username.
+<p>username.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_varname">varname</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_varname">varname</a></strong>
+
 <dd>
-variable name.
+<p>variable name.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_varvalue">varvalue</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_varvalue">varvalue</a></strong>
+
 <dd>
-variable value.
+<p>variable value.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>There can be multiple variable assignments with a single call.
 If '<strong>varvalue</strong>' is the string '<strong>.|rm</strong>' the variable '<strong>varname</strong>' is deleted.
 The result is a RESSTRING.</p>
@@ -3759,18 +3907,19 @@ The result is a RESSTRING.</p>
  &quot;userlist&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name, optional (can contain wild cards).
+<p>domain name, optional (can contain wild cards).</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username, optional (can contain wild cards).
+<p>username, optional (can contain wild cards).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;userlist&quot;[TAB]&quot;spacejam.foo&quot;[TAB]&quot;*admin&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3786,21 +3935,33 @@ This is the format of the listing:</p>
 </p>
 <h2><a name="getting_mailproc_tab_file">Getting mailproc.tab file</a></h2>
 <pre>
- &quot;usergetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+ &quot;usergetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;
+ 
+or</pre>
+<pre>
+ &quot;usergetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;flags&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username.
+<p>username.</p>
 </dd>
-<p></p></dl>
+</li>
+<dt><strong><a name="item_flags">flags</a></strong>
+
+<dd>
+<p>flags specifying which mailproc to retrieve. Use 'U' for user mailproc, or 'D'
+for domain mailproc (or 'DU' for a merge of both). If not specified, 'DU' is assumed.</p>
+</dd>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;usergetmproc&quot;[TAB]&quot;spacejam.foo&quot;[TAB]&quot;admin&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3813,21 +3974,33 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</p>
 </p>
 <h2><a name="setting_mailproc_tab_file">Setting mailproc.tab file</a></h2>
 <pre>
- &quot;usersetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+ &quot;usersetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;
+ 
+or</pre>
+<pre>
+ &quot;usersetmproc&quot;[TAB]&quot;domain&quot;[TAB]&quot;username&quot;[TAB]&quot;which&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p>
-<dt><strong>username</strong><br />
-</dt>
+</li>
+<dt><strong>username</strong>
+
 <dd>
-username.
+<p>username.</p>
 </dd>
-<p></p></dl>
+</li>
+<dt><strong><a name="item_which">which</a></strong>
+
+<dd>
+<p>which mailproc.tab should be set. Use 'U' for the user one, and 'D' for the domain one.
+If not specified, 'U' is assumed.</p>
+</dd>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;usersetmproc&quot;[TAB]&quot;spacejam.foo&quot;[TAB]&quot;admin&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -3849,31 +4022,32 @@ The client then gets another RESSTRING indicating the final command result.</p>
  &quot;mluseradd&quot;[TAB]&quot;domain&quot;[TAB]&quot;mlusername&quot;[TAB]&quot;mailaddress&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_mlusername">mlusername</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_mlusername">mlusername</a></strong>
+
 <dd>
-mailing list username.
+<p>mailing list username.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_mailaddress">mailaddress</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_mailaddress">mailaddress</a></strong>
+
 <dd>
-mail address to add to the mailing list 'mlusername&#64;domain'.
+<p>mail address to add to the mailing list 'mlusername&#64;domain'.</p>
 </dd>
-<p></p>
-<dt><strong>perms</strong><br />
-</dt>
+</li>
+<dt><strong>perms</strong>
+
 <dd>
-user permissions (R or RW or RA).
-When '<strong>perms</strong>' is not specified the default is RW.
+<p>user permissions (R or RW or RA).
+When '<strong>perms</strong>' is not specified the default is RW.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3883,24 +4057,25 @@ When '<strong>perms</strong>' is not specified the default is RW.
  &quot;mluserdel&quot;[TAB]&quot;domain&quot;[TAB]&quot;mlusername&quot;[TAB]&quot;mailaddress&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>mlusername</strong><br />
-</dt>
+</li>
+<dt><strong>mlusername</strong>
+
 <dd>
-mailing list username.
+<p>mailing list username.</p>
 </dd>
-<p></p>
-<dt><strong>mailaddress</strong><br />
-</dt>
+</li>
+<dt><strong>mailaddress</strong>
+
 <dd>
-mail address to delete from the mailing list 'mlusername&#64;domain'.
+<p>mail address to delete from the mailing list 'mlusername&#64;domain'.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3910,18 +4085,19 @@ mail address to delete from the mailing list 'mlusername&#64;domain'.
  &quot;mluserlist&quot;[TAB]&quot;domain&quot;[TAB]&quot;mlusername&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name (must be handled by the server).
+<p>domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>mlusername</strong><br />
-</dt>
+</li>
+<dt><strong>mlusername</strong>
+
 <dd>
-mailing list username.
+<p>mailing list username.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.
 If successful (00100), a formatted list of mailing list users follows terminated by a line
 containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</p>
@@ -3933,12 +4109,13 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</p>
  &quot;domainadd&quot;[TAB]&quot;domain&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name to add.
+<p>domain name to add.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3948,12 +4125,13 @@ domain name to add.
  &quot;domaindel&quot;[TAB]&quot;domain&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name to delete.
+<p>domain name to delete.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.
 This is not always a safe operation.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
@@ -4018,12 +4196,13 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;). The output 
  &quot;custdomget&quot;[TAB]&quot;domain&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;custdomget&quot;[TAB]&quot;spacejam.foo&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -4039,12 +4218,13 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</p>
  &quot;custdomset&quot;[TAB]&quot;domain&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>domain</strong><br />
-</dt>
+<dt><strong>domain</strong>
+
 <dd>
-domain name.
+<p>domain name.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;custdomset&quot;[TAB]&quot;spacejam.foo&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -4073,42 +4253,43 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</p>
    [TAB]&quot;extrn-username&quot;[TAB]&quot;extrn-password&quot;[TAB]&quot;authtype&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_loc_2ddomain">loc-domain</a></strong><br />
-</dt>
+<dt><strong><a name="item_loc_2ddomain">loc-domain</a></strong>
+
 <dd>
-local domain name (must be handled by the server).
+<p>local domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_loc_2dusername">loc-username</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_loc_2dusername">loc-username</a></strong>
+
 <dd>
-local username which receives mails.
+<p>local username which receives mails.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_extrn_2ddomain">extrn-domain</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_extrn_2ddomain">extrn-domain</a></strong>
+
 <dd>
-external domain.
+<p>external domain.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_extrn_2dusername">extrn-username</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_extrn_2dusername">extrn-username</a></strong>
+
 <dd>
-external username.
+<p>external username.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_extrn_2dpassword">extrn-password</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_extrn_2dpassword">extrn-password</a></strong>
+
 <dd>
-external user password.
+<p>external user password.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_authtype">authtype</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_authtype">authtype</a></strong>
+
 <dd>
-authentication method ('<strong>CLR</strong>' = USER/PASS auth '<strong>APOP</strong>' = APOP auth).
+<p>authentication method ('<strong>CLR</strong>' = USER/PASS auth '<strong>APOP</strong>' = APOP auth).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The remote server must support '<strong>APOP</strong>' authentication to specify APOP as authtype.
 Using APOP authentication is more secure because clear usernames and passwords do not
 travel on the network; if you're not sure about it, specify '<strong>CLR</strong>' as authtype.</p>
@@ -4122,30 +4303,31 @@ travel on the network; if you're not sure about it, specify '<strong>CLR</strong
    [TAB]&quot;extrn-username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>loc-domain</strong><br />
-</dt>
+<dt><strong>loc-domain</strong>
+
 <dd>
-local domain name (must be handled by the server).
+<p>local domain name (must be handled by the server).</p>
 </dd>
-<p></p>
-<dt><strong>loc-username</strong><br />
-</dt>
+</li>
+<dt><strong>loc-username</strong>
+
 <dd>
-local username which receives mails.
+<p>local username which receives mails.</p>
 </dd>
-<p></p>
-<dt><strong>extrn-domain</strong><br />
-</dt>
+</li>
+<dt><strong>extrn-domain</strong>
+
 <dd>
-external domain.
+<p>external domain.</p>
 </dd>
-<p></p>
-<dt><strong>extrn-username</strong><br />
-</dt>
+</li>
+<dt><strong>extrn-username</strong>
+
 <dd>
-external username.
+<p>external username.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -4178,36 +4360,37 @@ The format of the listing is:</p>
  &quot;poplnkenable&quot;[TAB]&quot;enable&quot;[TAB]&quot;loc-domain&quot;[TAB]&quot;loc-username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_enable">enable</a></strong><br />
-</dt>
+<dt><strong><a name="item_enable">enable</a></strong>
+
 <dd>
-1 for enabling - 0 for disabling.
+<p>1 for enabling - 0 for disabling.</p>
 </dd>
-<p></p>
-<dt><strong>loc-domain</strong><br />
-</dt>
+</li>
+<dt><strong>loc-domain</strong>
+
 <dd>
-local domain name.
+<p>local domain name.</p>
 </dd>
-<p></p>
-<dt><strong>loc-username</strong><br />
-</dt>
+</li>
+<dt><strong>loc-username</strong>
+
 <dd>
-local username which receives mails.
+<p>local username which receives mails.</p>
 </dd>
-<p></p>
-<dt><strong>extrn-domain</strong><br />
-</dt>
+</li>
+<dt><strong>extrn-domain</strong>
+
 <dd>
-external domain.
+<p>external domain.</p>
 </dd>
-<p></p>
-<dt><strong>extrn-username</strong><br />
-</dt>
+</li>
+<dt><strong>extrn-username</strong>
+
 <dd>
-external username.
+<p>external username.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>In the second format all users, links are affected by the enable operation.</p>
 <p>The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
@@ -4218,18 +4401,19 @@ external username.
  &quot;filelist&quot;[TAB]&quot;relative-dir-path&quot;[TAB]&quot;match-string&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_relative_2ddir_2dpath">relative-dir-path</a></strong><br />
-</dt>
+<dt><strong><a name="item_relative_2ddir_2dpath">relative-dir-path</a></strong>
+
 <dd>
-path relative to MAIL_ROOT path.
+<p>path relative to MAIL_ROOT path.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_match_2dstring">match-string</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_match_2dstring">match-string</a></strong>
+
 <dd>
-wild card match string for file list selection.
+<p>wild card match string for file list selection.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The result is a RESSTRING.
 If successful (00100), the directory is listed line by line, terminated by a line
 containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;). The listing format is:</p>
@@ -4242,12 +4426,13 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;). The listing
  &quot;cfgfileget&quot;[TAB]&quot;relative-file-path&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_relative_2dfile_2dpath">relative-file-path</a></strong><br />
-</dt>
+<dt><strong><a name="item_relative_2dfile_2dpath">relative-file-path</a></strong>
+
 <dd>
-path relative to MAIL_ROOT path.
+<p>path relative to MAIL_ROOT path.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;cfgfileget&quot;[TAB]&quot;ctrlaccounts.tab&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -4263,12 +4448,13 @@ You CANNOT use this command with indexed files !</p>
  &quot;cfgfileset&quot;[TAB]&quot;relative-file-path&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>relative-file-path</strong><br />
-</dt>
+<dt><strong>relative-file-path</strong>
+
 <dd>
-path relative to MAIL_ROOT path.
+<p>path relative to MAIL_ROOT path.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;cfgfileset&quot;[TAB]&quot;ctrlaccounts.tab&quot;&lt;CR&gt;&lt;LF&gt;</pre>
@@ -4295,48 +4481,49 @@ The format of the listing is:</p>
  &quot;msgfile&quot;[tab]&quot;lev0&quot;[TAB]&quot;lev1&quot;[TAB]&quot;from&quot;[TAB]&quot;to&quot;[TAB]&quot;time&quot;[TAB]&quot;size&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>Where:</p>
 <dl>
-<dt><strong><a name="item_msgfile">msgfile</a></strong><br />
-</dt>
+<dt><strong><a name="item_msgfile">msgfile</a></strong>
+
 <dd>
-message name or id.
+<p>message name or id.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_lev0">lev0</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_lev0">lev0</a></strong>
+
 <dd>
-queue fs level 0 (first level directory index).
+<p>queue fs level 0 (first level directory index).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_lev1">lev1</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_lev1">lev1</a></strong>
+
 <dd>
-queue fs level 1 (second level directory index).
+<p>queue fs level 1 (second level directory index).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_from">from</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_from">from</a></strong>
+
 <dd>
-message sender.
+<p>message sender.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_to">to</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_to">to</a></strong>
+
 <dd>
-message destination.
+<p>message destination.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_time">time</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_time">time</a></strong>
+
 <dd>
-message time (``YYYY-MM-DD HH:MM:SS'').
+<p>message time (``YYYY-MM-DD HH:MM:SS'').</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_size">size</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_size">size</a></strong>
+
 <dd>
-message size in bytes.
+<p>message size in bytes.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -4345,24 +4532,25 @@ message size in bytes.
  &quot;frozsubmit&quot;[TAB]&quot;lev0&quot;[TAB]&quot;lev1&quot;[TAB]&quot;msgfile&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>msgfile</strong><br />
-</dt>
+<dt><strong>msgfile</strong>
+
 <dd>
-message name or id.
+<p>message name or id.</p>
 </dd>
-<p></p>
-<dt><strong>lev0</strong><br />
-</dt>
+</li>
+<dt><strong>lev0</strong>
+
 <dd>
-queue fs level 0 (first level directory index).
+<p>queue fs level 0 (first level directory index).</p>
 </dd>
-<p></p>
-<dt><strong>lev1</strong><br />
-</dt>
+</li>
+<dt><strong>lev1</strong>
+
 <dd>
-queue fs level 1 (second level directory index).
+<p>queue fs level 1 (second level directory index).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>You can get this information from the <a href="#listing_frozen_messages">frozlist</a> command.
 After a message has been successfully rescheduled it is deleted from the frozen fs path.
 The result is a RESSTRING.</p>
@@ -4374,24 +4562,25 @@ The result is a RESSTRING.</p>
  &quot;frozdel&quot;[TAB]&quot;lev0&quot;[TAB]&quot;lev1&quot;[TAB]&quot;msgfile&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>msgfile</strong><br />
-</dt>
+<dt><strong>msgfile</strong>
+
 <dd>
-message name or id.
+<p>message name or id.</p>
 </dd>
-<p></p>
-<dt><strong>lev0</strong><br />
-</dt>
+</li>
+<dt><strong>lev0</strong>
+
 <dd>
-queue fs level 0 (first level directory index).
+<p>queue fs level 0 (first level directory index).</p>
 </dd>
-<p></p>
-<dt><strong>lev1</strong><br />
-</dt>
+</li>
+<dt><strong>lev1</strong>
+
 <dd>
-queue fs level 1 (second level directory index).
+<p>queue fs level 1 (second level directory index).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>You can get this information from the <a href="#listing_frozen_messages">frozlist</a> command.
 The result is a RESSTRING.</p>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
@@ -4402,24 +4591,25 @@ The result is a RESSTRING.</p>
  &quot;frozgetlog&quot;[TAB]&quot;lev0&quot;[TAB]&quot;lev1&quot;[TAB]&quot;msgfile&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>msgfile</strong><br />
-</dt>
+<dt><strong>msgfile</strong>
+
 <dd>
-message name or id.
+<p>message name or id.</p>
 </dd>
-<p></p>
-<dt><strong>lev0</strong><br />
-</dt>
+</li>
+<dt><strong>lev0</strong>
+
 <dd>
-queue fs level 0 (first level directory index).
+<p>queue fs level 0 (first level directory index).</p>
 </dd>
-<p></p>
-<dt><strong>lev1</strong><br />
-</dt>
+</li>
+<dt><strong>lev1</strong>
+
 <dd>
-queue fs level 1 (second level directory index).
+<p>queue fs level 1 (second level directory index).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>You can get this information from the <a href="#listing_frozen_messages">frozlist</a> command.
 The result is a RESSTRING.
 If successful (00100), the frozen message log file follows,
@@ -4432,24 +4622,25 @@ terminated by a line containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt
  &quot;frozgetmsg&quot;[TAB]&quot;lev0&quot;[TAB]&quot;lev1&quot;[TAB]&quot;msgfile&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong>msgfile</strong><br />
-</dt>
+<dt><strong>msgfile</strong>
+
 <dd>
-message name or id.
+<p>message name or id.</p>
 </dd>
-<p></p>
-<dt><strong>lev0</strong><br />
-</dt>
+</li>
+<dt><strong>lev0</strong>
+
 <dd>
-queue fs level 0 (first level directory index).
+<p>queue fs level 0 (first level directory index).</p>
 </dd>
-<p></p>
-<dt><strong>lev1</strong><br />
-</dt>
+</li>
+<dt><strong>lev1</strong>
+
 <dd>
-queue fs level 1 (second level directory index).
+<p>queue fs level 1 (second level directory index).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>You can get this information from the <a href="#listing_frozen_messages">frozlist</a> command.
 The result is a RESSTRING.
 If successful (00100), the frozen message file follows,
@@ -4462,12 +4653,13 @@ terminated by a line containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt
  &quot;etrn&quot;[TAB]&quot;email-match0&quot;...&lt;CR&gt;&lt;LF&gt;</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_email_2dmatch0">email-match0</a></strong><br />
-</dt>
+<dt><strong><a name="item_email_2dmatch0">email-match0</a></strong>
+
 <dd>
-wild card email matching for destination address.
+<p>wild card email matching for destination address.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  &quot;etrn&quot;  &quot;*@*.mydomain.com&quot;  &quot;your-domain.org&quot;</pre>
@@ -4517,30 +4709,31 @@ The file name format is:</p>
  stime-seqnr.pid.hostname</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item_stime">stime</a></strong><br />
-</dt>
+<dt><strong><a name="item_stime">stime</a></strong>
+
 <dd>
-system time in sec from 01/01/1970.
+<p>system time in sec from 01/01/1970.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_seqnr">seqnr</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_seqnr">seqnr</a></strong>
+
 <dd>
-sequence number for the current file.
+<p>sequence number for the current file.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_pid">pid</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_pid">pid</a></strong>
+
 <dd>
-process or thread id.
+<p>process or thread id.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item_hostname">hostname</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item_hostname">hostname</a></strong>
+
 <dd>
-creator process host name.
+<p>creator process host name.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>Example:</p>
 <pre>
  97456928-001.7892.home.bogus</pre>
@@ -4560,42 +4753,43 @@ The syntax of CtrlClnt is:</p>
  CtrlClnt  [-snuptf]  ...</pre>
 <p>where:</p>
 <dl>
-<dt><strong><a name="item__2ds_server">-s server</a></strong><br />
-</dt>
+<dt><strong><a name="item__2ds_server">-s server</a></strong>
+
 <dd>
-set server address.
+<p>set server address.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dn_port">-n port</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dn_port">-n port</a></strong>
+
 <dd>
-set server port [6017].
+<p>set server port [6017].</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2du_user">-u user</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2du_user">-u user</a></strong>
+
 <dd>
-set username.
+<p>set username.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dp_pass">-p pass</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dp_pass">-p pass</a></strong>
+
 <dd>
-set password.
+<p>set password.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dt_timeout">-t timeout</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dt_timeout">-t timeout</a></strong>
+
 <dd>
-set timeout [60].
+<p>set timeout [60].</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2df_filename">-f filename</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2df_filename">-f filename</a></strong>
+
 <dd>
-set dump filename [stdout].
+<p>set dump filename [stdout].</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>With the command and parameters that follow adhering to the command syntax, ie:</p>
 <pre>
  CtrlClnt  -s mail.foo.org -u davide.libenzi -p ciao=&gt;
@@ -4609,12 +4803,12 @@ If the command is a query, then the result is printed to  stdout.</p>
 <hr />
 <h1><a name="server_shutdown">SERVER SHUTDOWN</a></h1>
 <dl>
-<dt><strong><a name="item__5blinux_5d">[Linux]</a></strong><br />
-</dt>
+<dt><strong><a name="item__5blinux_5d">[Linux]</a></strong>
+
 <dd>
-Under Linux, XMail creates a file named XMail.pid in '<strong>/var/run</strong>' that contains the PID
+<p>Under Linux, XMail creates a file named XMail.pid in '<strong>/var/run</strong>' that contains the PID
 of the main XMail thread.
-By issuing a:
+By issuing a:</p>
 </dd>
 <dd>
 <pre>
@@ -4628,29 +4822,30 @@ You can use the supplied '<strong>xmail</strong>' startup script to start / stop
 <pre>
  xmail start / stop / restart</pre>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnt_as_console_service_5d">[NT as console service]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnt_as_console_service_5d">[NT as console service]</a></strong>
+
 <dd>
-Under NT console service (XMail --debug ...) you can hit Ctrl-C to initiate the
-shutdown process.
+<p>Under NT console service (XMail --debug ...) you can hit Ctrl-C to initiate the
+shutdown process.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5bnt_as_service_5d">[NT as service]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5bnt_as_service_5d">[NT as service]</a></strong>
+
 <dd>
-Using [Control Panel]-&gt;[Services] you can start and stop XMail as you wish.
+<p>Using [Control Panel]-&gt;[Services] you can start and stop XMail as you wish.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__5ball_5d">[All]</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__5ball_5d">[All]</a></strong>
+
 <dd>
-XMail detects a shutdown condition by checking the presence of a file named
+<p>XMail detects a shutdown condition by checking the presence of a file named
 '<strong>.shutdown</strong>' in its main directory (MAIL_ROOT).
 You can initiate XMail shutdown process by creating (or copying) a file
-with that name into MAIL_ROOT.
+with that name into MAIL_ROOT.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
@@ -4666,60 +4861,61 @@ This utility can also be used to create a random number users (useful for me
 to test server performance).</p>
 <p>These are MkUsers command line parameters:</p>
 <dl>
-<dt><strong><a name="item__2da_numusers">-a numusers</a></strong><br />
-</dt>
+<dt><strong><a name="item__2da_numusers">-a numusers</a></strong>
+
 <dd>
-number of users to create in auto-mode.
+<p>number of users to create in auto-mode.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dd_domain">-d domain</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dd_domain">-d domain</a></strong>
+
 <dd>
-domain name in auto-mode.
+<p>domain name in auto-mode.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2df_inputfile">-f inputFile</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2df_inputfile">-f inputFile</a></strong>
+
 <dd>
-input file name {stdin}.
+<p>input file name {stdin}.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2du_username">-u username</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2du_username">-u username</a></strong>
+
 <dd>
-radix user name in auto-mode.
+<p>radix user name in auto-mode.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dr_rootdir">-r rootdir</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dr_rootdir">-r rootdir</a></strong>
+
 <dd>
-mail root path {./}.
+<p>mail root path {./}.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2ds_mboxsize">-s mboxsize</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2ds_mboxsize">-s mboxsize</a></strong>
+
 <dd>
-mailbox maximum size {10000}.
+<p>mailbox maximum size {10000}.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2di_useridbase">-i useridbase</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2di_useridbase">-i useridbase</a></strong>
+
 <dd>
-base user id {1};
+<p>base user id {1};</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dm">-m</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dm">-m</a></strong>
+
 <dd>
-create Maildir boxes.
+<p>create Maildir boxes.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dh">-h</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dh">-h</a></strong>
+
 <dd>
-show this message.
+<p>show this message.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>MkUsers creates, under the specified root directory, the given structure:</p>
 <pre>
  rootdir            &lt;dir&gt;
@@ -4771,31 +4967,32 @@ it uses the local mail delivery
 of XMail to send email generated onto the server machine.
 These sendmail options are supported (other options are simply ignored):</p>
 <dl>
-<dt><strong><a name="item__2df_7bmail_from_7d">-f{mail from}</a></strong><br />
-</dt>
+<dt><strong><a name="item__2df_7bmail_from_7d">-f{mail from}</a></strong>
+
 <dd>
-Set the sender of the email.
+<p>Set the sender of the email.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2df_7bext_mail_from_7d">-F{ext mail from}</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2df_7bext_mail_from_7d">-F{ext mail from}</a></strong>
+
 <dd>
-Set the extended sender of the email.
+<p>Set the extended sender of the email.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2dt">-t</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2dt">-t</a></strong>
+
 <dd>
-Extract recipients from the 'To:'/'Cc:'/'Bcc:' header tags.
+<p>Extract recipients from the 'To:'/'Cc:'/'Bcc:' header tags.</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2di">-i</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2di">-i</a></strong>
+
 <dd>
-Read the input until the End Of Stream, instead of stopping at the ``\n.\n''
-sequence.
+<p>Read the input until the End Of Stream, instead of stopping at the ``\n.\n''
+sequence.</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>The syntax is:</p>
 <pre>
  sendmail [-t] [-f...] [-F...] [--input-file fname] [--xinput-file fname]=&gt;
@@ -4804,24 +5001,25 @@ sequence.
 <p>The following parameters are XMail extensions meant to be used with mailing lists managers (using
 sendmail as a mail list exploder):</p>
 <dl>
-<dt><strong><a name="item__2d_2dinput_2dfile_fname">--input-file fname</a></strong><br />
-</dt>
+<dt><strong><a name="item__2d_2dinput_2dfile_fname">--input-file fname</a></strong>
+
 <dd>
-take the message from the specified file instead from stdin (RFC format).
+<p>take the message from the specified file instead from stdin (RFC format).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2d_2dxinput_2dfile_fname">--xinput-file fname</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2d_2dxinput_2dfile_fname">--xinput-file fname</a></strong>
+
 <dd>
-take the message from the specified file instead from stdin (XMail format).
+<p>take the message from the specified file instead from stdin (XMail format).</p>
 </dd>
-<p></p>
-<dt><strong><a name="item__2d_2drcpt_2dfile_fname">--rcpt-file fname</a></strong><br />
-</dt>
+</li>
+<dt><strong><a name="item__2d_2drcpt_2dfile_fname">--rcpt-file fname</a></strong>
+
 <dd>
-add recipients listed inside the specified file (list exploder).
+<p>add recipients listed inside the specified file (list exploder).</p>
 </dd>
-<p></p></dl>
+</li>
+</dl>
 <p>To be RFC compliant means that the message MUST have the format:</p>
 <pre>
  [Headers]
@@ -4840,14 +5038,14 @@ you want to send the message to 'user1&#64;dom1' and 'user2&#64;dom2'. The synta
 <hr />
 <h1><a name="miscellaneous">MISCELLANEOUS</a></h1>
 <ol>
-<li></li>
-To handle multiple POP3 domains, the server makes a reverse lookup of the IP address
+<li>
+<p>To handle multiple POP3 domains, the server makes a reverse lookup of the IP address
 upon which it receives the connection.
 Suppose the reverse lookup results in '<strong>xxxx.yyyy.zzzz</strong>'. XMail checks if
 '<strong>xxxx.yyyy.zzzz</strong>' is handled, then it checks '<strong>yyyy.zzzz</strong>',  and then '<strong>zzzz</strong>'.
 The first resolved (in the given order) is the POP3 domain.
 To avoid the above behavior, it's sufficient that the POP3 client supply the entire
-email address as POP3 login username:
+email address as POP3 login username:</p>
 <pre>
  foo@foodomain.net   ==&gt; foo@foodomain.net</pre>
 <p>and not:</p>
@@ -4868,49 +5066,51 @@ domain for POP3 clients connections.
 This means that users of '<strong>POP3Domain</strong>' can use only the name part of their email address
 as POP3 login, while users of other hosted domains must use their entire email as
 POP3 login.</p>
-<p></p>
-<li></li>
-Important!
+</li>
+<li>
+<p>Important!</p>
 <ul>
-<li></li>
-'<strong>REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM CTRLACCOUNTS.TAB FILE!</strong>'
-<p></p>
-<li></li>
-Use ctrl.ipmap.tab to restrict CTRL server access.
-<p></p>
-<li></li>
-Use a long password (mixed upper/lower case with digits) for ctrlaccounts.tab.
-<p></p></ul>
-<li></li>
-The main cause of bugs with XMail is due a bad line termination of configuration
+<li>
+<p>'<strong>REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM CTRLACCOUNTS.TAB FILE!</strong>'</p>
+</li>
+<li>
+<p>Use ctrl.ipmap.tab to restrict CTRL server access.</p>
+</li>
+<li>
+<p>Use a long password (mixed upper/lower case with digits) for ctrlaccounts.tab.</p>
+</li>
+</ul>
+<li>
+<p>The main cause of bugs with XMail is due a bad line termination of configuration
 files, so check that these files being correctly line terminated for your OS.
-Linux uses the standard &lt;CR&gt; while M$ uses &lt;CR&gt;&lt;LF&gt;.
-<p></p>
-<li></li>
-If you get a bind error in Linux,you must comment pop3, smtp and finger entries
-in your /etc/inetd.conf.
-<p></p>
-<li></li>
-Remember to compile the file CTRL.IPMAP.TAB to restrict the access to the IPs you
-use to remote administer XMail server.
-<p></p>
-<li></li>
-If you have an heavily loaded server remember to setup the best number of XMAIL threads
+Linux uses the standard &lt;CR&gt; while M$ uses &lt;CR&gt;&lt;LF&gt;.</p>
+</li>
+<li>
+<p>If you get a bind error in Linux,you must comment pop3, smtp and finger entries
+in your /etc/inetd.conf.</p>
+</li>
+<li>
+<p>Remember to compile the file CTRL.IPMAP.TAB to restrict the access to the IPs you
+use to remote administer XMail server.</p>
+</li>
+<li>
+<p>If you have an heavily loaded server remember to setup the best number of XMAIL threads
 by specifying the '<strong>-Qn nthreads</strong>' option (you must do some tentatives to find the best
 value for your needs).
 Also you can limit the number of SMTP, POP3 and CTRL service threads by specifying
-the options '<strong>-SX maxthreads</strong>', '<strong>-PX maxthreads</strong>' and '<strong>-CX maxthreads</strong>'.
-<p></p>
-<li></li>
-If you have enabled logging, remember to setup the '<strong>-Mr hours</strong>' option depending on the
+the options '<strong>-SX maxthreads</strong>', '<strong>-PX maxthreads</strong>' and '<strong>-CX maxthreads</strong>'.</p>
+</li>
+<li>
+<p>If you have enabled logging, remember to setup the '<strong>-Mr hours</strong>' option depending on the
 traffic you get in your server.
-This avoids XMail having to work with very large log files and can improve server performance.
-<p></p>
-<li></li>
-If you are unable to start XMail (even if you followed this document's instructions), check
+This avoids XMail having to work with very large log files and can improve server performance.</p>
+</li>
+<li>
+<p>If you are unable to start XMail (even if you followed this document's instructions), check
 the MailRoot directory with the one listed above.
-More than one unzipper does not restore empty directories by default.
-<p></p></ol>
+More than one unzipper does not restore empty directories by default.</p>
+</li>
+</ol>
 <p>Please report XMail errors and errors in this document.
 If you successfully build and run XMail please let me know at <a href="mailto:davidel@xmailserver.org,">davidel@xmailserver.org,</a>
 I don't want money ;)</p>
@@ -4921,13 +5121,13 @@ I don't want money ;)</p>
 <h1><a name="known_bugs">KNOWN BUGS</a></h1>
 <p>Version 0.1 (Alpha-1):</p>
 <ol>
-<li><strong><a name="item_linux">1-001     Linux   (FIXED)</a></strong><br />
+<li><strong><a name="item_linux">1-001     Linux   (FIXED)</a></strong>
+
+<p>SMail threads don't wake up upon a release semaphore by SMTP threads.</p>
 </li>
-SMail threads don't wake up upon a release semaphore by SMTP threads.
-<p></p>
-<li><strong><a name="item_27_2d001_windows">27-001    Windows</a></strong><br />
-</li>
-Using XMail inside a net that use MS Proxy Server 2.0 cause XMail to fail
+<li><strong><a name="item_27_2d001_windows">27-001    Windows</a></strong>
+
+<p>Using XMail inside a net that use MS Proxy Server 2.0 cause XMail to fail
 in sending UDP packets for DNS MX queries (due to a bug of WS2_32.DLL linked
 to MS Proxy 2.0). I don't know if more recent versions of MS Proxy fixes this bug.
 To makes XMail work in such environment you can use 'DefaultSMTPGateways' option
@@ -4935,8 +5135,9 @@ in '<strong>SERVER.TAB</strong>' (see <a href="#server_tab_variables">SERVER.TAB
 Or better still, strip away MS Proxy server and
 setup a cheap PC running Linux + IP-Masquerading that cost exactly 0.0 $ and works great.
 Or use 'SmartDNSHost' configuration to redirect recursion queries to a DNS smart host
-that support TCP and recursion.
-<p></p></ol>
+that support TCP and recursion.</p>
+</li>
+</ol>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>

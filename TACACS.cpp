@@ -32,18 +32,18 @@
 #include "TACACS.h"
 
 /*
-
-#define ERR_TACACS_AUTH_FAILED      (-???)
-#define ERR_TACACS_AUTH_UNAVAILABLE (-???)
-#define ERR_TACACS_FILE_NOT_FOUND   (-???)
-#define ERR_TACACS_SERVER_NOT_FOUND (-???)
-
-{ERR_TACACS_AUTH_FAILED, "TACACS authentication failed", NULL},
-{ERR_TACACS_AUTH_UNAVAILABLE, "TACACS authentication server unavailable", NULL},
-{ERR_TACACS_FILE_NOT_FOUND, "TACACS configuration file not found", NULL},
-{ERR_TACACS_SERVER_NOT_FOUND, "TACACS server for domain not found", NULL},
-
-    */
+ *
+ #define ERR_TACACS_AUTH_FAILED      (-???)
+ #define ERR_TACACS_AUTH_UNAVAILABLE (-???)
+ #define ERR_TACACS_FILE_NOT_FOUND   (-???)
+ #define ERR_TACACS_SERVER_NOT_FOUND (-???)
+ *
+ {ERR_TACACS_AUTH_FAILED, "TACACS authentication failed", NULL},
+ {ERR_TACACS_AUTH_UNAVAILABLE, "TACACS authentication server unavailable", NULL},
+ {ERR_TACACS_FILE_NOT_FOUND, "TACACS configuration file not found", NULL},
+ {ERR_TACACS_SERVER_NOT_FOUND, "TACACS server for domain not found", NULL},
+ *
+ */
 
 #define TACACS_TIMEOUT          15
 #define TACACS_SEND_RETRIES     3
@@ -100,10 +100,10 @@
 
 enum TacsFields {
 	tacsDomain = 0,
-	tacsServer,
-	tacsPort,
+		tacsServer,
+		tacsPort,
 
-	tacsMax
+		tacsMax
 };
 
 struct xtacacstype {
@@ -120,8 +120,8 @@ struct xtacacstype {
 	SYS_UINT16 lport;	/* local line number        */
 	SYS_UINT32 flags;	/* misc flags               */
 	SYS_UINT16 accesslist;	/* access list for user     */
-/*                  user name[]                             */
-/*                  password[]                              */
+	/*                  user name[]                             */
+	/*                  password[]                              */
 };
 
 static char *TacsGetConfigFilePath(char *pszTacsFile);
@@ -129,18 +129,15 @@ static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iP
 
 static char *TacsGetConfigFilePath(char *pszTacsFile)
 {
-
 	CfgGetRootPath(pszTacsFile);
 
 	strcat(pszTacsFile, TACS_CONFIG_FILE);
 
-	return (pszTacsFile);
-
+	return pszTacsFile;
 }
 
 static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iPortNo)
 {
-
 	char szTacsFile[SYS_MAX_PATH] = "";
 
 	TacsGetConfigFilePath(szTacsFile);
@@ -149,7 +146,7 @@ static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iP
 
 	if (pTacsFile == NULL) {
 		ErrSetErrorCode(ERR_TACACS_FILE_NOT_FOUND);
-		return (ERR_TACACS_FILE_NOT_FOUND);
+		return ERR_TACACS_FILE_NOT_FOUND;
 	}
 
 	char szTacsLine[TACS_ALIAS_LINE_MAX] = "";
@@ -171,7 +168,7 @@ static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iP
 			StrFreeStrings(ppszStrings);
 			fclose(pTacsFile);
 
-			return (0);
+			return 0;
 		}
 
 		StrFreeStrings(ppszStrings);
@@ -181,42 +178,33 @@ static int TacsGetServerName(char const *pszDomain, char *pszTacsServer, int &iP
 
 	ErrSetErrorCode(ERR_TACACS_SERVER_NOT_FOUND);
 
-	return (ERR_TACACS_SERVER_NOT_FOUND);
-
+	return ERR_TACACS_SERVER_NOT_FOUND;
 }
 
 int TacsAuthenticate(char const *pszDomain, char const *pszUsername,
 		     char const *pszPassword, int iServicePort)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Get TACACS server coordinates
-///////////////////////////////////////////////////////////////////////////////
+	/* Get TACACS server coordinates */
 	int iPortNo = TACACS_PORT;
 	char szTacsServer[MAX_HOST_NAME] = "";
 
 	if (TacsGetServerName(pszDomain, szTacsServer, iPortNo) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  If not specified use POP3 port ( TACACS_DPORT )
-///////////////////////////////////////////////////////////////////////////////
+	/* If not specified use POP3 port ( TACACS_DPORT ) */
 	if (iServicePort < 0)
 		iServicePort = TACACS_DPORT;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Open TACACS server socket
-///////////////////////////////////////////////////////////////////////////////
+	/* Open TACACS server socket */
 	SYS_SOCKET SockFD;
 	SYS_INET_ADDR SvrAddr;
 	SYS_INET_ADDR SockAddr;
 
 	if (MscCreateClientSocket(szTacsServer, iPortNo, SOCK_DGRAM, &SockFD, &SvrAddr,
 				  &SockAddr, TACACS_TIMEOUT) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Build TACACS request packet
-///////////////////////////////////////////////////////////////////////////////
+	/* Build TACACS request packet */
 	char szBuffer[1024] = "";
 	xtacacstype *pTacs = (xtacacstype *) szBuffer;
 
@@ -238,16 +226,12 @@ int TacsAuthenticate(char const *pszDomain, char const *pszUsername,
 	memcpy(&szBuffer[XTACACSSIZE + pTacs->namelen], pszPassword, pTacs->pwlen);
 
 	for (int iSendLoops = 0; iSendLoops < TACACS_SEND_RETRIES; iSendLoops++) {
-///////////////////////////////////////////////////////////////////////////////
-//  Send packet
-///////////////////////////////////////////////////////////////////////////////
+		/* Send packet */
 		if (SysSendDataTo(SockFD, (const struct sockaddr *) &SvrAddr, sizeof(SvrAddr),
 				  szBuffer, iQueryLenght, TACACS_TIMEOUT) != iQueryLenght)
 			continue;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Receive packet lenght
-///////////////////////////////////////////////////////////////////////////////
+		/* Receive packet lenght */
 		SYS_INET_ADDR RecvAddr;
 		SYS_UINT8 RespBuffer[1024];
 
@@ -255,8 +239,8 @@ int TacsAuthenticate(char const *pszDomain, char const *pszUsername,
 		ZeroData(RespBuffer);
 
 		int iPacketLenght =
-		    SysRecvDataFrom(SockFD, (struct sockaddr *) &RecvAddr, sizeof(RecvAddr),
-				    (char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
+			SysRecvDataFrom(SockFD, (struct sockaddr *) &RecvAddr, sizeof(RecvAddr),
+					(char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
 
 		if (iPacketLenght < XTACACSSIZE)
 			continue;
@@ -267,18 +251,17 @@ int TacsAuthenticate(char const *pszDomain, char const *pszUsername,
 			SysCloseSocket(SockFD);
 
 			ErrSetErrorCode(ERR_TACACS_AUTH_FAILED);
-			return (ERR_TACACS_AUTH_FAILED);
+			return ERR_TACACS_AUTH_FAILED;
 		}
 
 		SysCloseSocket(SockFD);
 
-		return (0);
+		return 0;
 	}
 
 	SysCloseSocket(SockFD);
 
 	ErrSetErrorCode(ERR_TACACS_AUTH_UNAVAILABLE);
 
-	return (ERR_TACACS_AUTH_UNAVAILABLE);
-
+	return ERR_TACACS_AUTH_UNAVAILABLE;
 }

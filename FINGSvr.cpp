@@ -64,7 +64,6 @@ static int FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig *
 
 static int FINGCheckPeerIP(SYS_SOCKET SockFD)
 {
-
 	char szIPMapFile[SYS_MAX_PATH] = "";
 
 	CfgGetRootPath(szIPMapFile, sizeof(szIPMapFile));
@@ -74,23 +73,21 @@ static int FINGCheckPeerIP(SYS_SOCKET SockFD)
 		SYS_INET_ADDR PeerInfo;
 
 		if (SysGetPeerInfo(SockFD, PeerInfo) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 		if (MscCheckAllowedIP(szIPMapFile, PeerInfo, true) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING)
 {
-
 	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
 	if (pFINGCfg == NULL)
-		return (NULL);
+		return NULL;
 
 	FINGConfig *pFINGCfgCopy = (FINGConfig *) SysAlloc(sizeof(FINGConfig));
 
@@ -99,18 +96,16 @@ static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING)
 
 	ShbUnlock(hShbFING);
 
-	return (pFINGCfgCopy);
-
+	return pFINGCfgCopy;
 }
 
 static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
 {
-
 	int iDoUnlock = 0;
 
 	if (pFINGCfg == NULL) {
 		if ((pFINGCfg = (FINGConfig *) ShbLock(hShbFING)) == NULL)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 		++iDoUnlock;
 	}
@@ -120,90 +115,74 @@ static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
 	if (iDoUnlock)
 		ShbUnlock(hShbFING);
 
-	return ((ulFlags & FINGF_LOG_ENABLED) ? 1 : 0);
-
+	return (ulFlags & FINGF_LOG_ENABLED) ? 1 : 0;
 }
 
 static unsigned int FINGClientThread(void *pThreadData)
 {
-
 	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check peer IP address serivce access permissions
-///////////////////////////////////////////////////////////////////////////////
+	/* Check peer IP address serivce access permissions */
 	if (FINGCheckPeerIP(SockFD) < 0) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		SysCloseSocket(SockFD);
-		return (ErrorPop());
+		return ErrorPop();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Increase threads count
-///////////////////////////////////////////////////////////////////////////////
+	/* Increase threads count */
 	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
 	if (pFINGCfg == NULL) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		SysCloseSocket(SockFD);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	++pFINGCfg->lThreadCount;
 
 	ShbUnlock(hShbFING);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Link socket to the bufferer
-///////////////////////////////////////////////////////////////////////////////
+	/* Link socket to the bufferer */
 	BSOCK_HANDLE hBSock = BSckAttach(SockFD);
 
 	if (hBSock == INVALID_BSOCK_HANDLE) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		SysCloseSocket(SockFD);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Handle client session
-///////////////////////////////////////////////////////////////////////////////
+	/* Handle client session */
 	FINGHandleSession(hShbFING, hBSock);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Unlink socket to the bufferer and close it
-///////////////////////////////////////////////////////////////////////////////
+	/* Unlink socket to the bufferer and close it */
 	BSckDetach(hBSock, 1);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Decrease thread count
-///////////////////////////////////////////////////////////////////////////////
+	/* Decrease thread count */
 	pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
 	if (pFINGCfg == NULL) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	--pFINGCfg->lThreadCount;
 
 	ShbUnlock(hShbFING);
 
-	return (0);
-
+	return 0;
 }
 
 unsigned int FINGThreadProc(void *pThreadData)
 {
-
 	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
 	if (pFINGCfg == NULL) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	int iNumSockFDs = 0;
@@ -214,7 +193,7 @@ unsigned int FINGThreadProc(void *pThreadData)
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		ShbUnlock(hShbFING);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	ShbUnlock(hShbFING);
@@ -244,7 +223,7 @@ unsigned int FINGThreadProc(void *pThreadData)
 
 		for (int ss = 0; ss < iNumConnSockFD; ss++) {
 			SYS_THREAD hClientThread =
-			    SysCreateServiceThread(FINGClientThread, ConnSockFD[ss]);
+				SysCreateServiceThread(FINGClientThread, ConnSockFD[ss]);
 
 			if (hClientThread != SYS_INVALID_THREAD)
 				SysCloseThread(hClientThread, 0);
@@ -257,9 +236,7 @@ unsigned int FINGThreadProc(void *pThreadData)
 	for (int ss = 0; ss < iNumSockFDs; ss++)
 		SysCloseSocket(SockFDs[ss]);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for clients completion
-///////////////////////////////////////////////////////////////////////////////
+	/* Wait for clients completion */
 	for (int iTotalWait = 0; (iTotalWait < MAX_CLIENTS_WAIT); iTotalWait += FING_WAIT_SLEEP) {
 		pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
@@ -278,14 +255,12 @@ unsigned int FINGThreadProc(void *pThreadData)
 
 	SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", FING_SERVER_NAME);
 
-	return (0);
-
+	return 0;
 }
 
 static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 			  SYS_INET_ADDR & PeerInfo, char const *pszQuery)
 {
-
 	char szTime[256] = "";
 
 	MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
@@ -293,7 +268,7 @@ static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 	RLCK_HANDLE hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR FING_LOG_FILE);
 
 	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	char szIP[128] = "???.???.???.???";
 
@@ -307,18 +282,14 @@ static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 
 	RLckUnlockEX(hResLock);
 
-	return (0);
-
+	return 0;
 }
 
 static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 {
-
 	FINGConfig *pFINGCfg = FINGGetConfigCopy(hShbFING);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get client socket info
-///////////////////////////////////////////////////////////////////////////////
+	/* Get client socket info */
 	SYS_INET_ADDR PeerInfo;
 
 	if (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), PeerInfo) < 0) {
@@ -327,12 +298,10 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 		SysFree(pFINGCfg);
 
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get server socket FQDN
-///////////////////////////////////////////////////////////////////////////////
+	/* Get server socket FQDN */
 	char szSvrFQDN[MAX_HOST_NAME] = "";
 
 	if (MscGetSockHost(BSckGetAttachedSocket(hBSock), szSvrFQDN) < 0) {
@@ -341,7 +310,7 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 		SysFree(pFINGCfg);
 
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	char szSockHost[MAX_HOST_NAME] = "";
@@ -358,9 +327,7 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 	if ((BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL) &&
 	    (MscCmdStringCheck(szQuery) == 0)) {
-///////////////////////////////////////////////////////////////////////////////
-//  Log FINGER question
-///////////////////////////////////////////////////////////////////////////////
+		/* Log FINGER question */
 		if (FINGLogEnabled(hShbFING))
 			FINGLogSession(szSockHost, szSockDomain, PeerInfo, szQuery);
 
@@ -379,18 +346,14 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 	SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n", SysInetNToA(PeerInfo, szIP));
 
-	return (0);
-
+	return 0;
 }
 
 static int FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
 			    FINGConfig * pFINGCfg, char const *pszSockDomain,
 			    SVRCFG_HANDLE hSvrConfig)
 {
-
-///////////////////////////////////////////////////////////////////////////////
-//  Check for verbose query
-///////////////////////////////////////////////////////////////////////////////
+	/* Check for verbose query */
 	int iVerbose = 0;
 
 	if (pszQuery[0] == '/') {
@@ -398,26 +361,22 @@ static int FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
 			BSckSendString(hBSock, "Invalid query", pFINGCfg->iTimeout);
 
 			ErrSetErrorCode(ERR_FINGER_QUERY_FORMAT);
-			return (ERR_FINGER_QUERY_FORMAT);
+			return ERR_FINGER_QUERY_FORMAT;
 		}
 
 		++iVerbose;
 		pszQuery += 2;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Discard spaces
-///////////////////////////////////////////////////////////////////////////////
+	/* Discard spaces */
 	for (; *pszQuery == ' '; pszQuery++);
 
 	if (*pszQuery == '\0') {
 		BSckSendString(hBSock, "Empty query not allowed", pFINGCfg->iTimeout);
 
 		ErrSetErrorCode(ERR_FINGER_QUERY_FORMAT);
-		return (ERR_FINGER_QUERY_FORMAT);
+		return ERR_FINGER_QUERY_FORMAT;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Split user-domain
-///////////////////////////////////////////////////////////////////////////////
+	/* Split user-domain */
 	char szUser[MAX_ADDR_NAME] = "";
 	char szDomain[MAX_ADDR_NAME] = "";
 
@@ -427,23 +386,19 @@ static int FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
 
 			BSckSendString(hBSock, "Invalid query", pFINGCfg->iTimeout);
 
-			return (ErrorPop());
+			return ErrorPop();
 		}
 	} else
 		StrSNCpy(szUser, pszQuery);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check if indirect query
-///////////////////////////////////////////////////////////////////////////////
+	/* Check if indirect query */
 	if (strchr(szDomain, '@') != NULL) {
 		BSckSendString(hBSock, "Indirect query not allowed", pFINGCfg->iTimeout);
 
 		ErrSetErrorCode(ERR_FINGER_QUERY_FORMAT);
-		return (ERR_FINGER_QUERY_FORMAT);
+		return ERR_FINGER_QUERY_FORMAT;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Setup domain name in case of username only query
-///////////////////////////////////////////////////////////////////////////////
+	/* Setup domain name in case of username only query */
 	if (IsEmptyString(szDomain)) {
 		if (SvrConfigVar("POP3Domain", szDomain, sizeof(szDomain), hSvrConfig) < 0) {
 			if (strlen(pszSockDomain) == 0) {
@@ -454,42 +409,34 @@ static int FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
 					BSckSendString(hBSock, "User not found",
 						       pFINGCfg->iTimeout);
 
-					return (ErrorPop());
+					return ErrorPop();
 				}
 			} else
 				StrSNCpy(szDomain, pszSockDomain);
 		}
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Dump user
-///////////////////////////////////////////////////////////////////////////////
+	/* Dump user */
 	if (FINGDumpUser(szUser, szDomain, hBSock, pFINGCfg) < 0) {
 		ErrorPush();
 
 		BSckSendString(hBSock, "User not found", pFINGCfg->iTimeout);
 
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static int FINGDumpUser(char const *pszUser, char const *pszDomain,
 			BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
 {
-
-///////////////////////////////////////////////////////////////////////////////
-//  Lookup user
-///////////////////////////////////////////////////////////////////////////////
+	/* Lookup user */
 	char szRealAddr[MAX_ADDR_NAME] = "";
 	UserInfo *pUI = UsrGetUserByNameOrAlias(pszDomain, pszUser, szRealAddr);
 
 	if (pUI != NULL) {
 		if (UsrGetUserType(pUI) == usrTypeUser) {
-///////////////////////////////////////////////////////////////////////////////
-//  Local user case
-///////////////////////////////////////////////////////////////////////////////
+			/* Local user case */
 			char *pszRealName = UsrGetUserInfoVar(pUI, "RealName");
 			char *pszHomePage = UsrGetUserInfoVar(pUI, "HomePage");
 			char szRespBuffer[2048] = "";
@@ -510,9 +457,7 @@ static int FINGDumpUser(char const *pszUser, char const *pszDomain,
 			if (pszHomePage != NULL)
 				SysFree(pszHomePage);
 		} else {
-///////////////////////////////////////////////////////////////////////////////
-//  Local mailing list case
-///////////////////////////////////////////////////////////////////////////////
+			/* Local mailing list case */
 
 			FINGDumpMailingList(pUI, hBSock, pFINGCfg);
 		}
@@ -520,24 +465,20 @@ static int FINGDumpUser(char const *pszUser, char const *pszDomain,
 		UsrFreeUserInfo(pUI);
 	} else {
 		ErrSetErrorCode(ERR_USER_NOT_FOUND);
-		return (ERR_USER_NOT_FOUND);
+		return ERR_USER_NOT_FOUND;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static int FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
 {
-
 	USRML_HANDLE hUsersDB = UsrMLOpenDB(pUI);
 
 	if (hUsersDB == INVALID_USRML_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Mailing list scan
-///////////////////////////////////////////////////////////////////////////////
+	/* Mailing list scan */
 	MLUserInfo *pMLUI = UsrMLGetFirstUser(hUsersDB);
 
 	for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB)) {
@@ -548,11 +489,9 @@ static int FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig *
 			ErrorPush();
 			UsrMLFreeUser(pMLUI);
 			UsrMLCloseDB(hUsersDB);
-			return (ErrorPop());
+			return ErrorPop();
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  Dump user
-///////////////////////////////////////////////////////////////////////////////
+		/* Dump user */
 		FINGDumpUser(szUser, szDomain, hBSock, pFINGCfg);
 
 		UsrMLFreeUser(pMLUI);
@@ -560,6 +499,5 @@ static int FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig *
 
 	UsrMLCloseDB(hUsersDB);
 
-	return (0);
-
+	return 0;
 }

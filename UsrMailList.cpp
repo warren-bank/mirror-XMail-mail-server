@@ -43,9 +43,9 @@
 
 enum MLUsrFileds {
 	mlusrAddress = 0,
-	mlusrPerms,
+		mlusrPerms,
 
-	mlusrMax
+		mlusrMax
 };
 
 struct MLUsersScanData {
@@ -58,16 +58,15 @@ static int UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const *pMLUI);
 
 static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings)
 {
-
 	int iFieldsCount = StrStringsCount(ppszStrings);
 
 	if (iFieldsCount <= mlusrAddress)
-		return (NULL);
+		return NULL;
 
 	MLUserInfo *pMLUI = (MLUserInfo *) SysAlloc(sizeof(MLUserInfo));
 
 	if (pMLUI == NULL)
-		return (NULL);
+		return NULL;
 
 	pMLUI->pszAddress = SysStrDup(ppszStrings[mlusrAddress]);
 
@@ -76,17 +75,15 @@ static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings)
 	else
 		pMLUI->pszPerms = SysStrDup(DEFAULT_MLUSER_PERMS);
 
-	return (pMLUI);
-
+	return pMLUI;
 }
 
 MLUserInfo *UsrMLAllocDefault(char const *pszAddress, char const *pszPerms)
 {
-
 	MLUserInfo *pMLUI = (MLUserInfo *) SysAlloc(sizeof(MLUserInfo));
 
 	if (pMLUI == NULL)
-		return (NULL);
+		return NULL;
 
 	pMLUI->pszAddress = SysStrDup(pszAddress);
 
@@ -95,13 +92,11 @@ MLUserInfo *UsrMLAllocDefault(char const *pszAddress, char const *pszPerms)
 	else
 		pMLUI->pszPerms = SysStrDup(DEFAULT_MLUSER_PERMS);
 
-	return (pMLUI);
-
+	return pMLUI;
 }
 
 int UsrMLFreeUser(MLUserInfo * pMLUI)
 {
-
 	if (pMLUI->pszPerms != NULL)
 		SysFree(pMLUI->pszPerms);
 
@@ -110,13 +105,11 @@ int UsrMLFreeUser(MLUserInfo * pMLUI)
 
 	SysFree(pMLUI);
 
-	return (0);
-
+	return 0;
 }
 
 int UsrMLCheckUserPost(UserInfo * pUI, char const *pszUser, char const *pszLogonUser)
 {
-
 	char *pszClosed = UsrGetUserInfoVar(pUI, "ClosedML");
 
 	if (pszClosed != NULL) {
@@ -128,11 +121,9 @@ int UsrMLCheckUserPost(UserInfo * pUI, char const *pszUser, char const *pszLogon
 			USRML_HANDLE hUsersDB = UsrMLOpenDB(pUI);
 
 			if (hUsersDB == INVALID_USRML_HANDLE)
-				return (ErrGetErrorCode());
+				return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Mailing list scan
-///////////////////////////////////////////////////////////////////////////////
+			/* Mailing list scan */
 			MLUserInfo *pMLUI = UsrMLGetFirstUser(hUsersDB);
 
 			for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB)) {
@@ -144,7 +135,7 @@ int UsrMLCheckUserPost(UserInfo * pUI, char const *pszUser, char const *pszLogon
 					UsrMLFreeUser(pMLUI);
 					UsrMLCloseDB(hUsersDB);
 
-					return (0);
+					return 0;
 				}
 
 				UsrMLFreeUser(pMLUI);
@@ -153,46 +144,39 @@ int UsrMLCheckUserPost(UserInfo * pUI, char const *pszUser, char const *pszLogon
 			UsrMLCloseDB(hUsersDB);
 
 			ErrSetErrorCode(ERR_MLUSER_NOT_FOUND, pszUser);
-			return (ERR_MLUSER_NOT_FOUND);
+			return ERR_MLUSER_NOT_FOUND;
 		}
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static int UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const *pMLUI)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  User email address
-///////////////////////////////////////////////////////////////////////////////
+	/* User email address */
 	char *pszQuoted = StrQuote(pMLUI->pszAddress, '"');
 
 	if (pszQuoted == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	fprintf(pMLUFile, "%s\t", pszQuoted);
 
-///////////////////////////////////////////////////////////////////////////////
-//  User permissions
-///////////////////////////////////////////////////////////////////////////////
+	/* User permissions */
 	if ((pszQuoted = StrQuote(pMLUI->pszPerms, '"')) == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	fprintf(pMLUFile, "%s\n", pszQuoted);
 
 	SysFree(pszQuoted);
 
-	return (0);
-
+	return 0;
 }
 
 int UsrMLAddUser(UserInfo * pUI, MLUserInfo const *pMLUI)
 {
-
 	if (UsrGetUserType(pUI) != usrTypeML) {
 		ErrSetErrorCode(ERR_USER_NOT_MAILINGLIST);
-		return (ERR_USER_NOT_MAILINGLIST);
+		return ERR_USER_NOT_MAILINGLIST;
 	}
 
 	char szMLTablePath[SYS_MAX_PATH] = "";
@@ -204,14 +188,14 @@ int UsrMLAddUser(UserInfo * pUI, MLUserInfo const *pMLUI)
 							  sizeof(szResLock)));
 
 	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	FILE *pMLUFile = fopen(szMLTablePath, "r+t");
 
 	if (pMLUFile == NULL) {
 		RLckUnlockEX(hResLock);
 		ErrSetErrorCode(ERR_NO_USER_MLTABLE_FILE);
-		return (ERR_NO_USER_MLTABLE_FILE);
+		return ERR_NO_USER_MLTABLE_FILE;
 	}
 
 	char szMLULine[MLU_TABLE_LINE_MAX] = "";
@@ -231,7 +215,7 @@ int UsrMLAddUser(UserInfo * pUI, MLUserInfo const *pMLUI)
 			RLckUnlockEX(hResLock);
 
 			ErrSetErrorCode(ERR_MLUSER_ALREADY_EXIST);
-			return (ERR_MLUSER_ALREADY_EXIST);
+			return ERR_MLUSER_ALREADY_EXIST;
 		}
 
 		StrFreeStrings(ppszStrings);
@@ -242,23 +226,21 @@ int UsrMLAddUser(UserInfo * pUI, MLUserInfo const *pMLUI)
 	if (UsrMLWriteUser(pMLUFile, pMLUI) < 0) {
 		fclose(pMLUFile);
 		RLckUnlockEX(hResLock);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
 
 	fclose(pMLUFile);
 
 	RLckUnlockEX(hResLock);
 
-	return (0);
-
+	return 0;
 }
 
 int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 {
-
 	if (UsrGetUserType(pUI) != usrTypeML) {
 		ErrSetErrorCode(ERR_USER_NOT_MAILINGLIST);
-		return (ERR_USER_NOT_MAILINGLIST);
+		return ERR_USER_NOT_MAILINGLIST;
 	}
 
 	char szMLTablePath[SYS_MAX_PATH] = "";
@@ -274,14 +256,14 @@ int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 							  sizeof(szResLock)));
 
 	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	FILE *pMLUFile = fopen(szMLTablePath, "rt");
 
 	if (pMLUFile == NULL) {
 		RLckUnlockEX(hResLock);
 		ErrSetErrorCode(ERR_NO_USER_MLTABLE_FILE);
-		return (ERR_NO_USER_MLTABLE_FILE);
+		return ERR_NO_USER_MLTABLE_FILE;
 	}
 
 	FILE *pTmpFile = fopen(szTmpFile, "wt");
@@ -290,7 +272,7 @@ int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 		fclose(pMLUFile);
 		RLckUnlockEX(hResLock);
 		ErrSetErrorCode(ERR_FILE_CREATE);
-		return (ERR_FILE_CREATE);
+		return ERR_FILE_CREATE;
 	}
 
 	int iMLUserFound = 0;
@@ -322,7 +304,7 @@ int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		ErrSetErrorCode(ERR_MLUSER_NOT_FOUND);
-		return (ERR_MLUSER_NOT_FOUND);
+		return ERR_MLUSER_NOT_FOUND;
 	}
 
 	char szTmpMLFilePath[SYS_MAX_PATH] = "";
@@ -331,26 +313,24 @@ int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 
 	if (MscMoveFile(szMLTablePath, szTmpMLFilePath) < 0) {
 		RLckUnlockEX(hResLock);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
 
 	if (MscMoveFile(szTmpFile, szMLTablePath) < 0) {
 		MscMoveFile(szTmpMLFilePath, szMLTablePath);
 		RLckUnlockEX(hResLock);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
 
 	SysRemove(szTmpMLFilePath);
 
 	RLckUnlockEX(hResLock);
 
-	return (0);
-
+	return 0;
 }
 
 int UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName)
 {
-
 	char szMLTablePath[SYS_MAX_PATH] = "";
 
 	UsrGetMLTableFilePath(pUI, szMLTablePath, sizeof(szMLTablePath));
@@ -360,47 +340,43 @@ int UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName)
 							  sizeof(szResLock)));
 
 	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	if (MscCopyFile(pszFileName, szMLTablePath) < 0) {
 		RLckUnlockSH(hResLock);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
 
 	RLckUnlockSH(hResLock);
 
-	return (0);
-
+	return 0;
 }
 
 USRML_HANDLE UsrMLOpenDB(UserInfo * pUI)
 {
-
 	MLUsersScanData *pMLUSD = (MLUsersScanData *) SysAlloc(sizeof(MLUsersScanData));
 
 	if (pMLUSD == NULL)
-		return (INVALID_USRML_HANDLE);
+		return INVALID_USRML_HANDLE;
 
 	SysGetTmpFile(pMLUSD->szTmpDBFile);
 
 	if (UsrMLGetUsersFileSnapShot(pUI, pMLUSD->szTmpDBFile) < 0) {
 		SysFree(pMLUSD);
-		return (INVALID_USRML_HANDLE);
+		return INVALID_USRML_HANDLE;
 	}
 
 	if ((pMLUSD->pDBFile = fopen(pMLUSD->szTmpDBFile, "rt")) == NULL) {
 		SysRemove(pMLUSD->szTmpDBFile);
 		SysFree(pMLUSD);
-		return (INVALID_USRML_HANDLE);
+		return INVALID_USRML_HANDLE;
 	}
 
-	return ((USRML_HANDLE) pMLUSD);
-
+	return (USRML_HANDLE) pMLUSD;
 }
 
 void UsrMLCloseDB(USRML_HANDLE hUsersDB)
 {
-
 	MLUsersScanData *pMLUSD = (MLUsersScanData *) hUsersDB;
 
 	fclose(pMLUSD->pDBFile);
@@ -413,7 +389,6 @@ void UsrMLCloseDB(USRML_HANDLE hUsersDB)
 
 MLUserInfo *UsrMLGetFirstUser(USRML_HANDLE hUsersDB)
 {
-
 	MLUsersScanData *pMLUSD = (MLUsersScanData *) hUsersDB;
 
 	rewind(pMLUSD->pDBFile);
@@ -431,19 +406,17 @@ MLUserInfo *UsrMLGetFirstUser(USRML_HANDLE hUsersDB)
 		if (pMLUI != NULL) {
 			StrFreeStrings(ppszStrings);
 
-			return (pMLUI);
+			return pMLUI;
 		}
 
 		StrFreeStrings(ppszStrings);
 	}
 
-	return (NULL);
-
+	return NULL;
 }
 
 MLUserInfo *UsrMLGetNextUser(USRML_HANDLE hUsersDB)
 {
-
 	MLUsersScanData *pMLUSD = (MLUsersScanData *) hUsersDB;
 	char szMLULine[MLU_TABLE_LINE_MAX] = "";
 
@@ -458,12 +431,11 @@ MLUserInfo *UsrMLGetNextUser(USRML_HANDLE hUsersDB)
 		if (pMLUI != NULL) {
 			StrFreeStrings(ppszStrings);
 
-			return (pMLUI);
+			return pMLUI;
 		}
 
 		StrFreeStrings(ppszStrings);
 	}
 
-	return (NULL);
-
+	return NULL;
 }

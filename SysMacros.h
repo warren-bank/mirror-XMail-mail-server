@@ -43,6 +43,8 @@
 #define CharISame(a, b)         (tolower(a) == tolower(b))
 #define StrINComp(s, t)         strnicmp(s, t, strlen(t))
 #define StrNComp(s, t)          strncmp(s, t, strlen(t))
+#define StrSINComp(s, t)        strnicmp(s, t, CStringSize(t))
+#define StrSNComp(s, t)         strncmp(s, t, CStringSize(t))
 #define StrNCpy(t, s, n)        do { strncpy(t, s, n); (t)[(n) - 1] = '\0'; } while (0)
 #define StrSNCpy(t, s)          StrNCpy(t, s, sizeof(t))
 #define StrSNCat(t, s)          StrNCat(t, s, sizeof(t))
@@ -55,26 +57,44 @@
 #define SysFreeCheck(p)         do { if ((p) != NULL) SysFree(p), (p) = NULL; } while(0)
 #define IsDotFilename(f)        ((f)[0] == '.')
 #define IsEmailAddress(a)       (strchr((a), '@') != NULL)
+#define MemMatch(s, n, m, l)    ((n) == (l) && memcmp(s, m, n) == 0)
+#define StrVSprint(r, l, f) do { \
+	int             iCurrSize = 256; \
+	int             iPSize; \
+	va_list         Args; \
+	for (;;) { \
+		r = (char *) SysAlloc(iCurrSize); \
+		if (r == NULL) \
+			break; \
+		va_start(Args, l); \
+		if (((iPSize = SysVSNPrintf(r, iCurrSize - 1, f, Args)) >= 0) && \
+			    iPSize < iCurrSize) { \
+			va_end(Args); \
+			break; \
+		} \
+		va_end(Args); \
+		if (iPSize > 0) \
+			iCurrSize = (4 * iPSize) / 3 + 2; \
+		else \
+			iCurrSize *= 2; \
+		SysFree(r); \
+	} \
+} while (0)
 
-///////////////////////////////////////////////////////////////////////////////
-//  Inline functions
-///////////////////////////////////////////////////////////////////////////////
+/* Inline functions */
 
 inline char *StrNCat(char *pszDest, char const *pszSrc, int iMaxSize)
 {
-
 	int iDestLength = strlen(pszDest);
 
 	if (iDestLength < iMaxSize)
 		StrNCpy(pszDest + iDestLength, pszSrc, iMaxSize - iDestLength);
 
-	return (pszDest);
-
+	return pszDest;
 }
 
 inline int StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
 {
-
 	return (((strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0) &&
 		 ((pszCmdLine[iCmdLength] == '\0') || (pszCmdLine[iCmdLength] == ' ') ||
 		  (pszCmdLine[iCmdLength] == '\t'))) ? 1 : 0);
@@ -83,7 +103,6 @@ inline int StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLeng
 
 inline char *AppendChar(char *pszString, int iChar)
 {
-
 	int iStrLength = strlen(pszString);
 
 	if ((iStrLength == 0) || (pszString[iStrLength - 1] != iChar)) {
@@ -91,67 +110,65 @@ inline char *AppendChar(char *pszString, int iChar)
 		pszString[iStrLength + 1] = '\0';
 	}
 
-	return (pszString);
-
+	return pszString;
 }
 
 inline char *AppendSlash(char *pszPath)
 {
-
-	return (AppendChar(pszPath, SYS_SLASH_CHAR));
-
+	return AppendChar(pszPath, SYS_SLASH_CHAR);
 }
 
 inline char *DelFinalChar(char *pszString, int iChar)
 {
-
 	int iStrLength = strlen(pszString);
 
 	if ((iStrLength > 0) && (pszString[iStrLength - 1] == iChar))
 		pszString[iStrLength - 1] = '\0';
 
-	return (pszString);
-
+	return pszString;
 }
 
 inline char *DelFinalSlash(char *pszPath)
 {
 
-
-	return (DelFinalChar(pszPath, SYS_SLASH_CHAR));
-
+	return DelFinalChar(pszPath, SYS_SLASH_CHAR);
 }
 
 inline int ToUpper(int iChar)
 {
-
-	return (((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')) : iChar);
-
+	return ((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')) : iChar;
 }
 
 inline int ToLower(int iChar)
 {
-
-	return (((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')) : iChar);
-
+	return ((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')) : iChar;
 }
 
 inline int IsPrimeNumber(int iNumber)
 {
-
 	if (iNumber > 3) {
 		if (iNumber & 1) {
 			int iHalfNumber = iNumber / 2;
 
 			for (int ii = 3; ii < iHalfNumber; ii += 2)
 				if ((iNumber % ii) == 0)
-					return (0);
+					return 0;
 		} else
-			return (0);
+			return 0;
 	}
 
-	return (1);
+	return 1;
+}
 
+inline char *ClearEOL(char *pszBuffer)
+{
+	int iSize = strlen(pszBuffer);
+
+	for (; iSize > 0 && ((pszBuffer[iSize - 1] == '\r') || (pszBuffer[iSize - 1] == '\n'));
+	     iSize--);
+	pszBuffer[iSize] = '\0';
+
+	return pszBuffer;
 }
 
 #endif

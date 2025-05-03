@@ -23,33 +23,6 @@
 #ifndef _STRUTILS_H
 #define _STRUTILS_H
 
-#define STRSPRINTF(r, l, f) \
-do \
-{ \
-    int             iCurrSize = 256; \
-    int             iPSize; \
-    va_list         Args; \
-    for (;;) \
-    { \
-        r = (char *) SysAlloc(iCurrSize); \
-        if (r == NULL) \
-            break; \
-        va_start(Args, l); \
-        if (((iPSize = SysVSNPrintf(r, iCurrSize - 1, f, Args)) >= 0) && \
-            iPSize < iCurrSize) \
-        { \
-            va_end(Args); \
-            break; \
-        } \
-        va_end(Args); \
-        if (iPSize > 0) \
-            iCurrSize = (4 * iPSize) / 3 + 2; \
-        else \
-            iCurrSize *= 2; \
-        SysFree(r); \
-    } \
-} while (0)
-
 struct DynString {
 	char *pszBuffer;
 	int iStringSize;
@@ -73,10 +46,10 @@ char *StrConcat(char const *const *ppszStrings, char const *pszCStr);
 char *StrDeQuote(char *pszString, int iChar);
 char *StrQuote(const char *pszString, int iChar);
 char **StrGetTabLineStrings(const char *pszUsrLine);
-int StrWriteCRLFString(FILE * pFile, const char *pszString);
+int StrWriteCRLFString(FILE *pFile, const char *pszString);
 int StrWildMatch(char const *pszString, char const *pszMatch);
 int StrIWildMatch(char const *pszString, char const *pszMatch);
-char *StrLoadFile(FILE * pFile);
+char *StrLoadFile(FILE *pFile);
 char *StrSprint(char const *pszFormat, ...);
 int StrSplitString(char const *pszString, char const *pszSplitters,
 		   char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);
@@ -85,12 +58,17 @@ char *StrRTrim(char *pszString, char const *pszTrimChars);
 char *StrTrim(char *pszString, char const *pszTrimChars);
 char *StrEOLTrim(char *pszString);
 char *StrIStr(char const *pszBuffer, char const *pszMatch);
-int StrDynInit(DynString * pDS);
-int StrDynFree(DynString * pDS);
-int StrDynTruncate(DynString * pDS);
-char const *StrDynGet(DynString * pDS);
-int StrDynSize(DynString * pDS);
-int StrDynAdd(DynString * pDS, char const *pszBuffer, int iStringSize = -1);
+int StrDynInit(DynString *pDS, char const *pszInit = NULL);
+int StrDynFree(DynString *pDS);
+int StrDynTruncate(DynString *pDS);
+char const *StrDynGet(DynString *pDS);
+char *StrDynDrop(DynString *pDS, int *piSize);
+int StrDynSize(DynString *pDS);
+int StrDynAdd(DynString *pDS, char const *pszBuffer, int iStringSize = -1);
+int StrDynPrint(DynString *pDS, char const *pszFormat, ...);
+char *StrNDup(char const *pszStr, int iSize);
 int StrParamGet(char const *pszBuffer, char const *pszName, char *pszVal, int iMaxVal);
+char *StrMacSubst(char const *pszIn, int *piSize,
+		  char *(*pLkupProc)(void *, char const *, int), void *pPriv);
 
 #endif

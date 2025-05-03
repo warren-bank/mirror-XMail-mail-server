@@ -33,30 +33,22 @@
 #include "AppDefines.h"
 #include "MailSvr.h"
 
-///////////////////////////////////////////////////////////////////////////////
-//  Comment this statement if You want a normal startup ( not as a service )
-///////////////////////////////////////////////////////////////////////////////
+/* Comment this statement if You want a normal startup ( not as a service ) */
 #define SERVICE
 
 #define NULFILE         "nul"
 
 #ifndef SERVICE
-///////////////////////////////////////////////////////////////////////////////
-//  Normal startup
-///////////////////////////////////////////////////////////////////////////////
+/* Normal startup */
 
 int main(int iArgCount, char *pszArgs[])
 {
-
-	return (SvrMain(iArgCount, pszArgs));
-
+	return SvrMain(iArgCount, pszArgs);
 }
 
 #else				// #ifndef SERVICE
 
-///////////////////////////////////////////////////////////////////////////////
-//  Service startup
-///////////////////////////////////////////////////////////////////////////////
+/* Service startup */
 
 #define SZDEPENDENCIES              _T("Tcpip\0")
 #define SERVER_START_WAIT           8000
@@ -84,14 +76,13 @@ static TCHAR szServiceDispName[256] = _T("");
 
 static int MnSetupStdHandles(void)
 {
-
 	HANDLE hInFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
 				    FILE_SHARE_READ | FILE_SHARE_WRITE,
 				    NULL, OPEN_EXISTING, 0, NULL);
 
 	if (hInFile == INVALID_HANDLE_VALUE) {
 		AddToMessageLog(_T("CreateFile"));
-		return (-1);
+		return -1;
 	}
 
 	HANDLE hOutFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
@@ -101,7 +92,7 @@ static int MnSetupStdHandles(void)
 	if (hOutFile == INVALID_HANDLE_VALUE) {
 		AddToMessageLog(_T("CreateFile"));
 		CloseHandle(hInFile);
-		return (-1);
+		return -1;
 	}
 
 	HANDLE hErrFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
@@ -112,7 +103,7 @@ static int MnSetupStdHandles(void)
 		AddToMessageLog(_T("CreateFile"));
 		CloseHandle(hOutFile);
 		CloseHandle(hInFile);
-		return (-1);
+		return -1;
 	}
 
 	if (!SetStdHandle(STD_INPUT_HANDLE, hInFile) || !SetStdHandle(STD_OUTPUT_HANDLE, hOutFile)
@@ -121,20 +112,18 @@ static int MnSetupStdHandles(void)
 		CloseHandle(hErrFile);
 		CloseHandle(hOutFile);
 		CloseHandle(hInFile);
-		return (-1);
+		return -1;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int _tmain(int argc, TCHAR * argv[])
 {
-
 	if (GetModuleFileName(NULL, szServicePath, CountOf(szServicePath)) == 0) {
 		_tprintf(_T("Unable to get module name - %s\n"),
 			 GetLastErrorText(szErr, CountOf(szErr)));
-		return (1);
+		return 1;
 	}
 	GetServiceNameFromModule(szServicePath, szServiceName, CountOf(szServiceName));
 	_stprintf(szServiceDispName, _T("%s Server"), szServiceName);
@@ -148,18 +137,18 @@ int _tmain(int argc, TCHAR * argv[])
 	if (argc > 1) {
 		if (_tcsicmp(_T("--install"), argv[1]) == 0) {
 			CmdInstallService(SERVICE_DEMAND_START);
-			return (0);
+			return 0;
 		}
 		if (_tcsicmp(_T("--install-auto"), argv[1]) == 0) {
 			CmdInstallService(SERVICE_AUTO_START);
-			return (0);
+			return 0;
 		} else if (_tcsicmp(_T("--remove"), argv[1]) == 0) {
 			CmdRemoveService();
-			return (0);
+			return 0;
 		} else if (_tcsicmp(_T("--debug"), argv[1]) == 0) {
 			bDebug = TRUE;
 			CmdDebugService(argc, argv);
-			return (0);
+			return 0;
 		}
 	}
 
@@ -170,25 +159,19 @@ int _tmain(int argc, TCHAR * argv[])
 	_tprintf(_T("\nStartServiceCtrlDispatcher being called.\n"));
 	_tprintf(_T("This may take several seconds.  Please wait.\n"));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Setup std handles
-///////////////////////////////////////////////////////////////////////////////
+	/* Setup std handles */
 	if (MnSetupStdHandles() < 0)
-		return (1);
+		return 1;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Service loop
-///////////////////////////////////////////////////////////////////////////////
+	/* Service loop */
 	if (!StartServiceCtrlDispatcher(DispTable))
 		AddToMessageLog(_T("StartServiceCtrlDispatcher"));
 
-	return (0);
-
+	return 0;
 }
 
 static void WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[])
 {
-
 	if ((sshStatusHandle = RegisterServiceCtrlHandler(szServiceName, ServiceCtrl)) != NULL) {
 		ZeroData(ssStatus);
 
@@ -198,9 +181,7 @@ static void WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[])
 		if (ReportStatusToSCMgr(SERVICE_START_PENDING, NO_ERROR, SERVER_START_WAIT)) {
 			ReportStatusToSCMgr(SERVICE_RUNNING, NO_ERROR, 0);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Run server
-///////////////////////////////////////////////////////////////////////////////
+			/* Run server */
 			int iSvrResult = SvrMain((int) dwArgc, lpszArgv);
 
 			if (iSvrResult < 0) {
@@ -218,16 +199,13 @@ static void WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[])
 
 static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 {
-
 	switch (dwCtrlCode) {
 	case (SERVICE_CONTROL_SHUTDOWN):
 	case (SERVICE_CONTROL_STOP):
 		{
 			ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Signal the server to stop and wait for completion
-///////////////////////////////////////////////////////////////////////////////
+			/* Signal the server to stop and wait for completion */
 			SvrStopServer(false);
 
 			while (SvrInShutdown()) {
@@ -248,7 +226,6 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 
 static BOOL ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWORD dwWaitHint)
 {
-
 	static DWORD dwCheckPoint = 1;
 	BOOL bResult = TRUE;
 
@@ -257,7 +234,7 @@ static BOOL ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWO
 			ssStatus.dwControlsAccepted = 0;
 		else
 			ssStatus.dwControlsAccepted =
-			    SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+			SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 
 		ssStatus.dwCurrentState = dwCurrentState;
 		ssStatus.dwWin32ExitCode = dwWin32ExitCode;
@@ -273,13 +250,11 @@ static BOOL ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWO
 
 	}
 
-	return (bResult);
-
+	return bResult;
 }
 
 static VOID AddToMessageLog(LPCTSTR lpszMsg)
 {
-
 	HANDLE hEventSource = NULL;
 	LPTSTR lpszStrings[2];
 	TCHAR szMsg[512] = _T("");
@@ -315,7 +290,6 @@ static VOID AddToMessageLog(LPCTSTR lpszMsg)
 
 static BOOL CmdInstallService(DWORD dwStartType)
 {
-
 	SC_HANDLE schService = NULL;
 	SC_HANDLE schSCManager = NULL;
 
@@ -339,7 +313,7 @@ static BOOL CmdInstallService(DWORD dwStartType)
 			CloseServiceHandle(schService);
 			CloseServiceHandle(schSCManager);
 
-			return (TRUE);
+			return TRUE;
 		} else
 			_tprintf(_T("CreateService failed - %s\n"),
 				 GetLastErrorText(szErr, CountOf(szErr)));
@@ -349,13 +323,11 @@ static BOOL CmdInstallService(DWORD dwStartType)
 		_tprintf(_T("OpenSCManager failed - %s\n"),
 			 GetLastErrorText(szErr, CountOf(szErr)));
 
-	return (FALSE);
-
+	return FALSE;
 }
 
 static BOOL CmdRemoveService(void)
 {
-
 	SC_HANDLE schService = NULL;
 	SC_HANDLE schSCManager = NULL;
 
@@ -387,7 +359,7 @@ static BOOL CmdRemoveService(void)
 				CloseServiceHandle(schService);
 				CloseServiceHandle(schSCManager);
 
-				return (TRUE);
+				return TRUE;
 			} else
 				_tprintf(_T("DeleteService failed - %s\n"),
 					 GetLastErrorText(szErr, CountOf(szErr)));
@@ -402,33 +374,27 @@ static BOOL CmdRemoveService(void)
 		_tprintf(_T("OpenSCManager failed - %s\n"),
 			 GetLastErrorText(szErr, CountOf(szErr)));
 
-	return (FALSE);
-
+	return FALSE;
 }
 
 static int CmdDebugService(int argc, LPTSTR argv[])
 {
-
 	_tprintf(_T("Debugging %s.\n"), szServiceDispName);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Run server
-///////////////////////////////////////////////////////////////////////////////
-	return (SvrMain(argc, argv));
-
+	/* Run server */
+	return SvrMain(argc, argv);
 }
 
 static LPTSTR GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)
 {
-
 	DWORD dwRet;
 	DWORD dwError = GetLastError();
 	LPTSTR lpszTemp = NULL;
 
 	dwRet =
-	    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-			  FORMAT_MESSAGE_ARGUMENT_ARRAY, NULL, dwError, LANG_NEUTRAL,
-			  (LPTSTR) & lpszTemp, 0, NULL);
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+			      FORMAT_MESSAGE_ARGUMENT_ARRAY, NULL, dwError, LANG_NEUTRAL,
+			      (LPTSTR) & lpszTemp, 0, NULL);
 
 	if ((dwRet == 0) || ((long) dwSize < (long) (dwRet + 14)))
 		lpszBuf[0] = TCHAR('\0');
@@ -441,8 +407,7 @@ static LPTSTR GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)
 	if (lpszTemp != NULL)
 		LocalFree((HLOCAL) lpszTemp);
 
-	return (lpszBuf);
-
+	return lpszBuf;
 }
 
 static int GetServiceNameFromModule(LPCTSTR pszModule, LPTSTR pszName, int iSize)
@@ -459,7 +424,7 @@ static int GetServiceNameFromModule(LPCTSTR pszModule, LPTSTR pszName, int iSize
 	iSize = Min(iSize - 1, (int) (pszDot - pszSlash));
 	Cpy2Sz(pszName, pszSlash, iSize);
 
-	return (0);
+	return 0;
 }
 
 #endif				// #ifndef SERVICE

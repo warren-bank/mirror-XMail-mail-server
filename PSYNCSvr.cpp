@@ -65,32 +65,27 @@ static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
 
 static bool PSYNCNeedSync(void)
 {
-
 	char szTriggerPath[SYS_MAX_PATH] = "";
 
 	CfgGetRootPath(szTriggerPath, sizeof(szTriggerPath));
 
 	StrNCat(szTriggerPath, PSYNC_TRIGGER_FILE, sizeof(szTriggerPath));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check for the presence of the trigger file
-///////////////////////////////////////////////////////////////////////////////
+	/* Check for the presence of the trigger file */
 	if (!SysExistFile(szTriggerPath))
-		return (false);
+		return false;
 
 	SysRemove(szTriggerPath);
 
-	return (true);
-
+	return true;
 }
 
 static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC)
 {
-
 	PSYNCConfig *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
 
 	if (pPSYNCCfg == NULL)
-		return (NULL);
+		return NULL;
 
 	PSYNCConfig *pNewPSYNCCfg = (PSYNCConfig *) SysAlloc(sizeof(PSYNCConfig));
 
@@ -99,18 +94,16 @@ static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC)
 
 	ShbUnlock(hShbPSYNC);
 
-	return (pNewPSYNCCfg);
-
+	return pNewPSYNCCfg;
 }
 
 static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
 {
-
 	int iDoUnlock = 0;
 
 	if (pPSYNCCfg == NULL) {
 		if ((pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC)) == NULL)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 		++iDoUnlock;
 	}
@@ -120,29 +113,25 @@ static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig * 
 	if (iDoUnlock)
 		ShbUnlock(hShbPSYNC);
 
-	return (0);
-
+	return 0;
 }
 
 static int PSYNCTimeToStop(SHB_HANDLE hShbPSYNC)
 {
-
 	PSYNCConfig *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
 
 	if (pPSYNCCfg == NULL)
-		return (1);
+		return 1;
 
 	int iTimeToStop = (pPSYNCCfg->ulFlags & PSYNCF_STOP_SERVER) ? 1 : 0;
 
 	ShbUnlock(hShbPSYNC);
 
-	return (iTimeToStop);
-
+	return iTimeToStop;
 }
 
 unsigned int PSYNCThreadProc(void *pThreadData)
 {
-
 	SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", PSYNC_SERVER_NAME);
 
 	int iElapsedTime = 0;
@@ -175,9 +164,7 @@ unsigned int PSYNCThreadProc(void *pThreadData)
 		SysFree(pPSYNCCfg);
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for client completion
-///////////////////////////////////////////////////////////////////////////////
+	/* Wait for client completion */
 	for (int iTotalWait = 0; (iTotalWait < MAX_CLIENTS_WAIT); iTotalWait += PSYNC_WAIT_SLEEP) {
 		PSYNCConfig *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
 
@@ -196,21 +183,19 @@ unsigned int PSYNCThreadProc(void *pThreadData)
 
 	SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", PSYNC_SERVER_NAME);
 
-	return (0);
-
+	return 0;
 }
 
 static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link * pPopLnk)
 {
-
 	PSYNCThreadData *pSTD = (PSYNCThreadData *) SysAlloc(sizeof(PSYNCThreadData));
 
 	if (pSTD == NULL)
-		return (SYS_INVALID_THREAD);
+		return SYS_INVALID_THREAD;
 
 	if ((pSTD->pPSYNCCfg = PSYNCGetConfigCopy(hShbPSYNC)) == NULL) {
 		SysFree(pSTD);
-		return (SYS_INVALID_THREAD);
+		return SYS_INVALID_THREAD;
 	}
 
 	pSTD->pPopLnk = pPopLnk;
@@ -220,30 +205,26 @@ static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link * pPopLnk
 	if (hThread == SYS_INVALID_THREAD) {
 		SysFree(pSTD->pPSYNCCfg);
 		SysFree(pSTD);
-		return (SYS_INVALID_THREAD);
+		return SYS_INVALID_THREAD;
 	}
 
-	return (hThread);
-
+	return hThread;
 }
 
 static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
 {
-
 	GWLKF_HANDLE hLinksDB = GwLkOpenDB();
 
 	if (hLinksDB == INVALID_GWLKF_HANDLE) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	POP3Link *pPopLnk = GwLkGetFirstUser(hLinksDB);
 
 	for (; pPopLnk != NULL; pPopLnk = GwLkGetNextUser(hLinksDB)) {
-///////////////////////////////////////////////////////////////////////////////
-//  Check if link is enabled
-///////////////////////////////////////////////////////////////////////////////
+		/* Check if link is enabled */
 		if (GwLkCheckEnabled(pPopLnk) < 0) {
 			GwLkFreePOP3Link(pPopLnk);
 			continue;
@@ -262,7 +243,7 @@ static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
 			GwLkFreePOP3Link(pPopLnk);
 			SysReleaseSemaphore(hSyncSem, 1);
 			GwLkCloseDB(hLinksDB);
-			return (ErrorPop());
+			return ErrorPop();
 		}
 
 		SysCloseThread(hClientThread, 0);
@@ -270,22 +251,18 @@ static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
 
 	GwLkCloseDB(hLinksDB);
 
-	return (0);
-
+	return 0;
 }
 
 static int PSYNCThreadNotifyExit(void)
 {
-
 	SysReleaseSemaphore(hSyncSem, 1);
 
-	return (0);
-
+	return 0;
 }
 
 unsigned int PSYNCThreadSyncProc(void *pThreadData)
 {
-
 	PSYNCThreadData *pSTD = (PSYNCThreadData *) pThreadData;
 	POP3Link *pPopLnk = pSTD->pPopLnk;
 	PSYNCConfig *pPSYNCCfg = pSTD->pPSYNCCfg;
@@ -294,9 +271,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 
 	SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] entry\n");
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get configuration handle
-///////////////////////////////////////////////////////////////////////////////
+	/* Get configuration handle */
 	SVRCFG_HANDLE hSvrConfig = SvrGetConfigHandle();
 
 	if (hSvrConfig == INVALID_SVRCFG_HANDLE) {
@@ -305,16 +280,12 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 
 		GwLkFreePOP3Link(pPopLnk);
 		SysFree(pPSYNCCfg);
-///////////////////////////////////////////////////////////////////////////////
-//  Notify thread exit semaphore
-///////////////////////////////////////////////////////////////////////////////
+		/* Notify thread exit semaphore */
 		PSYNCThreadNotifyExit();
-		return (ErrorPop());
+		return ErrorPop();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Get the error account for email that the server is not able to deliver coz
-//  it does not find information about where it has to deliver
-///////////////////////////////////////////////////////////////////////////////
+	/* Get the error account for email that the server is not able to deliver coz */
+	/* it does not find information about where it has to deliver */
 	char szErrorAccount[MAX_ADDR_NAME] = "";
 
 	SvrConfigVar("Pop3SyncErrorAccount", szErrorAccount, sizeof(szErrorAccount) - 1,
@@ -322,17 +293,13 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 
 	char const *pszErrorAccount = (IsEmptyString(szErrorAccount)) ? NULL : szErrorAccount;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get headers tags that must be checked to extract recipients
-///////////////////////////////////////////////////////////////////////////////
+	/* Get headers tags that must be checked to extract recipients */
 	char szFetchHdrTags[256] = "";
 
 	SvrConfigVar("FetchHdrTags", szFetchHdrTags, sizeof(szFetchHdrTags) - 1,
 		     hSvrConfig, "+X-Deliver-To,+Received,To,Cc");
 
-///////////////////////////////////////////////////////////////////////////////
-//  Lock the link
-///////////////////////////////////////////////////////////////////////////////
+	/* Lock the link */
 	if (GwLkLinkLock(pPopLnk) < 0) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
@@ -340,26 +307,18 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 		SvrReleaseConfigHandle(hSvrConfig);
 		GwLkFreePOP3Link(pPopLnk);
 		SysFree(pPSYNCCfg);
-///////////////////////////////////////////////////////////////////////////////
-//  Notify thread exit semaphore
-///////////////////////////////////////////////////////////////////////////////
+		/* Notify thread exit semaphore */
 		PSYNCThreadNotifyExit();
-		return (ErrorPop());
+		return ErrorPop();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Increase threads count
-///////////////////////////////////////////////////////////////////////////////
+	/* Increase threads count */
 	PSYNCThreadCountAdd(+1, hShbPSYNC);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Sync for real internal account ?
-///////////////////////////////////////////////////////////////////////////////
+	/* Sync for real internal account ? */
 	PopSyncReport SRep;
 
 	if (GwLkLocalDomain(pPopLnk)) {
-///////////////////////////////////////////////////////////////////////////////
-//  Verify user credentials
-///////////////////////////////////////////////////////////////////////////////
+		/* Verify user credentials */
 		UserInfo *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
 
 		if (pUI != NULL) {
@@ -367,9 +326,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 				      "[PSYNC] User = \"%s\" - Domain = \"%s\"\n",
 				      pPopLnk->pszName, pPopLnk->pszDomain);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Sync
-///////////////////////////////////////////////////////////////////////////////
+			/* Sync */
 			char szUserAddress[MAX_ADDR_NAME] = "";
 
 			UsrGetAddress(pUI, szUserAddress);
@@ -406,9 +363,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 			      "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
 			      pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
-///////////////////////////////////////////////////////////////////////////////
+		/* Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain ) */
 		if (UPopSyncRemoteLink
 		    (pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
 		     pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
@@ -435,9 +390,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 			      "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
 			      szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Sync ( "pszDomain" == "@" + domain )
-///////////////////////////////////////////////////////////////////////////////
+		/* Sync ( "pszDomain" == "@" + domain ) */
 		if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
 				       pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags,
 				       pPopLnk->pszAuthType, pszErrorAccount) < 0) {
@@ -454,9 +407,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 		}
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Decrease threads count
-///////////////////////////////////////////////////////////////////////////////
+	/* Decrease threads count */
 	PSYNCThreadCountAdd(-1, hShbPSYNC);
 
 	GwLkLinkUnlock(pPopLnk);
@@ -464,28 +415,22 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 	GwLkFreePOP3Link(pPopLnk);
 	SysFree(pPSYNCCfg);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Notify thread exit semaphore
-///////////////////////////////////////////////////////////////////////////////
+	/* Notify thread exit semaphore */
 	PSYNCThreadNotifyExit();
 
 	SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] exit\n");
 
-	return (0);
-
+	return 0;
 }
 
 static int PSYNCLogEnabled(PSYNCConfig * pPSYNCCfg)
 {
-
-	return ((pPSYNCCfg->ulFlags & PSYNCF_LOG_ENABLED) ? 1 : 0);
-
+	return (pPSYNCCfg->ulFlags & PSYNCF_LOG_ENABLED) ? 1 : 0;
 }
 
 static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
 			   char const *pszStatus)
 {
-
 	char szTime[256] = "";
 
 	MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
@@ -493,7 +438,7 @@ static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
 	RLCK_HANDLE hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR PSYNC_LOG_FILE);
 
 	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	MscFileLog(PSYNC_LOG_FILE,
 		   "\"%s\""
@@ -513,6 +458,5 @@ static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
 
 	RLckUnlockEX(hResLock);
 
-	return (0);
-
+	return 0;
 }

@@ -26,7 +26,6 @@
 
 char *StrCrypt(char const *pszString, char *pszCrypt)
 {
-
 	strcpy(pszCrypt, "");
 
 	for (int ii = 0; pszString[ii] != '\0'; ii++) {
@@ -38,16 +37,14 @@ char *StrCrypt(char const *pszString, char *pszCrypt)
 		strcat(pszCrypt, szByte);
 	}
 
-	return (pszCrypt);
-
+	return pszCrypt;
 }
 
 int main(int argc, char *argv[])
 {
-
 	if (argc < 2) {
 		printf("usage : %s  password\n", argv[0]);
-		return (1);
+		return 1;
 	}
 
 	char szCrypt[1024] = "";
@@ -56,6 +53,5 @@ int main(int argc, char *argv[])
 
 	printf("%s\n", szCrypt);
 
-	return (0);
-
+	return 0;
 }

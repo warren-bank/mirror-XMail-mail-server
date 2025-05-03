@@ -1,10 +1,89 @@
 NAME
 
-    XMail Change Log as of Version 1.22
+    XMail Change Log as of Version 1.23
 
     [top]
 
 CHANGE LOG
+
+  Nov 19, 2006 v 1.23
+
+    *   Changed the filter log to include the full exec string (separated by
+        semicolon).
+
+    *   Fix CTRL "poplnkadd" and "poplnkdel" to accept local domains strings
+        starting with special characters.
+
+    *   Added (finally!) a command line makefile (Makefile.win) to build the
+        whole XMail package without the usage of the MS VC++ IDE.
+
+    *   Reject a CTRL "domainadd" command if an alias domain already exists
+        with the same name.
+
+    *   Changed the CTRL "usergetmproc" command to allow the caller to
+        specify if it is the user or the domain one that is wanted. Or a
+        merges of both, if "DU" is specified in the optional 3th parameter.
+
+    *   Changed the CTRL "usersetmproc" command to allow the caller to
+        specify if it is the user ('U') or the domain ('D') one that is
+        wanted to be set.
+
+    *   Added complex/multiple macro substitution capabilities to external
+        programs argoument lists.
+
+    *   Added strictier SMTP address validation.
+
+    *   Check the mailbox size for every message coming into the mailbox
+        (before it was only done during the SMTP phase).
+
+    *   Do not try to send to the 'A' record if the recipient domain does
+        not exist at all (NXDOMAIN). Bounce immediately instead, avoiding
+        lengthy retry policies.
+
+    *   Added the "wlex" flag to filter lines (works for the SMTP ones
+        only), to exclude execution of the filter line in case the client IP
+        is white-listed inside the ipprop file.
+
+    *   Added the post-RCPT SMTP filter, that is called before XMail acks
+        the client recipient. A new "RCPT=EFILTER" long entry is emitted in
+        case a recipient is rejected by a filter.
+
+    *   Added @@CRCPT (current recipient) and @@FROM (sender email address)
+        macros to SMTP filter substitution.
+
+    *   Allow cmdaliases to work on aliased domains. Before a cmdalias
+        defined on an alias-target domain was not working before the
+        cmdalias check was done before the alias domain resolution.
+
+    *   Added the ability to bypass the SMTP.IPMAP.TAB inclusion using SMTP
+        authentication.
+
+    *   Added a new SERVER.TAB variable "SMTP-IpMapDropCode" to control the
+        drop code to be used for IPs listed inside the SMTP.IPMAP.TAB. Like
+        other codes inside XMail, 1 means drop now, 0 means allow if auth,
+        and -N means add N seconds delay. An immediate drop will emit a
+        "SNDRIP=EIPBAN" log entry.
+
+    *   Added a new SERVER.TAB variable "SmtpMsgIPBan" to control the SMTP
+        message returned in case of SMTP.IPMAP.TAB inclusion.
+
+    *   Added log message when the maximum number of SMTP/POP3/CTRL threads
+        is hit.
+
+    *   Fixed documentation about the spool info line and the SMTP filters
+        info line.
+
+    *   Fixed a build problem on OpenBSD related to the lack of c_r
+        (reentrant C library) library.
+
+    *   Fixed greetings message to be RFC2821 compliant (server host must be
+        first).
+
+    *   Fixed a NAME_MAX build error ond *BSD and Solaris.
+
+    *   Added a "Pop3ScanCur" USER.TAB variable to control the scan of the
+        Maildir's "cur" directory during POP3 message list build. Now XMail
+        only scans the "new" directory as default.
 
   Oct 12, 2005 v 1.22
 

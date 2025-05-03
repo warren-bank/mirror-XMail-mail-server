@@ -34,6 +34,9 @@
 #define FILTER_FLAGS_BREAK          (1 << 4)
 #define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
+#define FILTER_XFL_WHITELISTED      (1 << 0)
+
+
 struct FilterLogInfo {
 	char const *pszSender;
 	char const *pszRecipient;
@@ -54,16 +57,17 @@ struct FilterTokens {
 struct FilterExecCtx {
 	FilterTokens *pToks;
 	char const *pszAuthName;
+	unsigned long ulFlags;
 };
 
 enum FilterFields {
 	filSender = 0,
-	filRecipient,
-	filRemoteAddr,
-	filLocalAddr,
-	filFileName,
+		filRecipient,
+		filRemoteAddr,
+		filLocalAddr,
+		filFileName,
 
-	filMax
+		filMax
 };
 
 int FilLogFilter(FilterLogInfo const *pFLI);

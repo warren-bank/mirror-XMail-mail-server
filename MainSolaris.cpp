@@ -54,7 +54,6 @@ static int MnDaemonStartup(int iArgCount, char *pszArgs[]);
 
 static int MnEventLog(char const *pszFormat, ...)
 {
-
 	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
 
 	va_list Args;
@@ -71,21 +70,18 @@ static int MnEventLog(char const *pszFormat, ...)
 
 	closelog();
 
-	return (0);
-
+	return 0;
 }
 
 static char const *MnGetPIDDir(void)
 {
 	char const *pszPIDDir = getenv(XMAIL_PIDDIR_ENV);
 
-	return ((pszPIDDir != NULL) ? pszPIDDir: RUNNING_PIDS_DIR);
-
+	return (pszPIDDir != NULL) ? pszPIDDir: RUNNING_PIDS_DIR;
 }
 
 static int MnSavePID(char const *pszPidFile)
 {
-
 	char szPidFile[SYS_MAX_PATH] = "";
 
 	snprintf(szPidFile, sizeof(szPidFile) - 1, "%s/%s.pid", MnGetPIDDir(), pszPidFile);
@@ -94,38 +90,33 @@ static int MnSavePID(char const *pszPidFile)
 
 	if (pFile == NULL) {
 		perror(szPidFile);
-		return (-errno);
+		return -errno;
 	}
 
 	fprintf(pFile, "%u", (unsigned int) getpid());
 
 	fclose(pFile);
 
-	return (0);
-
+	return 0;
 }
 
 static int MnRemovePID(char const *pszPidFile)
 {
-
 	char szPidFile[SYS_MAX_PATH] = "";
 
 	snprintf(szPidFile, sizeof(szPidFile) - 1, "%s/%s.pid", MnGetPIDDir(), pszPidFile);
 
 	if (unlink(szPidFile) != 0) {
 		perror(szPidFile);
-		return (-errno);
+		return -errno;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static void MnSIGCLD(int iSignal)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  For BSD
-///////////////////////////////////////////////////////////////////////////////
+	/* For BSD */
 #ifdef __BSD__
 
 	int iDeadPID;
@@ -139,7 +130,6 @@ static void MnSIGCLD(int iSignal)
 
 static void MnSetupStdHandles(void)
 {
-
 	int iFD = open(DEVNULL, O_RDWR, 0);
 
 	if (iFD == -1) {
@@ -158,15 +148,11 @@ static void MnSetupStdHandles(void)
 
 static int MnDaemonBootStrap(void)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  This code is inspired from the code of the great Richard Stevens books.
-//  May You RIP in programmers paradise great Richard.
-//  I suggest You to buy all his collection, soon !
-///////////////////////////////////////////////////////////////////////////////
+	/* This code is inspired from the code of the great Richard Stevens books. */
+	/* May You RIP in programmers paradise great Richard. */
+	/* I suggest You to buy all his collection, soon ! */
 
-///////////////////////////////////////////////////////////////////////////////
-//  For BSD
-///////////////////////////////////////////////////////////////////////////////
+	/* For BSD */
 #ifdef SIGTTOU
 	signal(SIGTTOU, SIG_IGN);
 #endif
@@ -177,9 +163,7 @@ static int MnDaemonBootStrap(void)
 	signal(SIGTSTP, SIG_IGN);
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//  1st fork
-///////////////////////////////////////////////////////////////////////////////
+	/* 1st fork */
 	int iChildPID = fork();
 
 	if (iChildPID < 0) {
@@ -187,25 +171,19 @@ static int MnDaemonBootStrap(void)
 
 		exit(errno);
 	} else if (iChildPID > 0)
-		exit(0);
+			exit(0);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Disassociate from controlling terminal and process group. Ensure the process
-//  can't reacquire a new controlling terminal.
-///////////////////////////////////////////////////////////////////////////////
+	/* Disassociate from controlling terminal and process group. Ensure the process */
+	/* can't reacquire a new controlling terminal. */
 
 #ifdef __BSD__
-///////////////////////////////////////////////////////////////////////////////
-//  BSD
-///////////////////////////////////////////////////////////////////////////////
+	/* BSD */
 	if (setpgrp(0, getpid()) == -1) {
 		MnEventLog("Can't change process group : %s", strerror(errno));
 
 		exit(errno);
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Lose controlling tty
-///////////////////////////////////////////////////////////////////////////////
+	/* Lose controlling tty */
 	int iFdTty = open("/dev/tty", O_RDWR);
 
 	if (iFdTty >= 0) {
@@ -213,9 +191,7 @@ static int MnDaemonBootStrap(void)
 		close(iFdTty);
 	}
 #else
-///////////////////////////////////////////////////////////////////////////////
-//  System V
-///////////////////////////////////////////////////////////////////////////////
+	/* System V */
 	if (setpgrp() == -1) {
 		MnEventLog("Can't change process group : %s", strerror(errno));
 
@@ -224,9 +200,7 @@ static int MnDaemonBootStrap(void)
 
 	signal(SIGHUP, SIG_IGN);
 
-///////////////////////////////////////////////////////////////////////////////
-//  2nd fork
-///////////////////////////////////////////////////////////////////////////////
+	/* 2nd fork */
 	iChildPID = fork();
 
 	if (iChildPID < 0) {
@@ -234,105 +208,74 @@ static int MnDaemonBootStrap(void)
 
 		exit(errno);
 	} else if (iChildPID > 0)
-		exit(0);
+			exit(0);
 
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-//  Close open file descriptors
-///////////////////////////////////////////////////////////////////////////////
+	/* Close open file descriptors */
 	for (int fd = 0; fd < NOFILE; fd++)
 		close(fd);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Set std handles
-///////////////////////////////////////////////////////////////////////////////
+	/* Set std handles */
 	MnSetupStdHandles();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Probably got set to EBADF from a close
-///////////////////////////////////////////////////////////////////////////////
+	/* Probably got set to EBADF from a close */
 	errno = 0;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Move the current directory to root, to make sure we aren't on a mounted
-//  filesystem.
-///////////////////////////////////////////////////////////////////////////////
+	/* Move the current directory to root, to make sure we aren't on a mounted */
+	/* filesystem. */
 	chdir("/");
 
-///////////////////////////////////////////////////////////////////////////////
-//  Clear any inherited file mode creation mask.
-///////////////////////////////////////////////////////////////////////////////
+	/* Clear any inherited file mode creation mask. */
 	umask(0);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Ignore childs dead.
-///////////////////////////////////////////////////////////////////////////////
+	/* Ignore childs dead. */
 
 #ifdef __BSD__
-///////////////////////////////////////////////////////////////////////////////
-//  BSD
-///////////////////////////////////////////////////////////////////////////////
+	/* BSD */
 	signal(SIGCLD, MnSIGCLD);
 
 #else
-///////////////////////////////////////////////////////////////////////////////
-//  System V
-///////////////////////////////////////////////////////////////////////////////
+	/* System V */
 	signal(SIGCLD, SIG_IGN);
 
 #endif
 
-	return (0);
-
+	return 0;
 }
 
 static int MnIsDebugStartup(int iArgCount, char *pszArgs[])
 {
-
 	for (int ii = 0; ii < iArgCount; ii++)
 		if (strcmp(pszArgs[ii], XMAIL_DEBUG_OPTION) == 0)
-			return (1);
+			return 1;
 
-	return (0);
-
+	return 0;
 }
 
 static int MnDaemonStartup(int iArgCount, char *pszArgs[])
 {
-
-///////////////////////////////////////////////////////////////////////////////
-//  Daemon bootstrap code if We're not in debug mode
-///////////////////////////////////////////////////////////////////////////////
+	/* Daemon bootstrap code if We're not in debug mode */
 	if (!MnIsDebugStartup(iArgCount, pszArgs))
 		MnDaemonBootStrap();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Extract PID file name
-///////////////////////////////////////////////////////////////////////////////
+	/* Extract PID file name */
 	char const *pszPidFile = strrchr(pszArgs[0], '/');
 
 	pszPidFile = (pszPidFile != NULL) ? (pszPidFile + 1): pszArgs[0];
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create PID file
-///////////////////////////////////////////////////////////////////////////////
+	/* Create PID file */
 	MnSavePID(pszPidFile);
 
 	int iServerResult = SvrMain(iArgCount, pszArgs);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Remove PID file
-///////////////////////////////////////////////////////////////////////////////
+	/* Remove PID file */
 	MnRemovePID(pszPidFile);
 
-	return (iServerResult);
-
+	return iServerResult;
 }
 
 int main(int iArgCount, char *pszArgs[])
 {
-
-	return (MnDaemonStartup(iArgCount, pszArgs));
-
+	return MnDaemonStartup(iArgCount, pszArgs);
 }

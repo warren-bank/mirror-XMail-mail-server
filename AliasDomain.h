@@ -27,9 +27,9 @@
 
 enum ADomainFileds {
 	adomADomain = 0,
-	adomDomain,
+		adomDomain,
 
-	adomMax
+		adomMax
 };
 
 typedef struct ADOMAIN_HANDLE_struct {

@@ -34,12 +34,11 @@
 
 int DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 {
-
 	bool bReleaseHandle = false;
 
 	if (hSvrConfig == INVALID_SVRCFG_HANDLE) {
 		if ((hSvrConfig = SvrGetConfigHandle()) == INVALID_SVRCFG_HANDLE)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 		bReleaseHandle = true;
 	}
@@ -54,7 +53,7 @@ int DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 			SysFree(pszDynDnsCfg);
 			if (bReleaseHandle)
 				SvrReleaseConfigHandle(hSvrConfig);
-			return (ErrorPop());
+			return ErrorPop();
 		}
 
 		SysFree(pszDynDnsCfg);
@@ -67,7 +66,7 @@ int DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 				SvrReleaseConfigHandle(hSvrConfig);
 
 			ErrSetErrorCode(ERR_DYNDNS_CONFIG);
-			return (ERR_DYNDNS_CONFIG);
+			return ERR_DYNDNS_CONFIG;
 		}
 
 		char *pszUsername = (iTokensCount > 3) ? ppszTokens[3] : NULL;
@@ -79,7 +78,7 @@ int DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 			StrFreeStrings(ppszTokens);
 			if (bReleaseHandle)
 				SvrReleaseConfigHandle(hSvrConfig);
-			return (ErrorPop());
+			return ErrorPop();
 		}
 
 		StrFreeStrings(ppszTokens);
@@ -88,22 +87,20 @@ int DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 	if (bReleaseHandle)
 		SvrReleaseConfigHandle(hSvrConfig);
 
-	return (0);
-
+	return 0;
 }
 
 int DynDnsRegisterDomainHTTP(char const *pszServer, int iPortNo,
 			     char const *pszHTTPRegString, char const *pszUsername,
 			     char const *pszPassword)
 {
-
 	SYS_SOCKET SockFD;
 	SYS_INET_ADDR SvrAddr;
 	SYS_INET_ADDR SockAddr;
 
 	if (MscCreateClientSocket(pszServer, iPortNo, SOCK_STREAM, &SockFD, &SvrAddr,
 				  &SockAddr, DYNDNS_REG_TIMEOUT) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	char szIP[128] = "???.???.???.???";
 	char szRegString[512] = "";
@@ -141,7 +138,7 @@ int DynDnsRegisterDomainHTTP(char const *pszServer, int iPortNo,
 	if (SysSend(SockFD, szHTTPRequest, iRequestLength, DYNDNS_REG_TIMEOUT) != iRequestLength) {
 		ErrorPush();
 		SysCloseSocket(SockFD);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	char szRespFile[SYS_MAX_PATH] = "";
@@ -155,7 +152,7 @@ int DynDnsRegisterDomainHTTP(char const *pszServer, int iPortNo,
 		SysCloseSocket(SockFD);
 
 		ErrSetErrorCode(ERR_FILE_CREATE);
-		return (ERR_FILE_CREATE);
+		return ERR_FILE_CREATE;
 	}
 
 	int iRecvData;
@@ -170,15 +167,12 @@ int DynDnsRegisterDomainHTTP(char const *pszServer, int iPortNo,
 
 	SysCloseSocket(SockFD);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Parse HTTP response
-///////////////////////////////////////////////////////////////////////////////
+	/* Parse HTTP response */
 	fseek(pRespFile, 0, SEEK_SET);
 
 	fclose(pRespFile);
 
 	SysRemove(szRespFile);
 
-	return (0);
-
+	return 0;
 }

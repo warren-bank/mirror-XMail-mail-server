@@ -56,6 +56,7 @@ int QueCloseMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 QMSG_HANDLE QueGetHandle(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2, char const *pszQueueDir,
 			 char const *pszFileName);
 char const *QueGetFileName(QMSG_HANDLE hMessage);
+char const *QueGetQueueDir(QMSG_HANDLE hMessage);
 int QueGetLevel1(QMSG_HANDLE hMessage);
 int QueGetLevel2(QMSG_HANDLE hMessage);
 int QueGetTryCount(QMSG_HANDLE hMessage);
@@ -70,3 +71,4 @@ int QueCheckMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 int QueFlushRsndArena(QUEUE_HANDLE hQueue, char const *pszAddressMatch);
 
 #endif
+

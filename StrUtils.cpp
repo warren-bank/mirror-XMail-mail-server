@@ -31,13 +31,12 @@
 
 int StrCmdLineToken(char const *&pszCmdLine, char *pszToken)
 {
-
 	char const *pszCurr = pszCmdLine;
 
 	for (; (*pszCurr == ' ') || (*pszCurr == '\t'); pszCurr++);
 
 	if (*pszCurr == '\0')
-		return (ERR_NO_MORE_TOKENS);
+		return ERR_NO_MORE_TOKENS;
 
 	if (*pszCurr == '"') {
 		++pszCurr;
@@ -64,13 +63,11 @@ int StrCmdLineToken(char const *&pszCmdLine, char *pszToken)
 
 	pszCmdLine = pszCurr;
 
-	return (0);
-
+	return 0;
 }
 
 char **StrGetArgs(char const *pszCmdLine, int &iArgsCount)
 {
-
 	char const *pszCLine = pszCmdLine;
 	char szToken[1024] = "";
 
@@ -79,7 +76,7 @@ char **StrGetArgs(char const *pszCmdLine, int &iArgsCount)
 	char **ppszArgs = (char **) SysAlloc((iArgsCount + 1) * sizeof(char *));
 
 	if (ppszArgs == NULL)
-		return (NULL);
+		return NULL;
 
 	int ii = 0;
 
@@ -89,39 +86,33 @@ char **StrGetArgs(char const *pszCmdLine, int &iArgsCount)
 
 	ppszArgs[ii] = NULL;
 
-	return (ppszArgs);
-
+	return ppszArgs;
 }
 
 char *StrLower(char *pszString)
 {
-
 	char *pszCurr = pszString;
 
 	for (; *pszCurr != '\0'; pszCurr++)
 		if ((*pszCurr >= 'A') && (*pszCurr <= 'Z'))
 			*pszCurr = 'a' + (*pszCurr - 'A');
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrUpper(char *pszString)
 {
-
 	char *pszCurr = pszString;
 
 	for (; *pszCurr != '\0'; pszCurr++)
 		if ((*pszCurr >= 'a') && (*pszCurr <= 'z'))
 			*pszCurr = 'A' + (*pszCurr - 'a');
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrCrypt(char const *pszString, char *pszCrypt)
 {
-
 	SetEmptyString(pszCrypt);
 
 	for (int ii = 0; pszString[ii] != '\0'; ii++) {
@@ -133,19 +124,17 @@ char *StrCrypt(char const *pszString, char *pszCrypt)
 		strcat(pszCrypt, szByte);
 	}
 
-	return (pszCrypt);
-
+	return pszCrypt;
 }
 
 char *StrDeCrypt(char const *pszString, char *pszDeCrypt)
 {
-
 	int iStrLength = strlen(pszString);
 
 	SetEmptyString(pszDeCrypt);
 
 	if ((iStrLength % 2) != 0)
-		return (NULL);
+		return NULL;
 
 	int ii;
 
@@ -159,20 +148,18 @@ char *StrDeCrypt(char const *pszString, char *pszDeCrypt)
 		unsigned int uChar = 0;
 
 		if (sscanf(szByte, "%x", &uChar) != 1)
-			return (NULL);
+			return NULL;
 
 		pszDeCrypt[ii >> 1] = (char) ((uChar ^ 101) & 0xff);
 	}
 
 	pszDeCrypt[ii >> 1] = '\0';
 
-	return (pszDeCrypt);
-
+	return pszDeCrypt;
 }
 
 char **StrBuildList(char const *pszString, ...)
 {
-
 	int iNumString = 1;
 	char const *pszArg = NULL;
 	va_list Args;
@@ -188,30 +175,28 @@ char **StrBuildList(char const *pszString, ...)
 	char **ppszStrings = (char **) SysAlloc((iNumString + 1) * sizeof(char *));
 
 	if (ppszStrings == NULL)
-		return (NULL);
+		return NULL;
 
 	ppszStrings[iStrCurr++] = SysStrDup(pszString);
 
 	va_start(Args, pszString);
 
 	while ((pszArg = va_arg(Args, char *)) != NULL)
-		 ppszStrings[iStrCurr++] = SysStrDup(pszArg);
+		ppszStrings[iStrCurr++] = SysStrDup(pszArg);
 
 	va_end(Args);
 
 	ppszStrings[iStrCurr] = NULL;
 
-	return (ppszStrings);
-
+	return ppszStrings;
 }
 
 char **StrTokenize(const char *pszString, const char *pszTokenizer)
 {
-
 	char *pszBuffer = SysStrDup(pszString);
 
 	if (pszBuffer == NULL)
-		return (NULL);
+		return NULL;
 
 	int iTokenCount = 0;
 	char *pszToken = NULL;
@@ -229,7 +214,7 @@ char **StrTokenize(const char *pszString, const char *pszTokenizer)
 
 	if (ppszTokens == NULL) {
 		SysFree(pszBuffer);
-		return (NULL);
+		return NULL;
 	}
 
 	strcpy(pszBuffer, pszString);
@@ -242,78 +227,63 @@ char **StrTokenize(const char *pszString, const char *pszTokenizer)
 
 		pszToken = SysStrTok(NULL, pszTokenizer, &pszSavePtr);
 	}
-
 	ppszTokens[iTokenCount] = NULL;
-
 	SysFree(pszBuffer);
 
-	return (ppszTokens);
-
+	return ppszTokens;
 }
 
 void StrFreeStrings(char **ppszStrings)
 {
-
 	for (int ii = 0; ppszStrings[ii] != NULL; ii++)
 		SysFree(ppszStrings[ii]);
-
 	SysFree(ppszStrings);
-
 }
 
 int StrStringsCount(char const *const *ppszStrings)
 {
-
 	int ii;
 
 	for (ii = 0; ppszStrings[ii] != NULL; ii++);
 
-	return (ii);
-
+	return ii;
 }
 
 bool StrStringsMatch(char const *const *ppszStrings, char const *pszMatch)
 {
-
 	int ii;
 
 	for (ii = 0; ppszStrings[ii] != NULL; ii++)
 		if (strcmp(ppszStrings[ii], pszMatch) == 0)
-			return (true);
+			return true;
 
-	return (false);
-
+	return false;
 }
 
 bool StrStringsIMatch(char const *const *ppszStrings, char const *pszMatch)
 {
-
 	int ii;
 
 	for (ii = 0; ppszStrings[ii] != NULL; ii++)
 		if (stricmp(ppszStrings[ii], pszMatch) == 0)
-			return (true);
+			return true;
 
-	return (false);
-
+	return false;
 }
 
 bool StrStringsRIWMatch(char const *const *pszMatches, char const *pszString)
 {
-
 	int ii;
 
 	for (ii = 0; pszMatches[ii] != NULL; ii++)
 		if (StrIWildMatch(pszString, pszMatches[ii]))
-			return (true);
+			return true;
 
-	return (false);
-
+	return false;
 }
 
 char *StrConcat(char const *const *ppszStrings, char const *pszCStr)
 {
-
 	int ii;
 	int iStrCount = StrStringsCount(ppszStrings);
 	int iCStrLength = strlen(pszCStr);
@@ -325,7 +295,7 @@ char *StrConcat(char const *const *ppszStrings, char const *pszCStr)
 	char *pszConcat = (char *) SysAlloc(iSumLength + 1);
 
 	if (pszConcat == NULL)
-		return (NULL);
+		return NULL;
 
 	SetEmptyString(pszConcat);
 
@@ -336,78 +306,79 @@ char *StrConcat(char const *const *ppszStrings, char const *pszCStr)
 		strcat(pszConcat, ppszStrings[ii]);
 	}
 
-	return (pszConcat);
-
+	return pszConcat;
 }
 
 char *StrDeQuote(char *pszString, int iChar)
 {
-
 	if (*pszString == iChar) {
-		int ii;
+		int i, j;
 
-		for (ii = 1; (pszString[ii] != '\0') && (pszString[ii] != iChar); ii++)
-			pszString[ii - 1] = pszString[ii];
-
-		pszString[ii - 1] = '\0';
+		for (i = 1, j = 0; pszString[i] != '\0' && pszString[i] != iChar; i++) {
+			if (pszString[i] == '\\' && pszString[i + 1] == iChar)
+				i++;
+			pszString[j++] = pszString[i];
+		}
+		pszString[j] = '\0';
 	}
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrQuote(const char *pszString, int iChar)
 {
+	int i, j, iQSize;
 
-	int iStrLen = strlen(pszString);
-	char *pszBuffer = (char *) SysAlloc(3 + iStrLen);
+	for (i = iQSize = 0; pszString[i] != '\0'; i++, iQSize++)
+		if (pszString[i] == iChar)
+			iQSize++;
+
+	char *pszBuffer = (char *) SysAlloc(3 + iQSize);
 
 	if (pszBuffer == NULL)
-		return (NULL);
+		return NULL;
 
 	pszBuffer[0] = (char) iChar;
-	memcpy(pszBuffer + 1, pszString, iStrLen);
-	pszBuffer[iStrLen + 1] = (char) iChar;
-	pszBuffer[iStrLen + 2] = '\0';
+	for (i = 0, j = 1; pszString[i] != '\0'; i++) {
+		if (pszString[i] == iChar)
+			pszBuffer[j++] = '\\';
+		pszBuffer[j++] = pszString[i];
+	}
+	pszBuffer[j++] = (char) iChar;
+	pszBuffer[j] = '\0';
 
-	return (pszBuffer);
-
+	return pszBuffer;
 }
 
 char **StrGetTabLineStrings(const char *pszUsrLine)
 {
-
 	char **ppszStrings = StrTokenize(pszUsrLine, "\t");
 
 	if (ppszStrings == NULL)
-		return (NULL);
+		return NULL;
 
 	for (int ii = 0; ppszStrings[ii] != NULL; ii++)
 		StrDeQuote(ppszStrings[ii], '"');
 
-	return (ppszStrings);
-
+	return ppszStrings;
 }
 
-int StrWriteCRLFString(FILE * pFile, const char *pszString)
+int StrWriteCRLFString(FILE *pFile, const char *pszString)
 {
-
 	unsigned int uStrLength = strlen(pszString);
 
 	if ((uStrLength != 0) && (fwrite(pszString, uStrLength, 1, pFile) == 0)) {
 		ErrSetErrorCode(ERR_FILE_WRITE);
-		return (ERR_FILE_WRITE);
+		return ERR_FILE_WRITE;
 	}
 
 	fputs("\r\n", pFile);
 
-	return (0);
-
+	return 0;
 }
 
 int StrWildMatch(char const *pszString, char const *pszMatch)
 {
-
 	int iPrev;
 	int iMatched;
 	int iReverse;
@@ -417,26 +388,26 @@ int StrWildMatch(char const *pszString, char const *pszMatch)
 		switch (*pszMatch) {
 		case ('\\'):
 			if (!*++pszMatch)
-				return (0);
+				return 0;
 
 		default:
 			if (*pszString != *pszMatch)
-				return (0);
+				return 0;
 			continue;
 
 		case ('?'):
 			if (*pszString == '\0')
-				return (0);
+				return 0;
 			continue;
 
 		case ('*'):
 			while (*(++pszMatch) == '*');
 			if (!*pszMatch)
-				return (1);
+				return 1;
 			while (*pszString)
 				if (StrWildMatch(pszString++, pszMatch))
-					return (1);
-			return (0);
+					return 1;
+			return 0;
 
 		case ('['):
 			iEscape = 0;
@@ -450,10 +421,10 @@ int StrWildMatch(char const *pszString, char const *pszMatch)
 					continue;
 				if (!iEscape && (*pszMatch == '-')) {
 					if (!*++pszMatch)
-						return (0);
+						return 0;
 					if (*pszMatch == '\\')
 						if (!*++pszMatch)
-							return (0);
+							return 0;
 					iMatched = iMatched || ((*pszString <= *pszMatch) &&
 								(*pszString >= iPrev));
 				} else
@@ -463,29 +434,27 @@ int StrWildMatch(char const *pszString, char const *pszMatch)
 
 			if ((iPrev == 256) || iEscape || (*pszMatch != ']') ||
 			    (iMatched == iReverse))
-				return (0);
+				return 0;
 
 			continue;
 		}
 	}
 
-	return ((*pszString == '\0') ? 1 : 0);
-
+	return (*pszString == '\0') ? 1 : 0;
 }
 
 int StrIWildMatch(char const *pszString, char const *pszMatch)
 {
-
 	char *pszLowString = SysStrDup(pszString);
 
 	if (pszLowString == NULL)
-		return (0);
+		return 0;
 
 	char *pszLowMatch = SysStrDup(pszMatch);
 
 	if (pszLowMatch == NULL) {
 		SysFree(pszLowString);
-		return (0);
+		return 0;
 	}
 
 	StrLower(pszLowString);
@@ -496,49 +465,42 @@ int StrIWildMatch(char const *pszString, char const *pszMatch)
 	SysFree(pszLowMatch);
 	SysFree(pszLowString);
 
-	return (iMatchResult);
-
+	return iMatchResult;
 }
 
-char *StrLoadFile(FILE * pFile)
+char *StrLoadFile(FILE *pFile)
 {
-
 	fseek(pFile, 0, SEEK_END);
 
 	unsigned int uFileSize = (unsigned int) ftell(pFile);
 	char *pszData = (char *) SysAlloc(uFileSize + 1);
 
 	if (pszData == NULL)
-		return (NULL);
+		return NULL;
 
 	fseek(pFile, 0, SEEK_SET);
 
 	fread(pszData, uFileSize, 1, pFile);
 	pszData[uFileSize] = '\0';
 
-	return (pszData);
-
+	return pszData;
 }
 
 char *StrSprint(char const *pszFormat, ...)
 {
-
 	char *pszMessage = NULL;
 
-	STRSPRINTF(pszMessage, pszFormat, pszFormat);
+	StrVSprint(pszMessage, pszFormat, pszFormat);
 
-	return (pszMessage);
-
+	return pszMessage;
 }
 
 int StrSplitString(char const *pszString, char const *pszSplitters,
 		   char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight)
 {
-
 	char const *pszSplitChar = NULL;
 
-	for (;
-	     (*pszSplitters != '\0') &&
+	for (; (*pszSplitters != '\0') &&
 	     ((pszSplitChar = strchr(pszString, *pszSplitters)) == NULL); ++pszSplitters);
 
 	if (pszSplitChar == NULL) {
@@ -553,18 +515,15 @@ int StrSplitString(char const *pszString, char const *pszSplitters,
 
 			StrNCpy(pszStrLeft, pszString, Min(iUserLength + 1, iSizeLeft));
 		}
-
 		if (pszStrRight != NULL)
 			StrNCpy(pszStrRight, pszSplitChar + 1, iSizeRight);
 	}
 
-	return (0);
-
+	return 0;
 }
 
 char *StrLTrim(char *pszString, char const *pszTrimChars)
 {
-
 	int ii;
 
 	for (ii = 0; (pszString[ii] != '\0') && (strchr(pszTrimChars, pszString[ii]) != NULL);
@@ -579,57 +538,48 @@ char *StrLTrim(char *pszString, char const *pszTrimChars)
 		pszString[jj - ii] = pszString[jj];
 	}
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrRTrim(char *pszString, char const *pszTrimChars)
 {
-
 	int ii = strlen(pszString) - 1;
 
 	for (; (ii >= 0) && (strchr(pszTrimChars, pszString[ii]) != NULL); ii--)
 		pszString[ii] = '\0';
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrTrim(char *pszString, char const *pszTrimChars)
 {
-
-	return (StrRTrim(StrLTrim(pszString, pszTrimChars), pszTrimChars));
-
+	return StrRTrim(StrLTrim(pszString, pszTrimChars), pszTrimChars);
 }
 
 char *StrEOLTrim(char *pszString)
 {
-
 	int iPos = strlen(pszString);
 
 	for (; (iPos > 0) && ((pszString[iPos - 1] == '\r') || (pszString[iPos - 1] == '\n'));
 	     iPos--);
-
 	pszString[iPos] = '\0';
 
-	return (pszString);
-
+	return pszString;
 }
 
 char *StrIStr(char const *pszBuffer, char const *pszMatch)
 {
-
 	int iMatchLen = strlen(pszMatch);
 	int iMatchPos = 0;
 	int iLoMatch = LoChar(*pszMatch);
 
 	if (iMatchLen == 0)
-		return ((char *) pszBuffer);
+		return (char *) pszBuffer;
 
 	for (; *pszBuffer != '\0'; pszBuffer++) {
 		if (LoChar(*pszBuffer) == iLoMatch) {
 			if (++iMatchPos == iMatchLen)
-				return ((char *) pszBuffer - iMatchLen + 1);
+				return (char *) pszBuffer - iMatchLen + 1;
 
 			iLoMatch = LoChar(pszMatch[iMatchPos]);
 		} else if (iMatchPos != 0) {
@@ -639,95 +589,114 @@ char *StrIStr(char const *pszBuffer, char const *pszMatch)
 		}
 	}
 
-	return (NULL);
-
+	return NULL;
 }
 
-int StrDynInit(DynString * pDS)
+int StrDynInit(DynString *pDS, char const *pszInit)
 {
+	if (pszInit == NULL)
+		pszInit = "";
+
+	int iInitLength = strlen(pszInit);
 
 	ZeroData(*pDS);
-	pDS->pszBuffer = SysStrDup("");
-	pDS->iStringSize = 0;
-	pDS->iBufferSize = 0;
+	pDS->iStringSize = iInitLength;
+	pDS->iBufferSize = Max(2 * iInitLength, MIN_DYNSTR_INCR);
 
-	return (0);
+	if ((pDS->pszBuffer = (char *) SysAlloc(pDS->iBufferSize)) == NULL)
+		return ErrGetErrorCode();
+	memcpy(pDS->pszBuffer, pszInit, iInitLength);
 
+	return 0;
 }
 
-int StrDynFree(DynString * pDS)
+int StrDynFree(DynString *pDS)
 {
+	SysFree(pDS->pszBuffer);
 
-	if (pDS->pszBuffer != NULL)
-		SysFree(pDS->pszBuffer);
-
-	ZeroData(*pDS);
-
-	return (0);
-
+	return 0;
 }
 
-int StrDynTruncate(DynString * pDS)
+int StrDynTruncate(DynString *pDS)
 {
-
-	if (pDS->pszBuffer != NULL)
-		SetEmptyString(pDS->pszBuffer);
-
 	pDS->iStringSize = 0;
 
-	return (0);
-
+	return 0;
 }
 
-char const *StrDynGet(DynString * pDS)
+char const *StrDynGet(DynString *pDS)
 {
+	pDS->pszBuffer[pDS->iStringSize] = '\0';
 
-	return (pDS->pszBuffer);
-
+	return pDS->pszBuffer;
 }
 
-int StrDynSize(DynString * pDS)
+char *StrDynDrop(DynString *pDS, int *piSize)
 {
+	char *pszBuffer = pDS->pszBuffer;
 
-	return (pDS->iStringSize);
+	if (piSize != NULL)
+		*piSize = pDS->iStringSize;
+	pszBuffer[pDS->iStringSize] = '\0';
+	pDS->pszBuffer = NULL;
 
+	return pszBuffer;
 }
 
-int StrDynAdd(DynString * pDS, char const *pszBuffer, int iStringSize)
+int StrDynSize(DynString *pDS)
 {
+	return pDS->iStringSize;
+}
 
+int StrDynAdd(DynString *pDS, char const *pszBuffer, int iStringSize)
+{
 	if (iStringSize < 0)
 		iStringSize = strlen(pszBuffer);
-
 	if ((pDS->iStringSize + iStringSize) >= pDS->iBufferSize) {
 		int iNewSize = pDS->iBufferSize + Max(2 * iStringSize, MIN_DYNSTR_INCR);
 		char *pszNewBuffer = (char *) SysAlloc(iNewSize);
 
 		if (pszNewBuffer == NULL)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
-		strcpy(pszNewBuffer, pDS->pszBuffer);
-
+		memcpy(pszNewBuffer, pDS->pszBuffer, pDS->iStringSize);
 		SysFree(pDS->pszBuffer);
-
 		pDS->pszBuffer = pszNewBuffer;
-
 		pDS->iBufferSize = iNewSize;
 	}
-
 	memcpy(pDS->pszBuffer + pDS->iStringSize, pszBuffer, iStringSize);
-
 	pDS->iStringSize += iStringSize;
 
-	pDS->pszBuffer[pDS->iStringSize] = '\0';
+	return 0;
+}
 
-	return (0);
+int StrDynPrint(DynString *pDS, char const *pszFormat, ...)
+{
+	char *pszMessage = NULL;
 
+	StrVSprint(pszMessage, pszFormat, pszFormat);
+	if (pszMessage == NULL)
+		return ErrGetErrorCode();
+
+	int iAddResult = StrDynAdd(pDS, pszMessage);
+
+	SysFree(pszMessage);
+
+	return iAddResult;
+}
+
+char *StrNDup(char const *pszStr, int iSize)
+{
+	char *pszDupStr = (char *) SysAlloc(iSize + 1);
+
+	if (pszDupStr != NULL)
+		Cpy2Sz(pszDupStr, pszStr, iSize);
+
+	return pszDupStr;
 }
 
 int StrParamGet(char const *pszBuffer, char const *pszName, char *pszVal, int iMaxVal)
 {
-
 	int iNameLen = strlen(pszName), iParamSize;
 	char const *pszTmp, *pszEnd;
 
@@ -744,10 +713,57 @@ int StrParamGet(char const *pszBuffer, char const *pszName, char *pszVal, int iM
 
 		Cpy2Sz(pszVal, pszTmp, iParamSize);
 
-		return (1);
+		return 1;
 	}
 
-	return (0);
+	return 0;
+}
 
+char *StrMacSubst(char const *pszIn, int *piSize,
+		  char *(*pLkupProc)(void *, char const *, int), void *pPriv)
+{
+	int i, j;
+	char *pszLkup = NULL;
+	char const *pszVarS, *pszVarE;
+	DynString DynS;
+	char szBuf[128];
+
+	if (StrDynInit(&DynS, NULL) < 0)
+		return NULL;
+	for (i = j = 0; pszIn[i]; i++) {
+		if (pszIn[i] == '\\' && pszIn[i + 1] == '$')
+			szBuf[j++] = pszIn[++i];
+		else if (pszIn[i] == '$') {
+			if (pszIn[++i] != '(')
+				goto ErrorExit;
+			pszVarS = pszIn + i + 1;
+			if ((pszVarE = strchr(pszVarS, ')')) == NULL)
+				goto ErrorExit;
+			if (j && StrDynAdd(&DynS, szBuf, j) < 0)
+				goto ErrorExit;
+			j = 0;
+			if ((pszLkup = (*pLkupProc)(pPriv, pszVarS, pszVarE - pszVarS)) == NULL ||
+			    StrDynAdd(&DynS, pszLkup, -1) < 0)
+				goto ErrorExit;
+			SysFree(pszLkup);
+			pszLkup = NULL;
+			i = pszVarE - pszIn;
+		} else
+			szBuf[j++] = pszIn[i];
+		if (j == CountOf(szBuf)) {
+			if (StrDynAdd(&DynS, szBuf, j) < 0)
+				goto ErrorExit;
+			j = 0;
+		}
+	}
+	if (j && StrDynAdd(&DynS, szBuf, j) < 0)
+		goto ErrorExit;
+
+	return StrDynDrop(&DynS, piSize);
+
+	ErrorExit:
+	SysFreeCheck(pszLkup);
+	StrDynFree(&DynS);
+	return NULL;
 }
 

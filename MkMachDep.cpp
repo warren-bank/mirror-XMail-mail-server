@@ -48,7 +48,6 @@ static int MkMachIsLEBF(void)
 
 static int MkMachGenType(int iBits, char const *pszBase)
 {
-
 	fprintf(stdout,
 		"typedef signed %s MachInt%d;\n"
 		"typedef unsigned %s MachUInt%d;\n"
@@ -59,7 +58,6 @@ static int MkMachGenType(int iBits, char const *pszBase)
 
 int main(int argc, char *argv[])
 {
-
 	fprintf(stdout, "#ifndef _MACHDEFS_H\n" "#define _MACHDEFS_H\n\n\n");
 
 	if (!MkMachIsLE())

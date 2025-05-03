@@ -30,6 +30,19 @@
 typedef struct BSOCK_HANDLE_struct {
 } *BSOCK_HANDLE;
 
+struct BSockLineBuffer {
+	char *pszBuffer;
+	int iSize;
+};
+
+struct BufSockIOOps {
+	void *pPrivate;
+	int (*pFree)(void *);
+	int (*pRead)(void *, void *, int, int);
+	int (*pWrite)(void *, void const *, int, int);
+	int (*pSendFile)(void *, char const *, unsigned long, unsigned long, int);
+};
+
 BSOCK_HANDLE BSckAttach(SYS_SOCKET SockFD, int iBufferSize = STD_SOCK_BUFFER_SIZE);
 SYS_SOCKET BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket = 0);
 int BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout);
@@ -40,7 +53,15 @@ char *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTi
 int BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout);
 int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ...);
 int BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout);
-int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout);
+int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout,
+		 int iSizeFill = 0);
+int BSckSendFile(BSOCK_HANDLE hBSock, char const *pszFilePath, unsigned long ulBaseOffset,
+		 unsigned long ulEndOffset, int iTimeout);
 SYS_SOCKET BSckGetAttachedSocket(BSOCK_HANDLE hBSock);
+int BSckSetIOops(BSOCK_HANDLE hBSock, BufSockIOOps const *pIOops);
+int BSckBufferInit(BSockLineBuffer *pBLB, int iSize = -1);
+void BSckBufferFree(BSockLineBuffer *pBLB);
+char *BSckBufferGet(BSOCK_HANDLE hBSock, BSockLineBuffer *pBLB, int iTimeout,
+		    int *piLineLength = NULL);
 
 #endif

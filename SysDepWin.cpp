@@ -30,12 +30,10 @@
 #define SOCK_VERSION_REQUESTED          MAKEWORD(2, 0)
 #define SHUTDOWN_RECV_TIMEOUT           2
 
-///////////////////////////////////////////////////////////////////////////////
-//  Under certain circumstances ( M$ Proxy installed ?! ) a waiting operation
-//  may be unlocked even if the IO terminal is not ready to perform following
-//  IO request ( an error code WSAEWOULDBLOCK is returned ). The only solution
-//  I see is to sleep a bit to prevent processor time wasting :(
-///////////////////////////////////////////////////////////////////////////////
+/* Under certain circumstances ( M$ Proxy installed ?! ) a waiting operation */
+/* may be unlocked even if the IO terminal is not ready to perform following */
+/* IO request ( an error code WSAEWOULDBLOCK is returned ). The only solution */
+/* I see is to sleep a bit to prevent processor time wasting :( */
 #define BLOCKED_SNDRCV_MSSLEEP          200
 #define HANDLE_SOCKS_SUCKS()            do { Sleep(BLOCKED_SNDRCV_MSSLEEP); } while (0)
 
@@ -67,6 +65,15 @@ struct ThreadRunner {
 	void *pThreadData;
 };
 
+struct MMapData {
+	unsigned long ulPageSize;
+	HANDLE hFile;
+	HANDLE hFileMap;
+	int iNumMaps;
+	unsigned long ulFileSize;
+	unsigned long ulFlags;
+};
+
 static void SysInitTlsKeyEntries(void);
 static void SysInitTlsKeys(void);
 static void SysCleanupTlsKeys(void);
@@ -89,7 +96,7 @@ static CRITICAL_SECTION csTLS;
 static bool bSetupEntries = true;
 static TlsKeyEntry TlsKeyEntries[MAX_TLS_KEYS];
 static __declspec(thread)
-TlsKeyData TlsKeys[MAX_TLS_KEYS];
+	TlsKeyData TlsKeys[MAX_TLS_KEYS];
 static time_t tSysStart;
 static SYS_INT64 PCFreq;
 static SYS_INT64 PCSysStart;
@@ -101,7 +108,6 @@ static HANDLE hShutdownEvent = NULL;
 
 static void SysInitTlsKeyEntries(void)
 {
-
 	if (bSetupEntries) {
 		for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
 			TlsKeyEntries[ii].pFreeProc = UNUSED_TLS_KEY_PROC;
@@ -113,7 +119,6 @@ static void SysInitTlsKeyEntries(void)
 
 static void SysInitTlsKeys(void)
 {
-
 	for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
 		TlsKeys[ii].pData = NULL;
 
@@ -121,7 +126,6 @@ static void SysInitTlsKeys(void)
 
 static void SysCleanupTlsKeys(void)
 {
-
 	EnterCriticalSection(&csTLS);
 
 	for (int ii = 0; ii < MAX_TLS_KEYS; ii++) {
@@ -138,18 +142,17 @@ static void SysCleanupTlsKeys(void)
 
 static char const *SysGetLastError(void)
 {
-
 	char *pszMessage = NULL;
 	DWORD dwError = GetLastError();
 	DWORD dwRet =
-	    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-			  FORMAT_MESSAGE_ARGUMENT_ARRAY,
-			  NULL,
-			  dwError,
-			  LANG_NEUTRAL,
-			  (LPTSTR) & pszMessage,
-			  0,
-			  NULL);
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+			      FORMAT_MESSAGE_ARGUMENT_ARRAY,
+			      NULL,
+			      dwError,
+			      LANG_NEUTRAL,
+			      (LPTSTR) & pszMessage,
+			      0,
+			      NULL);
 
 	static char szMessage[1024] = "";
 
@@ -163,13 +166,11 @@ static char const *SysGetLastError(void)
 	if (pszMessage != NULL)
 		LocalFree((HLOCAL) pszMessage);
 
-	return (szMessage);
-
+	return szMessage;
 }
 
 static int SysSetServerName(void)
 {
-
 	int iSize;
 	char *pszSlash;
 	char *pszDot;
@@ -188,15 +189,12 @@ static int SysSetServerName(void)
 	iSize = Min(sizeof(szServerName) - 1, (int) (pszDot - pszSlash));
 	Cpy2Sz(szServerName, pszSlash, iSize);
 
-	return (0);
-
+	return 0;
 }
 
 int SysInitLibrary(void)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Setup timers
-///////////////////////////////////////////////////////////////////////////////
+	/* Setup timers */
 	LARGE_INTEGER PerfCntFreq;
 	LARGE_INTEGER PerfCntCurr;
 
@@ -211,21 +209,17 @@ int SysInitLibrary(void)
 	time(&tSysStart);
 	uSRandBase = (unsigned int) tSysStart;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Set the server name
-///////////////////////////////////////////////////////////////////////////////
+	/* Set the server name */
 	SysSetServerName();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Setup sockets
-///////////////////////////////////////////////////////////////////////////////
+	/* Setup sockets */
 	WSADATA WSD;
 
 	ZeroData(WSD);
 
 	if (WSAStartup(SOCK_VERSION_REQUESTED, &WSD)) {
 		ErrSetErrorCode(ERR_NETWORK);
-		return (ERR_NETWORK);
+		return ERR_NETWORK;
 	}
 
 	InitializeCriticalSection(&csTLS);
@@ -237,7 +231,7 @@ int SysInitLibrary(void)
 		DeleteCriticalSection(&csLog);
 		DeleteCriticalSection(&csTLS);
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	if (SysThreadSetup() < 0) {
@@ -245,16 +239,14 @@ int SysInitLibrary(void)
 		CloseHandle(hShutdownEvent);
 		DeleteCriticalSection(&csLog);
 		DeleteCriticalSection(&csTLS);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
-	return (0);
-
+	return 0;
 }
 
 void SysCleanupLibrary(void)
 {
-
 	SysThreadCleanup();
 
 	DeleteCriticalSection(&csLog);
@@ -269,66 +261,56 @@ void SysCleanupLibrary(void)
 
 int SysShutdownLibrary(int iMode)
 {
-
 	SetEvent(hShutdownEvent);
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize)
 {
-
 	if (piSndBufSize != NULL)
 		iSndBufSize = *piSndBufSize;
 
 	if (piRcvBufSize != NULL)
 		iRcvBufSize = *piRcvBufSize;
 
-	return (0);
-
+	return 0;
 }
 
 SYS_SOCKET SysCreateSocket(int iAddressFamily, int iType, int iProtocol)
 {
-
 	SOCKET SockFD = WSASocket(iAddressFamily, iType, iProtocol, NULL, 0,
 				  WSA_FLAG_OVERLAPPED);
 
 	if (SockFD == INVALID_SOCKET) {
 		ErrSetErrorCode(ERR_SOCKET_CREATE);
-		return (SYS_INVALID_SOCKET);
+		return SYS_INVALID_SOCKET;
 	}
 
 	if (SysSetSocketsOptions((SYS_SOCKET) SockFD) < 0) {
 		SysCloseSocket((SYS_SOCKET) SockFD);
 
-		return (SYS_INVALID_SOCKET);
+		return SYS_INVALID_SOCKET;
 	}
 
-	return ((SYS_SOCKET) SockFD);
-
+	return (SYS_SOCKET) SockFD;
 }
 
 static int SysBlockSocket(SYS_SOCKET SockFD, int OnOff)
 {
-
 	u_long IoctlLong = (OnOff) ? 0 : 1;
 
 	if (ioctlsocket(SockFD, FIONBIO, &IoctlLong) == SOCKET_ERROR) {
 		ErrSetErrorCode(ERR_NETWORK);
-		return (ERR_NETWORK);
+		return ERR_NETWORK;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Set socket buffer sizes
-///////////////////////////////////////////////////////////////////////////////
+	/* Set socket buffer sizes */
 	if (iSndBufSize > 0) {
 		int iSize = iSndBufSize;
 
@@ -348,11 +330,9 @@ static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 	if (setsockopt(SockFD, SOL_SOCKET, SO_REUSEADDR, (const char *) &iActivate,
 		       sizeof(iActivate)) != 0) {
 		ErrSetErrorCode(ERR_SETSOCKOPT);
-		return (ERR_SETSOCKOPT);
+		return ERR_SETSOCKOPT;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Disable linger
-///////////////////////////////////////////////////////////////////////////////
+	/* Disable linger */
 	struct linger Ling;
 
 	ZeroData(Ling);
@@ -361,45 +341,37 @@ static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 
 	setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling, sizeof(Ling));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Set KEEPALIVE if supported
-///////////////////////////////////////////////////////////////////////////////
+	/* Set KEEPALIVE if supported */
 	setsockopt(SockFD, SOL_SOCKET, SO_KEEPALIVE, (const char *) &iActivate,
 		   sizeof(iActivate));
 
-	return (0);
-
+	return 0;
 }
 
 void SysCloseSocket(SYS_SOCKET SockFD)
 {
-
 	closesocket(SockFD);
 
 }
 
 int SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr *SockName, int iNameLen)
 {
-
 	if (bind(SockFD, SockName, iNameLen) == SOCKET_ERROR) {
 		ErrSetErrorCode(ERR_SOCKET_BIND);
-		return (ERR_SOCKET_BIND);
+		return ERR_SOCKET_BIND;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 void SysListenSocket(SYS_SOCKET SockFD, int iConnections)
 {
-
 	listen(SockFD, iConnections);
 
 }
 
 static int SysRecvLL(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize)
 {
-
 	DWORD dwRtxBytes = 0;
 	DWORD dwRtxFlags = 0;
 	WSABUF WSABuff;
@@ -415,7 +387,6 @@ static int SysRecvLL(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize)
 
 static int SysSendLL(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize)
 {
-
 	DWORD dwRtxBytes = 0;
 	WSABUF WSABuff;
 
@@ -430,12 +401,11 @@ static int SysSendLL(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize)
 
 int SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	HANDLE hReadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hReadEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	int iRecvBytes = 0;
@@ -452,11 +422,11 @@ int SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeou
 		if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1)) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
-			return (ERR_SERVER_SHUTDOWN);
+			return ERR_SERVER_SHUTDOWN;
 		} else if (dwWaitResult != WSA_WAIT_EVENT_0) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_TIMEOUT);
-			return (ERR_TIMEOUT);
+			return ERR_TIMEOUT;
 		}
 
 		if ((iRecvBytes = SysRecvLL(SockFD, pszBuffer, iBufferSize)) >= 0)
@@ -467,23 +437,19 @@ int SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeou
 		if (iErrorCode != WSAEWOULDBLOCK) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_NETWORK);
-			return (ERR_NETWORK);
+			return ERR_NETWORK;
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  You should never get here if Win32 API worked fine
-///////////////////////////////////////////////////////////////////////////////
+		/* You should never get here if Win32 API worked fine */
 		HANDLE_SOCKS_SUCKS();
 	}
 
 	CloseHandle(hReadEvent);
 
-	return (iRecvBytes);
-
+	return iRecvBytes;
 }
 
 int SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	int iRtxBytes = 0;
 
 	while (iRtxBytes < iBufferSize) {
@@ -491,24 +457,22 @@ int SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout)
 					      iBufferSize - iRtxBytes, iTimeout);
 
 		if (iRtxCurrent <= 0)
-			return (iRtxBytes);
+			return iRtxBytes;
 
 		iRtxBytes += iRtxCurrent;
 	}
 
-	return (iRtxBytes);
-
+	return iRtxBytes;
 }
 
 int SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
 		    char *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	HANDLE hReadEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hReadEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	DWORD dwRtxBytes = 0;
@@ -530,11 +494,11 @@ int SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
 		if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1)) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
-			return (ERR_SERVER_SHUTDOWN);
+			return ERR_SERVER_SHUTDOWN;
 		} else if (dwWaitResult != WSA_WAIT_EVENT_0) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_TIMEOUT);
-			return (ERR_TIMEOUT);
+			return ERR_TIMEOUT;
 		}
 
 		INT FromLen = (INT) iFromlen;
@@ -547,28 +511,24 @@ int SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
 		if (WSAGetLastError() != WSAEWOULDBLOCK) {
 			CloseHandle(hReadEvent);
 			ErrSetErrorCode(ERR_NETWORK);
-			return (ERR_NETWORK);
+			return ERR_NETWORK;
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  You should never get here if Win32 API worked fine
-///////////////////////////////////////////////////////////////////////////////
+		/* You should never get here if Win32 API worked fine */
 		HANDLE_SOCKS_SUCKS();
 	}
 
 	CloseHandle(hReadEvent);
 
-	return ((int) dwRtxBytes);
-
+	return (int) dwRtxBytes;
 }
 
 int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	HANDLE hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hWriteEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	int iSendBytes = 0;
@@ -585,11 +545,11 @@ int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int i
 		if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1)) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
-			return (ERR_SERVER_SHUTDOWN);
+			return ERR_SERVER_SHUTDOWN;
 		} else if (dwWaitResult != WSA_WAIT_EVENT_0) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_TIMEOUT);
-			return (ERR_TIMEOUT);
+			return ERR_TIMEOUT;
 		}
 
 		if ((iSendBytes = SysSendLL(SockFD, pszBuffer, iBufferSize)) >= 0)
@@ -600,23 +560,19 @@ int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int i
 		if (iErrorCode != WSAEWOULDBLOCK) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_NETWORK);
-			return (ERR_NETWORK);
+			return ERR_NETWORK;
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  You should never get here if Win32 API worked fine
-///////////////////////////////////////////////////////////////////////////////
+		/* You should never get here if Win32 API worked fine */
 		HANDLE_SOCKS_SUCKS();
 	}
 
 	CloseHandle(hWriteEvent);
 
-	return (iSendBytes);
-
+	return iSendBytes;
 }
 
 int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	int iRtxBytes = 0;
 
 	while (iRtxBytes < iBufferSize) {
@@ -624,24 +580,22 @@ int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTime
 					      iBufferSize - iRtxBytes, iTimeout);
 
 		if (iRtxCurrent <= 0)
-			return (iRtxBytes);
+			return iRtxBytes;
 
 		iRtxBytes += iRtxCurrent;
 	}
 
-	return (iRtxBytes);
-
+	return iRtxBytes;
 }
 
 int SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
 		  int iToLen, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
-
 	HANDLE hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hWriteEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	DWORD dwRtxBytes = 0;
@@ -663,11 +617,11 @@ int SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
 		if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1)) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
-			return (ERR_SERVER_SHUTDOWN);
+			return ERR_SERVER_SHUTDOWN;
 		} else if (dwWaitResult != WSA_WAIT_EVENT_0) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_TIMEOUT);
-			return (ERR_TIMEOUT);
+			return ERR_TIMEOUT;
 		}
 
 		DWORD dwRtxFlags = 0;
@@ -679,28 +633,24 @@ int SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
 		if (WSAGetLastError() != WSAEWOULDBLOCK) {
 			CloseHandle(hWriteEvent);
 			ErrSetErrorCode(ERR_NETWORK);
-			return (ERR_NETWORK);
+			return ERR_NETWORK;
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  You should never get here if Win32 API worked fine
-///////////////////////////////////////////////////////////////////////////////
+		/* You should never get here if Win32 API worked fine */
 		HANDLE_SOCKS_SUCKS();
 	}
 
 	CloseHandle(hWriteEvent);
 
-	return ((int) dwRtxBytes);
-
+	return (int) dwRtxBytes;
 }
 
 int SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, int iNameLen, int iTimeout)
 {
-
 	HANDLE hConnectEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hConnectEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (ERR_CREATEEVENT);
+		return ERR_CREATEEVENT;
 	}
 
 	WSAEventSelect(SockFD, (WSAEVENT) hConnectEvent, FD_CONNECT);
@@ -738,24 +688,22 @@ int SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, int iNameLen,
 	WSAEventSelect(SockFD, (WSAEVENT) hConnectEvent, 0);
 	CloseHandle(hConnectEvent);
 
-	return (iConnectResult);
-
+	return iConnectResult;
 }
 
 SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen, int iTimeout)
 {
-
 	HANDLE hAcceptEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	if (hAcceptEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (SYS_INVALID_SOCKET);
+		return SYS_INVALID_SOCKET;
 	}
 
 	WSAEventSelect(SockFD, (WSAEVENT) hAcceptEvent, FD_ACCEPT);
 
 	SOCKET SockFDAccept =
-	    WSAAccept(SockFD, (struct sockaddr *) &pSockName->Addr, iNameLen, NULL, 0);
+		WSAAccept(SockFD, (struct sockaddr *) &pSockName->Addr, iNameLen, NULL, 0);
 
 	int iConnectError = WSAGetLastError();
 
@@ -766,8 +714,8 @@ SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen
 
 		if (dwWaitResult == WSA_WAIT_EVENT_0)
 			SockFDAccept =
-			    WSAAccept(SockFD, (struct sockaddr *) &pSockName->Addr, iNameLen,
-				      NULL, 0);
+			WSAAccept(SockFD, (struct sockaddr *) &pSockName->Addr, iNameLen,
+				  NULL, 0);
 		else if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
 			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
 		else
@@ -781,18 +729,16 @@ SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen
 		if ((SysBlockSocket(SockFDAccept, 0) < 0) ||
 		    (SysSetSocketsOptions(SockFDAccept) < 0)) {
 			SysCloseSocket(SockFDAccept);
-			return (SYS_INVALID_SOCKET);
+			return SYS_INVALID_SOCKET;
 		}
 	}
 
-	return (SockFDAccept);
-
+	return SockFDAccept;
 }
 
 int SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
 	      int iTimeout)
 {
-
 	struct timeval TV;
 
 	ZeroData(TV);
@@ -803,34 +749,29 @@ int SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_
 
 	if (iSelectResult < 0) {
 		ErrSetErrorCode(ERR_SELECT);
-		return (ERR_SELECT);
+		return ERR_SELECT;
 	}
 
 	if (iSelectResult == 0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (iSelectResult);
-
+	return iSelectResult;
 }
 
 int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBaseOffset,
 		unsigned long ulEndOffset, int iTimeout)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Open the source file
-///////////////////////////////////////////////////////////////////////////////
+	/* Open the source file */
 	HANDLE hFile = CreateFile(pszFileName, GENERIC_READ, FILE_SHARE_READ,
 				  NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE) {
 		ErrSetErrorCode(ERR_FILE_OPEN);
-		return (ERR_FILE_OPEN);
+		return ERR_FILE_OPEN;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Create file mapping and the file
-///////////////////////////////////////////////////////////////////////////////
+	/* Create file mapping and the file */
 	DWORD dwFileSizeHi = 0;
 	DWORD dwFileSizeLo = GetFileSize(hFile, &dwFileSizeHi);
 	HANDLE hFileMap = CreateFileMapping(hFile, NULL, PAGE_READONLY,
@@ -840,7 +781,7 @@ int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBase
 		CloseHandle(hFile);
 
 		ErrSetErrorCode(ERR_CREATEFILEMAPPING);
-		return (ERR_CREATEFILEMAPPING);
+		return ERR_CREATEFILEMAPPING;
 	}
 
 	void *pAddress = MapViewOfFile(hFileMap, FILE_MAP_READ, 0, 0, 0);
@@ -850,15 +791,13 @@ int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBase
 		CloseHandle(hFile);
 
 		ErrSetErrorCode(ERR_MAPVIEWOFFILE);
-		return (ERR_MAPVIEWOFFILE);
+		return ERR_MAPVIEWOFFILE;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Send the file
-///////////////////////////////////////////////////////////////////////////////
+	/* Send the file */
 	int iSndBuffSize = MIN_TCP_SEND_SIZE;
 	SYS_UINT64 ullFileSize = (((SYS_UINT64) dwFileSizeHi) << 32) | (SYS_UINT64) dwFileSizeLo;
 	SYS_UINT64 ullEndOffset = (ulEndOffset != (unsigned long) -1) ?
-	    ((SYS_UINT64) ulEndOffset) : ullFileSize;
+		((SYS_UINT64) ulEndOffset) : ullFileSize;
 	SYS_UINT64 ullCurrOffset = (SYS_UINT64) ulBaseOffset;
 	char *pszBuffer = (char *) pAddress + ulBaseOffset;
 	time_t tStart;
@@ -872,7 +811,7 @@ int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBase
 			UnmapViewOfFile(pAddress);
 			CloseHandle(hFileMap);
 			CloseHandle(hFile);
-			return (ErrorPop());
+			return ErrorPop();
 		}
 
 		if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
@@ -887,76 +826,62 @@ int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBase
 	CloseHandle(hFileMap);
 	CloseHandle(hFile);
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily,
 		    NET_ADDRESS const &NetAddr, int iPortNo)
 {
-
 	ZeroData(AddrInfo);
 	AddrInfo.Addr.sin_family = iFamily;
 	SAIN_Addr(AddrInfo.Addr) = NetAddr;
 	AddrInfo.Addr.sin_port = htons((short) iPortNo);
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetAddrAddress(SYS_INET_ADDR const &AddrInfo, NET_ADDRESS & NetAddr)
 {
-
 	NetAddr = SAIN_Addr(AddrInfo.Addr);
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetAddrPort(SYS_INET_ADDR const &AddrInfo)
 {
-
-	return (ntohs(AddrInfo.Addr.sin_port));
-
+	return ntohs(AddrInfo.Addr.sin_port);
 }
 
 int SysSetAddrAddress(SYS_INET_ADDR & AddrInfo, NET_ADDRESS const &NetAddr)
 {
-
 	SAIN_Addr(AddrInfo.Addr) = NetAddr;
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetAddrPort(SYS_INET_ADDR & AddrInfo, int iPortNo)
 {
-
 	AddrInfo.Addr.sin_port = htons((short) iPortNo);
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetHostByName(char const *pszName, NET_ADDRESS & NetAddr)
 {
-
 	struct hostent *pHostEnt = gethostbyname(pszName);
 
 	if ((pHostEnt == NULL) || (pHostEnt->h_addr_list[0] == NULL)) {
 		ErrSetErrorCode(ERR_BAD_SERVER_ADDR, pszName);
-		return (ERR_BAD_SERVER_ADDR);
+		return ERR_BAD_SERVER_ADDR;
 	}
 
 	memcpy(&NetAddr, pHostEnt->h_addr_list[0], sizeof(NetAddr));
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetHostByAddr(SYS_INET_ADDR const &AddrInfo, char *pszFQDN)
 {
-
 	struct hostent *pHostEnt = gethostbyaddr((const char *) &SAIN_Addr(AddrInfo.Addr),
 						 sizeof(SAIN_Addr(AddrInfo.Addr)), AF_INET);
 
@@ -964,50 +889,44 @@ int SysGetHostByAddr(SYS_INET_ADDR const &AddrInfo, char *pszFQDN)
 		char szIP[128] = "???.???.???.???";
 
 		ErrSetErrorCode(ERR_GET_SOCK_HOST, SysInetNToA(AddrInfo, szIP));
-		return (ERR_GET_SOCK_HOST);
+		return ERR_GET_SOCK_HOST;
 	}
 
 	strcpy(pszFQDN, pHostEnt->h_name);
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo)
 {
-
 	ZeroData(AddrInfo);
 
 	socklen_t InfoSize = sizeof(AddrInfo.Addr);
 
 	if (getpeername(SockFD, (struct sockaddr *) &AddrInfo.Addr, &InfoSize) == -1) {
 		ErrSetErrorCode(ERR_GET_PEER_INFO);
-		return (ERR_GET_PEER_INFO);
+		return ERR_GET_PEER_INFO;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo)
 {
-
 	ZeroData(AddrInfo);
 
 	socklen_t InfoSize = sizeof(AddrInfo.Addr);
 
 	if (getsockname(SockFD, (struct sockaddr *) &AddrInfo.Addr, &InfoSize) == -1) {
 		ErrSetErrorCode(ERR_GET_SOCK_INFO);
-		return (ERR_GET_SOCK_INFO);
+		return ERR_GET_SOCK_INFO;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 char *SysInetNToA(SYS_INET_ADDR const &AddrInfo, char *pszIP)
 {
-
 	union {
 		unsigned int a;
 		unsigned char b[4];
@@ -1019,226 +938,188 @@ char *SysInetNToA(SYS_INET_ADDR const &AddrInfo, char *pszIP)
 		(unsigned int) UAddr.b[0],
 		(unsigned int) UAddr.b[1], (unsigned int) UAddr.b[2], (unsigned int) UAddr.b[3]);
 
-	return (pszIP);
-
+	return pszIP;
 }
 
 int SysInetAddr(char const *pszDotName, NET_ADDRESS & NetAddr)
 {
-
 	if ((NetAddr = (NET_ADDRESS) inet_addr(pszDotName)) == SYS_INVALID_NET_ADDRESS) {
 		ErrSetErrorCode(ERR_BAD_SERVER_ADDR, pszDotName);
-		return (ERR_BAD_SERVER_ADDR);
+		return ERR_BAD_SERVER_ADDR;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysSameAddress(NET_ADDRESS const &NetAddr1, NET_ADDRESS const &NetAddr2)
 {
-
-	return (memcmp(&NetAddr1, &NetAddr2, sizeof(NET_ADDRESS)) == 0);
-
+	return memcmp(&NetAddr1, &NetAddr2, sizeof(NET_ADDRESS)) == 0;
 }
 
 SYS_SEMAPHORE SysCreateSemaphore(int iInitCount, int iMaxCount)
 {
-
 	HANDLE hSemaphore = CreateSemaphore(NULL, iInitCount, iMaxCount, NULL);
 
 	if (hSemaphore == NULL) {
 		ErrSetErrorCode(ERR_CREATESEMAPHORE);
-		return (SYS_INVALID_SEMAPHORE);
+		return SYS_INVALID_SEMAPHORE;
 	}
 
-	return ((SYS_SEMAPHORE) hSemaphore);
-
+	return (SYS_SEMAPHORE) hSemaphore;
 }
 
 int SysCloseSemaphore(SYS_SEMAPHORE hSemaphore)
 {
-
 	if (!CloseHandle((HANDLE) hSemaphore)) {
 		ErrSetErrorCode(ERR_CLOSEHANDLE);
-		return (ERR_CLOSEHANDLE);
+		return ERR_CLOSEHANDLE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysWaitSemaphore(SYS_SEMAPHORE hSemaphore, int iTimeout)
 {
-
 	if (WaitForSingleObject((HANDLE) hSemaphore, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysReleaseSemaphore(SYS_SEMAPHORE hSemaphore, int iCount)
 {
-
 	if (!ReleaseSemaphore((HANDLE) hSemaphore, (LONG) iCount, NULL)) {
 		ErrSetErrorCode(ERR_RELEASESEMAPHORE);
-		return (ERR_RELEASESEMAPHORE);
+		return ERR_RELEASESEMAPHORE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysTryWaitSemaphore(SYS_SEMAPHORE hSemaphore)
 {
-
 	if (WaitForSingleObject((HANDLE) hSemaphore, 0) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 SYS_MUTEX SysCreateMutex(void)
 {
-
 	HANDLE hMutex = CreateMutex(NULL, FALSE, NULL);
 
 	if (hMutex == NULL) {
 		ErrSetErrorCode(ERR_CREATEMUTEX);
-		return (SYS_INVALID_MUTEX);
+		return SYS_INVALID_MUTEX;
 	}
 
-	return ((SYS_MUTEX) hMutex);
-
+	return (SYS_MUTEX) hMutex;
 }
 
 int SysCloseMutex(SYS_MUTEX hMutex)
 {
-
 	if (!CloseHandle((HANDLE) hMutex)) {
 		ErrSetErrorCode(ERR_CLOSEHANDLE);
-		return (ERR_CLOSEHANDLE);
+		return ERR_CLOSEHANDLE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysLockMutex(SYS_MUTEX hMutex, int iTimeout)
 {
-
 	if (WaitForSingleObject((HANDLE) hMutex, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysUnlockMutex(SYS_MUTEX hMutex)
 {
-
 	ReleaseMutex((HANDLE) hMutex);
 
-	return (0);
-
+	return 0;
 }
 
 int SysTryLockMutex(SYS_MUTEX hMutex)
 {
-
 	if (WaitForSingleObject((HANDLE) hMutex, 0) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 SYS_EVENT SysCreateEvent(int iManualReset)
 {
-
 	HANDLE hEvent = CreateEvent(NULL, iManualReset, FALSE, NULL);
 
 	if (hEvent == NULL) {
 		ErrSetErrorCode(ERR_CREATEEVENT);
-		return (SYS_INVALID_EVENT);
+		return SYS_INVALID_EVENT;
 	}
 
-	return ((SYS_EVENT) hEvent);
-
+	return (SYS_EVENT) hEvent;
 }
 
 int SysCloseEvent(SYS_EVENT hEvent)
 {
-
 	if (!CloseHandle((HANDLE) hEvent)) {
 		ErrSetErrorCode(ERR_CLOSEHANDLE);
-		return (ERR_CLOSEHANDLE);
+		return ERR_CLOSEHANDLE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysWaitEvent(SYS_EVENT hEvent, int iTimeout)
 {
-
 	if (WaitForSingleObject((HANDLE) hEvent, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetEvent(SYS_EVENT hEvent)
 {
-
 	SetEvent((HANDLE) hEvent);
 
-	return (0);
-
+	return 0;
 }
 
 int SysResetEvent(SYS_EVENT hEvent)
 {
-
 	ResetEvent((HANDLE) hEvent);
 
-	return (0);
-
+	return 0;
 }
 
 int SysTryWaitEvent(SYS_EVENT hEvent)
 {
-
 	if (WaitForSingleObject((HANDLE) hEvent, 0) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 static unsigned int SysThreadRunner(void *pRunData)
 {
-
 	ThreadRunner *pTR = (ThreadRunner *) pRunData;
 
 	if (SysThreadSetup() < 0) {
 		SysFree(pTR);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
 
 	unsigned int uResultCode = SysStkCall(pTR->pThreadProc, pTR->pThreadData);
@@ -1247,26 +1128,21 @@ static unsigned int SysThreadRunner(void *pRunData)
 
 	SysFree(pTR);
 
-	return (uResultCode);
-
+	return uResultCode;
 }
 
 SYS_THREAD SysCreateThread(unsigned int (*pThreadProc) (void *), void *pThreadData)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Alloc thread runner data
-///////////////////////////////////////////////////////////////////////////////
+	/* Alloc thread runner data */
 	ThreadRunner *pTR = (ThreadRunner *) SysAlloc(sizeof(ThreadRunner));
 
 	if (pTR == NULL)
-		return (SYS_INVALID_THREAD);
+		return SYS_INVALID_THREAD;
 
 	pTR->pThreadProc = pThreadProc;
 	pTR->pThreadData = pThreadData;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create the thread
-///////////////////////////////////////////////////////////////////////////////
+	/* Create the thread */
 	unsigned int uThreadId = 0;
 	unsigned long ulThread = _beginthreadex(NULL, 0,
 						(unsigned (__stdcall *) (void *)) SysThreadRunner,
@@ -1275,43 +1151,35 @@ SYS_THREAD SysCreateThread(unsigned int (*pThreadProc) (void *), void *pThreadDa
 	if (ulThread == 0) {
 		SysFree(pTR);
 		ErrSetErrorCode(ERR_BEGINTHREADEX);
-		return (SYS_INVALID_THREAD);
+		return SYS_INVALID_THREAD;
 	}
 
-	return ((SYS_THREAD) ulThread);
-
+	return (SYS_THREAD) ulThread;
 }
 
 SYS_THREAD SysCreateServiceThread(unsigned int (*pThreadProc) (void *), SYS_SOCKET SockFD)
 {
-
 	SYS_THREAD ThreadID = SysCreateThread(pThreadProc, (void *) (unsigned int) SockFD);
 
-	return (ThreadID);
-
+	return ThreadID;
 }
 
 static int SysThreadSetup(void)
 {
-
 	SysInitTlsKeys();
 
-	return (0);
-
+	return 0;
 }
 
 static int SysThreadCleanup(void)
 {
-
 	SysCleanupTlsKeys();
 
-	return (0);
-
+	return 0;
 }
 
 void SysCloseThread(SYS_THREAD ThreadID, int iForce)
 {
-
 	if (iForce)
 		TerminateThread((HANDLE) ThreadID, (DWORD) - 1);
 
@@ -1321,7 +1189,6 @@ void SysCloseThread(SYS_THREAD ThreadID, int iForce)
 
 int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 {
-
 	BOOL bSetResult = FALSE;
 
 	switch (iPriority) {
@@ -1340,36 +1207,30 @@ int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 
 	if (!bSetResult) {
 		ErrSetErrorCode(ERR_SET_THREAD_PRIORITY);
-		return (ERR_SET_THREAD_PRIORITY);
+		return ERR_SET_THREAD_PRIORITY;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysWaitThread(SYS_THREAD ThreadID, int iTimeout)
 {
-
 	if (WaitForSingleObject((HANDLE) ThreadID, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0) {
 		ErrSetErrorCode(ERR_TIMEOUT);
-		return (ERR_TIMEOUT);
+		return ERR_TIMEOUT;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 unsigned long SysGetCurrentThreadId(void)
 {
-
-	return ((unsigned long) GetCurrentThreadId());
-
+	return (unsigned long) GetCurrentThreadId();
 }
 
 int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout,
 	    int iPriority, int *piExitStatus)
 {
-
 	int ii;
 	int iCommandLength = strlen(pszCommand) + 4;
 
@@ -1379,7 +1240,7 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 	char *pszCmdLine = (char *) SysAlloc(iCommandLength + 1);
 
 	if (pszCmdLine == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	strcpy(pszCmdLine, pszCommand);
 
@@ -1401,7 +1262,7 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 
 	if (!bProcessCreated) {
 		ErrSetErrorCode(ERR_PROCESS_EXECUTE);
-		return (ERR_PROCESS_EXECUTE);
+		return ERR_PROCESS_EXECUTE;
 	}
 
 	SysSetThreadPriority((SYS_THREAD) PI.hThread, iPriority);
@@ -1412,7 +1273,7 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 			CloseHandle(PI.hProcess);
 
 			ErrSetErrorCode(ERR_TIMEOUT);
-			return (ERR_TIMEOUT);
+			return ERR_TIMEOUT;
 		}
 
 		if (piExitStatus != NULL) {
@@ -1424,18 +1285,16 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 				*piExitStatus = (int) dwExitCode;
 		}
 	} else if (piExitStatus != NULL)
-		*piExitStatus = -1;
+			*piExitStatus = -1;
 
 	CloseHandle(PI.hThread);
 	CloseHandle(PI.hProcess);
 
-	return (0);
-
+	return 0;
 }
 
 static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType)
 {
-
 	BOOL bReturnValue = FALSE;
 
 	switch (dwCtrlType) {
@@ -1450,13 +1309,11 @@ static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType)
 
 	}
 
-	return (bReturnValue);
-
+	return bReturnValue;
 }
 
 void SysSetBreakHandler(void (*BreakHandler) (void))
 {
-
 	if (SysBreakHandler == NULL)
 		SetConsoleCtrlHandler(SysBreakHandlerRoutine,
 				      (BreakHandler != NULL) ? TRUE : FALSE);
@@ -1467,7 +1324,6 @@ void SysSetBreakHandler(void (*BreakHandler) (void))
 
 int SysCreateTlsKey(SYS_TLSKEY & TlsKey, void (*pFreeProc) (void *))
 {
-
 	EnterCriticalSection(&csTLS);
 
 	for (int ii = 0; ii < MAX_TLS_KEYS; ii++) {
@@ -1478,7 +1334,7 @@ int SysCreateTlsKey(SYS_TLSKEY & TlsKey, void (*pFreeProc) (void *))
 
 			TlsKey = (SYS_TLSKEY) ii;
 
-			return (0);
+			return 0;
 		}
 	}
 
@@ -1486,13 +1342,11 @@ int SysCreateTlsKey(SYS_TLSKEY & TlsKey, void (*pFreeProc) (void *))
 
 	ErrSetErrorCode(ERR_NOMORE_TLSKEYS);
 
-	return (ERR_NOMORE_TLSKEYS);
-
+	return ERR_NOMORE_TLSKEYS;
 }
 
 int SysDeleteTlsKey(SYS_TLSKEY & TlsKey)
 {
-
 	int iKey = (int) TlsKey;
 
 	EnterCriticalSection(&csTLS);
@@ -1502,7 +1356,7 @@ int SysDeleteTlsKey(SYS_TLSKEY & TlsKey)
 		LeaveCriticalSection(&csTLS);
 
 		ErrSetErrorCode(ERR_INVALID_TLSKEY);
-		return (ERR_INVALID_TLSKEY);
+		return ERR_INVALID_TLSKEY;
 	}
 
 	TlsKeyEntries[iKey].pFreeProc = UNUSED_TLS_KEY_PROC;
@@ -1511,45 +1365,39 @@ int SysDeleteTlsKey(SYS_TLSKEY & TlsKey)
 
 	TlsKey = (SYS_TLSKEY) - 1;
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetTlsKeyData(SYS_TLSKEY & TlsKey, void *pData)
 {
-
 	int iKey = (int) TlsKey;
 
 	if ((iKey < 0) || (iKey >= MAX_TLS_KEYS) ||
 	    (TlsKeyEntries[iKey].pFreeProc == UNUSED_TLS_KEY_PROC)) {
 		ErrSetErrorCode(ERR_INVALID_TLSKEY);
-		return (ERR_INVALID_TLSKEY);
+		return ERR_INVALID_TLSKEY;
 	}
 
 	TlsKeys[iKey].pData = pData;
 
-	return (0);
-
+	return 0;
 }
 
 void *SysGetTlsKeyData(SYS_TLSKEY & TlsKey)
 {
-
 	int iKey = (int) TlsKey;
 
 	if ((iKey < 0) || (iKey >= MAX_TLS_KEYS) ||
 	    (TlsKeyEntries[iKey].pFreeProc == UNUSED_TLS_KEY_PROC)) {
 		ErrSetErrorCode(ERR_INVALID_TLSKEY);
-		return (NULL);
+		return NULL;
 	}
 
-	return (TlsKeys[iKey].pData);
-
+	return TlsKeys[iKey].pData;
 }
 
 void SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void))
 {
-
 	if (InterlockedExchange(&pThrOnce->lOnce, 1) == 0) {
 		pOnceProc();
 
@@ -1563,7 +1411,6 @@ void SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void))
 
 void *SysAlloc(unsigned int uSize)
 {
-
 	void *pData = malloc(uSize);
 
 	if (pData != NULL)
@@ -1571,50 +1418,43 @@ void *SysAlloc(unsigned int uSize)
 	else
 		ErrSetErrorCode(ERR_MEMORY);
 
-	return (pData);
-
+	return pData;
 }
 
 void SysFree(void *pData)
 {
-
 	free(pData);
 
 }
 
 void *SysRealloc(void *pData, unsigned int uSize)
 {
-
 	void *pNewData = realloc(pData, uSize);
 
 	if (pNewData == NULL)
 		ErrSetErrorCode(ERR_MEMORY);
 
-	return (pNewData);
-
+	return pNewData;
 }
 
 int SysLockFile(const char *pszFileName, char const *pszLockExt)
 {
-
 	char szLockFile[SYS_MAX_PATH] = "";
 
 	SysSNPrintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Try to create lock file
-///////////////////////////////////////////////////////////////////////////////
+	/* Try to create lock file */
 	HANDLE hFile = CreateFile(szLockFile, GENERIC_READ | GENERIC_WRITE,
 				  0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE) {
 		if (GetLastError() == ERROR_ALREADY_EXISTS) {
 			ErrSetErrorCode(ERR_LOCKED);
-			return (ERR_LOCKED);
+			return ERR_LOCKED;
 		}
 
 		ErrSetErrorCode(ERR_FILE_CREATE);
-		return (ERR_FILE_CREATE);
+		return ERR_FILE_CREATE;
 	}
 
 	DWORD dwWritten = 0;
@@ -1626,76 +1466,66 @@ int SysLockFile(const char *pszFileName, char const *pszLockExt)
 		CloseHandle(hFile);
 
 		ErrSetErrorCode(ERR_FILE_WRITE);
-		return (ERR_FILE_WRITE);
+		return ERR_FILE_WRITE;
 	}
 
 	CloseHandle(hFile);
 
-	return (0);
-
+	return 0;
 }
 
 int SysUnlockFile(const char *pszFileName, char const *pszLockExt)
 {
-
 	char szLockFile[SYS_MAX_PATH] = "";
 
 	SysSNPrintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
 	if (_unlink(szLockFile) != 0) {
 		ErrSetErrorCode(ERR_NOT_LOCKED);
-		return (ERR_NOT_LOCKED);
+		return ERR_NOT_LOCKED;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 SYS_HANDLE SysOpenModule(char const *pszFilePath)
 {
-
 	HMODULE hModule = LoadLibrary(pszFilePath);
 
 	if (hModule == NULL) {
 		ErrSetErrorCode(ERR_LOADMODULE, pszFilePath);
-		return (SYS_INVALID_HANDLE);
+		return SYS_INVALID_HANDLE;
 	}
 
-	return ((SYS_HANDLE) hModule);
-
+	return (SYS_HANDLE) hModule;
 }
 
 int SysCloseModule(SYS_HANDLE hModule)
 {
-
 	FreeLibrary((HMODULE) hModule);
 
-	return (0);
-
+	return 0;
 }
 
 void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 {
-
 	void *pSymbol = (void *) GetProcAddress((HMODULE) hModule, pszSymbol);
 
 	if (pSymbol == NULL) {
 		ErrSetErrorCode(ERR_LOADMODULESYMBOL, pszSymbol);
-		return (NULL);
+		return NULL;
 	}
 
-	return (pSymbol);
-
+	return pSymbol;
 }
 
 int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 {
-
 	HANDLE hEventSource = RegisterEventSource(NULL, szServerName);
 
 	if (hEventSource == NULL) {
 		ErrSetErrorCode(ERR_REGISTER_EVENT_SOURCE);
-		return (ERR_REGISTER_EVENT_SOURCE);
+		return ERR_REGISTER_EVENT_SOURCE;
 	}
 
 	char *pszStrings[2];
@@ -1711,13 +1541,11 @@ int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 
 	DeregisterEventSource(hEventSource);
 
-	return (0);
-
+	return 0;
 }
 
 int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 {
-
 	va_list Args;
 
 	va_start(Args, pszFormat);
@@ -1726,13 +1554,11 @@ int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 
 	va_end(Args);
 
-	return (0);
-
+	return 0;
 }
 
 int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 {
-
 	extern bool bServerDebug;
 
 	EnterCriticalSection(&csLog);
@@ -1742,9 +1568,7 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 	va_start(Args, pszFormat);
 
 	if (bServerDebug) {
-///////////////////////////////////////////////////////////////////////////////
-//  Debug implementation
-///////////////////////////////////////////////////////////////////////////////
+		/* Debug implementation */
 
 		vprintf(pszFormat, Args);
 
@@ -1763,27 +1587,23 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 
 	LeaveCriticalSection(&csLog);
 
-	return (0);
-
+	return 0;
 }
 
 void SysSleep(int iTimeout)
 {
-
 	SysMsSleep(iTimeout * 1000);
 
 }
 
 void SysMsSleep(int iMsTimeout)
 {
-
 	Sleep(iMsTimeout);
 
 }
 
 static void SysTimetToFileTime(time_t tTime, LPFILETIME pFT)
 {
-
 	LONGLONG llTime = Int32x32To64(tTime, 10000000) + 116444736000000000;
 
 	pFT->dwLowDateTime = (DWORD) llTime;
@@ -1793,17 +1613,14 @@ static void SysTimetToFileTime(time_t tTime, LPFILETIME pFT)
 
 static time_t SysFileTimeToTimet(LPFILETIME pFT)
 {
-
 	LONGLONG llTime = ((LONGLONG) pFT->dwLowDateTime) |
-	    (((LONGLONG) pFT->dwHighDateTime) << 32);
+		(((LONGLONG) pFT->dwHighDateTime) << 32);
 
-	return ((time_t) ((llTime - 116444736000000000) / 10000000));
-
+	return (time_t) ((llTime - 116444736000000000) / 10000000);
 }
 
 SYS_INT64 SysMsTime(void)
 {
-
 	LARGE_INTEGER PerfCntCurr;
 
 	QueryPerformanceCounter(&PerfCntCurr);
@@ -1814,37 +1631,31 @@ SYS_INT64 SysMsTime(void)
 	MsTicks /= PCFreq;
 	MsTicks += (SYS_INT64) tSysStart *1000;
 
-	return (MsTicks);
-
+	return MsTicks;
 }
 
 int SysExistFile(const char *pszFilePath)
 {
-
 	DWORD dwAttr = GetFileAttributes(pszFilePath);
 
 	if (dwAttr == (DWORD) - 1)
-		return (0);
+		return 0;
 
-	return ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 0 : 1);
-
+	return (dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 0 : 1;
 }
 
 int SysExistDir(const char *pszDirPath)
 {
-
 	DWORD dwAttr = GetFileAttributes(pszDirPath);
 
 	if (dwAttr == (DWORD) - 1)
-		return (0);
+		return 0;
 
-	return ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0);
-
+	return (dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
 }
 
 SYS_HANDLE SysFirstFile(const char *pszPath, char *pszFileName)
 {
-
 	char szMatch[SYS_MAX_PATH] = "";
 
 	strcpy(szMatch, pszPath);
@@ -1855,13 +1666,13 @@ SYS_HANDLE SysFirstFile(const char *pszPath, char *pszFileName)
 	HANDLE hFind = FindFirstFile(szMatch, &WFD);
 
 	if (hFind == INVALID_HANDLE_VALUE)
-		return (SYS_INVALID_HANDLE);
+		return SYS_INVALID_HANDLE;
 
 	FileFindData *pFFD = (FileFindData *) SysAlloc(sizeof(FileFindData));
 
 	if (pFFD == NULL) {
 		FindClose(hFind);
-		return (SYS_INVALID_HANDLE);
+		return SYS_INVALID_HANDLE;
 	}
 
 	strcpy(pFFD->szFindPath, pszPath);
@@ -1872,45 +1683,37 @@ SYS_HANDLE SysFirstFile(const char *pszPath, char *pszFileName)
 
 	strcpy(pszFileName, pFFD->WFD.cFileName);
 
-	return ((SYS_HANDLE) pFFD);
-
+	return (SYS_HANDLE) pFFD;
 }
 
 int SysIsDirectory(SYS_HANDLE hFind)
 {
-
 	FileFindData *pFFD = (FileFindData *) hFind;
 
-	return ((pFFD->WFD.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0);
-
+	return (pFFD->WFD.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
 }
 
 unsigned long SysGetSize(SYS_HANDLE hFind)
 {
-
 	FileFindData *pFFD = (FileFindData *) hFind;
 
-	return ((unsigned long) pFFD->WFD.nFileSizeLow);
-
+	return (unsigned long) pFFD->WFD.nFileSizeLow;
 }
 
 int SysNextFile(SYS_HANDLE hFind, char *pszFileName)
 {
-
 	FileFindData *pFFD = (FileFindData *) hFind;
 
 	if (!FindNextFile(pFFD->hFind, &pFFD->WFD))
-		return (0);
+		return 0;
 
 	strcpy(pszFileName, pFFD->WFD.cFileName);
 
-	return (1);
-
+	return 1;
 }
 
 void SysFindClose(SYS_HANDLE hFind)
 {
-
 	FileFindData *pFFD = (FileFindData *) hFind;
 
 	FindClose(pFFD->hFind);
@@ -1921,13 +1724,12 @@ void SysFindClose(SYS_HANDLE hFind)
 
 int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI)
 {
-
 	WIN32_FIND_DATA WFD;
 	HANDLE hFind = FindFirstFile(pszFileName, &WFD);
 
 	if (hFind == INVALID_HANDLE_VALUE) {
 		ErrSetErrorCode(ERR_STAT);
-		return (ERR_STAT);
+		return ERR_STAT;
 	}
 
 	ZeroData(FI);
@@ -1937,20 +1739,18 @@ int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI)
 
 	FindClose(hFind);
 
-	return (0);
-
+	return 0;
 }
 
 int SysSetFileModTime(char const *pszFileName, time_t tMod)
 {
-
 	HANDLE hFile = CreateFile(pszFileName, GENERIC_WRITE,
 				  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 				  NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hFile == INVALID_HANDLE_VALUE) {
 		ErrSetErrorCode(ERR_SET_FILE_TIME);
-		return (ERR_SET_FILE_TIME);
+		return ERR_SET_FILE_TIME;
 	}
 
 	FILETIME MFT;
@@ -1960,31 +1760,27 @@ int SysSetFileModTime(char const *pszFileName, time_t tMod)
 	if (!SetFileTime(hFile, NULL, &MFT, &MFT)) {
 		CloseHandle(hFile);
 		ErrSetErrorCode(ERR_SET_FILE_TIME);
-		return (ERR_SET_FILE_TIME);
+		return ERR_SET_FILE_TIME;
 	}
 
 	CloseHandle(hFile);
 
-	return (0);
-
+	return 0;
 }
 
 char *SysStrDup(const char *pszString)
 {
-
 	int iStrLength = strlen(pszString);
 	char *pszBuffer = (char *) SysAlloc(iStrLength + 1);
 
 	if (pszBuffer != NULL)
 		strcpy(pszBuffer, pszString);
 
-	return (pszBuffer);
-
+	return pszBuffer;
 }
 
 char *SysGetEnv(const char *pszVarName)
 {
-
 	char szRKeyPath[256] = "";
 
 	SysSNPrintf(szRKeyPath, sizeof(szRKeyPath) - 1, "SOFTWARE\\%s\\%s",
@@ -2002,7 +1798,7 @@ char *SysGetEnv(const char *pszVarName)
 				    &dwSize) == ERROR_SUCCESS) {
 			RegCloseKey(hKey);
 
-			return (SysStrDup(szKeyValue));
+			return SysStrDup(szKeyValue);
 		}
 
 		RegCloseKey(hKey);
@@ -2010,157 +1806,127 @@ char *SysGetEnv(const char *pszVarName)
 
 	const char *pszValue = getenv(pszVarName);
 
-	return ((pszValue != NULL) ? SysStrDup(pszValue) : NULL);
-
+	return (pszValue != NULL) ? SysStrDup(pszValue) : NULL;
 }
 
 char *SysGetTmpFile(char *pszFileName)
 {
-
 	char szTmpPath[SYS_MAX_PATH] = "";
 
 	GetTempPath(sizeof(szTmpPath) - 1, szTmpPath);
 
 	static unsigned int uFileSeqNr = 0;
 	SYS_LONGLONG llFileID =
-	    (((SYS_LONGLONG) GetCurrentThreadId()) << 32) | (SYS_LONGLONG)++ uFileSeqNr;
+		(((SYS_LONGLONG) GetCurrentThreadId()) << 32) | (SYS_LONGLONG)++ uFileSeqNr;
 
 	SysSNPrintf(pszFileName, SYS_MAX_PATH - 1, "%smsrv%I64x.tmp", szTmpPath, llFileID);
 
-	return (pszFileName);
-
+	return pszFileName;
 }
 
 int SysRemove(const char *pszFileName)
 {
-
 	if (!DeleteFile(pszFileName)) {
 		ErrSetErrorCode(ERR_FILE_DELETE);
-		return (ERR_FILE_DELETE);
+		return ERR_FILE_DELETE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysMakeDir(const char *pszPath)
 {
-
 	if (!CreateDirectory(pszPath, NULL)) {
 		ErrSetErrorCode(ERR_DIR_CREATE);
-		return (ERR_DIR_CREATE);
+		return ERR_DIR_CREATE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysRemoveDir(const char *pszPath)
 {
-
 	if (!RemoveDirectory(pszPath)) {
 		ErrSetErrorCode(ERR_DIR_DELETE);
-		return (ERR_DIR_DELETE);
+		return ERR_DIR_DELETE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysMoveFile(char const *pszOldName, char const *pszNewName)
 {
-
 	if (!MoveFileEx(pszOldName, pszNewName,
 			MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
 		ErrSetErrorCode(ERR_FILE_MOVE);
-		return (ERR_FILE_MOVE);
+		return ERR_FILE_MOVE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int SysVSNPrintf(char *pszBuffer, int iSize, char const *pszFormat, va_list Args)
 {
-
-	return (_vsnprintf(pszBuffer, iSize, pszFormat, Args));
-
+	return _vsnprintf(pszBuffer, iSize, pszFormat, Args);
 }
 
 int SysFileSync(FILE * pFile)
 {
-
 	if (fflush(pFile) || _commit(_fileno(pFile))) {
 		ErrSetErrorCode(ERR_FILE_WRITE);
-		return (ERR_FILE_WRITE);
+		return ERR_FILE_WRITE;
 	}
 
-	return (0);
-
+	return 0;
 }
 
 char *SysStrTok(char *pszData, char const *pszDelim, char **ppszSavePtr)
 {
-
-	return (*ppszSavePtr = strtok(pszData, pszDelim));
-
+	return *ppszSavePtr = strtok(pszData, pszDelim);
 }
 
 char *SysCTime(time_t * pTimer, char *pszBuffer)
 {
-
-	return (strcpy(pszBuffer, ctime(pTimer)));
-
+	return strcpy(pszBuffer, ctime(pTimer));
 }
 
 struct tm *SysLocalTime(time_t * pTimer, struct tm *pTStruct)
 {
-
 	*pTStruct = *localtime(pTimer);
 
-	return (pTStruct);
-
+	return pTStruct;
 }
 
 struct tm *SysGMTime(time_t * pTimer, struct tm *pTStruct)
 {
-
 	*pTStruct = *gmtime(pTimer);
 
-	return (pTStruct);
-
+	return pTStruct;
 }
 
 char *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize)
 {
-
 	strncpy(pszBuffer, asctime(pTStruct), iBufferSize);
 	pszBuffer[iBufferSize - 1] = '\0';
 
-	return (pszBuffer);
-
+	return pszBuffer;
 }
 
 long SysGetTimeZone(void)
 {
-
-	return ((long) _timezone);
-
+	return (long) _timezone;
 }
 
 long SysGetDayLight(void)
 {
-
 	time_t tCurr = time(NULL);
 	struct tm tmCurr = *localtime(&tCurr);
 
-	return ((long) ((tmCurr.tm_isdst <= 0) ? 0 : 3600));
-
+	return (long) ((tmCurr.tm_isdst <= 0) ? 0 : 3600);
 }
 
 int SysGetDiskSpace(char const *pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
 {
-
 	ULARGE_INTEGER BytesAvail;
 	ULARGE_INTEGER BytesOnDisk;
 	ULARGE_INTEGER BytesFree;
@@ -2171,21 +1937,19 @@ int SysGetDiskSpace(char const *pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
 
 	if (!GetDiskFreeSpaceEx(szXPath, &BytesAvail, &BytesOnDisk, &BytesFree)) {
 		ErrSetErrorCode(ERR_GET_DISK_SPACE_INFO);
-		return (ERR_GET_DISK_SPACE_INFO);
+		return ERR_GET_DISK_SPACE_INFO;
 	}
 
 	*pTotal = *(SYS_INT64 *) & BytesOnDisk;
 
 	*pFree = *(SYS_INT64 *) & BytesAvail;
 
-	return (0);
-
+	return 0;
 }
 
 int SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 		  SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
 {
-
 #if _WIN32_WINNT >= 0x0500
 
 	MEMORYSTATUSEX MSEX;
@@ -2194,7 +1958,7 @@ int SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 	if (!GlobalMemoryStatusEx(&MSEX)) {
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
-		return (ERR_GET_MEMORY_INFO);
+		return ERR_GET_MEMORY_INFO;
 	}
 
 	*pRamTotal = (SYS_INT64) MSEX.ullTotalPhys;
@@ -2223,39 +1987,125 @@ int SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 #endif				// #if defined(_WIN32_WINNT 0x0500)
 
-	return (0);
-
+	return 0;
 }
 
 static unsigned int SysStkCall(unsigned int (*pProc) (void *), void *pData)
 {
-
 	srand(GetCurrentThreadId() * (unsigned int) time(NULL) * uSRandBase);
 
-	unsigned int uResult;
 	unsigned int uStkDisp =
-	    (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+		(unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+	void *pStkSpace = alloca(uStkDisp);
 
-#if !defined(USE_ASM_STK_DISP)
+	return pProc(pData);
+}
 
-	void *pStkSpace = _alloca(uStkDisp);
+SYS_MMAP SysCreateMMap(char const *pszFileName, unsigned long ulFlags)
+{
+	HANDLE hFile = CreateFile(pszFileName, (ulFlags & SYS_MMAP_WRITE) ?
+				  GENERIC_WRITE | GENERIC_READ : GENERIC_READ,
+				  (ulFlags & SYS_MMAP_WRITE) ? 0 : FILE_SHARE_READ,
+				  NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	uResult = pProc(pData);
-
-#else
-
-	__asm {
-		sub esp, uStkDisp;
+	if (hFile == INVALID_HANDLE_VALUE) {
+		ErrSetErrorCode(ERR_FILE_OPEN);
+		return SYS_INVALID_MMAP;
 	}
 
-	uResult = pProc(pData);
+	DWORD dwFileSizeHi = 0;
+	DWORD dwFileSizeLo = GetFileSize(hFile, &dwFileSizeHi);
+	HANDLE hFileMap = CreateFileMapping(hFile, NULL, (ulFlags & SYS_MMAP_WRITE) ?
+					    PAGE_READWRITE : PAGE_READONLY,
+					    dwFileSizeHi, dwFileSizeLo, NULL);
 
-	__asm {
-		add esp, uStkDisp;
+	if (hFileMap == NULL) {
+		CloseHandle(hFile);
+		ErrSetErrorCode(ERR_CREATEFILEMAPPING);
+		return SYS_INVALID_MMAP;
 	}
 
-#endif
+	SYSTEM_INFO SI;
 
-	return (uResult);
+	GetSystemInfo(&SI);
 
+	MMapData *pMMD = (MMapData *) SysAlloc(sizeof(MMapData));
+
+	if (pMMD == NULL) {
+		CloseHandle(hFileMap);
+		CloseHandle(hFile);
+		return SYS_INVALID_MMAP;
+	}
+
+	pMMD->ulPageSize = (unsigned long) SI.dwPageSize;
+	pMMD->hFile = hFile;
+	pMMD->hFileMap = hFileMap;
+	pMMD->iNumMaps = 0;
+	pMMD->ulFlags = ulFlags;
+	pMMD->ulFileSize = (unsigned long) dwFileSizeLo;
+
+	return (SYS_MMAP) pMMD;
+}
+
+void SysCloseMMap(SYS_MMAP hMap)
+{
+	MMapData *pMMD = (MMapData *) hMap;
+
+	if (pMMD->iNumMaps > 0) {
+
+	}
+
+	CloseHandle(pMMD->hFileMap);
+	CloseHandle(pMMD->hFile);
+	SysFree(pMMD);
+
+}
+
+unsigned long SysMMapSize(SYS_MMAP hMap)
+{
+	MMapData *pMMD = (MMapData *) hMap;
+
+	return pMMD->ulFileSize;
+}
+
+void *SysMapMMap(SYS_MMAP hMap, unsigned long ulOffset, unsigned long ulSize)
+{
+	MMapData *pMMD = (MMapData *) hMap;
+
+	if (ulOffset % pMMD->ulPageSize) {
+		ErrSetErrorCode(ERR_INVALID_MMAP_OFFSET);
+		return NULL;
+	}
+
+	DWORD dwMapFlags = 0;
+
+	if (pMMD->ulFlags & SYS_MMAP_READ)
+		dwMapFlags |= FILE_MAP_READ;
+	if (pMMD->ulFlags & SYS_MMAP_WRITE)
+		dwMapFlags |= FILE_MAP_WRITE;
+
+	void *pMapAddress = MapViewOfFile(pMMD->hFileMap, dwMapFlags, 0, ulOffset, ulSize);
+
+	if (pMapAddress == NULL) {
+		ErrSetErrorCode(ERR_MAPVIEWOFFILE);
+		return NULL;
+	}
+
+	pMMD->iNumMaps++;
+
+	return pMapAddress;
+}
+
+int SysUnmapMMap(SYS_MMAP hMap, void *pAddr, unsigned long ulSize)
+{
+	MMapData *pMMD = (MMapData *) hMap;
+
+	if (!UnmapViewOfFile(pAddr)) {
+		ErrSetErrorCode(ERR_UNMAPFILEVIEW);
+		return ERR_UNMAPFILEVIEW;
+	}
+
+	pMMD->iNumMaps--;
+
+	return 0;
 }

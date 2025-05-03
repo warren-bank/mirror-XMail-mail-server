@@ -35,37 +35,30 @@
 #define CTRL_WAITDATA_RESULT        101
 #define CCLN_ERR_BAD_USAGE          (-10000)
 
-///////////////////////////////////////////////////////////////////////////////
-//  Needed by library functions ( START )
-///////////////////////////////////////////////////////////////////////////////
+/* Needed by library functions ( START ) */
 bool bServerDebug = false;
 int iLogRotateHours = 24;
 
 char *SvrGetLogsDir(char *pszLogsDir, int iMaxPath)
 {
-
 	SysSNPrintf(pszLogsDir, iMaxPath - 1, ".");
 
-	return (pszLogsDir);
-
+	return pszLogsDir;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//  Needed by library functions ( END )
-///////////////////////////////////////////////////////////////////////////////
+/* Needed by library functions ( END ) */
 
 int CClnGetResponse(BSOCK_HANDLE hBSock, char *pszError, int iMaxError,
 		    int *piErrorCode, int iTimeout)
 {
-
 	char szRespBuffer[2048] = "";
 
 	if (BSckGetString(hBSock, szRespBuffer, sizeof(szRespBuffer) - 1, iTimeout) == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	if ((szRespBuffer[0] != '+') && (szRespBuffer[0] != '-')) {
 		ErrSetErrorCode(ERR_CCLN_INVALID_RESPONSE, szRespBuffer);
-		return (ERR_CCLN_INVALID_RESPONSE);
+		return ERR_CCLN_INVALID_RESPONSE;
 	}
 
 	char *pszToken = szRespBuffer + 1;
@@ -77,7 +70,7 @@ int CClnGetResponse(BSOCK_HANDLE hBSock, char *pszError, int iMaxError,
 
 	if (*pszToken != ' ') {
 		ErrSetErrorCode(ERR_CCLN_INVALID_RESPONSE, szRespBuffer);
-		return (ERR_CCLN_INVALID_RESPONSE);
+		return ERR_CCLN_INVALID_RESPONSE;
 	}
 
 	for (; *pszToken == ' '; pszToken++);
@@ -87,20 +80,18 @@ int CClnGetResponse(BSOCK_HANDLE hBSock, char *pszError, int iMaxError,
 		pszError[iMaxError - 1] = '\0';
 	}
 
-	return (0);
-
+	return 0;
 }
 
 int CClnRecvTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout)
 {
-
 	bool bCloseFile = false;
 	FILE *pFile = stdout;
 
 	if (pszFileName != NULL) {
 		if ((pFile = fopen(pszFileName, "wt")) == NULL) {
 			ErrSetErrorCode(ERR_FILE_CREATE, pszFileName);
-			return (ERR_FILE_CREATE);
+			return ERR_FILE_CREATE;
 		}
 
 		bCloseFile = true;
@@ -121,20 +112,18 @@ int CClnRecvTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout)
 	if (bCloseFile)
 		fclose(pFile);
 
-	return (0);
-
+	return 0;
 }
 
 int CClnSendTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout)
 {
-
 	bool bCloseFile = false;
 	FILE *pFile = stdin;
 
 	if (pszFileName != NULL) {
 		if ((pFile = fopen(pszFileName, "rt")) == NULL) {
 			ErrSetErrorCode(ERR_FILE_OPEN, pszFileName);
-			return (ERR_FILE_OPEN);
+			return ERR_FILE_OPEN;
 		}
 
 		bCloseFile = true;
@@ -149,118 +138,105 @@ int CClnSendTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout)
 
 		if (BSckSendString(hBSock, szBuffer, iTimeout) <= 0) {
 			fclose(pFile);
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 		}
 	}
 
 	if (bCloseFile)
 		fclose(pFile);
 
-	return (BSckSendString(hBSock, ".", iTimeout));
-
+	return BSckSendString(hBSock, ".", iTimeout);
 }
 
 int CClnSubmitCommand(BSOCK_HANDLE hBSock, char const *pszCommand,
 		      char *pszError, int iMaxError, char const *pszIOFile, int iTimeout)
 {
-
 	if (BSckSendString(hBSock, pszCommand, iTimeout) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	int iErrorCode = 0;
 
 	if (CClnGetResponse(hBSock, pszError, iMaxError, &iErrorCode, iTimeout) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	if (iErrorCode < 0) {
 		ErrSetErrorCode(ERR_CCLN_ERROR_RESPONSE, pszError);
-		return (ERR_CCLN_ERROR_RESPONSE);
+		return ERR_CCLN_ERROR_RESPONSE;
 	}
 
 	if (iErrorCode == CTRL_LISTFOLLOW_RESULT) {
 
 		if (CClnRecvTextFile(pszIOFile, hBSock, iTimeout) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 	} else if (iErrorCode == CTRL_WAITDATA_RESULT) {
 
 		if (CClnSendTextFile(pszIOFile, hBSock, iTimeout) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 		if (CClnGetResponse(hBSock, pszError, iMaxError, &iErrorCode, iTimeout) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 
 	}
 
-	return (0);
-
+	return 0;
 }
 
 BSOCK_HANDLE CClnConnectServer(char const *pszServer, int iPortNo,
 			       char const *pszUsername, char const *pszPassword,
 			       bool bUseMD5Auth, int iTimeout)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Get server address
-///////////////////////////////////////////////////////////////////////////////
+	/* Get server address */
 	SYS_INET_ADDR SvrAddr;
 
 	if (MscGetServerAddress(pszServer, SvrAddr, iPortNo) < 0)
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Try connect to server
-///////////////////////////////////////////////////////////////////////////////
+	/* Try connect to server */
 	SYS_SOCKET SockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
 
 	if (SockFD == SYS_INVALID_SOCKET)
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 
 	if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), iTimeout) < 0) {
 		SysCloseSocket(SockFD);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
 	BSOCK_HANDLE hBSock = BSckAttach(SockFD);
 
 	if (hBSock == INVALID_BSOCK_HANDLE) {
 		SysCloseSocket(SockFD);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Read welcome message
-///////////////////////////////////////////////////////////////////////////////
+	/* Read welcome message */
 	int iErrorCode = 0;
 	char szRTXBuffer[2048] = "";
 
 	if (CClnGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer), &iErrorCode, iTimeout) < 0) {
 		BSckDetach(hBSock, 1);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
 	if (iErrorCode < 0) {
 		BSckDetach(hBSock, 1);
 
 		ErrSetErrorCode(ERR_CCLN_ERROR_RESPONSE, szRTXBuffer);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Prepare login
-///////////////////////////////////////////////////////////////////////////////
+	/* Prepare login */
 	char szTimeStamp[256] = "";
 
 	if (!bUseMD5Auth ||
 	    (MscExtractServerTimeStamp(szRTXBuffer, szTimeStamp, sizeof(szTimeStamp)) == NULL))
 		sprintf(szRTXBuffer, "\"%s\"\t\"%s\"", pszUsername, pszPassword);
 	else {
-///////////////////////////////////////////////////////////////////////////////
-//  Perform MD5 authentication
-///////////////////////////////////////////////////////////////////////////////
+		/* Perform MD5 authentication */
 		char *pszHash = StrSprint("%s%s", szTimeStamp, pszPassword);
 
 		if (pszHash == NULL) {
 			BSckDetach(hBSock, 1);
-			return (INVALID_BSOCK_HANDLE);
+			return INVALID_BSOCK_HANDLE;
 		}
 
 		char szMD5[128] = "";
@@ -269,66 +245,56 @@ BSOCK_HANDLE CClnConnectServer(char const *pszServer, int iPortNo,
 
 		SysFree(pszHash);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Add a  #  char in head of password field
-///////////////////////////////////////////////////////////////////////////////
+		/* Add a  #  char in head of password field */
 		sprintf(szRTXBuffer, "\"%s\"\t\"#%s\"", pszUsername, szMD5);
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Send login
-///////////////////////////////////////////////////////////////////////////////
+	/* Send login */
 	if (BSckSendString(hBSock, szRTXBuffer, iTimeout) < 0) {
 		BSckDetach(hBSock, 1);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
 	if (CClnGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer), &iErrorCode, iTimeout) < 0) {
 		BSckDetach(hBSock, 1);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
 	if (iErrorCode < 0) {
 		BSckDetach(hBSock, 1);
 
 		ErrSetErrorCode(ERR_CCLN_ERROR_RESPONSE, szRTXBuffer);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
-	return (hBSock);
-
+	return hBSock;
 }
 
 int CClnQuitConnection(BSOCK_HANDLE hBSock, int iTimeout)
 {
-
 	CClnSubmitCommand(hBSock, "\"quit\"", NULL, 0, NULL, iTimeout);
 
 	BSckDetach(hBSock, 1);
 
-	return (0);
-
+	return 0;
 }
 
 int CClnLogError(void)
 {
-
 	char *pszError = ErrGetErrorStringInfo(ErrGetErrorCode());
 
 	if (pszError == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	fprintf(stderr, "%s\n", pszError);
 
 	SysFree(pszError);
 
-	return (0);
-
+	return 0;
 }
 
 void CClnShowUsage(char const *pszProgName)
 {
-
 	fprintf(stderr,
 		"use :  %s  [-snuptfc]  ...\n"
 		"options :\n"
@@ -345,7 +311,6 @@ void CClnShowUsage(char const *pszProgName)
 
 int CClnExec(int iArgCount, char *pszArgs[])
 {
-
 	int ii;
 	int iPortNo = STD_CTRL_PORT;
 	int iTimeout = STD_CTRL_TIMEOUT;
@@ -395,13 +360,13 @@ int CClnExec(int iArgCount, char *pszArgs[])
 			break;
 
 		default:
-			return (CCLN_ERR_BAD_USAGE);
+			return CCLN_ERR_BAD_USAGE;
 		}
 	}
 
 	if ((strlen(szServer) == 0) || (strlen(szUsername) == 0) ||
 	    (strlen(szPassword) == 0) || (ii == iArgCount))
-		return (CCLN_ERR_BAD_USAGE);
+		return CCLN_ERR_BAD_USAGE;
 
 	int iFirstParam = ii;
 	int iCmdLength = 0;
@@ -412,7 +377,7 @@ int CClnExec(int iArgCount, char *pszArgs[])
 	char *pszCommand = (char *) SysAlloc(iCmdLength + 1);
 
 	if (pszCommand == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	for (ii = iFirstParam; ii < iArgCount; ii++) {
 		if (ii == iFirstParam)
@@ -427,7 +392,7 @@ int CClnExec(int iArgCount, char *pszArgs[])
 	if (hBSock == INVALID_BSOCK_HANDLE) {
 		ErrorPush();
 		SysFree(pszCommand);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	char szRTXBuffer[2048] = "";
@@ -437,25 +402,23 @@ int CClnExec(int iArgCount, char *pszArgs[])
 		ErrorPush();
 		CClnQuitConnection(hBSock, iTimeout);
 		SysFree(pszCommand);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
 	SysFree(pszCommand);
 
 	CClnQuitConnection(hBSock, iTimeout);
 
-	return (0);
-
+	return 0;
 }
 
 #ifndef __CTRLCLNT_LIBRARY__
 
 int main(int iArgCount, char *pszArgs[])
 {
-
 	if (SysInitLibrary() < 0) {
 		CClnLogError();
-		return (1);
+		return 1;
 	}
 
 	int iExecResult = CClnExec(iArgCount, pszArgs);
@@ -463,17 +426,16 @@ int main(int iArgCount, char *pszArgs[])
 	if (iExecResult == CCLN_ERR_BAD_USAGE) {
 		CClnShowUsage(pszArgs[0]);
 		SysCleanupLibrary();
-		return (2);
+		return 2;
 	} else if (iExecResult < 0) {
 		CClnLogError();
 		SysCleanupLibrary();
-		return (3);
+		return 3;
 	}
 
 	SysCleanupLibrary();
 
-	return (0);
-
+	return 0;
 }
 
 #endif				// #ifndef __CTRLCLNT_LIBRARY__

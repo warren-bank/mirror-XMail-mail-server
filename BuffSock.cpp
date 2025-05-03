@@ -27,6 +27,13 @@
 #include "BuffSock.h"
 
 #define BSOCK_EOF                   INT_MIN
+#define BSOCK_STD_BUFFER_SIZE       1024
+
+#define BSOCK_FREE(p) (*(p)->IOops.pFree)((p)->IOops.pPrivate)
+#define BSOCK_READ(p, d, n, t) (*(p)->IOops.pRead)((p)->IOops.pPrivate, d, n, t)
+#define BSOCK_WRITE(p, d, n, t) (*(p)->IOops.pWrite)((p)->IOops.pPrivate, d, n, t)
+#define BSOCK_SENDFILE(p, f, b, e, t) (*(p)->IOops.pSendFile)((p)->IOops.pPrivate, f, b, e, t)
+
 
 struct BuffSocketData {
 	SYS_SOCKET SockFD;
@@ -34,23 +41,86 @@ struct BuffSocketData {
 	char *pszBuffer;
 	int iBytesInBuffer;
 	int iReadIndex;
+	BufSockIOOps IOops;
 };
 
-static int BSckFetchData(BuffSocketData * pBSD, int iTimeout);
+static int BSckReadLL(BuffSocketData *pBSD, void *pData, int iSize, int iTimeout);
+static int BSckWriteLL(BuffSocketData *pBSD, void const *pData, int iSize, int iTimeout);
+static int BSckSock_Free(void *pPrivate);
+static int BSckSock_Read(void *pPrivate, void *pData, int iSize, int iTimeout);
+static int BSckSock_Write(void *pPrivate, void const *pData, int iSize, int iTimeout);
+static int BSckSock_SendFile(void *pPrivate, char const *pszFilePath, unsigned long ulBaseOffset,
+			     unsigned long ulEndOffset, int iTimeout);
+static int BSckFetchData(BuffSocketData *pBSD, int iTimeout);
+
+
+
+static int BSckReadLL(BuffSocketData *pBSD, void *pData, int iSize, int iTimeout)
+{
+	int iCount = 0;
+
+	while (iCount < iSize) {
+		int iCRead = BSOCK_READ(pBSD, (char *) pData + iCount,
+					iSize - iCount, iTimeout);
+
+		if (iCRead <= 0)
+			return iCount;
+		iCount += iCRead;
+	}
+
+	return iCount;
+}
+
+static int BSckWriteLL(BuffSocketData *pBSD, void const *pData, int iSize, int iTimeout)
+{
+	int iCount = 0;
+
+	while (iCount < iSize) {
+		int iCWrite = BSOCK_WRITE(pBSD, (char const *) pData + iCount,
+					  iSize - iCount, iTimeout);
+
+		if (iCWrite <= 0)
+			return iCount;
+		iCount += iCWrite;
+	}
+
+	return iCount;
+}
+
+static int BSckSock_Free(void *pPrivate)
+{
+	return 0;
+}
+
+static int BSckSock_Read(void *pPrivate, void *pData, int iSize, int iTimeout)
+{
+	return SysRecvData((SYS_SOCKET) (long) pPrivate, (char *) pData, iSize, iTimeout);
+}
+
+static int BSckSock_Write(void *pPrivate, void const *pData, int iSize, int iTimeout)
+{
+	return SysSendData((SYS_SOCKET) (long) pPrivate, (char const *) pData, iSize, iTimeout);
+}
+
+static int BSckSock_SendFile(void *pPrivate, char const *pszFilePath, unsigned long ulBaseOffset,
+			     unsigned long ulEndOffset, int iTimeout)
+{
+	return SysSendFile((SYS_SOCKET) (long) pPrivate, pszFilePath, ulBaseOffset,
+			   ulEndOffset, iTimeout);
+}
 
 BSOCK_HANDLE BSckAttach(SYS_SOCKET SockFD, int iBufferSize)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) SysAlloc(sizeof(BuffSocketData));
 
 	if (pBSD == NULL)
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 
 	char *pszBuffer = (char *) SysAlloc(iBufferSize);
 
 	if (pszBuffer == NULL) {
 		SysFree(pBSD);
-		return (INVALID_BSOCK_HANDLE);
+		return INVALID_BSOCK_HANDLE;
 	}
 
 	pBSD->SockFD = SockFD;
@@ -58,125 +128,107 @@ BSOCK_HANDLE BSckAttach(SYS_SOCKET SockFD, int iBufferSize)
 	pBSD->pszBuffer = pszBuffer;
 	pBSD->iBytesInBuffer = 0;
 	pBSD->iReadIndex = 0;
+	pBSD->IOops.pPrivate = (void *) (long) SockFD;
+	pBSD->IOops.pFree = BSckSock_Free;
+	pBSD->IOops.pRead = BSckSock_Read;
+	pBSD->IOops.pWrite = BSckSock_Write;
+	pBSD->IOops.pSendFile = BSckSock_SendFile;
 
-	return ((BSOCK_HANDLE) pBSD);
-
+	return (BSOCK_HANDLE) pBSD;
 }
 
 SYS_SOCKET BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 	SYS_SOCKET SockFD = pBSD->SockFD;
 
+	BSOCK_FREE(pBSD);
 	SysFree(pBSD->pszBuffer);
-
 	SysFree(pBSD);
-
 	if (iCloseSocket) {
 		SysCloseSocket(SockFD);
-		return (SYS_INVALID_SOCKET);
+		return SYS_INVALID_SOCKET;
 	}
 
-	return (SockFD);
-
+	return SockFD;
 }
 
-static int BSckFetchData(BuffSocketData * pBSD, int iTimeout)
+static int BSckFetchData(BuffSocketData *pBSD, int iTimeout)
 {
-
 	int iReadedBytes;
 
 	pBSD->iReadIndex = 0;
-
-	if ((iReadedBytes = SysRecvData(pBSD->SockFD, pBSD->pszBuffer,
-					pBSD->iBufferSize, iTimeout)) <= 0) {
+	if ((iReadedBytes = BSOCK_READ(pBSD, pBSD->pszBuffer, pBSD->iBufferSize,
+				       iTimeout)) <= 0) {
 		ErrSetErrorCode(ERR_SOCK_NOMORE_DATA);
-		return (iReadedBytes);
+		return iReadedBytes;
 	}
-
 	pBSD->iBytesInBuffer = iReadedBytes;
 
-	return (iReadedBytes);
-
+	return iReadedBytes;
 }
 
 int BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
 	if ((pBSD->iBytesInBuffer == 0) && (BSckFetchData(pBSD, iTimeout) <= 0))
-		return (BSOCK_EOF);
+		return BSOCK_EOF;
 
 	int iChar = (int) pBSD->pszBuffer[pBSD->iReadIndex];
 
 	pBSD->iReadIndex = INext(pBSD->iReadIndex, pBSD->iBufferSize);
-
 	--pBSD->iBytesInBuffer;
 
-	return (iChar);
-
+	return iChar;
 }
 
 char *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
 		      int *pLineLength, int *piGotNL)
 {
-
 	int ii;
 
 	for (ii = 0, iMaxChars--; ii < iMaxChars; ii++) {
 		int iChar = BSckGetChar(hBSock, iTimeout);
 
 		if (iChar == BSOCK_EOF)
-			return (NULL);
+			return NULL;
 
 		if (iChar == '\n') {
 			for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
-
 			pszBuffer[ii] = '\0';
-
 			if (pLineLength != NULL)
 				*pLineLength = ii;
-
 			if (piGotNL != NULL)
 				*piGotNL = 1;
 
-			return (pszBuffer);
+			return pszBuffer;
 		} else
 			pszBuffer[ii] = (char) iChar;
-
 	}
-
 	pszBuffer[ii] = '\0';
-
 	if (pLineLength != NULL)
 		*pLineLength = ii;
-
 	if (piGotNL != NULL) {
 		*piGotNL = 0;
-		return (pszBuffer);
+		return pszBuffer;
 	}
 
 	ErrSetErrorCode(ERR_LINE_TOO_LONG);
 
-	return (NULL);
-
+	return NULL;
 }
 
 char *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
 		    int *pLineLength, int *piGotNL)
 {
-
 	int ii;
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
 	for (ii = 0, iMaxChars--; ii < iMaxChars;) {
-///////////////////////////////////////////////////////////////////////////////
-//  Verify to have something to read
-///////////////////////////////////////////////////////////////////////////////
+		/* Verify to have something to read */
 		if ((pBSD->iBytesInBuffer == 0) && (BSckFetchData(pBSD, iTimeout) <= 0))
-			return (NULL);
+			return NULL;
 
 		int iBytesLookup = Min(pBSD->iBytesInBuffer, iMaxChars - ii);
 
@@ -185,148 +237,185 @@ char *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTi
 						      iBytesLookup);
 
 			if (pszNL != NULL) {
-				int iCopySize =
-				    (int) (pszNL - (pBSD->pszBuffer + pBSD->iReadIndex));
+				int iCopySize = (int) (pszNL - (pBSD->pszBuffer + pBSD->iReadIndex));
 
 				memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex,
 				       iCopySize);
 				ii += iCopySize;
-
 				pBSD->iReadIndex += iCopySize + 1;
-
 				pBSD->iBytesInBuffer -= iCopySize + 1;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Line cleanup
-///////////////////////////////////////////////////////////////////////////////
+				/* Line cleanup */
 				for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
-
 				pszBuffer[ii] = '\0';
-
 				if (pLineLength != NULL)
 					*pLineLength = ii;
-
 				if (piGotNL != NULL)
 					*piGotNL = 1;
 
-				return (pszBuffer);
+				return pszBuffer;
 			} else {
 				memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex,
 				       iBytesLookup);
 				ii += iBytesLookup;
-
 				pBSD->iReadIndex += iBytesLookup;
-
 				pBSD->iBytesInBuffer -= iBytesLookup;
 			}
 		}
 	}
-
 	pszBuffer[ii] = '\0';
-
 	if (pLineLength != NULL)
 		*pLineLength = ii;
-
 	if (piGotNL != NULL) {
 		*piGotNL = 0;
-		return (pszBuffer);
+		return pszBuffer;
 	}
 
 	ErrSetErrorCode(ERR_LINE_TOO_LONG);
 
-	return (NULL);
-
+	return NULL;
 }
 
 int BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 	char *pszSendBuffer = (char *) SysAlloc(strlen(pszBuffer) + 3);
 
 	if (pszSendBuffer == NULL)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	sprintf(pszSendBuffer, "%s\r\n", pszBuffer);
 
 	int iSendLength = strlen(pszSendBuffer);
 
-	if (SysSend(pBSD->SockFD, pszSendBuffer, iSendLength, iTimeout) != iSendLength) {
+	if (BSckWriteLL(pBSD, pszSendBuffer, iSendLength, iTimeout) != iSendLength) {
 		SysFree(pszSendBuffer);
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 	}
-
 	SysFree(pszSendBuffer);
 
-	return (iSendLength);
-
+	return iSendLength;
 }
 
 int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ...)
 {
-
 	char *pszBuffer = NULL;
 
-	STRSPRINTF(pszBuffer, pszFormat, pszFormat);
+	StrVSprint(pszBuffer, pszFormat, pszFormat);
 
 	if (pszBuffer == NULL)
-		return (ErrGetErrorCode());
-
+		return ErrGetErrorCode();
 	if (BSckSendString(hBSock, pszBuffer, iTimeout) < 0) {
 		ErrorPush();
 		SysFree(pszBuffer);
-		return (ErrorPop());
+		return ErrorPop();
 	}
-
 	SysFree(pszBuffer);
 
-	return (0);
-
+	return 0;
 }
 
 int BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
-	if (SysSend(pBSD->SockFD, pszBuffer, iSize, iTimeout) != iSize)
-		return (ErrGetErrorCode());
+	if (BSckWriteLL(pBSD, pszBuffer, iSize, iTimeout) != iSize)
+		return ErrGetErrorCode();
 
-	return (iSize);
-
+	return iSize;
 }
 
-int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout)
+int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout, int iSizeFill)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 	int iReadedBytes = 0;
 	int iReadFromBuffer = Min(iSize, pBSD->iBytesInBuffer);
 
 	if (iReadFromBuffer > 0) {
 		memcpy(pszBuffer, pBSD->pszBuffer + pBSD->iReadIndex, iReadFromBuffer);
-
 		pBSD->iReadIndex += iReadFromBuffer;
-
 		pBSD->iBytesInBuffer -= iReadFromBuffer;
-
 		iReadedBytes = iReadFromBuffer;
 	}
+	if (iReadedBytes == 0 || (iSizeFill && iReadedBytes < iSize)) {
+		int iReadSize = BSckReadLL(pBSD, pszBuffer + iReadedBytes,
+					   iSize - iReadedBytes, iTimeout);
 
-	if ((iReadedBytes < iSize) &&
-	    (SysRecv(pBSD->SockFD, pszBuffer + iReadedBytes, iSize - iReadedBytes,
-		     iTimeout) != (iSize - iReadedBytes)))
-		return (ErrGetErrorCode());
+		if (iReadSize > 0)
+			iReadedBytes += iReadSize;
+	}
 
-	return (iSize);
+	return iReadedBytes;
+}
 
+int BSckSendFile(BSOCK_HANDLE hBSock, char const *pszFilePath, unsigned long ulBaseOffset,
+		 unsigned long ulEndOffset, int iTimeout)
+{
+	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
+
+	return BSOCK_SENDFILE(pBSD, pszFilePath, ulBaseOffset, ulEndOffset, iTimeout);
 }
 
 SYS_SOCKET BSckGetAttachedSocket(BSOCK_HANDLE hBSock)
 {
-
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
-	return (pBSD->SockFD);
+	return pBSD->SockFD;
+}
 
+int BSckSetIOops(BSOCK_HANDLE hBSock, BufSockIOOps const *pIOops)
+{
+	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
+
+	pBSD->IOops = *pIOops;
+
+	return 0;
+}
+
+int BSckBufferInit(BSockLineBuffer *pBLB, int iSize)
+{
+	if (iSize <= 0)
+		iSize = BSOCK_STD_BUFFER_SIZE;
+
+	if ((pBLB->pszBuffer = (char *) SysAlloc(iSize)) == NULL)
+		return ErrGetErrorCode();
+	pBLB->iSize = iSize;
+
+	return 0;
+}
+
+void BSckBufferFree(BSockLineBuffer *pBLB)
+{
+	if (pBLB->pszBuffer != NULL)
+		SysFree(pBLB->pszBuffer);
+}
+
+char *BSckBufferGet(BSOCK_HANDLE hBSock, BSockLineBuffer *pBLB, int iTimeout, int *piLineLength)
+{
+	int iLineLength = 0;
+	int iCurrLength;
+	int iGotNL;
+
+	do {
+		if (BSckGetString
+		    (hBSock, pBLB->pszBuffer + iLineLength, pBLB->iSize - 1 - iLineLength,
+		     iTimeout, &iCurrLength, &iGotNL) == NULL)
+			return NULL;
+
+		if (!iGotNL) {
+			int iNewSize = 2 * pBLB->iSize + 1;
+			char *pszBuffer = (char *) SysRealloc(pBLB->pszBuffer,
+							      (unsigned int) iNewSize);
+
+			if (pszBuffer == NULL)
+				return NULL;
+			pBLB->pszBuffer = pszBuffer;
+			pBLB->iSize = iNewSize;
+		}
+		iLineLength += iCurrLength;
+	} while (!iGotNL);
+	if (piLineLength != NULL)
+		*piLineLength = iLineLength;
+
+	return pBLB->pszBuffer;
 }

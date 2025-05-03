@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.22
+Version: 1.23
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons

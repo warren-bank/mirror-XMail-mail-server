@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.22
+1.23
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-Oct 12, 2005
+Nov 19, 2006
 
 =head2 project by
 
@@ -100,7 +100,7 @@ Beau E, Cox <beau@beaucox.com>
  ************************************************************
  *                     <<WARNING>>                          *
  *  If you're upgrading an existing version of XMail it's   *
- *  strongly suggested that you read all the ChangeLog.txt  *
+ *  strongly suggested that you read all the ChangeLog      *
  *  notes that range from existing version to the new one.  *
  ************************************************************
 
@@ -173,10 +173,6 @@ SMTP RBL maps check (rbl.maps.vix.com)
 =item *
 
 SMTP RSS maps check (relays.mail-abuse.org)
-
-=item *
-
-SMTP ORBS relay check (relays.orbs.org)
 
 =item *
 
@@ -611,6 +607,7 @@ Mail root directory contain these files:
   finger.ipmap.tab    <file>
   filters.in.tab  <file>
   filters.out.tab <file>
+  filters.post-rcpt.tab <file>
   filters.pre-data.tab <file>
   filters.post-data.tab <file>
   smtp.ipprop.tab <file>
@@ -744,6 +741,8 @@ The following sections explain each file's structure and use.
 =item L<"FILTERS.IN.TAB">
 
 =item L<"FILTERS.OUT.TAB">
+
+=item L<"FILTERS.POST-RCPT.TAB">
 
 =item L<"FILTERS.PRE-DATA.TAB">
 
@@ -1086,19 +1085,19 @@ the given format:
 
 This file can contain multiple lines whose 'B<auth-name>' are listed during the
 EHLO command response.
-Where 'arg-or-macro' can be:
+Where 'arg-or-macro' can be (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@CHALL
+=item CHALL
 
 server challenge given by  base-challenge + ':' + server-timestamp
 
-=item @@DGEST
+=item DGEST
 
 client response to server challenge (E<64>CHALL)
 
-=item @@FSECRT
+=item FSECRT
 
 a file containing all the lines (username + ':' + password) of SMTPAUTH.TAB
 
@@ -1109,9 +1108,9 @@ Example:
  "RSA-AUTH" "foochallenge" "/usr/bin/myrsa-authenticate"=>
    "-c" "@@CHALL" "-f" "@@FSECRT" "-d" "@@DGEST"
 
-The external program must test all lines of 'B<@@FSECRT>' to find the one (if it exists)
-that matches the client digest (B<@@DGEST>).
-If it finds a match, it must return zero and overwrite 'B<@@FSECRT>' with the matching secret
+The external program must test all lines of 'B<FSECRT>' to find the one (if it exists)
+that matches the client digest (B<DGEST>).
+If it finds a match, it must return zero and overwrite 'B<FSECRT>' with the matching secret
 (username + ':' + password).
 If a match is not found, the program must return a value other than zero.
 
@@ -1369,42 +1368,42 @@ is to store the message in user mailbox. The 'B<MAILPROC.TAB>' file can be eithe
 user or per domain, depending where the file is stored. If stored inside the user
 directory it applies only to the user whose directory hosts the 'B<MAILPROC.TAB>', while
 if stored inside the domain directory it applies to all users of such domain.
-Each argument can be a macro also:
+Each argument can be a macro also (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@FROM
+=item FROM
 
 is substituted for the sender of the message
 
-=item @@RCPT
+=item RCPT
 
 is substituted for the recipient of the message
 
-=item @@RRCPT
+=item RRCPT
 
-is substituted for the real recipient (@@RCPT could be an alias) of the message
+is substituted for the real recipient ($(RCPT) could be an alias) of the message
 
-=item @@FILE
+=item FILE
 
 is substituted for the message file path (the external command _must_ only read the file)
 
-=item @@MSGID
+=item MSGID
 
 is substituted for the (XMail unique) message id
 
-=item @@MSGREF
+=item MSGREF
 
 is substituted for the reference SMTP message id
 
-=item @@TMPFILE
+=item TMPFILE
 
 creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program
 responsibility to delete the temporary file. Do not use it with 'filter' commands
 since the filter will have no way to modify the real spool file
 
-=item @@USERAUTH
+=item USERAUTH
 
 name of the SMTP authenticated user, or "-" if no authentication has been supplied
 
@@ -1433,7 +1432,7 @@ process priority: 0 = normal  -1 = below normal  +1 = above normal
 
 wait timeout for process execution in seconds: 0 = nowait
 
-Be carefull if using @@FILE to give the external command enough timeout to complete,
+Be carefull if using $(FILE) to give the external command enough timeout to complete,
 otherwise the file will be removed by XMail while the command is processing.
 This is because such file is a temporary one that is deleted when XMail exits
 from 'B<MAILPROC.TAB>' file processing. In case the external command exit code will
@@ -1463,7 +1462,7 @@ process priority: 0 = normal  -1 = below normal  +1 = above normal
 
 wait timeout for process execution in seconds: 0 = nowait
 
-With filters, it is not suggested to use @@TMPFILE, since the filter will never have
+With filters, it is not suggested to use $(TMPFILE), since the filter will never have
 the ability to change the message content in that way. Also, to avoid problems very difficult to
 troubleshoot, it is suggested to give the filter 'B<ENOUGH>' timeout to complete (90 seconds
 or more). See [L<MESSAGE FILTERS|"MESSAGE FILTERS">] for detailed information about return codes.
@@ -1572,6 +1571,12 @@ See [L<MESSAGE FILTERS|"MESSAGE FILTERS">]
 
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
 
+=head3 FILTERS.POST-RCPT.TAB
+
+See [L<SMTP MESSAGE FILTERS|"SMTP MESSAGE FILTERS">]
+
+[L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
+
 =head3 FILTERS.PRE-DATA.TAB
 
 See [L<SMTP MESSAGE FILTERS|"SMTP MESSAGE FILTERS">]
@@ -1583,6 +1588,18 @@ See [L<SMTP MESSAGE FILTERS|"SMTP MESSAGE FILTERS">]
 See [L<SMTP MESSAGE FILTERS|"SMTP MESSAGE FILTERS">]
 
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
+
+=head1 MACRO SUBSTITUTION
+
+XMail support two kinds of macro declaration inside its TAB file. The old macro
+declaration done by prefixing the macro name with the 'B<@@>' sequence is still supported
+for backward compatibility, and has to be used when the macro is the only content of the
+parameter. Macro can also be declared as 'B<$(MACRO)>' and this form can be used anywhere
+inside the parameter declaration, like:
+
+ "/var/spool/mail/$(USER).dat"
+
+[L<top|"__index__">]
 
 =head1 EXTERNAL AUTHENTICATION
 
@@ -1605,23 +1622,23 @@ the given structure:
 
  "auth-action"[TAB]"command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
-Each argument can be a macro also:
+Each argument can be a macro also (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@USER
+=item USER
 
 the USERNAME to authenticate
 
-=item @@DOMAIN
+=item DOMAIN
 
 the DOMAIN to authenticate
 
-=item @@PASSWD
+=item PASSWD
 
 the user password
 
-=item @@PATH
+=item PATH
 
 user path
 
@@ -1714,19 +1731,19 @@ or
  "external"  "auth-name" "secret"    "prog-path" "arg-or-macro"  ...
 
 Where  'B<auth-name>' can be any symbolic name and 'B<arg-or-macro>' can be a program
-argument or one of these macros:
+argument or one of these macros (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@CHALL
+=item CHALL
 
 server challenge string
 
-=item @@SECRT
+=item SECRT
 
 authentication secret
 
-=item @@RFILE
+=item RFILE
 
 output response file path
 
@@ -1748,7 +1765,7 @@ to the SMTP server, and wait for a line like:
 Then XMail decodes 'B<base64-challenge>' and invokes the external program to get the response
 to send to the SMTP server.
 The external program must return zero upon success and must put the response into
-the file  @@RFILE (without new line termination).
+the file $(RFILE) (without new line termination).
 
 [L<top|"__index__">]
 
@@ -1777,37 +1794,37 @@ These tables store commands (internals or externals) that have to be executed on
 The presence of one of these files is optional and if none exist the default processing
 is applied to the message via SMTP.
 
-Each argument can be a macro also:
+Each argument can be a macro also (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@FROM
+=item FROM
 
 the sender of the message
 
-=item @@RCPT
+=item RCPT
 
 the target of the message
 
-=item @@FILE
+=item FILE
 
 the message file path (the external command 'B<must only read>' the file)
 
-=item @@MSGID
+=item MSGID
 
 the (XMail unique) message id
 
-=item @@MSGREF
+=item MSGREF
 
 the reference SMTP message id
 
-=item @@TMPFILE
+=item TMPFILE
 
 creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program's
 responsibility to delete the temporary file
 
-=item @@USERAUTH
+=item USERAUTH
 
 name of the SMTP authenticated user, or "-" if no authentication has been supplied
 
@@ -1838,7 +1855,7 @@ process priority: 0 = normal  -1 = below normal  +1 = above normal
 
 wait timeout for process execution in seconds: 0 = nowait
 
-Be carefull if using @@FILE to give the external command enough timeout to complete,
+Be carefull if using $(FILE) to give the external command enough timeout to complete,
 otherwise the file will be removed by XMail while the command is processing.
 This is because such file is a temporary one that is deleted when XMail exits
 from file processing. In case the external command exit code will be 'B<16>',
@@ -1868,7 +1885,7 @@ process priority: 0 = normal  -1 = below normal  +1 = above normal
 
 wait timeout for process execution in seconds: 0 = nowait
 
-With filters, it is not suggested to use @@TMPFILE, since the filter will never have
+With filters, it is not suggested to use $(TMPFILE), since the filter will never have
 the ability to change the message content in that way. Also, to avoid problems very difficult to
 troubleshoot, it is suggested to give the filter 'B<ENOUGH>' timeout to complete (90 seconds
 or more). See [L<MESSAGE FILTERS|"MESSAGE FILTERS">] for detailed information about return codes.
@@ -2125,6 +2142,11 @@ the file SPAM-ADDRESS.TAB.
 Used to set the message that is sent to the SMTP client when the client IP is listed inside
 one of the "CustMapsList".
 
+=item [SmtpMsgIPBan]
+
+Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SMTP.IPMAP.TAB.
+
 =item [CustomSMTPMessage]
 
 Set this to the message that you want to follow the standard SMTP error
@@ -2134,6 +2156,26 @@ response sent by XMail, as in (one line, remember the =>):
     more information about this error"
 
 Please be aware the RFC821 fix the maximum reply line length to 512 bytes.
+
+=item [SMTP-IpMapDropCode]
+
+Set the drop code for IPs blocked by the SMTP.IPMAP.TAB file:
+
+=over 8
+
+=item '1'
+
+the connection is drooped soon
+
+=item "0"
+
+the connection is kept alive but only authenticated users can send mail
+
+=item '-S'
+
+the peer can send messages but a delay of S seconds is introduced between commands
+
+=back
 
 =item [AllowSmtpVRFY]
 
@@ -2365,50 +2407,55 @@ supported flags are:
 
 exclude filter execution in case of authenticated sender
 
+=item wlex
+
+exclude filter execution in case the client IP is white-listed inside the SMTP.IPPROP.TAB file.
+This flag works only for SMTP filters.
+
 =back
 
-Each argument can be a macro also:
+Each argument can be a macro also (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@FROM
+=item FROM
 
 the sender of the message
 
-=item @@RFROM
+=item RFROM
 
 the sender of the message resolved to the real account, when possible (alias resolution)
 
-=item @@RCPT
+=item RCPT
 
 the target of the message
 
-=item @@RRCPT
+=item RRCPT
 
 the target of the message resolved to the real account, when possible (alias resolution)
 
-=item @@REMOTEADDR
+=item REMOTEADDR
 
 remote IP address and port of the sender
 
-=item @@LOCALADDR
+=item LOCALADDR
 
 local IP address and port where the message has been accepted
 
-=item @@FILE
+=item FILE
 
 the message file path (the external command may modify the file if it returns 'B<7>'
 as command exit value.)
 
-=item @@MSGID
+=item MSGID
 
 with the (XMail unique) message id
 
-=item @@MSGREF
+=item MSGREF
 
 the reference SMTP message id
 
-=item @@USERAUTH
+=item USERAUTH
 
 name of the SMTP authenticated user, or "-" if no authentication has been supplied
 
@@ -2426,7 +2473,7 @@ The filter command may also modify the file
 The filter 'B<MUST>' return 'B<7>' in case it modifies the message.
 If the filter changes the message file it 'B<MUST>' keep the message structure and
 it 'B<MUST>' terminate all line with <CR><LF>. The filter has also the ability to return
-a one-line custom return message by creating a file named @@FILE.rej holding the message
+a one-line custom return message by creating a file named $(FILE).rej holding the message
 in the very first line. This file should be created 'B<ONLY>' when the filter returns a
 rejection code ('B<6, 5 and 4>')and 'B<NEVER>' in case of passthru code ('B<7>') or modify code.
 
@@ -2444,7 +2491,7 @@ After the 'B<E<lt>E<lt>MAIL-DATAE<gt>E<gt>>' tag (5th line) the message follows.
 of a headers section and, after the first empty line, the message body. The format of the "Info Data"
 line is:
 
- ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo
+ [ClientIP]:ClientPort;[ServerIP]:ServerPort;Time
 
 'B<EXTREME>' care must be used when modifying the message because the filter will be working
 on the real message, and a badly reformatted file will lead to message loss. The spool file
@@ -2456,16 +2503,19 @@ message rewrite happens.
 =head1 SMTP MESSAGE FILTERS
 
 Besides having the ability to perform off-line message filtering, XMail gives the user
-the power to run filters during the SMTP session. Two files drive the SMTP on-line filtering,
-and these are 'B<FILTERS.PRE-DATA.TAB>' and 'B<FILTERS.POST-DATA.TAB>'. The file
-'B<FILTERS.PRE-DATA.TAB>' contains one or more commands to be executed after the remote
+the power to run filters during the SMTP session. Three files drive the SMTP on-line filtering,
+and these are 'B<FILTERS.POST-RCPT.TAB>', 'B<FILTERS.PRE-DATA.TAB>' and 'B<FILTERS.POST-DATA.TAB>'.
+The file 'B<FILTERS.POST-RCPT.TAB>', contains one or more commands to be executed after the remote
+SMTP client sends the RCPT_TO command(s), and before XMail sends the response to the command.
+The file 'B<FILTERS.PRE-DATA.TAB>' contains one or more commands to be executed after the remote
 SMTP client sends the DATA command, and before XMail sends the response to the command.
-Using such filters, the user can tell XMail if or if not accept the following DATA transaction
+Using such filters, the user can tell XMail if or if not accept the following transaction
 and, in case of rejection, the user is also allowed to specify a custom message to be sent
 to the remote SMTP client. The file 'B<FILTERS.POST-DATA.TAB>' contains one or more commands
 to be executed after XMail received the whole client DATA, and before XMail sends the final
-response to the DATA command (final messages ack). The files 'B<FILTERS.PRE-DATA.TAB>'
-and 'B<FILTERS.POST-DATA.TAB>' conatins zero or more lines with the following format:
+response to the DATA command (final messages ack). The files 'B<FILTERS.POST-RCPT.TAB>',
+'B<FILTERS.PRE-DATA.TAB>' and 'B<FILTERS.POST-DATA.TAB>' contains zero or more lines with the
+following format:
 
  "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
@@ -2485,33 +2535,46 @@ supported flags are:
 
 exclude filter execution in case of authenticated sender
 
+=item wlex
+
+exclude filter execution in case the client IP is white-listed inside the SMTP.IPPROP.TAB file.
+
 =back
 
-Each argument can be a macro also:
+Each argument can be a macro also (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
-=item @@FILE
+=item FILE
 
 message file path
 
-=item @@USERAUTH
+=item USERAUTH
 
 name of the SMTP authenticated user, or "-" if no authentication has been supplied
 
-=item @@REMOTEADDR
+=item REMOTEADDR
 
 remote IP address and port of the sender
 
-=item @@LOCALADDR
+=item LOCALADDR
 
 local IP address and port where the message has been accepted
+
+=item FROM
+
+message sender address
+
+=item CRCPT
+
+last recipient submitted by the client. For post-rcpt filters, this will be
+used as to-validate recipient
 
 =back
 
 Filter commands have the ability to inspect and modify the content of the message
 (or info) file. The exit code of commands executed by XMail are used to tell XMail
-the action that has to be performed as a cosequence of the filter. The exit code
+the action that has to be performed as a consequence of the filter. The exit code
 is composed by a raw exit code and additional flags. Currently defined flags are:
 
 =over
@@ -2533,16 +2596,16 @@ Reject the message.
 =back
 
 Any other exit codes will make XMail to accept the message, and can be used also when
-changing the content of the @@FILE file. 'B<EXTREME>' care must be used when changing the
-@@FILE file, since XMail expect the file format to be correct. Also, it is important to
+changing the content of the $(FILE) file. 'B<EXTREME>' care must be used when changing the
+$(FILE) file, since XMail expect the file format to be correct. Also, it is important to
 preserve the <CR><LF> line termination of the file itself.
 When rejecting the message, the filter command has the ability to specify the SMTP
 status code that XMail will send to the remote SMTP client, by creating a file named
-@@FILE.rej containing the message in the very first line. Such file will be automatically
-removed by XMail. The data passed to filter commands inside @@FILE varies depending
-if the command is listed inside 'B<FILTERS.PRE-DATA.TAB>' or inside 'B<FILTERS.POST-DATA.TAB>'.
-Commands listed inside 'B<FILTERS.PRE-DATA.TAB>' will receive the following data stored
-inside @@FILE:
+$(FILE).rej containing the message in the very first line. Such file will be automatically
+removed by XMail. The data passed to filter commands inside $(FILE) varies depending
+if the command is listed inside 'B<FILTERS.POST-RCPT.TAB>', 'B<FILTERS.PRE-DATA.TAB>' or
+inside 'B<FILTERS.POST-DATA.TAB>'. Commands listed inside 'B<FILTERS.POST-RCPT.TAB>' and
+'B<FILTERS.PRE-DATA.TAB>' will receive the following data stored inside $(FILE):
 
  Info Data           [ 1th line ]
  SmtpDomain          [ 2nd line ]
@@ -2554,10 +2617,13 @@ inside @@FILE:
 The file can have one or more "RCPT TO" lines. The format of the "Info Data"
 line is:
 
- ClientDomain;ClientIP;ClientPort;ServerDomain;ServerIP;ServerPort;Time;Logo
+ ClientDomain;[ClientIP]:ClientPort;ServerDomain;[ServerIP]:ServerPort;Time;Logo
 
+Note that in case of 'B<FILTERS.POST-RCPT.TAB>', the $(FILE) data does not yet contain the
+current recipient to be validated. This needs to be fetched and passed to the external program
+using the $(CRCPT) macro.
 Commands listed inside 'B<FILTERS.POST-DATA.TAB>' will receive the following data stored
-inside @@FILE:
+inside $(FILE):
 
  Info Data           [ 1th line ]
  SmtpDomain          [ 2nd line ]
@@ -2576,6 +2642,8 @@ RCPT line is:
 
 where "real-address" is the "address" after it has been translated (if aliases applies)
 to the real local address. Otherwise it holds the same value of "address".
+In case one or more SMTP filter functionalities are not needed, avoid to create zero sized
+files altogether, since this will result in faster processing.
 
 [L<top|"__index__">]
 
@@ -2644,6 +2712,11 @@ Overrides the SERVER.TAB variable.
 Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
 Valid values are '0' or '1', default is '0' (emission enabled). This variable overrides
 the SERVER.TAB one when present.
+
+=item [Pop3ScanCur]
+
+In case of Maildir mailbox structure, scan the "cur" directory during POP3 message list build.
+Set to "0" to disable "cur" directory scanning, or to "1" to enable it.
 
 =back
 
@@ -3633,6 +3706,10 @@ This is the format of the listing:
 =head2 Getting mailproc.tab file
 
  "usergetmproc"[TAB]"domain"[TAB]"username"<CR><LF>
+ 
+or
+
+ "usergetmproc"[TAB]"domain"[TAB]"username"[TAB]"flags"<CR><LF>
 
 where:
 
@@ -3645,6 +3722,11 @@ domain name.
 =item username
 
 username.
+
+=item flags
+
+flags specifying which mailproc to retrieve. Use 'U' for user mailproc, or 'D'
+for domain mailproc (or 'DU' for a merge of both). If not specified, 'DU' is assumed.
 
 =back
 
@@ -3663,6 +3745,10 @@ containing a single dot (<CR><LF>.<CR><LF>).
 =head2 Setting mailproc.tab file
 
  "usersetmproc"[TAB]"domain"[TAB]"username"<CR><LF>
+ 
+or
+
+ "usersetmproc"[TAB]"domain"[TAB]"username"[TAB]"which"<CR><LF>
 
 where:
 
@@ -3675,6 +3761,11 @@ domain name.
 =item username
 
 username.
+
+=item which
+
+which mailproc.tab should be set. Use 'U' for the user one, and 'D' for the domain one.
+If not specified, 'U' is assumed.
 
 =back
 

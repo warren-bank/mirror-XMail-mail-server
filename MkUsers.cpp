@@ -34,30 +34,22 @@
 
 int SysPathExist(char const *pszPathName)
 {
-
-	return ((_access(pszPathName, 0) == 0) ? 1 : 0);
-
+	return (_access(pszPathName, 0) == 0) ? 1 : 0;
 }
 
 int SysMakeDir(char const *pszPathName)
 {
-
-	return ((_mkdir(pszPathName) == 0) ? 1 : 0);
-
+	return (_mkdir(pszPathName) == 0) ? 1 : 0;
 }
 
 int SysErrNo(void)
 {
-
-	return (errno);
-
+	return errno;
 }
 
 char const *SysErrStr(void)
 {
-
-	return (strerror(errno));
-
+	return strerror(errno);
 }
 
 #else				// #if defined(WIN32)
@@ -80,30 +72,22 @@ char const *SysErrStr(void)
 
 int SysPathExist(char const *pszPathName)
 {
-
-	return ((access(pszPathName, 0) == 0) ? 1 : 0);
-
+	return (access(pszPathName, 0) == 0) ? 1 : 0;
 }
 
 int SysMakeDir(char const *pszPathName)
 {
-
-	return ((mkdir(pszPathName, 0700) == 0) ? 1 : 0);
-
+	return (mkdir(pszPathName, 0700) == 0) ? 1 : 0;
 }
 
 int SysErrNo(void)
 {
-
-	return (errno);
-
+	return errno;
 }
 
 char const *SysErrStr(void)
 {
-
-	return (strerror(errno));
-
+	return strerror(errno);
 }
 
 #else				// #if defined(__LINUX__) || defined(__SOLARIS__)
@@ -119,7 +103,6 @@ char const *SysErrStr(void)
 
 char *StrCrypt(char const *pszInput, char *pszCrypt)
 {
-
 	strcpy(pszCrypt, "");
 
 	for (int ii = 0; pszInput[ii] != '\0'; ii++) {
@@ -131,8 +114,7 @@ char *StrCrypt(char const *pszInput, char *pszCrypt)
 		strcat(pszCrypt, szByte);
 	}
 
-	return (pszCrypt);
-
+	return pszCrypt;
 }
 
 int CreateUser(char const *pszRootDir, char const *pszDomain,
@@ -140,42 +122,35 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 	       unsigned int uUserId, char const *pszRealName,
 	       char const *pszHomePage, unsigned int uMBSize, bool bMaildir, FILE * pUsrFile)
 {
-
 	FILE *pTabFile;
 	char szPathName[SYS_MAX_PATH] = "";
 	char szCryptPwd[256] = "";
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domain directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Check-create domain directory */
 	sprintf(szPathName, "%sdomains" SYS_SLASH_STR "%s", pszRootDir, pszDomain);
 
 	if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 		perror(szPathName);
-		return (SysErrNo());
+		return SysErrNo();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domain/user directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Check-create domain/user directory */
 	sprintf(szPathName, "%sdomains" SYS_SLASH_STR "%s" SYS_SLASH_STR "%s", pszRootDir,
 		pszDomain, pszUsername);
 
 	if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 		perror(szPathName);
-		return (SysErrNo());
+		return SysErrNo();
 	}
 
 	if (bMaildir) {
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domain/user/Maildir/(tmp,new,cur) directories
-///////////////////////////////////////////////////////////////////////////////
+		/* Check-create domain/user/Maildir/(tmp,new,cur) directories */
 		sprintf(szPathName,
 			"%sdomains" SYS_SLASH_STR "%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "Maildir",
 			pszRootDir, pszDomain, pszUsername);
 
 		if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 
 		sprintf(szPathName,
@@ -184,7 +159,7 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 
 		if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 
 		sprintf(szPathName,
@@ -193,7 +168,7 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 
 		if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 
 		sprintf(szPathName,
@@ -202,25 +177,21 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 
 		if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 	} else {
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domain/user/mailbox directory
-///////////////////////////////////////////////////////////////////////////////
+		/* Check-create domain/user/mailbox directory */
 		sprintf(szPathName,
 			"%sdomains" SYS_SLASH_STR "%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "mailbox",
 			pszRootDir, pszDomain, pszUsername);
 
 		if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domain/user/mailbox/user.tab file
-///////////////////////////////////////////////////////////////////////////////
+	/* Check-create domain/user/mailbox/user.tab file */
 	sprintf(szPathName,
 		"%sdomains" SYS_SLASH_STR "%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "user.tab",
 		pszRootDir, pszDomain, pszUsername);
@@ -228,7 +199,7 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 	if (!SysPathExist(szPathName)) {
 		if ((pTabFile = fopen(szPathName, "wt")) == NULL) {
 			perror(szPathName);
-			return (SysErrNo());
+			return SysErrNo();
 		}
 
 		fprintf(pTabFile,
@@ -238,9 +209,7 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 
 		fclose(pTabFile);
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Add user to users file
-///////////////////////////////////////////////////////////////////////////////
+	/* Add user to users file */
 	fprintf(pUsrFile,
 		"\"%s\"\t"
 		"\"%s\"\t"
@@ -250,13 +219,11 @@ int CreateUser(char const *pszRootDir, char const *pszDomain,
 		"\"U\"\n", pszDomain, pszUsername, StrCrypt(pszPassword, szCryptPwd), uUserId,
 		pszUsername);
 
-	return (0);
-
+	return 0;
 }
 
 void ShowUsage(char const *pszProgName)
 {
-
 	fprintf(stderr,
 		"use : %s [-adfursih]\n"
 		"          -a numusers     = number of users to create in auto-mode\n"
@@ -274,7 +241,6 @@ void ShowUsage(char const *pszProgName)
 
 int main(int argc, char *argv[])
 {
-
 	int ii;
 	int iNumUsers = 0;
 	bool bMaildir = false;
@@ -335,53 +301,45 @@ int main(int argc, char *argv[])
 
 		case ('h'):
 			ShowUsage(argv[0]);
-			return (0);
+			return 0;
 
 		default:
 			ShowUsage(argv[0]);
-			return (1);
+			return 1;
 		}
 	}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Root directory slash termination
-///////////////////////////////////////////////////////////////////////////////
+	/* Root directory slash termination */
 	if (szRootDir[strlen(szRootDir) - 1] != SYS_SLASH_CHAR)
 		strcat(szRootDir, SYS_SLASH_STR);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check-create domains directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Check-create domains directory */
 	sprintf(szPathName, "%sdomains", szRootDir);
 
 	if (!SysPathExist(szPathName) && !SysMakeDir(szPathName)) {
 		perror(szPathName);
-		return (SysErrNo());
+		return SysErrNo();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Create mailusers.tab file
-///////////////////////////////////////////////////////////////////////////////
+	/* Create mailusers.tab file */
 	sprintf(szPathName, "%smailusers.tab", szRootDir);
 
 	if (SysPathExist(szPathName)) {
 		fprintf(stderr, "%s already exist\n", szPathName);
-		return (1);
+		return 1;
 	}
 
 	if ((pUsrFile = fopen(szPathName, "wt")) == NULL) {
 		perror(szPathName);
-		return (SysErrNo());
+		return SysErrNo();
 	}
 
 	if (iNumUsers == 0) {
 		if ((strlen(szInputFile) != 0) && ((pInFile = fopen(szInputFile, "rt")) == NULL)) {
 			perror(szPathName);
 			fclose(pUsrFile);
-			return (SysErrNo());
+			return SysErrNo();
 		}
-///////////////////////////////////////////////////////////////////////////////
-//  Get input from stdin
-///////////////////////////////////////////////////////////////////////////////
+		/* Get input from stdin */
 		while (fgets(szUsrLine, sizeof(szUsrLine) - 1, pInFile) != NULL) {
 			char *pszDomain;
 			char *pszUsername;
@@ -413,9 +371,7 @@ int main(int argc, char *argv[])
 		if (pInFile != stdin)
 			fclose(pInFile);
 	} else {
-///////////////////////////////////////////////////////////////////////////////
-//  Automatically generate users
-///////////////////////////////////////////////////////////////////////////////
+		/* Automatically generate users */
 		for (ii = 1; ii <= iNumUsers; ii++) {
 			char szUsername[256] = "";
 			char szHomePage[256] = "";
@@ -438,6 +394,5 @@ int main(int argc, char *argv[])
 
 	fclose(pUsrFile);
 
-	return (0);
-
+	return 0;
 }

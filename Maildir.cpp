@@ -39,9 +39,7 @@
 
 int MdirCreateStructure(char const *pszBasePath)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Create Maildir directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Create Maildir directory */
 	char szMaildirPath[SYS_MAX_PATH] = "";
 
 	StrSNCpy(szMaildirPath, pszBasePath);
@@ -50,64 +48,51 @@ int MdirCreateStructure(char const *pszBasePath)
 	StrSNCat(szMaildirPath, MAILDIR_DIRECTORY);
 
 	if (SysMakeDir(szMaildirPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create Maildir/tmp directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Create Maildir/tmp directory */
 	char szSubPath[SYS_MAX_PATH] = "";
 
 	sprintf(szSubPath, "%s" SYS_SLASH_STR "tmp", szMaildirPath);
 
 	if (SysMakeDir(szSubPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create Maildir/new directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Create Maildir/new directory */
 	sprintf(szSubPath, "%s" SYS_SLASH_STR "new", szMaildirPath);
 
 	if (SysMakeDir(szSubPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create Maildir/cur directory
-///////////////////////////////////////////////////////////////////////////////
+	/* Create Maildir/cur directory */
 	sprintf(szSubPath, "%s" SYS_SLASH_STR "cur", szMaildirPath);
 
 	if (SysMakeDir(szSubPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-	return (0);
-
+	return 0;
 }
 
 int MdirGetTmpMaildirEntry(char const *pszMaildirPath, char *pszFilePath)
 {
-
 	char szTmpPath[SYS_MAX_PATH] = "";
 
 	sprintf(szTmpPath, "%s" SYS_SLASH_STR "tmp", pszMaildirPath);
 
-	return (MscUniqueFile(szTmpPath, pszFilePath));
-
+	return MscUniqueFile(szTmpPath, pszFilePath);
 }
 
 int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Lookup Maildir/tmp/ subpath
-///////////////////////////////////////////////////////////////////////////////
+	/* Lookup Maildir/tmp/ subpath */
 	char const *pszTmpDir = MAILDIR_DIRECTORY SYS_SLASH_STR "tmp" SYS_SLASH_STR;
 	char const *pszLookup = strstr(pszTmpEntryPath, pszTmpDir);
 
 	if (pszLookup == NULL) {
 		ErrSetErrorCode(ERR_INVALID_MAILDIR_SUBPATH);
-		return (ERR_INVALID_MAILDIR_SUBPATH);
+		return ERR_INVALID_MAILDIR_SUBPATH;
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Build Maildir/new file path
-///////////////////////////////////////////////////////////////////////////////
+	/* Build Maildir/new file path */
 	int iBaseLength = (int) (pszLookup - pszTmpEntryPath);
 	char const *pszNewDir = MAILDIR_DIRECTORY SYS_SLASH_STR "new" SYS_SLASH_STR;
 	char const *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
@@ -117,47 +102,37 @@ int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
 	StrNCpy(szNewEntryPath + iBaseLength, pszNewDir, sizeof(szNewEntryPath) - iBaseLength);
 	StrNCat(szNewEntryPath, pszSlash + 1, sizeof(szNewEntryPath));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Move to Maildir/new
-///////////////////////////////////////////////////////////////////////////////
+	/* Move to Maildir/new */
 	if (SysMoveFile(pszTmpEntryPath, szNewEntryPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
-	return (0);
-
+	return 0;
 }
 
 int MdirMoveMessage(char const *pszMaildirPath, const char *pszFileName, char const *pszMessageID)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Allocate a Maildir/tmp entry
-///////////////////////////////////////////////////////////////////////////////
+	/* Allocate a Maildir/tmp entry */
 	char szTmpEntryPath[SYS_MAX_PATH] = "";
 
 	if (pszMessageID == NULL) {
 		if (MdirGetTmpMaildirEntry(pszMaildirPath, szTmpEntryPath) < 0)
-			return (ErrGetErrorCode());
+			return ErrGetErrorCode();
 	} else
 		sprintf(szTmpEntryPath, "%s" SYS_SLASH_STR "tmp" SYS_SLASH_STR "%s",
 			pszMaildirPath, pszMessageID);
 
-///////////////////////////////////////////////////////////////////////////////
-//  This perform a copy&delete to Maildir/tmp
-///////////////////////////////////////////////////////////////////////////////
+	/* This perform a copy&delete to Maildir/tmp */
 	if (MscMoveFile(pszFileName, szTmpEntryPath) < 0) {
 		ErrorPush();
 		CheckRemoveFile(szTmpEntryPath);
-		return (ErrorPop());
+		return ErrorPop();
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  This perform a fast system move from Maildir/tmp to Maildir/new
-///////////////////////////////////////////////////////////////////////////////
+	/* This perform a fast system move from Maildir/tmp to Maildir/new */
 	if (MdirMoveTmpEntryInNew(szTmpEntryPath) < 0) {
 		ErrorPush();
 		SysRemove(szTmpEntryPath);
-		return (ErrorPop());
+		return ErrorPop();
 	}
 
-	return (0);
-
+	return 0;
 }

@@ -31,16 +31,13 @@
 
 char *CfgGetRootPath(char *pszPath, int iMaxPath)
 {
-
 	StrNCpy(pszPath, szMailPath, iMaxPath);
 
-	return (pszPath);
-
+	return pszPath;
 }
 
 char *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
 {
-
 	char szRootPath[SYS_MAX_PATH] = "";
 
 	CfgGetRootPath(szRootPath, sizeof(szRootPath));
@@ -52,19 +49,16 @@ char *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
 	else
 		StrNCpy(pszBasePath, pszFullPath, iMaxPath);
 
-	return (pszBasePath);
-
+	return pszBasePath;
 }
 
 char *CfgGetFullPath(char const *pszRelativePath, char *pszFullPath, int iMaxPath)
 {
-
 	CfgGetRootPath(pszFullPath, iMaxPath);
 
 	StrNCat(pszFullPath,
 		(*pszRelativePath != SYS_SLASH_CHAR) ? pszRelativePath : pszRelativePath + 1,
 		iMaxPath);
 
-	return (pszFullPath);
-
+	return pszFullPath;
 }

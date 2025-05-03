@@ -49,15 +49,22 @@
 #define USER_AUTH_PRIORITY          SYS_PRIORITY_NORMAL
 #define AUTH_SUCCESS_CODE           0
 
+struct UAuthMacroSubstCtx {
+	char const *pszDomain;
+	char const *pszUsername;
+	char const *pszPassword;
+	UserInfo *pUI;
+};
+
 static int UAthGetConfigPath(char const *pszService, char const *pszDomain, char *pszConfigPath);
 static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
-			  char const *pszDomain, char const *pszUsername, UserInfo * pUI);
+			  char const *pszDomain, char const *pszUsername, UserInfo *pUI);
+static char *UAthAuthMacroLkupProc(void *pPrivate, char const *pszName, int iSize);
 static int UAthMacroSubstitutes(char **ppszCmdTokens, char const *pszDomain,
-				char const *pszUsername, char const *pszPassword, UserInfo * pUI);
+				char const *pszUsername, char const *pszPassword, UserInfo *pUI);
 
 char *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath)
 {
-
 	CfgGetRootPath(pszAuthPath, iMaxPath);
 
 	StrNCat(pszAuthPath, USER_AUTH_DIR, iMaxPath);
@@ -68,53 +75,45 @@ char *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath)
 
 	AppendSlash(pszAuthPath);
 
-	return (pszAuthPath);
-
+	return pszAuthPath;
 }
 
 static int UAthGetConfigPath(char const *pszService, char const *pszDomain, char *pszConfigPath)
 {
-
 	char szAuthPath[SYS_MAX_PATH] = "";
 
 	UAthGetRootPath(pszService, szAuthPath, sizeof(szAuthPath));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check domain specific config
-///////////////////////////////////////////////////////////////////////////////
+	/* Check domain specific config */
 	sprintf(pszConfigPath, "%s%s.tab", szAuthPath, pszDomain);
 
 	if (SysExistFile(pszConfigPath))
-		return (0);
+		return 0;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Check default config
-///////////////////////////////////////////////////////////////////////////////
+	/* Check default config */
 	sprintf(pszConfigPath, "%s.tab", szAuthPath);
 
 	if (SysExistFile(pszConfigPath))
-		return (0);
+		return 0;
 
 	ErrSetErrorCode(ERR_NO_EXTERNAL_AUTH_DEFINED);
-	return (ERR_NO_EXTERNAL_AUTH_DEFINED);
-
+	return ERR_NO_EXTERNAL_AUTH_DEFINED;
 }
 
 static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 			  char const *pszDomain, char const *pszUsername,
-			  char const *pszPassword, UserInfo * pUI)
+			  char const *pszPassword, UserInfo *pUI)
 {
-
 	char szAuthConfigPath[SYS_MAX_PATH] = "";
 
 	if (UAthGetConfigPath(pszService, pszDomain, szAuthConfigPath) < 0)
-		return (ErrGetErrorCode());
+		return ErrGetErrorCode();
 
 	FILE *pAuthFile = fopen(szAuthConfigPath, "rt");
 
 	if (pAuthFile == NULL) {
 		ErrSetErrorCode(ERR_FILE_OPEN, szAuthConfigPath);
-		return (ERR_FILE_OPEN);
+		return ERR_FILE_OPEN;
 	}
 
 	char szAuthLine[AUTH_LINE_MAX] = "";
@@ -128,9 +127,7 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 		int iFieldsCount = StrStringsCount(ppszCmdTokens);
 
 		if ((iFieldsCount > 1) && (stricmp(ppszCmdTokens[0], pszAuthOp) == 0)) {
-///////////////////////////////////////////////////////////////////////////////
-//  Do auth line macro substitution
-///////////////////////////////////////////////////////////////////////////////
+			/* Do auth line macro substitution */
 			UAthMacroSubstitutes(ppszCmdTokens, pszDomain, pszUsername, pszPassword,
 					     pUI);
 
@@ -143,13 +140,13 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 					fclose(pAuthFile);
 
 					ErrSetErrorCode(ERR_EXTERNAL_AUTH_FAILURE);
-					return (ERR_EXTERNAL_AUTH_FAILURE);
+					return ERR_EXTERNAL_AUTH_FAILURE;
 				}
 
 				StrFreeStrings(ppszCmdTokens);
 				fclose(pAuthFile);
 
-				return (0);
+				return 0;
 			} else {
 				StrFreeStrings(ppszCmdTokens);
 				fclose(pAuthFile);
@@ -159,7 +156,7 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 					      szAuthConfigPath);
 
 				ErrSetErrorCode(ERR_EXTERNAL_AUTH_FAILURE);
-				return (ERR_EXTERNAL_AUTH_FAILURE);
+				return ERR_EXTERNAL_AUTH_FAILURE;
 			}
 		}
 
@@ -169,38 +166,33 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 	fclose(pAuthFile);
 
 	ErrSetErrorCode(ERR_NO_EXTERNAL_AUTH_DEFINED);
-	return (ERR_NO_EXTERNAL_AUTH_DEFINED);
-
+	return ERR_NO_EXTERNAL_AUTH_DEFINED;
 }
 
 int UAthAuthenticateUser(char const *pszService, char const *pszDomain,
 			 char const *pszUsername, char const *pszPassword)
 {
-
 	return (UAthExecAuthOp(pszService, AUTH_AUTHENTICATE_CONFIG, pszDomain, pszUsername,
 			       pszPassword, NULL));
 
 }
 
-int UAthAddUser(char const *pszService, UserInfo * pUI)
+int UAthAddUser(char const *pszService, UserInfo *pUI)
 {
-
 	return (UAthExecAuthOp(pszService, AUTH_ADD_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
 
 }
 
-int UAthModifyUser(char const *pszService, UserInfo * pUI)
+int UAthModifyUser(char const *pszService, UserInfo *pUI)
 {
-
 	return (UAthExecAuthOp(pszService, AUTH_MODIFY_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
 
 }
 
-int UAthDelUser(char const *pszService, UserInfo * pUI)
+int UAthDelUser(char const *pszService, UserInfo *pUI)
 {
-
 	return (UAthExecAuthOp(pszService, AUTH_DEL_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
 
@@ -208,60 +200,45 @@ int UAthDelUser(char const *pszService, UserInfo * pUI)
 
 int UAthDropDomain(char const *pszService, char const *pszDomain)
 {
+	return UAthExecAuthOp(pszService, AUTH_DROPDOMAIN_CONFIG, pszDomain, NULL, NULL, NULL);
+}
 
-	return (UAthExecAuthOp(pszService, AUTH_DROPDOMAIN_CONFIG, pszDomain, NULL, NULL, NULL));
+static char *UAthAuthMacroLkupProc(void *pPrivate, char const *pszName, int iSize)
+{
+	UAuthMacroSubstCtx *pUATH = (UAuthMacroSubstCtx *) pPrivate;
 
+	if (MemMatch(pszName, iSize, "DOMAIN", 6)) {
+
+		return SysStrDup(pUATH->pszDomain != NULL ? pUATH->pszDomain: "");
+	} else if (MemMatch(pszName, iSize, "USER", 4)) {
+
+		return SysStrDup(pUATH->pszUsername != NULL ? pUATH->pszUsername: "");
+	} else if (MemMatch(pszName, iSize, "PASSWD", 6)) {
+
+		return SysStrDup(pUATH->pszPassword != NULL ? pUATH->pszPassword: "");
+	} else if (MemMatch(pszName, iSize, "PATH", 4)) {
+		char szUserPath[SYS_MAX_PATH] = "";
+
+		if (pUATH->pUI != NULL)
+			UsrGetUserPath(pUATH->pUI, szUserPath, sizeof(szUserPath), 0);
+
+		return SysStrDup(szUserPath);
+	}
+
+	return SysStrDup("");
 }
 
 static int UAthMacroSubstitutes(char **ppszCmdTokens, char const *pszDomain,
-				char const *pszUsername, char const *pszPassword, UserInfo * pUI)
+				char const *pszUsername, char const *pszPassword, UserInfo *pUI)
 {
+	UAuthMacroSubstCtx UATH;
 
-	for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++) {
-		if ((pszDomain != NULL) && (strcmp(ppszCmdTokens[ii], "@@DOMAIN") == 0)) {
-			char *pszNewValue = SysStrDup(pszDomain);
+	ZeroData(UATH);
+	UATH.pszDomain = pszDomain;
+	UATH.pszUsername = pszUsername;
+	UATH.pszPassword = pszPassword;
+	UATH.pUI = pUI;
 
-			if (pszNewValue == NULL)
-				return (ErrGetErrorCode());
-
-			SysFree(ppszCmdTokens[ii]);
-
-			ppszCmdTokens[ii] = pszNewValue;
-		} else if ((pszUsername != NULL) && (strcmp(ppszCmdTokens[ii], "@@USER") == 0)) {
-			char *pszNewValue = SysStrDup(pszUsername);
-
-			if (pszNewValue == NULL)
-				return (ErrGetErrorCode());
-
-			SysFree(ppszCmdTokens[ii]);
-
-			ppszCmdTokens[ii] = pszNewValue;
-		} else if ((pszPassword != NULL) && (strcmp(ppszCmdTokens[ii], "@@PASSWD") == 0)) {
-			char *pszNewValue = SysStrDup(pszPassword);
-
-			if (pszNewValue == NULL)
-				return (ErrGetErrorCode());
-
-			SysFree(ppszCmdTokens[ii]);
-
-			ppszCmdTokens[ii] = pszNewValue;
-		} else if ((pUI != NULL) && (strcmp(ppszCmdTokens[ii], "@@PATH") == 0)) {
-			char szUserPath[SYS_MAX_PATH] = "";
-
-			UsrGetUserPath(pUI, szUserPath, sizeof(szUserPath), 0);
-
-			char *pszNewValue = SysStrDup(szUserPath);
-
-			if (pszNewValue == NULL)
-				return (ErrGetErrorCode());
-
-			SysFree(ppszCmdTokens[ii]);
-
-			ppszCmdTokens[ii] = pszNewValue;
-		}
-
-	}
-
-	return (0);
-
+	return MscReplaceTokens(ppszCmdTokens, UAthAuthMacroLkupProc, &UATH);
 }
+

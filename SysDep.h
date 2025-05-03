@@ -34,6 +34,9 @@
 #define SYS_PRIORITY_NORMAL         0
 #define SYS_PRIORITY_HIGHER         +1
 
+#define SYS_MMAP_READ               (1 << 0)
+#define SYS_MMAP_WRITE              (1 << 1)
+
 #define SYS_IS_VALID_FILENAME(f)    ((strcmp(f, ".") != 0) && (strcmp(f, "..") != 0))
 
 int SysInitLibrary(void);
@@ -59,18 +62,18 @@ int SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_
 	      int iTimeout);
 int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBaseOffset,
 		unsigned long ulEndOffset, int iTimeout);
-int SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily,
+int SysSetupAddress(SYS_INET_ADDR &AddrInfo, int iFamily,
 		    NET_ADDRESS const &NetAddr, int iPortNo);
-int SysGetAddrAddress(SYS_INET_ADDR const &AddrInfo, NET_ADDRESS & NetAddr);
+int SysGetAddrAddress(SYS_INET_ADDR const &AddrInfo, NET_ADDRESS &NetAddr);
 int SysGetAddrPort(SYS_INET_ADDR const &AddrInfo);
-int SysSetAddrAddress(SYS_INET_ADDR & AddrInfo, NET_ADDRESS const &NetAddr);
-int SysSetAddrPort(SYS_INET_ADDR & AddrInfo, int iPortNo);
-int SysGetHostByName(char const *pszName, NET_ADDRESS & NetAddr);
+int SysSetAddrAddress(SYS_INET_ADDR &AddrInfo, NET_ADDRESS const &NetAddr);
+int SysSetAddrPort(SYS_INET_ADDR &AddrInfo, int iPortNo);
+int SysGetHostByName(char const *pszName, NET_ADDRESS &NetAddr);
 int SysGetHostByAddr(SYS_INET_ADDR const &AddrInfo, char *pszFQDN);
-int SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
-int SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
+int SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR &AddrInfo);
+int SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR &AddrInfo);
 char *SysInetNToA(SYS_INET_ADDR const &AddrInfo, char *pszIP);
-int SysInetAddr(char const *pszDotName, NET_ADDRESS & NetAddr);
+int SysInetAddr(char const *pszDotName, NET_ADDRESS &NetAddr);
 int SysSameAddress(NET_ADDRESS const &NetAddr1, NET_ADDRESS const &NetAddr2);
 
 SYS_SEMAPHORE SysCreateSemaphore(int iInitCount, int iMaxCount);
@@ -102,10 +105,10 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 	    int iPriority = SYS_PRIORITY_NORMAL, int *piExitStatus = NULL);
 void SysSetBreakHandler(void (*BreakHandler) (void));
 
-int SysCreateTlsKey(SYS_TLSKEY & TlsKey, void (*pFreeProc) (void *) = NULL);
-int SysDeleteTlsKey(SYS_TLSKEY & TlsKey);
-int SysSetTlsKeyData(SYS_TLSKEY & TlsKey, void *pData);
-void *SysGetTlsKeyData(SYS_TLSKEY & TlsKey);
+int SysCreateTlsKey(SYS_TLSKEY &TlsKey, void (*pFreeProc) (void *) = NULL);
+int SysDeleteTlsKey(SYS_TLSKEY &TlsKey);
+int SysSetTlsKeyData(SYS_TLSKEY &TlsKey, void *pData);
+void *SysGetTlsKeyData(SYS_TLSKEY &TlsKey);
 
 void SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void));
 
@@ -133,7 +136,7 @@ int SysIsDirectory(SYS_HANDLE hFind);
 unsigned long SysGetSize(SYS_HANDLE hFind);
 int SysNextFile(SYS_HANDLE hFind, char *pszFileName);
 void SysFindClose(SYS_HANDLE hFind);
-int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI);
+int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO &FI);
 int SysSetFileModTime(char const *pszFileName, time_t tMod);
 char *SysStrDup(const char *pszString);
 char *SysGetEnv(const char *pszVarName);
@@ -157,5 +160,11 @@ long SysGetDayLight(void);
 int SysGetDiskSpace(char const *pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree);
 int SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 		  SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree);
+
+SYS_MMAP SysCreateMMap(char const *pszFileName, unsigned long ulFlags);
+void SysCloseMMap(SYS_MMAP hMap);
+unsigned long SysMMapSize(SYS_MMAP hMap);
+void *SysMapMMap(SYS_MMAP hMap, unsigned long ulOffset, unsigned long ulSize);
+int SysUnmapMMap(SYS_MMAP hMap, void *pAddr);
 
 #endif

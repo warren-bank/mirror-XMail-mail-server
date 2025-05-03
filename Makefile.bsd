@@ -39,6 +39,10 @@ ifeq ($(OSTYPE),OpenBSD)
 else
 ifeq ($(OSTYPE),NetBSD)
 	SYSTYPE = netbsd
+	CVFS = $(shell grep -c statvfs /usr/include/sys/statvfs.h)
+	ifneq ("$(CVFS)", "0")
+	      CFLAGS := $(CFLAGS) -DBSD_USE_STATVFS
+	endif
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__NETBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
 	LDFLAGS = -lkvm -pthread
 else

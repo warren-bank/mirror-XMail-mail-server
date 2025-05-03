@@ -26,9 +26,7 @@
 #define XMAIL_MAILDIR    1
 #define XMAIL_MAILBOX    2
 
-///////////////////////////////////////////////////////////////////////////////
-//  Defined in MailSvr.cpp
-///////////////////////////////////////////////////////////////////////////////
+/* Defined in MailSvr.cpp */
 extern SHB_HANDLE hShbFING, hShbCTRL, hShbPOP3, hShbSMTP, hShbSMAIL, hShbPSYNC, hShbLMAIL;
 extern char szMailPath[SYS_MAX_PATH];
 extern bool bServerDebug;

@@ -23,9 +23,7 @@
 #ifndef _ERRORS_H
 #define _ERRORS_H
 
-///////////////////////////////////////////////////////////////////////////////
-//  Remeber to update error strings i Errors.cpp
-///////////////////////////////////////////////////////////////////////////////
+/* Remeber to update error strings i Errors.cpp */
 #define ERR_SUCCESS                 0
 #define ERR_SERVER_SHUTDOWN         (-1)
 #define ERR_MEMORY                  (-2)
@@ -256,6 +254,8 @@
 #define ERR_IMAP_UNKNOWN_AUTH       (-243)
 #define ERR_DNS_IS_CNAME            (-244)
 #define ERR_NO_MESSAGE_AUTH         (-245)
+#define ERR_INVALID_PARAMETER       (-246)
+#define ERR_ALREADY_EXIST           (-247)
 
 int ErrGetErrorCode(void);
 int ErrSetErrorCode(int iError, char const *pszInfo = NULL);

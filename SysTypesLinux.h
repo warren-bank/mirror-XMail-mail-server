@@ -48,6 +48,7 @@
 #define SYS_INVALID_EVENT       ((SYS_EVENT) 0)
 #define SYS_INVALID_THREAD      ((SYS_THREAD) 0)
 #define SYS_INVALID_NET_ADDRESS ((NET_ADDRESS) INADDR_NONE)
+#define SYS_INVALID_MMAP        ((SYS_MMAP) 0)
 
 #define SYS_THREAD_ONCE_INIT    PTHREAD_ONCE_INIT
 
@@ -80,6 +81,7 @@ typedef void *SYS_MUTEX;
 typedef void *SYS_EVENT;
 typedef void *SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
+typedef void *SYS_MMAP;
 
 struct SYS_INET_ADDR {
 	struct sockaddr_in Addr;
@@ -87,11 +89,11 @@ struct SYS_INET_ADDR {
 
 enum SysFileTypes {
 	ftNormal = 1,
-	ftDirectory,
-	ftLink,
-	ftOther,
+		ftDirectory,
+		ftLink,
+		ftOther,
 
-	ftMax
+		ftMax
 };
 
 struct SYS_FILE_INFO {
