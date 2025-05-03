@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
  *
  *  Written by      Ulrich Drepper <drepper@gnu.ai.mit.edu>, 1995
  *  Written by      Glynn Clements <glynn@sensei.co.uk>, 1997
- *  Modified by     Davide Libenzi <davide_libenzi@mycio.com>, 2000
+ *  Modified by     Davide Libenzi <davidel@xmailserver.org>, 2000
  *
  */
 

@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -225,6 +225,8 @@
 #define ERR_NO_LOCAL_SPOOL_FILES    (-200)
 #define ERR_NO_POP3_DOMAIN          (-201)
 #define ERR_INVALID_MAIL_DOMAIN     (-202)
+#define ERR_BAD_CMDSTR_CHARS        (-203)
+#define ERR_FETCHMSG_UNDELIVERED    (-204)
 
 
 

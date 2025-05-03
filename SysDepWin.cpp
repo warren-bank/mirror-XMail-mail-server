@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -99,6 +99,8 @@ static unsigned int SysThreadRunner(void *pRunData);
 static int      SysThreadSetup(void);
 static int      SysThreadCleanup(void);
 static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
+static void     SysTimetToFileTime(time_t tTime, LPFILETIME pFT);
+static time_t   SysFileTimeToTimet(LPFILETIME pFT);
 
 
 
@@ -1712,22 +1714,39 @@ int             SysLockFile(const char *pszFileName, char const * pszLockExt)
 
     sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
 
-    int             iFileID = _open(szLockFile, _O_CREAT | _O_EXCL | _O_BINARY | _O_RDWR,
-            _S_IREAD | _S_IWRITE);
+///////////////////////////////////////////////////////////////////////////////
+//  Try to create lock file
+///////////////////////////////////////////////////////////////////////////////
+    HANDLE          hFile = CreateFile(szLockFile, GENERIC_READ | GENERIC_WRITE,
+            0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 
-    if (iFileID == -1)
+    if (hFile == INVALID_HANDLE_VALUE)
     {
-        ErrSetErrorCode(ERR_LOCKED);
-        return (ERR_LOCKED);
+        if (GetLastError() == ERROR_ALREADY_EXISTS)
+        {
+            ErrSetErrorCode(ERR_LOCKED);
+            return (ERR_LOCKED);
+        }
+
+        ErrSetErrorCode(ERR_FILE_CREATE);
+        return (ERR_FILE_CREATE);
     }
 
+
+    DWORD           dwWritten = 0;
     char            szLock[128] = "";
 
     sprintf(szLock, "%lu", (unsigned long) GetCurrentThreadId());
 
-    _write(iFileID, szLock, strlen(szLock) + 1);
+    if (!WriteFile(hFile, szLock, strlen(szLock) + 1, &dwWritten, NULL))
+    {
+        CloseHandle(hFile);
 
-    _close(iFileID);
+        ErrSetErrorCode(ERR_FILE_WRITE);
+        return (ERR_FILE_WRITE);
+    }
+
+    CloseHandle(hFile);
 
     return (0);
 
@@ -1921,6 +1940,30 @@ void            SysMsSleep(int iMsTimeout)
 
 
 
+static void     SysTimetToFileTime(time_t tTime, LPFILETIME pFT)
+{
+
+    LONGLONG        llTime = Int32x32To64(tTime, 10000000) + 116444736000000000;
+
+    pFT->dwLowDateTime = (DWORD) llTime;
+    pFT->dwHighDateTime = (DWORD) (llTime >> 32);
+
+}
+
+
+
+static time_t   SysFileTimeToTimet(LPFILETIME pFT)
+{
+
+    LONGLONG        llTime = ((LONGLONG) pFT->dwLowDateTime) |
+    (((LONGLONG) pFT->dwHighDateTime) << 32);
+
+    return ((time_t) ((llTime - 116444736000000000) / 10000000));
+
+}
+
+
+
 SYS_INT64       SysMsTime(void)
 {
 
@@ -1932,7 +1975,7 @@ SYS_INT64       SysMsTime(void)
 
     MsTicks -= PCSysStart;
     MsTicks /= PCFreq;
-    MsTicks += (SYS_INT64) tSysStart *1000;
+    MsTicks += (SYS_INT64) tSysStart * 1000;
 
     return (MsTicks);
 
@@ -1943,7 +1986,15 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    return ((_access(pszFilePath, 00) == 0) ? 1 : 0);
+    WIN32_FIND_DATA WFD;
+    HANDLE          hFind = FindFirstFile(pszFilePath, &WFD);
+
+    if (hFind == INVALID_HANDLE_VALUE)
+        return (0);
+
+    FindClose(hFind);
+
+    return (1);
 
 }
 
@@ -2040,20 +2091,22 @@ void            SysFindClose(SYS_HANDLE hFind)
 int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
 {
 
-    struct _stat    stat_buffer;
+    WIN32_FIND_DATA WFD;
+    HANDLE          hFind = FindFirstFile(pszFileName, &WFD);
 
-    if (_stat(pszFileName, &stat_buffer) < 0)
+    if (hFind == INVALID_HANDLE_VALUE)
     {
         ErrSetErrorCode(ERR_STAT);
         return (ERR_STAT);
     }
 
     ZeroData(FI);
-    FI.iFileType = (stat_buffer.st_mode & _S_IFREG) ? ftNormal :
-            ((stat_buffer.st_mode & _S_IFDIR) ? ftDirectory : ftOther);
-    FI.ulSize = (unsigned long) stat_buffer.st_size;
-    FI.tCreat = stat_buffer.st_ctime;
-    FI.tMod = stat_buffer.st_mtime;
+    FI.iFileType = (WFD.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? ftDirectory : ftNormal;
+    FI.ulSize = (unsigned long) WFD.nFileSizeLow;
+    FI.tCreat = SysFileTimeToTimet(&WFD.ftCreationTime);
+    FI.tMod = SysFileTimeToTimet(&WFD.ftLastWriteTime);
+
+    FindClose(hFind);
 
     return (0);
 

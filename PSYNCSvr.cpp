@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -273,11 +273,44 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 
     SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] entry\n");
 
+///////////////////////////////////////////////////////////////////////////////
+//  Get configuration handle
+///////////////////////////////////////////////////////////////////////////////
+    SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
+
+    if (hSvrConfig == INVALID_SVRCFG_HANDLE)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
+
+        GwLkFreePOP3Link(pPopLnk);
+///////////////////////////////////////////////////////////////////////////////
+//  Notify thread exit semaphore
+///////////////////////////////////////////////////////////////////////////////
+        PSYNCThreadNotifyExit();
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get the error account for email that the server is not able to deliver coz
+//  it does not find informations about where it has to deliver
+///////////////////////////////////////////////////////////////////////////////
+    char            szErrorAccount[MAX_ADDR_NAME] = "";
+
+    SvrConfigVar("Pop3SyncErrorAccount", szErrorAccount, sizeof(szErrorAccount) - 1,
+            hSvrConfig, "");
+
+    char const     *pszErrorAccount = (IsEmptyString(szErrorAccount)) ? NULL: szErrorAccount;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Lock the link
+///////////////////////////////////////////////////////////////////////////////
     if (GwLkLinkLock(pPopLnk) < 0)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
 
+        SvrReleaseConfigHandle(hSvrConfig);
         GwLkFreePOP3Link(pPopLnk);
 ///////////////////////////////////////////////////////////////////////////////
 //  Notify thread exit semaphore
@@ -314,7 +347,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
             UsrGetAddress(pUI, szUserAddress);
 
             if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                            pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+                            pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
                 ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
                         pPopLnk->pszName, pPopLnk->pszDomain);
 
@@ -336,7 +369,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
                     "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                     pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
@@ -357,7 +390,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "@" + domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
                     "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                     szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
@@ -370,6 +403,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 
 
     GwLkLinkUnlock(pPopLnk);
+    SvrReleaseConfigHandle(hSvrConfig);
     GwLkFreePOP3Link(pPopLnk);
 
 ///////////////////////////////////////////////////////////////////////////////

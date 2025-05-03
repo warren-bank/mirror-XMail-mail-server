@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -113,9 +113,9 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
                         char *pszFilterFilePath);
 int             USmlCustomizedDomain(char const * pszDestDomain);
 int             USmlLogMessage(SPLF_HANDLE hFSpool, char const * pszMedium, char const * pszParam);
-int             USmlParseAddress(char const * pszAddress, char *pszPreAddr, char *pszEmailAddr);
-int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRcptTo,
-                        char const * pszSpoolFile);
+int             USmlParseAddress(char const * pszAddress, char *pszPreAddr,
+                        int iMaxPreAddress, char *pszEmailAddr, int iMaxAddress);
+int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszMailFile);
 int             USmlMailLoopCheck(SPLF_HANDLE hFSpool);
 
 

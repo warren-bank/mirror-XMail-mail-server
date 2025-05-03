@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -42,6 +42,7 @@
 #define CountOf(t)              (sizeof(t) / sizeof((t)[0]))
 #define SetEmptyString(s)       (s)[0] = '\0'
 #define IsEmptyString(s)        (*(s) == '\0')
+#define StrSkipSpaces(p)        for (; (*(p) == ' ') || (*(p) == '\t'); (p)++)
 #define CharISame(a, b)         (tolower(a) == tolower(b))
 #define StrINComp(s, t)         strnicmp(s, t, strlen(t))
 #define StrNComp(s, t)          strncmp(s, t, strlen(t))
@@ -55,6 +56,8 @@
 #define SysFreeCheck(p)         do { if ((p) != NULL) SysFree(p), (p) = NULL; } while(0)
 #define IsDotFilename(f)        ((f)[0] == '.')
 #define IsEmailAddress(a)       (strchr((a), '@') != NULL)
+
+
 
 
 

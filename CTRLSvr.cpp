@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -674,7 +674,8 @@ static int      CTRLLogin(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     char            szLogin[256] = "";
 
-    if (BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1, pCTRLCfg->iTimeout) == NULL)
+    if ((BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1, pCTRLCfg->iTimeout) == NULL) ||
+            (MscCmdStringCheck(szLogin) < 0))
         return (ErrGetErrorCode());
 
 
@@ -789,10 +790,11 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Command loop
 ///////////////////////////////////////////////////////////////////////////////
-    char            szBuffer[CTRL_MAX_LINE_SIZE] = "";
+    char            szCommand[CTRL_MAX_LINE_SIZE] = "";
 
     while (!SvrInShutdown() &&
-            (BSckGetString(hBSock, szBuffer, sizeof(szBuffer) - 1, iSessionTimeout) != NULL))
+            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, iSessionTimeout) != NULL) &&
+            (MscCmdStringCheck(szCommand) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for exit flag
@@ -809,7 +811,7 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Process client command
 ///////////////////////////////////////////////////////////////////////////////
-        int             iCmdResult = CTRLProcessCommand(pCTRLCfg, hBSock, szBuffer);
+        int             iCmdResult = CTRLProcessCommand(pCTRLCfg, hBSock, szCommand);
 
         SysFree(pCTRLCfg);
 
@@ -1885,7 +1887,8 @@ static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     char            szDomain[256] = "";
 
-    StrLower(strcpy(szDomain, ppszTokens[1]));
+    StrSNCpy(szDomain, ppszTokens[1]);
+    StrLower(szDomain);
 
     if (MDomAddDomain(szDomain) < 0)
     {
@@ -1918,7 +1921,8 @@ static int      CTRLDo_domaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     char            szDomain[256] = "";
 
-    StrLower(strcpy(szDomain, ppszTokens[1]));
+    StrSNCpy(szDomain, ppszTokens[1]);
+    StrLower(szDomain);
 
     if (MDomRemoveDomain(szDomain) < 0)
     {
@@ -2449,7 +2453,7 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     char            szRelativePath[SYS_MAX_PATH] = "",
                     szFullPath[SYS_MAX_PATH] = "";
 
-    strcpy(szRelativePath, ppszTokens[1]);
+    StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
 
     CfgGetFullPath(szRelativePath, szFullPath);
@@ -2524,7 +2528,7 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     char            szRelativePath[SYS_MAX_PATH] = "",
                     szFullPath[SYS_MAX_PATH] = "";
 
-    strcpy(szRelativePath, ppszTokens[1]);
+    StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
 
     CfgGetFullPath(szRelativePath, szFullPath);

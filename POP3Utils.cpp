@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -1247,7 +1247,7 @@ static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 
 
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer, const char *pszRmtName,
-                        const char *pszRmtPassword, const char *pszAuthType)
+                        const char *pszRmtPassword, const char *pszAuthType, const char * pszErrorAccount)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Connection to POP3 server
@@ -1294,47 +1294,34 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
             }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get unique spool/tmp file path
+//  Spool deliver fetched message
 ///////////////////////////////////////////////////////////////////////////////
-            char            szSpoolTmpFile[SYS_MAX_PATH] = "";
-
-            if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
+            if (USmlDeliverFetchedMsg(pszSyncAddr, szMsgFileName) < 0)
             {
-                ErrorPush();
-                SysRemove(szMsgFileName);
-                UPopCloseChannel(hBSock);
-                return (ErrorPop());
+///////////////////////////////////////////////////////////////////////////////
+//  If there's an error ( catch errors ) account try to deliver to this one
+///////////////////////////////////////////////////////////////////////////////
+                if ((pszErrorAccount != NULL) &&
+                        (USmlDeliverFetchedMsg(pszErrorAccount, szMsgFileName) == 0))
+                {
+///////////////////////////////////////////////////////////////////////////////
+//  Delete remote message only if successfully delivered
+///////////////////////////////////////////////////////////////////////////////
+                    UPopDeleteMessage(hBSock, ii + 1);
+
+                }
+
             }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Build spool file
-///////////////////////////////////////////////////////////////////////////////
-            if (USmlCreateSpoolFile(szMsgFileName, pszSyncAddr, szSpoolTmpFile) < 0)
+            else
             {
-                ErrorPush();
-                CheckRemoveFile(szSpoolTmpFile);
-                SysRemove(szMsgFileName);
-                UPopCloseChannel(hBSock);
-                return (ErrorPop());
+///////////////////////////////////////////////////////////////////////////////
+//  Delete remote message only if successfully delivered
+///////////////////////////////////////////////////////////////////////////////
+                UPopDeleteMessage(hBSock, ii + 1);
+
             }
 
             SysRemove(szMsgFileName);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Transfer file to the spool
-///////////////////////////////////////////////////////////////////////////////
-            if (QueCommitTempMessage(szSpoolTmpFile) < 0)
-            {
-                ErrorPush();
-                SysRemove(szSpoolTmpFile);
-                UPopCloseChannel(hBSock);
-                return (ErrorPop());
-            }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Delete remote message
-///////////////////////////////////////////////////////////////////////////////
-            UPopDeleteMessage(hBSock, ii + 1);
 
 
             if (SvrInShutdown())

@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -33,6 +33,8 @@
 
 
 #define INVCHAR             '^'
+#define LoChar(c)           ((((c) >= 'A') && ((c) <= 'Z')) ? ((c) - 'A' + 'a'): (c))
+#define MIN_DYNSTR_INCR     256
 
 
 
@@ -201,6 +203,47 @@ char           *StrDeCrypt(char const * pszString, char *pszDeCrypt)
     pszDeCrypt[ii >> 1] = '\0';
 
     return (pszDeCrypt);
+
+}
+
+
+
+char          **StrBuildList(char const *pszString, ...)
+{
+
+    int             iNumString = 1;
+    char const     *pszArg = NULL;
+    va_list         Args;
+
+    va_start(Args, pszString);
+
+    while ((pszArg = va_arg(Args, char *)) != NULL)
+        ++iNumString;
+
+    va_end(Args);
+
+
+    int             iStrCurr = 0;
+    char          **ppszStrings = (char **) SysAlloc((iNumString + 1) * sizeof(char *));
+
+    if (ppszStrings == NULL)
+        return (NULL);
+
+
+    ppszStrings[iStrCurr++] = SysStrDup(pszString);
+
+
+    va_start(Args, pszString);
+
+    while ((pszArg = va_arg(Args, char *)) != NULL)
+        ppszStrings[iStrCurr++] = SysStrDup(pszArg);
+
+    va_end(Args);
+
+
+    ppszStrings[iStrCurr] = NULL;
+
+    return (ppszStrings);
 
 }
 
@@ -696,29 +739,124 @@ char           *StrEOLTrim(char *pszString)
 
 
 
-int             StrAdd(char *&pszString, int &iSize, char const * pszAdd)
+char           *StrIStr(char const * pszBuffer, char const * pszMatch)
 {
 
-    int             iStringLen = strlen(pszString),
-                    iAddLen = strlen(pszAdd);
+    int             iMatchLen = strlen(pszMatch),
+                    iMatchPos = 0,
+                    iLoMatch = LoChar(*pszMatch);
 
-    if ((iStringLen + iAddLen + 1) >= iSize)
+    if (iMatchLen == 0)
+        return ((char *) pszBuffer);
+
+    for (; *pszBuffer != '\0'; pszBuffer++)
     {
-        int             iNewSize = (iSize + iAddLen + 1) * 2;
-        char           *pszNew = (char *) SysAlloc(iNewSize);
+        if (LoChar(*pszBuffer) == iLoMatch)
+        {
+            if (++iMatchPos == iMatchLen)
+                return ((char *) pszBuffer - iMatchLen + 1);
 
-        if (pszNew == NULL)
-            return (ErrGetErrorCode());
+            iLoMatch = LoChar(pszMatch[iMatchPos]);
+        }
+        else if (iMatchPos != 0)
+        {
+            iMatchPos = 0;
 
-        strcpy(pszNew, pszString);
-
-        SysFree(pszString);
-
-        pszString = pszNew;
-        iSize = iNewSize;
+            iLoMatch = LoChar(*pszMatch);
+        }
     }
 
-    strcat(pszString, pszAdd);
+    return (NULL);
+
+}
+
+
+
+int             StrDynInit(DynString * pDS)
+{
+
+    ZeroData(*pDS);
+    pDS->pszBuffer = SysStrDup("");
+    pDS->iStringSize = 0;
+    pDS->iBufferSize = 0;
+
+    return (0);
+
+}
+
+
+
+int             StrDynFree(DynString * pDS)
+{
+
+    if (pDS->pszBuffer != NULL)
+        SysFree(pDS->pszBuffer);
+
+    ZeroData(*pDS);
+
+    return (0);
+
+}
+
+
+
+int             StrDynTruncate(DynString * pDS)
+{
+
+    if (pDS->pszBuffer != NULL)
+        SetEmptyString(pDS->pszBuffer);
+
+    pDS->iStringSize = 0;
+
+    return (0);
+
+}
+
+
+
+char const     *StrDynGet(DynString * pDS)
+{
+
+    return (pDS->pszBuffer);
+
+}
+
+
+
+int             StrDynSize(DynString * pDS)
+{
+
+    return (pDS->iStringSize);
+
+}
+
+
+
+int             StrDynAdd(DynString * pDS, char const * pszBuffer)
+{
+
+    int	            iStringSize = strlen(pszBuffer);
+
+    if ((pDS->iStringSize + iStringSize) >= pDS->iBufferSize)
+    {
+        int             iNewSize = pDS->iBufferSize + Max(2 * iStringSize, MIN_DYNSTR_INCR);
+        char           *pszNewBuffer = (char *) SysAlloc(iNewSize);
+
+        if (pszNewBuffer == NULL)
+            return (ErrGetErrorCode());
+		
+        strcpy(pszNewBuffer, pDS->pszBuffer);
+
+        SysFree(pDS->pszBuffer);
+
+        pDS->pszBuffer = pszNewBuffer;
+
+        pDS->iBufferSize = iNewSize;
+    }
+
+    strcpy(pDS->pszBuffer + pDS->iStringSize, pszBuffer);
+
+    pDS->iStringSize += iStringSize;
 
     return (0);
 

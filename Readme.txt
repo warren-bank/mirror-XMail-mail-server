@@ -1,10 +1,10 @@
 
 			< XMail Server >
 
-Version      : 0.67 ( Beta-21 )
+Version      : 0.68
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 04-01-2001
-Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
+Date         : 05-02-2001
+Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
              : Shawn Anderson <sanderson@eye-catcher.com>
@@ -423,6 +423,32 @@ Date 04-01-2001	 0.67
 	Added a new  SERVER.TAB  variable "CheckMailerDomain" that, if on ( "1" ), force XMail
 	to validate the sender domain ( "MAIL FROM:<...@xxx>" ) by looking up DNS/MX entries.
 	Fixed the bug that made XMail to not accept users to add if a wildcard alias were defined.
+Date 05-02-2001	 0.68
+	Fixed a buffer overflow vulnerability in CTRL server and added command string validation to all servers.
+	Added 8BITMIME and PIPELINING support ( it was already compliant ).
+	Added a new SERVER.TAB option "HeloUseRootDomain" to make XMail to use the "RootDomain"
+	like HELO domain.
+	Added FINGER service access control based on the peer IP address. A new file FINGER.IPMAP.TAB
+	has been added to MAIL_ROOT with the same meaning of the ones used with SMTP, POP3 and CTRL services.
+	Fixed a bug that caused XMail to drop the first character of the headers if there was no space
+	between the colon and the header value.
+	Added extended SMTP log informations by adding an extra ( last ) field to the log file.
+	Added a new SERVER.TAB variable "AllowSmtpVRFY" ( default off ) to enable the SMTP VRFY command.
+	Added a new SMTP auth flag 'V' to enable VRFY command ( bypassing SERVER.TAB settings ).
+	Improved the POP3 sync method to fetch and distribute mail that uses an external POP3
+	mailbox to collect more accounts togheter. Before the method failed if the user was not
+	in the first "To:" address, while now all addresses contained in "To:", "Cc:" and "Bcc:" are
+	checked. There is also a new SERVER.TAB variable "Pop3SyncErrorAccount" whose use is
+	catch all emails that has been fetched but has had delivery errors.
+	
+	
+
+
+
+
+	
+	
+
 
 
 
@@ -540,11 +566,10 @@ Part 1			Overview
 	are many other packages You can use to reach these needs ).
 	With XMail You get an all-in-one package with a central administration that can
 	simplify the above common steps.
-	The first code of XMail Server is started on Windows NT ( my work OS, at least for now ) 
-	and Linux ( my home OS ). I plan to use Visual C++ on NT and gcc on Linux.
+	The first code of XMail Server is started on Windows NT and Linux, and
+	now, the Solaris version is ready. The compilers supported are gcc for
+	Linux and Solaris and M$ Visual C++ for NT/2K.
 
-	Note :
-	This documentation is still in beta release.
 
 
 
@@ -599,6 +624,11 @@ Part 2			Features
 
 Part 3			Porting status
 
+	Right now the Linux and NT ports are stable, while the Solaris one has
+	not been tested like the previous OSs.
+	I'd like to port XMail to FreeBSD also.
+	
+
 
 
 
@@ -636,9 +666,12 @@ Part 4			Requirements
 
 
 
+
+
+
 Part 5			Getting sources
 
-	Get the latest sources at the XMail home page http://www.mycio.com/davidel/xmail
+	Get the latest sources at the XMail home page http://www.xmailserver.org/
 	Use the correct distribution for Your system and don't mix Linux files with
 	Windows ones coz this is one of the most common cause of XMail bad behaviour.
 
@@ -803,6 +836,7 @@ Part 7			Configuration
 		pop3.ipmap.tab	<file>
 		smtp.ipmap.tab	<file>
 		ctrl.ipmap.tab	<file>
+		finger.ipmap.tab	<file>
 
 	this directories :
 
@@ -1087,6 +1121,7 @@ Part 7			Configuration
 
 	M	= open mailing features
 	R	= open relay features ( bypass all other relay blocking traps )
+	V	= VRFY command enabler ( bypass SERVER.TAB variable )
 
 	When PLAIN or LOGIN authentication mode are used a first lookup in MAILUSERS.TAB
 	accounts is performed to avoid duplicating informations with SMTPAUTH.TAB.
@@ -1149,7 +1184,7 @@ Part 7			Configuration
 
 
 	"RealName"	"Davide Libenzi"
-	"HomePage"	"http://www.mycio.com/davidel"
+	"HomePage"	"http://www.xmailserver.org/davide.html"
 	"MaxMBSize"	"30000"
 
 
@@ -1231,7 +1266,22 @@ Part 7			Configuration
 
 	This configuration deny access to all IPs except the ones of the 
 	class "C" network "212.131.173.XXX".
-	Higher precedences win over lower ones.	
+	Higher precedences win over lower ones.
+	
+	
+	FINGER.IPMAP.TAB :
+
+	"ipaddr"[TAB]"netmask"[TAB]"permission"[TAB]"precedence"[NEWLINE]
+
+	This file control IP access permission to FINGER server.
+	Ex :
+
+	"0.0.0.0"[TAB]"0.0.0.0"[TAB]"DENY"[TAB]"1"[NEWLINE]
+	"212.131.173.0"[TAB]"255.255.255.0"[TAB]"ALLOW"[TAB]"2"[NEWLINE]
+
+	This configuration deny access to all IPs except the ones of the 
+	class "C" network "212.131.173.XXX".
+	Higher precedences win over lower ones.
 
 
 	USER.TAB :
@@ -1241,7 +1291,7 @@ Part 7			Configuration
 	store user informations like :
 
 	"RealName"	"Davide Libenzi"
-	"HomePage"	"http://www.mycio.com/davidel"
+	"HomePage"	"http://www.xmailserver.org/davide.html"
 	"MaxMBSize"	"30000"
 	"ClosedML"	"0"
 
@@ -1261,7 +1311,7 @@ Part 7			Configuration
 
 	Ex:
 
-	"davide_libenzi@mycio.com"	"RW"
+	"davidel@xmailserver.org"	"RW"
 	"ghostuser@nightmare.net"	"R"
 
 	If the  USER.TAB  file defines a "ClosedML" variable as 1 then a client can post
@@ -1615,6 +1665,9 @@ Part 11			SERVER.TAB variables
 	[DefaultSMTPGateways]
 	A comma separated list of SMTP servers XMail _must_ use to send its mails.
 	This has the precedence over MX records.
+	
+	[HeloUseRootDomain]
+	Make XMail to use the root domain as helo domain.
 
 	[RemoveSpoolErrors]
 	Indicate if mail has to be removed or stored in  froz  directory after a failure in
@@ -1622,6 +1675,13 @@ Part 11			SERVER.TAB variables
 	
 	[AllowNullSender]
 	Enable null sender ( "MAIL FROM:<>" ) messages to be accepted by XMail.
+	
+	[AllowSmtpVRFY]
+	Enable the use of VRFY SMTP command. This flags may be forced by SMTP authentication.
+	
+	[Pop3SyncErrorAccount]
+	This defines the email account ( MUST be handled locally ) that will receive all
+	fetched email that XMail has not been able to deliver.
 
 	[SMTP-RDNSCheck]
 	Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
@@ -1772,7 +1832,7 @@ Part 13			USER.TAB variables
 	[HomePage]
 	User home page, ie. :
 
-	"HomePage"	"http://www.mycio.com/davidel"
+	"HomePage"	"http://www.xmailserver.org/davide.html"
 
 	[MaxMBSize]
 	Max user mailbox size in Kb, ie. :
@@ -1787,7 +1847,7 @@ Part 13			USER.TAB variables
 	[ListSender]
 	Specify the mailing list sender or administrator :
 
-	"ListSender"	"ml-admin@mycio.com"
+	"ListSender"	"ml-admin@nai.com"
 
 	This variable should be set to avoid delivery error notifications to reach the
 	original message senders.
@@ -2580,7 +2640,7 @@ Part 19			XMail admin protocol
 	Are there guys that want to build GUI configuration tools using common scripting
 	languages ( Java, TCL/Tk, etc ) and XMail controller protocol ?
 	Are there guys that want to build Web configuration tools ?
-	Let me know <davide_libenzi@mycio.com>.
+	Let me know <davidel@xmailserver.org>.
 
 
 
@@ -2851,7 +2911,9 @@ Part 24			Miscellaneous
 	POP3 login.
 
 	[2]
-	REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM CTRLACCOUNTS.TAB FILE !
+	a) REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM CTRLACCOUNTS.TAB FILE !
+	b) Use ctrl.ipmap.tab to restrict CTRL server access.
+	c) Use long password ( mixed upper/lower case with digits ) for ctrlaccounts.tab.
 
 	[3]
 	The main cause of bugs with XMail is due a bad line termination of configuration
@@ -2880,7 +2942,7 @@ Part 24			Miscellaneous
 
 	[-]
 	Please report me errors about XMail itself and about this document.
-	If You successfully build and run XMail please let me know at davide_libenzi@mycio.com ,
+	If You successfully build and run XMail please let me know at davidel@xmailserver.org ,
 	I don't want money ;)
 
 

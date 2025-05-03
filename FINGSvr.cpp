@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -27,6 +27,7 @@
 #include "ShBlocks.h"
 #include "SList.h"
 #include "BuffSock.h"
+#include "StrUtils.h"
 #include "ResLocks.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
@@ -34,6 +35,7 @@
 #include "ExtAliases.h"
 #include "UsrMailList.h"
 #include "SMTPUtils.h"
+#include "MailConfig.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
 #include "FINGSvr.h"
@@ -49,6 +51,7 @@
 #define FING_LISTEN_SIZE        8
 #define FING_WAIT_SLEEP         2
 #define MAX_CLIENTS_WAIT        300
+#define FING_IPMAP_FILE         "finger.ipmap.tab"
 #define FING_LOG_FILE           "finger"
 #define FING_SERVER_NAME        "[" APP_NAME_VERSION_OS_STR " FINGER Server]"
 
@@ -60,6 +63,7 @@
 
 
 
+static int      FINGCheckPeerIP(SYS_SOCKET SockFD);
 static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING);
 static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg = NULL);
 static unsigned int FINGClientThread(void *pThreadData);
@@ -76,6 +80,35 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
 
 
 
+
+
+
+
+
+
+
+static int      FINGCheckPeerIP(SYS_SOCKET SockFD)
+{
+
+    char            szIPMapFile[SYS_MAX_PATH] = "";
+
+    CfgGetRootPath(szIPMapFile);
+    strcat(szIPMapFile, FING_IPMAP_FILE);
+
+    if (SysExistFile(szIPMapFile))
+    {
+        SYS_INET_ADDR   PeerInfo;
+
+        if (SysGetPeerInfo(SockFD, PeerInfo) < 0)
+            return (ErrGetErrorCode());
+
+        if (MscCheckAllowedIP(szIPMapFile, PeerInfo, true) < 0)
+            return (ErrGetErrorCode());
+    }
+
+    return (0);
+
+}
 
 
 
@@ -128,6 +161,17 @@ static unsigned int FINGClientThread(void *pThreadData)
 {
 
     SYS_SOCKET      SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check peer IP address serivce access permissions
+///////////////////////////////////////////////////////////////////////////////
+    if (FINGCheckPeerIP(SockFD) < 0)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
+        SysCloseSocket(SockFD);
+        return (ErrorPop());
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Increase threads count
@@ -370,9 +414,10 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
             SysInetNToA(PeerInfo));
 
 
-    char            szQuery[2048] = "";
+    char            szQuery[1024] = "";
 
-    if (BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL)
+    if ((BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL) &&
+            (MscCmdStringCheck(szQuery) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Log FINGER question
@@ -477,7 +522,7 @@ static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup domain name in case of username only query
 ///////////////////////////////////////////////////////////////////////////////
-    if (strlen(szDomain) == 0)
+    if (IsEmptyString(szDomain))
     {
         if (SvrConfigVar("POP3Domain", szDomain, sizeof(szDomain), hSvrConfig) < 0)
         {

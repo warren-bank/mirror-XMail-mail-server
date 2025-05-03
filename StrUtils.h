@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -28,12 +28,25 @@
 
 
 
+struct DynString
+{
+    char           *pszBuffer;
+    int             iStringSize;
+    int             iBufferSize;
+};
+
+
+
+
+
+
 int             StrCmdLineToken(char const * &pszCmdLine, char *pszToken);
 char          **StrGetArgs(char const * pszCmdLine, int &iArgsCount);
 char           *StrLower(char *pszString);
 char           *StrUpper(char *pszString);
 char           *StrCrypt(char const * pszString, char *pszCrypt);
 char           *StrDeCrypt(char const * pszString, char *pszDeCrypt);
+char          **StrBuildList(char const *pszString, ...);
 char          **StrTokenize(const char *pszString, const char *pszTokenizer);
 void            StrFreeStrings(char **ppszStrings);
 int             StrStringsCount(char const * const * ppszStrings);
@@ -53,7 +66,13 @@ char           *StrLTrim(char *pszString, char const *pszTrimChars);
 char           *StrRTrim(char *pszString, char const *pszTrimChars);
 char           *StrTrim(char *pszString, char const *pszTrimChars);
 char           *StrEOLTrim(char *pszString);
-int             StrAdd(char *&pszString, int &iSize, char const *pszAdd);
+char           *StrIStr(char const * pszBuffer, char const * pszMatch);
+int             StrDynInit(DynString * pDS);
+int             StrDynFree(DynString * pDS);
+int             StrDynTruncate(DynString * pDS);
+char const     *StrDynGet(DynString * pDS);
+int             StrDynSize(DynString * pDS);
+int             StrDynAdd(DynString * pDS, char const * pszBuffer);
 
 
 

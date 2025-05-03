@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -72,6 +72,8 @@
 #define SMTPF_RELAY_ENABLED     (1 << 0)
 #define SMTPF_MAIL_LOCKED       (1 << 1)
 #define SMTPF_AUTHENTICATED     (1 << 2)
+#define SMTPF_VRFY_ENABLED      (1 << 3)
+
 
 
 
@@ -144,7 +146,8 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
 static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms);
-static int      SMTPLogSession(SMTPSession & SMTPS);
+static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
+                        char const * pszRecipient, char const * pszStatus);
 static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock);
 static void     SMTPClearSession(SMTPSession & SMTPS);
 static void     SMTPResetSession(SMTPSession & SMTPS);
@@ -496,6 +499,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     SMTPS.iRcptCount = 0;
     SetEmptyString(SMTPS.szDestDomain);
     SetEmptyString(SMTPS.szClientFQDN);
+    SetEmptyString(SMTPS.szClientDomain);
     SMTPS.ulSetupFlags = 0;
 
     SysGetTmpFile(SMTPS.szMsgFile);
@@ -571,7 +575,8 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     else
         MscSplitFQDN(SMTPS.szSvrFQDN, NULL, SMTPS.szSvrDomain);
 
-    if (strlen(SMTPS.szSvrDomain) == 0)
+    if (IsEmptyString(SMTPS.szSvrDomain) ||
+            SvrTestConfigFlag("HeloUseRootDomain", false, SMTPS.hSvrConfig))
     {
         char           *pszDefDomain = SvrGetConfigVar(SMTPS.hSvrConfig, "RootDomain");
 
@@ -664,6 +669,10 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
             case ('R'):
                 SMTPS.ulFlags |= SMTPF_RELAY_ENABLED;
                 break;
+
+            case ('V'):
+                SMTPS.ulFlags |= SMTPF_VRFY_ENABLED;
+                break;
         }
 
     }
@@ -674,7 +683,8 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
 
 
 
-static int      SMTPLogSession(SMTPSession & SMTPS)
+static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
+                        char const * pszRecipient, char const * pszStatus)
 {
 
     char            szTime[256] = "";
@@ -697,9 +707,10 @@ static int      SMTPLogSession(SMTPSession & SMTPS)
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
+            "\t\"%s\""
             "\n", SMTPS.szSvrFQDN, SMTPS.szSvrDomain, SysInetNToA(SMTPS.PeerInfo),
-            szTime, SMTPS.szClientDomain, SMTPS.szDestDomain, SMTPS.pszFrom, SMTPS.pszRcpt,
-            SMTPS.szMessageID);
+            szTime, SMTPS.szClientDomain, SMTPS.szDestDomain, pszSender, pszRecipient,
+            SMTPS.szMessageID, pszStatus);
 
 
     RLckUnlockEX(hResLock);
@@ -748,10 +759,12 @@ static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Command loop
 ///////////////////////////////////////////////////////////////////////////////
-    char            szCommand[2048] = "";
+    char            szCommand[1024] = "";
 
     while (!SvrInShutdown() && (SMTPS.iSMTPState != stateExit) &&
-            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, SMTPS.pSMTPCfg->iSessionTimeout) != NULL))
+            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1,
+                    SMTPS.pSMTPCfg->iSessionTimeout) != NULL) &&
+                    (MscCmdStringCheck(szCommand) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve a fresh new configuration copy and test shutdown flag
@@ -833,7 +846,7 @@ static void     SMTPResetSession(SMTPSession & SMTPS)
         SysFree(SMTPS.pszSendRcpt), SMTPS.pszSendRcpt = NULL;
 
 
-    SMTPS.iSMTPState = (SMTPS.ulFlags & SMTPF_AUTHENTICATED) ? stateAuthenticated:
+    SMTPS.iSMTPState = (SMTPS.ulFlags & SMTPF_AUTHENTICATED) ? stateAuthenticated :
             Min(SMTPS.iSMTPState, stateHelo);
 
 }
@@ -885,6 +898,9 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
     {
         if (!SvrTestConfigFlag("AllowNullSender", true, SMTPS.hSvrConfig))
         {
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, "", "", "SNDR=EEMPTY");
+
             pszSMTPError = SysStrDup("501 Syntax error in return path");
 
             ErrSetErrorCode(ERR_BAD_RETURN_PATH);
@@ -907,6 +923,9 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
     {
         ErrorPush();
 
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, ppszRetDomains[0], "", "SNDR=ESYNTAX");
+
         pszSMTPError = SysStrDup("501 Syntax error in return path");
 
         return (ErrorPop());
@@ -920,6 +939,9 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
     {
         ErrorPush();
 
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, ppszRetDomains[0], "", "SNDR=ENODNS");
+
         pszSMTPError = SysStrDup("505 Your domain has not DNS/MX entries");
 
         return (ErrorPop());
@@ -931,6 +953,9 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
     if (USmtpSpamAddressCheck(ppszRetDomains[0]) < 0)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, ppszRetDomains[0], "", "SNDR=ESPAM");
 
         pszSMTPError = SysStrDup("504 You are registered as spammer");
 
@@ -1138,6 +1163,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
 
     if (iDomainCount == 0)
     {
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, "", "RCPT=ESYNTAX");
+
         pszSMTPError = SysStrDup("501 Syntax error in forward path");
 
         ErrSetErrorCode(ERR_BAD_FORWARD_PATH);
@@ -1150,6 +1178,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
     if (USmtpSplitEmailAddr(ppszFwdDomains[0], szDestUser, szDestDomain) < 0)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=ESYNTAX");
 
         pszSMTPError = SysStrDup("501 Syntax error in forward path");
 
@@ -1167,6 +1198,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
 
             if (pUI == NULL)
             {
+                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                    SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EAVAIL");
+
                 pszSMTPError = StrSprint("550 Mailbox unavailable <%s@%s>",
                         szDestUser, szDestDomain);
 
@@ -1187,6 +1221,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                 {
                     ErrorPush();
                     UsrFreeUserInfo(pUI);
+
+                    if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EFULL");
 
                     pszSMTPError = StrSprint("452 Mailbox full <%s@%s>",
                             szDestUser, szDestDomain);
@@ -1209,6 +1246,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                     ErrorPush();
                     UsrFreeUserInfo(pUI);
 
+                    if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EACCESS");
+
                     pszSMTPError = StrSprint("557 Access denied <%s@%s> for user <%s>",
                             szDestUser, szDestDomain, SMTPS.pszFrom);
 
@@ -1229,6 +1269,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
             {
                 ErrorPush();
 
+                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                    SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=ERELAY");
+
                 pszSMTPError = SysStrDup("550 Relay denied");
 
                 return (ErrorPop());
@@ -1244,6 +1287,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
         {
             ErrorPush();
 
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=ERELAY");
+
             pszSMTPError = SysStrDup("550 Relay denied");
 
             return (ErrorPop());
@@ -1256,6 +1302,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
     if (USmtpSplitEmailAddr(ppszFwdDomains[0], NULL, SMTPS.szDestDomain) < 0)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=ESYNTAX");
 
         pszSMTPError = SysStrDup("501 Syntax error in forward path");
 
@@ -1272,6 +1321,9 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
     if ((SMTPS.pszSendRcpt = USmtpBuildRcptPath(ppszFwdDomains, SMTPS.hSvrConfig)) == NULL)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=ESYNTAX");
 
         pszSMTPError = SysStrDup("501 Syntax error in forward path");
 
@@ -1349,7 +1401,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
 //  Log SMTP session
 ///////////////////////////////////////////////////////////////////////////////
     if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-        SMTPLogSession(SMTPS);
+        SMTPLogSession(SMTPS, SMTPS.pszFrom, SMTPS.pszRcpt, "RCPT=OK");
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write RCPT TO ( 5th[,...] row(s) of the smtp-mail file )
@@ -1819,6 +1871,8 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     fprintf(pRespFile,
             "250 VRFY\r\n"
+            "250 8BITMIME\r\n"
+            "250 PIPELINING\r\n"
             "250 AUTH LOGIN PLAIN CRAM-MD5");
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2680,21 +2734,42 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
 
         if (SMTPDoAuthPlain(hBSock, SMTPS, szAuthParam) < 0)
-            return (ErrGetErrorCode());
+        {
+            ErrorPush();
+
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, "", "", "AUTH=EFAIL:TYPE=PLAIN");
+
+            return (ErrorPop());
+        }
 
     }
     else if (stricmp(szAuthType, "login") == 0)
     {
 
         if (SMTPDoAuthLogin(hBSock, SMTPS, szAuthParam) < 0)
-            return (ErrGetErrorCode());
+        {
+            ErrorPush();
+
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, "", "", "AUTH=EFAIL:TYPE=LOGIN");
+
+            return (ErrorPop());
+        }
 
     }
     else if (stricmp(szAuthType, "cram-md5") == 0)
     {
 
         if (SMTPDoAuthCramMD5(hBSock, SMTPS, szAuthParam) < 0)
-            return (ErrGetErrorCode());
+        {
+            ErrorPush();
+
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, "", "", "AUTH=EFAIL:TYPE=CRAM-MD5");
+
+            return (ErrorPop());
+        }
 
     }
     else
@@ -2703,7 +2778,14 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
 //  Handle external authentication methods
 ///////////////////////////////////////////////////////////////////////////////
         if (SMTPDoAuthExternal(hBSock, SMTPS, szAuthType) < 0)
-            return (ErrGetErrorCode());
+        {
+            ErrorPush();
+
+            if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                SMTPLogSession(SMTPS, "", "", "AUTH=EFAIL:TYPE=EXTRN");
+
+            return (ErrorPop());
+        }
 
     }
 
@@ -2790,6 +2872,19 @@ static int      SMTPHandleCmd_QUIT(const char *pszCommand, BSOCK_HANDLE hBSock,
 static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Check if VRFY is enabled
+///////////////////////////////////////////////////////////////////////////////
+    if (((SMTPS.ulFlags & SMTPF_VRFY_ENABLED) == 0) &&
+            !SvrTestConfigFlag("AllowSmtpVRFY", false, SMTPS.hSvrConfig))
+    {
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, "", "", "VRFY=EACCESS");
+
+        BSckSendString(hBSock, "501 Command not accepted", SMTPS.pSMTPCfg->iTimeout);
+        return (-1);
+    }
+
 
     char          **ppszTokens = StrTokenize(pszCommand, " ");
 

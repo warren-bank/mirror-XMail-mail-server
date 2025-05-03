@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -1605,7 +1605,6 @@ int             USmtpCloseChannel(BSOCK_HANDLE hBSock, int iHardClose, SMTPError
 
 int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE)
 {
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Send RSET and read result
 ///////////////////////////////////////////////////////////////////////////////
@@ -1635,7 +1634,6 @@ int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE)
 int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const char *pszRcpt,
                         const char *pszFileName, SMTPError * pSMTPE)
 {
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Send MAIL FROM: and read result
 ///////////////////////////////////////////////////////////////////////////////
@@ -1734,7 +1732,6 @@ int             USmtpSendMail(const char *pszServer, const char *pszDomain,
                         const char *pszFrom, const char *pszRcpt, const char *pszFileName,
                         SMTPError * pSMTPE)
 {
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Open STMP channel and try to send the message
 ///////////////////////////////////////////////////////////////////////////////
@@ -2270,8 +2267,8 @@ char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * 
     char            szFrom[MAX_SMTP_ADDRESS] = "",
                     szRcpt[MAX_SMTP_ADDRESS] = "";
 
-    if ((USmlParseAddress(pszMailFrom, NULL, szFrom) < 0) ||
-            (USmlParseAddress(pszRcptTo, NULL, szRcpt) < 0))
+    if ((USmlParseAddress(pszMailFrom, NULL, 0, szFrom, sizeof(szFrom) - 1) < 0) ||
+            (USmlParseAddress(pszRcptTo, NULL, 0, szRcpt, sizeof(szRcpt) - 1) < 0))
         return (NULL);
 
 ///////////////////////////////////////////////////////////////////////////////

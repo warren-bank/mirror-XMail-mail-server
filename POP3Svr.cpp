@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -485,7 +485,7 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
 ///////////////////////////////////////////////////////////////////////////////
 //  As a last tentative We try to get "RootDomain" to set POP3 domain
 ///////////////////////////////////////////////////////////////////////////////
-    if (strlen(POP3S.szSvrDomain) == 0)
+    if (IsEmptyString(POP3S.szSvrDomain))
     {
         char           *pszRootDomain = SvrGetConfigVar(POP3S.hSvrConfig, "RootDomain");
 
@@ -592,10 +592,12 @@ static int      POP3HandleSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Command loop
 ///////////////////////////////////////////////////////////////////////////////
-    char            szCommand[2048] = "";
+    char            szCommand[1024] = "";
 
     while (!SvrInShutdown() && (POP3S.iPOP3State != stateExit) &&
-            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, POP3S.pPOP3Cfg->iSessionTimeout) != NULL))
+            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1,
+                    POP3S.pPOP3Cfg->iSessionTimeout) != NULL) &&
+                    (MscCmdStringCheck(szCommand) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve a fresh new copy of configuration and test shutdown flag

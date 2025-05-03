@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -130,6 +130,7 @@ SYS_UINT64      MscReadUint64(void const * pData);
 void           *MscWriteUint16(void * pData, SYS_UINT16 uValue);
 void           *MscWriteUint32(void * pData, SYS_UINT32 uValue);
 void           *MscWriteUint64(void * pData, SYS_UINT64 uValue);
+int             MscCmdStringCheck(char const * pszString);
 
 
 

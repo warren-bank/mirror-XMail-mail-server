@@ -1,6 +1,6 @@
 /*
- *  MailSvr by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999  Davide Libenzi
+ *  XMail by Davide Libenzi ( Intranet and Internet mail server )
+ *  Copyright (C) 1999,2000,2001  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davide_libenzi@mycio.com>
+ *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
 
@@ -189,6 +189,8 @@ static void WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[])
 
         ReportStatusToSCMgr(SERVICE_STOPPED, dwErr, 0);
     }
+    else
+        AddToMessageLog(_T("RegisterServiceCtrlHandler"));
 
 }
 
@@ -200,8 +202,8 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 
     switch (dwCtrlCode)
     {
- case (SERVICE_CONTROL_SHUTDOWN):
- case (SERVICE_CONTROL_STOP):
+        case (SERVICE_CONTROL_SHUTDOWN):
+        case (SERVICE_CONTROL_STOP):
             {
                 ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
 
@@ -345,10 +347,8 @@ static BOOL     CmdInstallService(DWORD dwStartType)
             return (TRUE);
         }
         else
-        {
             _tprintf(_T("CreateService failed - %s\n"),
                     GetLastErrorText(szErr, CountOf(szErr)));
-        }
 
         CloseServiceHandle(schSCManager);
     }
