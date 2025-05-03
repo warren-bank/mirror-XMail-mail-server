@@ -100,13 +100,14 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
 int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
                         char const * pszRcptUser, char const * pszFileName);
 int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
-                        LocalMailProcConfig & LMPC);
+                        QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, LocalMailProcConfig & LMPC);
 int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash = 1);
 int             USmlDomainCustomFileName(char const * pszDestDomain, char *pszCustFilePath);
 int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCustFilePath);
-int             USmlGetDomainCustomSpoolFile(char const * pszSpoolFilePath, char *pszCustFilePath);
-int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, char const * pszDestDomain,
+int             USmlGetDomainCustomSpoolFile(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char *pszCustFilePath);
+int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, char const * pszDestDomain, char *pszCustFilePath);
 int             USmlGetCustomDomainFile(char const * pszDestDomain, char const * pszCustFilePath);
 int             USmlSetCustomDomainFile(char const * pszDestDomain, char const * pszCustFilePath);
 int             USmlGetMessageFilterFile(char const * pszDomain, char const * pszUser,
@@ -116,7 +117,7 @@ int             USmlLogMessage(SPLF_HANDLE hFSpool, char const * pszMedium, char
 int             USmlParseAddress(char const * pszAddress, char *pszPreAddr,
                         int iMaxPreAddress, char *pszEmailAddr, int iMaxAddress);
 int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszMailFile);
-int             USmlMailLoopCheck(SPLF_HANDLE hFSpool);
+int             USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig);
 
 
 

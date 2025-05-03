@@ -31,7 +31,9 @@
 #include "MiscUtils.h"
 #include "ResLocks.h"
 #include "BuffSock.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
+#include "MailDomains.h"
 #include "SvrUtils.h"
 #include "UsrUtils.h"
 #include "SMTPUtils.h"
@@ -50,13 +52,13 @@
 
 
 
+#define SMAIL_WAITMSG_TIMEOUT       2
 #define CUSTOM_PROC_LINE_MAX        1024
 #define FILTER_LINE_MAX             1024
 #define FILTER_TIMEOUT              60
 #define FILTER_PRIORITY             SYS_PRIORITY_NORMAL
 #define FILTER_OUT_EXITCODE         99
 #define MODIFY_EXITCODE             100
-#define MAX_PEEK_FILES              32
 
 
 
@@ -73,31 +75,41 @@ static SMAILConfig *SMAILGetConfigCopy(SHB_HANDLE hShbSMAIL);
 static int      SMAILThreadCountAdd(long lCount, SHB_HANDLE hShbSMAIL,
                         SMAILConfig * pSMAILCfg = NULL);
 static int      SMAILLogEnabled(SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg = NULL);
-static int      SMAILTryProcessFile(char const * pszMessFilePath, SHB_HANDLE hShbSMAIL,
-                        SMAILConfig * pSMAILCfg);
+static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg);
 static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL);
-static int      SMAILProcessFile(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool);
+static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool);
-static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain, SMTPError * pSMTPE = NULL);
-static int      SMAILHandleRemoteUserMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain);
-static int      SMAILCustomProcessMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain, char const * pszCustFilePath);
 static int      SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_external(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_wait(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool);
-static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFilePath);
+static int      SMAILCmd_external(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILCmd_wait(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILCmd_smtp(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILCmd_redirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILCmd_lredirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 static int      SMAILFilterMacroSubstitutes(char **ppszCmdTokens, char const * pszSpoolFilePath,
                         SpoolFileHeader const & SFH);
 
@@ -196,7 +208,6 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
 //  Get thread id
 ///////////////////////////////////////////////////////////////////////////////
-    int             iSleepTimeout = pSMAILCfg->iSleepTimeout;
     long            lThreadId = pSMAILCfg->lThreadCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -230,10 +241,7 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
 //  Process spool files
 ///////////////////////////////////////////////////////////////////////////////
-        int             iProcessResult = SMAILTryProcessSpool(hShbSMAIL);
-
-        if (iProcessResult == ERR_NO_SMTP_SPOOL_FILES)
-            SysSleep(iSleepTimeout);
+        SMAILTryProcessSpool(hShbSMAIL);
 
     }
 
@@ -251,33 +259,45 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 
 
 
-static int      SMAILTryProcessFile(char const * pszMessFilePath, SHB_HANDLE hShbSMAIL,
-                        SMAILConfig * pSMAILCfg)
+static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter message
 ///////////////////////////////////////////////////////////////////////////////
-    if (SMAILFilterMessage(hShbSMAIL, pszMessFilePath) < 0)
-        return (ErrGetErrorCode());
+    if (SMAILFilterMessage(hShbSMAIL, hQueue, hMessage) < 0)
+    {
+        ErrorPush();
+        QueCloseMessage(hQueue, hMessage);
+        return (ErrorPop());
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create the handle to manage the spool file
+//  Create the handle to manage the queue file
 ///////////////////////////////////////////////////////////////////////////////
-    SPLF_HANDLE     hFSpool = USmlCreateHandle(pszMessFilePath);
+    char            szMessFilePath[SYS_MAX_PATH] = "";
+
+    QueGetFilePath(hQueue, hMessage, szMessFilePath);
+
+
+    SPLF_HANDLE     hFSpool = USmlCreateHandle(szMessFilePath);
 
     if (hFSpool == INVALID_SPLF_HANDLE)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        QueCleanupMessage(pszMessFilePath, true, true);
+
+        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+        QueCloseMessage(hQueue, hMessage);
+
         return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for mail loops
 ///////////////////////////////////////////////////////////////////////////////
-    if (USmlMailLoopCheck(hFSpool) < 0)
+    if (USmlMailLoopCheck(hFSpool, hSvrConfig) < 0)
     {
         ErrorPush();
 
@@ -290,26 +310,33 @@ static int      SMAILTryProcessFile(char const * pszMessFilePath, SHB_HANDLE hSh
         ErrLogMessage(LOG_LEV_MESSAGE,
                 "Message <%s> blocked by mail loop check !\n",
                 pszSmtpMessageID);
-        QueErrLogMessage(pszMessFilePath,
+        QueUtErrLogMessage(hQueue, hMessage,
                 "Message <%s> blocked by mail loop check !\n",
                 pszSmtpMessageID);
 
-        QueSpoolRemoveNotifyRoot(pszMessFilePath, ErrGetErrorString(ErrorFetch()));
-
-
         USmlCloseHandle(hFSpool);
+
+        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+        QueCloseMessage(hQueue, hMessage);
+
         return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Process spool file
+//  Process queue file
 ///////////////////////////////////////////////////////////////////////////////
-    if (SMAILProcessFile(hShbSMAIL, hFSpool) < 0)
+    if (SMAILProcessFile(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage) < 0)
     {
         ErrorPush();
         USmlCloseHandle(hFSpool);
 
-        QueResendMessage(pszMessFilePath);
+///////////////////////////////////////////////////////////////////////////////
+//  Resend the message if it's not been cleaned up
+///////////////////////////////////////////////////////////////////////////////
+        if (QueCheckMessage(hQueue, hMessage) == 0)
+            QueUtResendMessage(hQueue, hMessage);
+        else
+            QueCloseMessage(hQueue, hMessage);
 
         return (ErrorPop());
     }
@@ -319,9 +346,11 @@ static int      SMAILTryProcessFile(char const * pszMessFilePath, SHB_HANDLE hSh
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Remove spool file
+//  Cleanup message
 ///////////////////////////////////////////////////////////////////////////////
-    QueCleanupMessage(pszMessFilePath, true, false);
+    QueCleanupMessage(hQueue, hMessage);
+
+    QueCloseMessage(hQueue, hMessage);
 
 
     return (0);
@@ -343,54 +372,35 @@ static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL)
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get spool files to process
+//  Get queue file to process
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszMessFilesPath[MAX_PEEK_FILES + 1];
+    QMSG_HANDLE     hMessage = QueExtractMessage(hSpoolQueue, SMAIL_WAITMSG_TIMEOUT);
 
-    if (QuePeekLockedFiles(NULL, pszMessFilesPath, MAX_PEEK_FILES,
-                    pSMAILCfg->iRetryTimeout, pSMAILCfg->iRetryIncrRatio,
-                    pSMAILCfg->iMaxRetry) < 0)
-    {
-        ErrorPush();
-        SysFree(pSMAILCfg);
-        return (ErrorPop());
-    }
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  Messages process loop
-///////////////////////////////////////////////////////////////////////////////
-    for (int ii = 0; pszMessFilesPath[ii] != NULL; ii++)
+    if (hMessage != INVALID_QMSG_HANDLE)
     {
 ///////////////////////////////////////////////////////////////////////////////
-//  Check shutdown condition
+//  Get configuration handle
 ///////////////////////////////////////////////////////////////////////////////
-        if (SvrInShutdown())
+        SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
+
+        if (hSvrConfig == INVALID_SVRCFG_HANDLE)
         {
-            for (; pszMessFilesPath[ii] != NULL; ii++)
-            {
-                QueUnlockMessage(pszMessFilesPath[ii]);
-                SysFree(pszMessFilesPath[ii]);
-            }
+            ErrorPush();
+            SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
+
+            QueUtResendMessage(hSpoolQueue, hMessage);
 
             SysFree(pSMAILCfg);
-
-            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
-            return (ERR_SERVER_SHUTDOWN);
+            return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Process spool file
+//  Process queue file
 ///////////////////////////////////////////////////////////////////////////////
-        SMAILTryProcessFile(pszMessFilesPath[ii], hShbSMAIL, pSMAILCfg);
+        SMAILTryProcessMessage(hSvrConfig, hSpoolQueue, hMessage, hShbSMAIL, pSMAILCfg);
 
 
-///////////////////////////////////////////////////////////////////////////////
-//  Unlock spool file
-///////////////////////////////////////////////////////////////////////////////
-        QueUnlockMessage(pszMessFilesPath[ii]);
-
-        SysFree(pszMessFilesPath[ii]);
+        SvrReleaseConfigHandle(hSvrConfig);
     }
 
 
@@ -402,7 +412,8 @@ static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL)
 
 
 
-static int      SMAILProcessFile(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool)
+static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     char const     *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
@@ -425,51 +436,70 @@ static int      SMAILProcessFile(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if we are at home
 ///////////////////////////////////////////////////////////////////////////////
-    UserInfo       *pUI = UsrGetUserByNameOrAlias(szDestDomain, szDestUser);
-
-    if (pUI != NULL)
+    if (MDomIsHandledDomain(szDestDomain) == 0)
     {
-        SysLogMessage(LOG_LEV_MESSAGE, "SMAIL local SMTP = \"%s\" From = <%s> To = <%s>\n",
-                pszSMTPDomain, pszMailFrom, ppszRcpt[0]);
+        UserInfo       *pUI = UsrGetUserByNameOrAlias(szDestDomain, szDestUser);
 
-        if (UsrGetUserType(pUI) == usrTypeUser)
+        if (pUI != NULL)
         {
+            SysLogMessage(LOG_LEV_MESSAGE, "SMAIL local SMTP = \"%s\" From = <%s> To = <%s>\n",
+                    pszSMTPDomain, pszMailFrom, ppszRcpt[0]);
+
+            if (UsrGetUserType(pUI) == usrTypeUser)
+            {
 ///////////////////////////////////////////////////////////////////////////////
 //  Local user case
 ///////////////////////////////////////////////////////////////////////////////
-            LocalMailProcConfig LMPC;
+                LocalMailProcConfig LMPC;
 
-            ZeroData(LMPC);
-            LMPC.ulFlags = (SMAILLogEnabled(hShbSMAIL)) ? LMPCF_LOG_ENABLED : 0;
+                ZeroData(LMPC);
+                LMPC.ulFlags = (SMAILLogEnabled(hShbSMAIL)) ? LMPCF_LOG_ENABLED : 0;
 
-            if (USmlProcessLocalUserMessage(pUI, hFSpool, LMPC) < 0)
-            {
-                ErrorPush();
-                UsrFreeUserInfo(pUI);
-                return (ErrorPop());
+                if (USmlProcessLocalUserMessage(pUI, hFSpool, hQueue, hMessage, LMPC) < 0)
+                {
+                    ErrorPush();
+                    UsrFreeUserInfo(pUI);
+                    return (ErrorPop());
+                }
             }
-        }
-        else
-        {
+            else
+            {
 ///////////////////////////////////////////////////////////////////////////////
 //  Local mailing list case
 ///////////////////////////////////////////////////////////////////////////////
-            if (SMAILMailingListExplode(pUI, hFSpool) < 0)
-            {
-                ErrorPush();
-                UsrFreeUserInfo(pUI);
-                return (ErrorPop());
+                if (SMAILMailingListExplode(pUI, hFSpool) < 0)
+                {
+                    ErrorPush();
+                    UsrFreeUserInfo(pUI);
+                    return (ErrorPop());
+                }
             }
-        }
 
-        UsrFreeUserInfo(pUI);
+            UsrFreeUserInfo(pUI);
+        }
+        else
+        {
+            ErrorPush();
+///////////////////////////////////////////////////////////////////////////////
+//  No account inside the handled domain
+///////////////////////////////////////////////////////////////////////////////
+            char            szBounceMsg[512] = "";
+
+            SysSNPrintf(szBounceMsg, sizeof(szBounceMsg) - 1,
+                    "Unknown user \"%s\" in domain \"%s\"", szDestUser, szDestDomain);
+
+            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, szBounceMsg);
+
+            return (ErrorPop());
+        }
     }
     else
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Remote user case ( or custom domain user )
 ///////////////////////////////////////////////////////////////////////////////
-        if (SMAILHandleRemoteUserMessage(hShbSMAIL, hFSpool, szDestDomain) < 0)
+        if (SMAILHandleRemoteUserMessage(hSvrConfig, hShbSMAIL, hFSpool,
+                        hQueue, hMessage, szDestDomain) < 0)
             return (ErrGetErrorCode());
 
     }
@@ -519,11 +549,11 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
         if (strchr(pMLUI->pszPerms, 'R') != NULL)
         {
 ///////////////////////////////////////////////////////////////////////////////
-//  Get unique spool/tmp file path
+//  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-            char            szSpoolTmpFile[SYS_MAX_PATH] = "";
+            QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
 
-            if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
+            if (hMessage == INVALID_QMSG_HANDLE)
             {
                 ErrorPush();
                 SysFreeCheck(pszMLSender);
@@ -532,12 +562,18 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
                 return (ErrorPop());
             }
 
+            char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+            QueGetFilePath(hSpoolQueue, hMessage, szQueueFilePath);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Create spool file. If "pszMLSender" is NULL the original sender is kept
 ///////////////////////////////////////////////////////////////////////////////
-            if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szSpoolTmpFile) < 0)
+            if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szQueueFilePath) < 0)
             {
                 ErrorPush();
+                QueCleanupMessage(hSpoolQueue, hMessage);
+                QueCloseMessage(hSpoolQueue, hMessage);
                 SysFreeCheck(pszMLSender);
                 UsrMLFreeUser(pMLUI);
                 UsrMLCloseDB(hUsersDB);
@@ -547,10 +583,11 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-            if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+            if (QueCommitMessage(hSpoolQueue, hMessage) < 0)
             {
                 ErrorPush();
-                SysRemove(szSpoolTmpFile);
+                QueCleanupMessage(hSpoolQueue, hMessage);
+                QueCloseMessage(hSpoolQueue, hMessage);
                 SysFreeCheck(pszMLSender);
                 UsrMLFreeUser(pMLUI);
                 UsrMLCloseDB(hUsersDB);
@@ -572,7 +609,8 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 
 
 
-static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain, SMTPError * pSMTPE)
 {
 
@@ -588,6 +626,15 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
     char const     *pszRelayDomain = USmlGetRelayDomain(hFSpool);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Get HELO domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szHeloDomain[MAX_HOST_NAME] = "";
+
+    SvrConfigVar("HeloDomain", szHeloDomain, sizeof(szHeloDomain) - 1, hSvrConfig, "");
+
+    char const     *pszHeloDomain = IsEmptyString(szHeloDomain) ? NULL : szHeloDomain;
+
+///////////////////////////////////////////////////////////////////////////////
 //  If it's a relayed message use the associated relay
 ///////////////////////////////////////////////////////////////////////////////
     if (pszRelayDomain != NULL)
@@ -598,7 +645,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
         if (pSMTPE != NULL)
             USmtpCleanupError(pSMTPE);
 
-        if (USmtpSendMail(pszRelayDomain, pszSMTPDomain, pszSendMailFrom, pszSendRcptTo,
+        if (USmtpSendMail(pszRelayDomain, pszHeloDomain, pszSendMailFrom, pszSendRcptTo,
                         pszMailFile, pSMTPE) < 0)
         {
             ErrorPush();
@@ -607,7 +654,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                     "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-            QueErrLogMessage(pszSpoolFilePath,
+            QueUtErrLogMessage(hQueue, hMessage,
                     "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -621,22 +668,12 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Load server configuration
-///////////////////////////////////////////////////////////////////////////////
-    SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
-
-    if (hSvrConfig == INVALID_SVRCFG_HANDLE)
-        return (ErrGetErrorCode());
-
-///////////////////////////////////////////////////////////////////////////////
 //  Check the existance of direct SMTP forwarders
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszFwdGws = USmtpGetFwdGateways(hSvrConfig, pszDestDomain);
 
     if (ppszFwdGws != NULL)
     {
-        SvrReleaseConfigHandle(hSvrConfig);
-
 ///////////////////////////////////////////////////////////////////////////////
 //  By initializing this to zero makes XMail to discharge all mail for domains
 //  that have an empty forwarders list
@@ -651,7 +688,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
             if (pSMTPE != NULL)
                 USmtpCleanupError(pSMTPE);
 
-            if ((iSendErrorCode = USmtpSendMail(ppszFwdGws[ss], pszSMTPDomain,
+            if ((iSendErrorCode = USmtpSendMail(ppszFwdGws[ss], pszHeloDomain,
                                     pszSendMailFrom, pszSendRcptTo, pszMailFile, pSMTPE)) == 0)
             {
 ///////////////////////////////////////////////////////////////////////////////
@@ -668,7 +705,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                     "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-            QueErrLogMessage(pszSpoolFilePath,
+            QueUtErrLogMessage(hQueue, hMessage,
                     "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -682,9 +719,8 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Try to get custom mail exchangers or DNS mail exchangers and if booth tests
-//  fails try direct ( I don't know if this is a standard but exist domains
-//  that does not have MXs )
+//  Try to get custom mail exchangers or DNS mail exchangers and if both tests
+//  fails try direct
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszMXGWs = USmtpGetMailExchangers(hSvrConfig, pszDestDomain);
 
@@ -693,8 +729,6 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
         char            szDomainMXHost[256] = "";
         MXS_HANDLE      hMXSHandle = USmtpGetMXFirst(hSvrConfig, pszDestDomain,
                 szDomainMXHost);
-
-        SvrReleaseConfigHandle(hSvrConfig);
 
         if (hMXSHandle != INVALID_MXS_HANDLE)
         {
@@ -708,7 +742,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                 if (pSMTPE != NULL)
                     USmtpCleanupError(pSMTPE);
 
-                if ((iSendErrorCode = USmtpSendMail(szDomainMXHost, pszSMTPDomain,
+                if ((iSendErrorCode = USmtpSendMail(szDomainMXHost, pszHeloDomain,
                                         pszSendMailFrom, pszSendRcptTo, pszMailFile, pSMTPE)) == 0)
                 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -725,7 +759,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                         "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                         szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-                QueErrLogMessage(pszSpoolFilePath,
+                QueUtErrLogMessage(hQueue, hMessage,
                         "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                         szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -756,7 +790,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
             if (pSMTPE != NULL)
                 USmtpCleanupError(pSMTPE);
 
-            if (USmtpSendMail(pszDestDomain, pszSMTPDomain, pszSendMailFrom, pszSendRcptTo,
+            if (USmtpSendMail(pszDestDomain, pszHeloDomain, pszSendMailFrom, pszSendRcptTo,
                             pszMailFile, pSMTPE) < 0)
             {
                 ErrorPush();
@@ -765,7 +799,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                         "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                         pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-                QueErrLogMessage(pszSpoolFilePath,
+                QueUtErrLogMessage(hQueue, hMessage,
                         "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                         pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -781,8 +815,6 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
     }
     else
     {
-        SvrReleaseConfigHandle(hSvrConfig);
-
         int             iSendErrorCode = 0;
 
         for (int ss = 0; ppszMXGWs[ss] != NULL; ss++)
@@ -793,7 +825,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
             if (pSMTPE != NULL)
                 USmtpCleanupError(pSMTPE);
 
-            if ((iSendErrorCode = USmtpSendMail(ppszMXGWs[ss], pszSMTPDomain,
+            if ((iSendErrorCode = USmtpSendMail(ppszMXGWs[ss], pszHeloDomain,
                                     pszSendMailFrom, pszSendRcptTo, pszMailFile, pSMTPE)) == 0)
             {
 ///////////////////////////////////////////////////////////////////////////////
@@ -810,7 +842,7 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
                     "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-            QueErrLogMessage(pszSpoolFilePath,
+            QueUtErrLogMessage(hQueue, hMessage,
                     "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                     ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -824,13 +856,15 @@ static int      SMAILRemoteMsgSMTPSend(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool
             return (iSendErrorCode);
     }
 
+
     return (0);
 
 }
 
 
 
-static int      SMAILHandleRemoteUserMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain)
 {
 
@@ -839,13 +873,14 @@ static int      SMAILHandleRemoteUserMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE h
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustFilePath[SYS_MAX_PATH] = "";
 
-    if (USmlGetDomainMsgCustomFile(hFSpool, pszDestDomain, szCustFilePath) < 0)
+    if (USmlGetDomainMsgCustomFile(hFSpool, hQueue, hMessage, pszDestDomain, szCustFilePath) < 0)
     {
         SMTPError       SMTPE;
 
         USmtpInitError(&SMTPE);
 
-        if (SMAILRemoteMsgSMTPSend(hShbSMAIL, hFSpool, pszDestDomain, &SMTPE) < 0)
+        if (SMAILRemoteMsgSMTPSend(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+                        pszDestDomain, &SMTPE) < 0)
         {
             ErrorPush();
 ///////////////////////////////////////////////////////////////////////////////
@@ -853,8 +888,7 @@ static int      SMAILHandleRemoteUserMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE h
 //  sender and remove the spool file
 ///////////////////////////////////////////////////////////////////////////////
             if (USmtpIsFatalError(&SMTPE))
-                QueSpoolRemoveNotifySender(USmlGetSpoolFilePath(hFSpool),
-                        USmtpGetErrorMessage(&SMTPE));
+                QueUtCleanupNotifyErrDelivery(hQueue, hMessage, USmtpGetErrorMessage(&SMTPE));
 
             USmtpCleanupError(&SMTPE);
 
@@ -871,14 +905,16 @@ static int      SMAILHandleRemoteUserMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE h
 //  Do custom message processing
 ///////////////////////////////////////////////////////////////////////////////
 
-    return (SMAILCustomProcessMessage(hShbSMAIL, hFSpool, pszDestDomain, szCustFilePath));
+    return (SMAILCustomProcessMessage(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+                    pszDestDomain, szCustFilePath));
 
 }
 
 
 
 
-static int      SMAILCustomProcessMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSpool,
+static int      SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain, char const * pszCustFilePath)
 {
 
@@ -931,26 +967,26 @@ static int      SMAILCustomProcessMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSp
             int             iCmdResult = 0;
 
             if (stricmp(ppszCmdTokens[0], "external") == 0)
-                iCmdResult = SMAILCmd_external(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_external(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
             else if (stricmp(ppszCmdTokens[0], "wait") == 0)
-                iCmdResult = SMAILCmd_wait(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_wait(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
             else if (stricmp(ppszCmdTokens[0], "smtp") == 0)
-                iCmdResult = SMAILCmd_smtp(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_smtp(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
             else if (stricmp(ppszCmdTokens[0], "smtprelay") == 0)
-                iCmdResult = SMAILCmd_smtprelay(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_smtprelay(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
             else if (stricmp(ppszCmdTokens[0], "redirect") == 0)
-                iCmdResult = SMAILCmd_redirect(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_redirect(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
             else if (stricmp(ppszCmdTokens[0], "lredirect") == 0)
-                iCmdResult = SMAILCmd_lredirect(hShbSMAIL, pszDestDomain, ppszCmdTokens,
-                        iFieldsCount, hFSpool);
+                iCmdResult = SMAILCmd_lredirect(hSvrConfig, hShbSMAIL, pszDestDomain,
+                        ppszCmdTokens, iFieldsCount, hFSpool, hQueue, hMessage);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Test if We must save a failed command
+//  Test if we must save a failed command
 //  <0 = Error ; ==0 = Success ; >0 = Transient error ( save the command )
 ///////////////////////////////////////////////////////////////////////////////
             if (iCmdResult > 0)
@@ -1092,8 +1128,9 @@ static int      SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpo
 
 
 
-static int      SMAILCmd_external(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_external(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens < 5)
@@ -1115,7 +1152,7 @@ static int      SMAILCmd_external(SHB_HANDLE hShbSMAIL, char const * pszDestDoma
         char const     *pszMailFrom = USmlMailFrom(hFSpool);
         char const     *pszRcptTo = USmlRcptTo(hFSpool);
 
-        QueErrLogMessage(pszSpoolFilePath,
+        QueUtErrLogMessage(hQueue, hMessage,
                 "SMAIL EXTRN-Send Prg = \"%s\" Domain = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                 ppszCmdTokens[3], pszDestDomain, pszMailFrom, pszRcptTo);
 
@@ -1135,8 +1172,9 @@ static int      SMAILCmd_external(SHB_HANDLE hShbSMAIL, char const * pszDestDoma
 
 
 
-static int      SMAILCmd_wait(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_wait(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens != 2)
@@ -1155,8 +1193,9 @@ static int      SMAILCmd_wait(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, 
 
 
 
-static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_smtp(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens != 1)
@@ -1170,10 +1209,11 @@ static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, 
 
     USmtpInitError(&SMTPE);
 
-    if (SMAILRemoteMsgSMTPSend(hShbSMAIL, hFSpool, pszDestDomain, &SMTPE) < 0)
+    if (SMAILRemoteMsgSMTPSend(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
+                    pszDestDomain, &SMTPE) < 0)
     {
 ///////////////////////////////////////////////////////////////////////////////
-//  If We get an SMTP fatal error We must return <0 , otherwise >0 to give
+//  If we get an SMTP fatal error We must return <0 , otherwise >0 to give
 //  XMail to ability to resume the command
 ///////////////////////////////////////////////////////////////////////////////
         int             iReturnCode = USmtpIsFatalError(&SMTPE) ? ErrGetErrorCode() : -ErrGetErrorCode();
@@ -1191,8 +1231,9 @@ static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, 
 
 
 
-static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens != 2)
@@ -1241,6 +1282,16 @@ static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDom
     char const     *pszMailFile = USmlGetMailFile(hFSpool);
     char const     *pszSpoolFilePath = USmlGetSpoolFilePath(hFSpool);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Get HELO domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szHeloDomain[MAX_HOST_NAME] = "";
+
+    SvrConfigVar("HeloDomain", szHeloDomain, sizeof(szHeloDomain) - 1, hSvrConfig, "");
+
+    char const     *pszHeloDomain = IsEmptyString(szHeloDomain) ? NULL : szHeloDomain;
+
+
     SMTPError       SMTPE;
 
     USmtpInitError(&SMTPE);
@@ -1259,7 +1310,7 @@ static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDom
 
         USmtpCleanupError(&SMTPE);
 
-        if (USmtpSendMail(ppszRelays[ss], pszSMTPDomain, pszSendMailFrom, pszSendRcptTo,
+        if (USmtpSendMail(ppszRelays[ss], pszHeloDomain, pszSendMailFrom, pszSendRcptTo,
                         pszMailFile, &SMTPE) == 0)
         {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1280,7 +1331,7 @@ static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDom
                 "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                 ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-        QueErrLogMessage(pszSpoolFilePath,
+        QueUtErrLogMessage(hQueue, hMessage,
                 "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                 ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
 
@@ -1298,8 +1349,9 @@ static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDom
 
 
 
-static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_redirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens < 2)
@@ -1326,27 +1378,40 @@ static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDoma
 
     for (int ii = 1; ppszCmdTokens[ii] != NULL; ii++)
     {
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "",
-                        szAliasAddr[MAX_ADDR_NAME] = "";
+///////////////////////////////////////////////////////////////////////////////
+//  Get message handle
+///////////////////////////////////////////////////////////////////////////////
+        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
-            continue;
+        if (hRedirMessage == INVALID_QMSG_HANDLE)
+            return (ErrGetErrorCode());
+
+
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+        QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
+
+
+        char            szAliasAddr[MAX_ADDR_NAME] = "";
 
         sprintf(szAliasAddr, "%s@%s", szLocalUser, ppszCmdTokens[ii]);
 
-        if (USmlCreateSpoolFile(hFSpool, NULL, szAliasAddr, szSpoolTmpFile) < 0)
+        if (USmlCreateSpoolFile(hFSpool, NULL, szAliasAddr, szQueueFilePath) < 0)
         {
-            CheckRemoveFile(szSpoolTmpFile);
-            continue;
+            ErrorPush();
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
+            return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hRedirMessage) < 0)
         {
             ErrorPush();
-            SysRemove(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
             return (ErrorPop());
         }
     }
@@ -1358,8 +1423,9 @@ static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDoma
 
 
 
-static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
-                        int iNumTokens, SPLF_HANDLE hFSpool)
+static int      SMAILCmd_lredirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
+                        char const * pszDestDomain, char **ppszCmdTokens, int iNumTokens,
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     if (iNumTokens < 2)
@@ -1385,28 +1451,41 @@ static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDom
 
     for (int ii = 1; ppszCmdTokens[ii] != NULL; ii++)
     {
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "",
-                        szAliasAddr[MAX_ADDR_NAME] = "";
+///////////////////////////////////////////////////////////////////////////////
+//  Get message handle
+///////////////////////////////////////////////////////////////////////////////
+        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
-            continue;
+        if (hRedirMessage == INVALID_QMSG_HANDLE)
+            return (ErrGetErrorCode());
+
+
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+        QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
+
+
+        char            szAliasAddr[MAX_ADDR_NAME] = "";
 
         sprintf(szAliasAddr, "%s@%s", szLocalUser, ppszCmdTokens[ii]);
 
         if (USmlCreateSpoolFile(hFSpool, ppszRcpt[iRcptDomains - 1], szAliasAddr,
-                        szSpoolTmpFile) < 0)
+                        szQueueFilePath) < 0)
         {
-            CheckRemoveFile(szSpoolTmpFile);
-            continue;
+            ErrorPush();
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
+            return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hRedirMessage) < 0)
         {
             ErrorPush();
-            SysRemove(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
             return (ErrorPop());
         }
     }
@@ -1418,16 +1497,29 @@ static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDom
 
 
 
-static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFilePath)
+static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
+
+///////////////////////////////////////////////////////////////////////////////
+//  Retrieve message file path
+///////////////////////////////////////////////////////////////////////////////
+    char            szMessFilePath[SYS_MAX_PATH] = "";
+
+    QueGetFilePath(hQueue, hMessage, szMessFilePath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load spool file header
 ///////////////////////////////////////////////////////////////////////////////
     SpoolFileHeader SFH;
 
-    if (USmlLoadSpoolFileHeader(pszMessFilePath, SFH) < 0)
-        return (ErrGetErrorCode());
+    if (USmlLoadSpoolFileHeader(szMessFilePath, SFH) < 0)
+    {
+        ErrorPush();
+
+        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+
+        return (ErrorPop());
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract target domain and user
@@ -1438,8 +1530,12 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFil
     if ((StrStringsCount(SFH.ppszRcpt) < 1) ||
             (USmtpSplitEmailAddr(SFH.ppszRcpt[0], szDestUser, szDestDomain) < 0))
     {
+        ErrorPush();
+
+        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+
         USmlCleanupSpoolFileHeader(SFH);
-        return (ErrGetErrorCode());
+        return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1454,18 +1550,19 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFil
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Filter this message
+//  This should not happen but if it happens we let the message pass through
 ///////////////////////////////////////////////////////////////////////////////
     FILE           *pFiltFile = fopen(szFilterFilePath, "rt");
 
     if (pFiltFile == NULL)
     {
         USmlCleanupSpoolFileHeader(SFH);
-
-        ErrSetErrorCode(ERR_FILE_OPEN, szFilterFilePath);
-        return (ERR_FILE_OPEN);
+        return (0);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Filter this message
+///////////////////////////////////////////////////////////////////////////////
     char            szFiltLine[FILTER_LINE_MAX] = "";
 
     while (MscGetConfigLine(szFiltLine, sizeof(szFiltLine) - 1, pFiltFile) != NULL)
@@ -1482,7 +1579,7 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFil
 ///////////////////////////////////////////////////////////////////////////////
 //  Do filter line macro substitution
 ///////////////////////////////////////////////////////////////////////////////
-            SMAILFilterMacroSubstitutes(ppszCmdTokens, pszMessFilePath, SFH);
+            SMAILFilterMacroSubstitutes(ppszCmdTokens, szMessFilePath, SFH);
 
 
             int             iExitCode = 0;
@@ -1494,14 +1591,14 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFil
                 {
                     StrFreeStrings(ppszCmdTokens);
                     fclose(pFiltFile);
+                    USmlCleanupSpoolFileHeader(SFH);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter out message
 ///////////////////////////////////////////////////////////////////////////////
-                    QueSpoolRemoveNotifySender(pszMessFilePath, ErrGetErrorString(ERR_FILTERED_MESSAGE));
+                    QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
+                            ErrGetErrorString(ERR_FILTERED_MESSAGE));
 
-
-                    USmlCleanupSpoolFileHeader(SFH);
 
                     ErrSetErrorCode(ERR_FILTERED_MESSAGE);
                     return (ERR_FILTERED_MESSAGE);
@@ -1513,9 +1610,13 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, char const * pszMessFil
                 }
             }
             else
+            {
                 SysLogMessage(LOG_LEV_MESSAGE, "Filter error for domain \"%s\" (%s)\n",
                         szDestDomain, ppszCmdTokens[0]);
 
+                QueUtErrLogMessage(hQueue, hMessage, "Filter error for domain \"%s\" (%s)\n",
+                        szDestDomain, ppszCmdTokens[0]);
+            }
         }
 
         StrFreeStrings(ppszCmdTokens);

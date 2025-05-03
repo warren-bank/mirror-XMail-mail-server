@@ -29,6 +29,7 @@
 #include "BuffSock.h"
 #include "SList.h"
 #include "MailConfig.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
@@ -415,9 +416,17 @@ static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
 static SYS_UINT16 DNS_GetUniqueQueryId(void)
 {
 
-    SYS_UINT32      uThreadId = (SYS_UINT32) SysGetCurrentThreadId();
+    static SYS_SPINLOCK IdLock = 0;
+    static SYS_UINT16   uDnsQueryId = 0;
 
-    return ((SYS_UINT16) uThreadId);
+    SysSpinAcquire(&IdLock);
+
+    SYS_UINT16      uQueryId = ++uDnsQueryId;
+
+    SysSpinRelease(&IdLock);
+
+
+    return (uQueryId);
 
 }
 
@@ -632,12 +641,14 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
 
         ZeroData(RecvAddr);
 
+
         int             iPacketLenght = SysRecvDataFrom(SockFD, (struct sockaddr *) & RecvAddr, sizeof(RecvAddr),
                 (char *) RespBuffer, sizeof(RespBuffer), iTimeout);
 
 
         if ((iPacketLenght < 0) || (iPacketLenght < sizeof(DNS_HEADER)))
             continue;
+
 
         DNS_HEADER     *pDNSH = (DNS_HEADER *) RespBuffer;
 

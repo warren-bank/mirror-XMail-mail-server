@@ -33,6 +33,7 @@
 #include "MailConfig.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 
@@ -682,7 +683,7 @@ int             MscCopyFile(FILE * pFileOut, FILE * pFileIn, unsigned long ulBas
     if (ulCopySize == (unsigned long) -1)
         ulCopySize = ulFileSize - ulBaseOffset;
     else
-        ulCopySize = min(ulCopySize, ulFileSize - ulBaseOffset);
+        ulCopySize = Min(ulCopySize, ulFileSize - ulBaseOffset);
 
     fseek(pFileIn, ulBaseOffset, SEEK_SET);
 
@@ -693,7 +694,7 @@ int             MscCopyFile(FILE * pFileOut, FILE * pFileIn, unsigned long ulBas
 
     while (ulCopySize > 0)
     {
-        unsigned int    uToRead = (unsigned int) min(ulCopySize, sizeof(szBuffer)),
+        unsigned int    uToRead = (unsigned int) Min(ulCopySize, sizeof(szBuffer)),
                         uReaded = fread(szBuffer, 1, uToRead, pFileIn);
 
         if (uReaded > 0)
@@ -1589,7 +1590,7 @@ SYS_UINT16      MscReadUint16(void const * pData)
 
 #else           // #if defined(CPU_NEED_ALIGNMENT)
 
-                    return (*(SYS_UINT16 const *) pData);
+    return (*(SYS_UINT16 const *) pData);
 
 #endif          // #if defined(CPU_NEED_ALIGNMENT)
 
@@ -1611,7 +1612,7 @@ SYS_UINT32      MscReadUint32(void const * pData)
 
 #else           // #if defined(CPU_NEED_ALIGNMENT)
 
-                    return (*(SYS_UINT32 const *) pData);
+    return (*(SYS_UINT32 const *) pData);
 
 #endif          // #if defined(CPU_NEED_ALIGNMENT)
 
@@ -1633,7 +1634,7 @@ SYS_UINT64      MscReadUint64(void const * pData)
 
 #else           // #if defined(CPU_NEED_ALIGNMENT)
 
-                    return (*(SYS_UINT64 const *) pData);
+    return (*(SYS_UINT64 const *) pData);
 
 #endif          // #if defined(CPU_NEED_ALIGNMENT)
 

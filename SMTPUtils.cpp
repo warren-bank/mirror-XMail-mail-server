@@ -36,6 +36,8 @@
 #include "MiscUtils.h"
 #include "DNS.h"
 #include "DNSCache.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "SMTPSvr.h"
 #include "SMAILUtils.h"
 #include "SMTPUtils.h"
@@ -60,6 +62,7 @@
 #define RBL_MAPS_DOMAIN         "rbl.maps.vix.com."
 #define RSS_MAPS_DOMAIN         "relays.mail-abuse.org."
 #define ORBS_MAPS_DOMAIN        "relays.orbs.org."
+#define DUL_MAPS_DOMAIN         "dialups.mail-abuse.org."
 #define SMTP_SPAMMERS_FILE      "spammers.tab"
 #define SMTP_SPAM_ADDRESS_FILE  "spam-address.tab"
 #define SPAMMERS_LINE_MAX       512
@@ -1041,7 +1044,7 @@ static int      USmtpDoPlainAuth(BSOCK_HANDLE hBSock, char const * pszServer,
 ///////////////////////////////////////////////////////////////////////////////
     int             iSvrReponse;
 
-    sprintf(szAuthBuffer, "AUTH PLAIN %s", szEnc64Token);
+    SysSNPrintf(szAuthBuffer, sizeof(szAuthBuffer) - 1, "AUTH PLAIN %s", szEnc64Token);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
                             sizeof(szAuthBuffer)), 200))
@@ -1206,7 +1209,7 @@ static int      USmtpDoCramMD5Auth(BSOCK_HANDLE hBSock, char const * pszServer,
     unsigned int    uEnc64Length = 0;
     char            szResponse[1024] = "";
 
-    sprintf(szResponse, "%s %s", ppszAuthTokens[1], szChallenge);
+    SysSNPrintf(szResponse, sizeof(szResponse) - 1, "%s %s", ppszAuthTokens[1], szChallenge);
 
     encode64(szResponse, strlen(szResponse), szAuthBuffer,
             sizeof(szAuthBuffer), &uEnc64Length);
@@ -1295,7 +1298,7 @@ static int      USmtpDoExternAuth(BSOCK_HANDLE hBSock, char const * pszServer,
     int             iSvrReponse;
     char            szAuthBuffer[1024] = "";
 
-    sprintf(szAuthBuffer, "AUTH %s", ppszAuthTokens[1]);
+    SysSNPrintf(szAuthBuffer, sizeof(szAuthBuffer) - 1, "AUTH %s", ppszAuthTokens[1]);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
                             sizeof(szAuthBuffer)), 300))
@@ -1502,6 +1505,37 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
         return (INVALID_BSOCK_HANDLE);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Check if We need to supply an HELO host
+///////////////////////////////////////////////////////////////////////////////
+    char            szHeloHost[MAX_HOST_NAME] = "";
+
+    if (pszDomain == NULL)
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Get the DNS name of the local interface
+///////////////////////////////////////////////////////////////////////////////
+        if (MscGetSockHost(SockFD, szHeloHost) < 0)
+        {
+            SYS_INET_ADDR   SockInfo;
+
+            if (SysGetSockInfo(SockFD, SockInfo) < 0)
+            {
+                SysCloseSocket(SockFD);
+                return (INVALID_BSOCK_HANDLE);
+            }
+
+            char            szIP[128] = "???.???.???.???";
+
+            strcpy(szHeloHost, SysInetNToA(SockInfo, szIP));
+        }
+
+        pszDomain = szHeloHost;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Attach socket to buffered reader
+///////////////////////////////////////////////////////////////////////////////
     BSOCK_HANDLE    hBSock = BSckAttach(SockFD);
 
     if (hBSock == INVALID_BSOCK_HANDLE)
@@ -1535,7 +1569,7 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
 ///////////////////////////////////////////////////////////////////////////////
 //  Send HELO and read result
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(szRTXBuffer, "HELO %s", pszDomain);
+    SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "HELO %s", pszDomain);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
                             sizeof(szRTXBuffer)), 200))
@@ -1643,7 +1677,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
     int             iSvrReponse = -1;
     char            szRTXBuffer[2048] = "";
 
-    sprintf(szRTXBuffer, "MAIL FROM:<%s>", pszFrom);
+    SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "MAIL FROM:<%s>", pszFrom);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
                             sizeof(szRTXBuffer)), 200))
@@ -1662,7 +1696,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 ///////////////////////////////////////////////////////////////////////////////
 //  Send RCPT TO: and read result
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(szRTXBuffer, "RCPT TO:<%s>", pszRcpt);
+    SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "RCPT TO:<%s>", pszRcpt);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
                             sizeof(szRTXBuffer)), 200))
@@ -2018,7 +2052,9 @@ int             USmtpRBLCheck(SYS_INET_ADDR const & PeerInfo)
 
     if (USmtpDnsMapsContained(PeerInfo, RBL_MAPS_DOMAIN))
     {
-        ErrSetErrorCode(ERR_RBL_SPAMMER, SysInetNToA(PeerInfo));
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_RBL_SPAMMER, SysInetNToA(PeerInfo, szIP));
         return (ERR_RBL_SPAMMER);
     }
 
@@ -2033,7 +2069,9 @@ int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo)
 
     if (USmtpDnsMapsContained(PeerInfo, RSS_MAPS_DOMAIN))
     {
-        ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo));
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo, szIP));
         return (ERR_RSS_SPAMMER);
     }
 
@@ -2048,8 +2086,27 @@ int             USmtpORBSCheck(SYS_INET_ADDR const & PeerInfo)
 
     if (USmtpDnsMapsContained(PeerInfo, ORBS_MAPS_DOMAIN))
     {
-        ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo));
-        return (ERR_RSS_SPAMMER);
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_ORBS_SPAMMER, SysInetNToA(PeerInfo, szIP));
+        return (ERR_ORBS_SPAMMER);
+    }
+
+    return (0);
+
+}
+
+
+
+int             USmtpDULCheck(SYS_INET_ADDR const & PeerInfo)
+{
+
+    if (USmtpDnsMapsContained(PeerInfo, DUL_MAPS_DOMAIN))
+    {
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_DUL_SPAMMER, SysInetNToA(PeerInfo, szIP));
+        return (ERR_DUL_SPAMMER);
     }
 
     return (0);
@@ -2143,7 +2200,9 @@ int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo)
             fclose(pSpammersFile);
             RLckUnlockSH(hResLock);
 
-            ErrSetErrorCode(ERR_SPAMMER_IP, SysInetNToA(PeerInfo));
+            char            szIP[128] = "???.???.???.???";
+
+            ErrSetErrorCode(ERR_SPAMMER_IP, SysInetNToA(PeerInfo, szIP));
             return (ERR_SPAMMER_IP);
         }
 
@@ -2245,8 +2304,8 @@ int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomai
     char            szPeerIP[128] = "",
                     szSockIP[128] = "";
 
-    strcpy(szPeerIP, SysInetNToA(PeerInfo));
-    strcpy(szSockIP, SysInetNToA(SockInfo));
+    SysInetNToA(PeerInfo, szPeerIP);
+    SysInetNToA(SockInfo, szSockIP);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write message info. If You change the order ( or add new fields ) You must

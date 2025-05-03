@@ -39,18 +39,19 @@ MAILSVR = XMail
 CRTLCLNT = CtrlClnt
 XMCRYPT = XMCrypt
 MKUSERS = MkUsers
+SENDMAIL = sendmail
 
 SVRSRCS = BuffSock.${CPP} CTRLSvr.${CPP} DynDNS.${CPP} DNS.${CPP} DNSCache.${CPP} Errors.${CPP} ExtAliases.${CPP} FINGSvr.${CPP} \
 	MailConfig.${CPP} MailSvr.${CPP} Maildir.${CPP} MailDomains.${CPP} MD5.${CPP} MiscUtils.${CPP} LMAILSvr.${CPP} \
 	POP3GwLink.${CPP} POP3Svr.${CPP} POP3Utils.${CPP} PSYNCSvr.${CPP} ResLocks.${CPP} SList.${CPP} SMAILSvr.${CPP} \
-	TabIndex.${CPP} SMAILUtils.${CPP} SMTPSvr.${CPP} SMTPUtils.${CPP} ShBlocks.${CPP} StrUtils.${CPP} Queue.${CPP} \
-	SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP}
+	TabIndex.${CPP} SMAILUtils.${CPP} SMTPSvr.${CPP} SMTPUtils.${CPP} ShBlocks.${CPP} StrUtils.${CPP} MessQueue.${CPP} \
+	QueueUtils.${CPP} SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP}
 
 SVROBJS = BuffSock.${O} CTRLSvr.${O} DynDNS.${O} DNS.${O} DNSCache.${O} Errors.${O} ExtAliases.${O} FINGSvr.${O} \
 	MailConfig.${O} MailSvr.${O} Maildir.${O} MailDomains.${O} MD5.${O} MiscUtils.${O} LMAILSvr.${O} \
 	POP3GwLink.${O} POP3Svr.${O} POP3Utils.${O} PSYNCSvr.${O} ResLocks.${O} SList.${O} SMAILSvr.${O} \
-	TabIndex.${O} SMAILUtils.${O} SMTPSvr.${O} SMTPUtils.${O} ShBlocks.${O} StrUtils.${O} Queue.${O} \
-	SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O}
+	TabIndex.${O} SMAILUtils.${O} SMTPSvr.${O} SMTPUtils.${O} ShBlocks.${O} StrUtils.${O} MessQueue.${O} \
+	QueueUtils.${O} SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O}
 
 CCLNSRCS = Base64Enc.${CPP} BuffSock.${CPP} SysDep.${CPP} StrUtils.${CPP} MD5.${CPP} MiscUtils.${CPP} CTRLClient.${CPP} Errors.${CPP}
 
@@ -64,10 +65,14 @@ MKUSRCS = MkUsers.${CPP}
 
 MKUOBJS = MkUsers.${O}
 
+SENDMAILSRCS = SendMail.${CPP}
+
+SENDMAILOBJS = SendMail.${O}
+
 %.${O} : %.${CPP}
 	${CC} ${CPPFLAGS} ${CFLAGS} -c $*.${CPP}
 
-all: ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS}
+all: ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
 
 ${MAILSVR}: ${SVROBJS}
 	${LD} -o ${MAILSVR} ${SVROBJS} ${LDFLAGS}
@@ -85,9 +90,13 @@ ${MKUSERS}: ${MKUOBJS}
 	${LD} -o ${MKUSERS} ${MKUOBJS} ${LDFLAGS}
 	strip ${MKUSERS}
 
+${SENDMAIL}: ${SENDMAILOBJS}
+	${LD} -o ${SENDMAIL} ${SENDMAILOBJS} ${LDFLAGS}
+	strip ${SENDMAIL}
+
 distclean: clean
 
 clean:
-	rm -f .depend a.out core ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS}
+	rm -f .depend a.out core ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
 	rm -f *.${O} *~
 

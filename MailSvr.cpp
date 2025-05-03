@@ -39,7 +39,8 @@
 #include "DNSCache.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "ExtAliases.h"
 #include "MailDomains.h"
 #include "POP3GwLink.h"
@@ -79,6 +80,7 @@
 #define CTRL_SERVER_SESSION_TIMEOUT 120
 #define SERVER_SLEEP_TIMESLICE      2
 #define SHUTDOWN_CHECK_TIME         2
+#define STD_POP3AUTH_EXPIRE_TIME    (15 * 60)
 
 
 
@@ -127,6 +129,7 @@ SHB_HANDLE      hShbFING,
                 hShbPSYNC,
                 hShbLMAIL;
 char            szMailPath[SYS_MAX_PATH];
+QUEUE_HANDLE    hSpoolQueue;
 SYS_SEMAPHORE   hSyncSem;
 bool            bServerDebug;
 int             iLogRotateHours = LOG_ROTATE_HOURS;
@@ -135,7 +138,6 @@ int             iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
 ///////////////////////////////////////////////////////////////////////////////
 //  Local visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
-static SHB_HANDLE hShbQueue;
 static char     szShutdownFile[SYS_MAX_PATH];
 static int      iNumSMAILThreads;
 static int      iNumLMAILThreads;
@@ -538,6 +540,7 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
                     iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
                     iMaxRcpts = STD_SMTP_MAX_RCPTS,
                     iNumAddr = 0;
+    unsigned int    uPopAuthExpireTime = STD_POP3AUTH_EXPIRE_TIME;
     long            lMaxThreads = MAX_SMTP_THREADS;
     unsigned long   ulFlags = 0;
     ServerNetPath   SvrPath[MAX_SMTP_ACCEPT_ADDRESSES];
@@ -578,6 +581,12 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
                 if (++ii < iArgCount)
                     iMaxRcpts = atoi(pszArgs[ii]);
                 break;
+
+            case ('e'):
+                if (++ii < iArgCount)
+                    uPopAuthExpireTime = (unsigned int) atol(pszArgs[ii]);
+                break;
+
         }
     }
 
@@ -599,6 +608,7 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
     pSMTPCfg->iSessionTimeout = iSessionTimeout;
     pSMTPCfg->iTimeout = STD_SERVER_TIMEOUT;
     pSMTPCfg->iMaxRcpts = iMaxRcpts;
+    pSMTPCfg->uPopAuthExpireTime = uPopAuthExpireTime;
     pSMTPCfg->iNumAddr = iNumAddr;
 
     for (int nn = 0; nn < iNumAddr; nn++)
@@ -670,7 +680,7 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
                 if (++ii < iArgCount)
                     iNumSMAILThreads = atoi(pszArgs[ii]);
 
-                iNumSMAILThreads = min(MAX_SMAIL_THREADS, max(1, iNumSMAILThreads));
+                iNumSMAILThreads = Min(MAX_SMAIL_THREADS, Max(1, iNumSMAILThreads));
                 break;
 
             case ('t'):
@@ -709,11 +719,6 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 
     pSMAILCfg->ulFlags = ulFlags;
     pSMAILCfg->lThreadCount = 0;
-    pSMAILCfg->iTimeout = STD_SERVER_TIMEOUT;
-    pSMAILCfg->iRetryTimeout = iRetryTimeout;
-    pSMAILCfg->iRetryIncrRatio = iRetryIncrRatio;
-    pSMAILCfg->iMaxRetry = iMaxRetry;
-    pSMAILCfg->iSleepTimeout = Max(iNumSMAILThreads, 4);
 
 
     ShbUnlock(hShbSMAIL);
@@ -721,7 +726,12 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Initialize queue fs
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCreateQueue(hShbQueue, NULL, iQueueSplitLevel) < 0)
+    char            szSpoolDir[SYS_MAX_PATH] = "";
+
+    SvrGetSpoolDir(szSpoolDir);
+
+    if ((hSpoolQueue = QueOpen(szSpoolDir, iMaxRetry, iRetryTimeout, iRetryIncrRatio,
+                            iQueueSplitLevel)) == INVALID_QUEUE_HANDLE)
     {
         ErrorPush();
         ShbCloseBlock(hShbSMAIL);
@@ -773,7 +783,7 @@ static void     SvrCleanupSMAIL(void)
 ///////////////////////////////////////////////////////////////////////////////
 //  Close the mail queue
 ///////////////////////////////////////////////////////////////////////////////
-    QueCloseQueue(hShbQueue);
+    QueClose(hSpoolQueue);
 
 }
 
@@ -801,7 +811,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
                 if (++ii < iArgCount)
                     iNumSyncThreads = atoi(pszArgs[ii]);
 
-                iNumSyncThreads = min(MAX_PSYNC_NUM_THREADS, max(1, iNumSyncThreads));
+                iNumSyncThreads = Min(MAX_PSYNC_NUM_THREADS, Max(1, iNumSyncThreads));
                 break;
         }
     }
@@ -906,7 +916,7 @@ static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
                 if (++ii < iArgCount)
                     iNumLMAILThreads = atoi(pszArgs[ii]);
 
-                iNumLMAILThreads = min(MAX_LMAIL_THREADS, max(1, iNumLMAILThreads));
+                iNumLMAILThreads = Min(MAX_LMAIL_THREADS, Max(1, iNumLMAILThreads));
                 break;
 
             case ('l'):
@@ -994,7 +1004,9 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
         SysFree(pszValue);
     }
 
+
     bServerDebug = false;
+
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -1026,6 +1038,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
                         ++iQueueSplitLevel;
                 }
                 break;
+
         }
     }
 
@@ -1089,16 +1102,6 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
         return (ErrorPop());
     }
 
-///////////////////////////////////////////////////////////////////////////////
-//  Initialize queue handler
-///////////////////////////////////////////////////////////////////////////////
-    if (QueHandlerInit() < 0)
-    {
-        ErrorPush();
-        RLckCleanupLockers();
-
-        return (ErrorPop());
-    }
 
     return (0);
 
@@ -1108,11 +1111,6 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
 static void     SvrCleanup(void)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Cleanup queue handler
-///////////////////////////////////////////////////////////////////////////////
-    QueHandlerCleanup();
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Cleanup resource lockers
 ///////////////////////////////////////////////////////////////////////////////

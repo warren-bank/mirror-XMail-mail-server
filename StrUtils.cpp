@@ -661,7 +661,7 @@ int             StrSplitString(char const * pszString, char const * pszSplitters
         {
             int             iUserLength = (int) (pszSplitChar - pszString);
 
-            StrNCpy(pszStrLeft, pszString, min(iUserLength + 1, iSizeLeft));
+            StrNCpy(pszStrLeft, pszString, Min(iUserLength + 1, iSizeLeft));
         }
 
         if (pszStrRight != NULL)

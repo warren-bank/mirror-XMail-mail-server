@@ -20,30 +20,45 @@
  *
  */
 
-#ifdef WIN32
 
-#include "MainWin.cpp"
+#ifndef _SYSINCLUDEFREEBSD_H
+#define _SYSINCLUDEFREEBSD_H
 
-#else           // #ifdef WIN32
-#ifdef __LINUX__
 
-#include "MainLinux.cpp"
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/select.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+#include <ctype.h>
+#include <signal.h>
+#include <time.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <netdb.h>
+#include <dirent.h>
+#include <stdarg.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <syslog.h>
+#include <dlfcn.h>
+#include <sched.h>
+#include <pthread.h>
 
-#else           // #ifdef __LINUX__
-#ifdef __SOLARIS__
 
-#include "MainSolaris.cpp"
 
-#else           // #ifdef __SOLARIS__
-#ifdef __FREEBSD__
 
-#include "MainFreeBSD.cpp"
-
-#else           // #ifdef __FREEBSD__
-
-#error System type not defined
-
-#endif          // #ifdef __FREEBSD__
-#endif          // #ifdef __SOLARIS__
-#endif          // #ifdef __LINUX__
-#endif          // #ifdef WIN32
+#endif

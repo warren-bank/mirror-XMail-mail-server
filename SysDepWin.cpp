@@ -879,7 +879,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
     if (getsockopt(SockFD, SOL_SOCKET, SO_SNDBUF, (char *) &iSndBuffSize, &iOptLenght) != 0)
         iSndBuffSize = MIN_TCP_SEND_SIZE;
     else
-        iSndBuffSize = min(iSndBuffSize, MAX_TCP_SEND_SIZE);
+        iSndBuffSize = Min(iSndBuffSize, MAX_TCP_SEND_SIZE);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -891,10 +891,10 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
     while (ullSentBytes < ullFileSize)
     {
-        int             iCurrSend = (int) min(iSndBuffSize, ullFileSize - ullSentBytes);
+        int             iCurrSend = (int) Min(iSndBuffSize, ullFileSize - ullSentBytes);
 
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
-                                max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
+                                Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
         {
             ErrorPush();
             UnmapViewOfFile(pAddress);
@@ -977,7 +977,9 @@ int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN)
 
     if (pHostEnt == NULL)
     {
-        ErrSetErrorCode(ERR_GET_SOCK_HOST, SysInetNToA(AddrInfo));
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_GET_SOCK_HOST, SysInetNToA(AddrInfo, szIP));
         return (ERR_GET_SOCK_HOST);
     }
 
@@ -1030,10 +1032,24 @@ int             SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo)
 
 
 
-char const     *SysInetNToA(SYS_INET_ADDR const & AddrInfo)
+char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char *pszIP)
 {
 
-    return (inet_ntoa(AddrInfo.Addr.sin_addr));
+    union
+    {
+        unsigned int    a;
+        unsigned char   b[4];
+    }               UAddr;
+
+    memcpy(&UAddr, &AddrInfo.Addr.sin_addr, sizeof(UAddr));
+
+    sprintf(pszIP, "%u.%u.%u.%u",
+            (unsigned int) UAddr.b[0],
+            (unsigned int) UAddr.b[1],
+            (unsigned int) UAddr.b[2],
+            (unsigned int) UAddr.b[3]);
+
+    return (pszIP);
 
 }
 
@@ -1975,7 +1991,7 @@ SYS_INT64       SysMsTime(void)
 
     MsTicks -= PCSysStart;
     MsTicks /= PCFreq;
-    MsTicks += (SYS_INT64) tSysStart * 1000;
+    MsTicks += (SYS_INT64) tSysStart *1000;
 
     return (MsTicks);
 

@@ -75,7 +75,6 @@
 #define ERR_LINK_EXIST              (-44)
 #define ERR_WRITE_LINKS_FILE        (-45)
 #define ERR_LINK_NOT_FOUND          (-46)
-#define ERR_NO_SMTP_SPOOL_FILES     (-47)
 #define ERR_SMTPGW_FILE_NOT_FOUND   (-48)
 #define ERR_GATEWAY_ALREADY_EXIST   (-49)
 #define ERR_GATEWAY_NOT_FOUND       (-50)
@@ -85,7 +84,6 @@
 #define ERR_MLUSER_NOT_FOUND        (-54)
 #define ERR_SPOOL_FILE_NOT_FOUND    (-55)
 #define ERR_INVALID_SPOOL_FILE      (-56)
-#define ERR_SPOOL_FILE_NOT_READY    (-57)
 #define ERR_SPOOL_FILE_EXPIRED      (-58)
 #define ERR_SMTPRELAY_FILE_NOT_FOUND (-59)
 #define ERR_DOMAINS_FILE_NOT_FOUND  (-60)
@@ -207,9 +205,6 @@
 #define ERR_SMTPFWD_NOT_FOUND       (-182)
 #define ERR_USER_BREAK              (-183)
 #define ERR_SET_THREAD_PRIORITY     (-184)
-#define ERR_INVALID_QUEUE_PATH      (-185)
-#define ERR_QUEUE_ARRAY_FULL        (-186)
-#define ERR_QUEUE_ENTRY_NOT_FOUND   (-187)
 #define ERR_NULL_SENDER             (-188)
 #define ERR_RCPTTO_UNKNOWN          (-189)
 #define ERR_LOADMODULE              (-190)
@@ -223,13 +218,15 @@
 #define ERR_THREADCREATE            (-198)
 #define ERR_CREATEMUTEX             (-199)
 #define ERR_NO_LOCAL_SPOOL_FILES    (-200)
-#define ERR_NO_POP3_DOMAIN          (-201)
+#define ERR_NO_HANDLED_DOMAIN       (-201)
 #define ERR_INVALID_MAIL_DOMAIN     (-202)
 #define ERR_BAD_CMDSTR_CHARS        (-203)
 #define ERR_FETCHMSG_UNDELIVERED    (-204)
 #define ERR_USER_VAR_NOT_FOUND      (-205)
-
-
+#define ERR_ORBS_SPAMMER            (-206)
+#define ERR_DUL_SPAMMER             (-207)
+#define ERR_NO_POP3_IP              (-208)
+#define ERR_NO_MESSAGE_FILE         (-209)
 
 
 

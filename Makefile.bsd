@@ -18,7 +18,7 @@
 #
 #  Davide Libenzi <davidel@xmailserver.org>
 #
-SYSTYPE = linux
+SYSTYPE = freebsd
 O = o
 A = a
 CPP = cpp
@@ -30,10 +30,10 @@ LD = gcc
 # Remember that Maildir is not compatible with the old mailbox structure, so You've
 # to convert Your accounts ( if any ) to the new Maildir format.
 #
-CFLAGS = -O2 -I. -D__LINUX__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
-# CFLAGS = -O2 -I. -D__LINUX__ -DXMAIL_X86 -DCONFIG_MAILDIR -D_REENTRANT=1 -D_THREAD_SAFE=1
+CFLAGS = -O2 -I. -D__FREEBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
+# CFLAGS = -O2 -I. -D__FREEBSD__ -DXMAIL_X86 -DCONFIG_MAILDIR -D_REENTRANT=1 -D_THREAD_SAFE=1
 
-LDFLAGS = -ldl -lpthread
+LDFLAGS = -lcrypt -lc_r
 MAILSVR = XMail
 CRTLCLNT = CtrlClnt
 XMCRYPT = XMCrypt

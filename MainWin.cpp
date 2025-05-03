@@ -25,6 +25,8 @@
 #include "SysDep.h"
 #include "SvrDefines.h"
 #include "ShBlocks.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
 

@@ -28,6 +28,7 @@
 #include "ResLocks.h"
 #include "BuffSock.h"
 #include "MiscUtils.h"
+#include "MessQueue.h"
 #include "MailConfig.h"
 #include "MailSvr.h"
 
@@ -426,7 +427,7 @@ static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName)
 static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int, char const *))
 {
 
-    int             iWaitGate = -1;
+    int             iWaitGate = RLckGetWaitGate(pszResourceName);
 
     for (;;)
     {
@@ -435,10 +436,6 @@ static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int,
 ///////////////////////////////////////////////////////////////////////////////
         if (SysLockMutex(hRLMutex, SYS_INFINITE_TIMEOUT) < 0)
             return (INVALID_RLCK_HANDLE);
-
-
-        if (iWaitGate < 0)
-            iWaitGate = RLckGetWaitGate(pszResourceName);
 
 
         int             iLockResult = pLockProc(iWaitGate, pszResourceName);
@@ -479,6 +476,7 @@ static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char cons
 {
 
     char           *pszResourceName = (char *) hLock;
+    int             iWaitGate = RLckGetWaitGate(pszResourceName);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lock resources list access
@@ -487,8 +485,6 @@ static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char cons
         return (ErrGetErrorCode());
 
 
-    int             iWaitGate = RLckGetWaitGate(pszResourceName);
-
     if (pUnlockProc(iWaitGate, pszResourceName) < 0)
     {
         ErrorPush();
@@ -496,6 +492,7 @@ static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char cons
         SysFree(pszResourceName);
         return (ErrorPop());
     }
+
 
     SysUnlockMutex(hRLMutex);
 

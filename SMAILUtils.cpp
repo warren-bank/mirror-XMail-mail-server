@@ -30,7 +30,8 @@
 #include "ResLocks.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
 #include "ExtAliases.h"
@@ -54,9 +55,9 @@
 #define CUSTOM_CMD_LINE_MAX             512
 #define SMAIL_DOMAIN_PROC_DIR           "custdomains"
 #define SMAIL_DOMAIN_FILTER_DIR         "filters"
-#define SMAIL_DEFAULT_FILTER            "defaultfilter.tab"
+#define SMAIL_DEFAULT_FILTER            ".tab"
 #define SMAIL_LOG_FILE                  "smail"
-#define MAX_RECEIVED_TAGS               32
+#define MAX_MTA_OPS                     16
 #define ADDRESS_TOKENIZER               ","
 
 
@@ -113,28 +114,34 @@ static int      USmlDumpHeaders(FILE * pMsgFile, HSLIST & hTagList);
 static void     USmlFreeData(SpoolFileData * pSFD);
 static int      USmlFlushMessageFile(SpoolFileData * pSFD);
 static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool,
-                        char const * pszMPFile, LocalMailProcConfig & LMPC);
+                        QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char const * pszMPFile,
+                        LocalMailProcConfig & LMPC);
 static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
                         SPLF_HANDLE hFSpool);
 static int      USmlCmd_external(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC);
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC);
 static int      USmlCmd_wait(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC);
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC);
 static int      USmlCmd_mailbox(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC);
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC);
 static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC);
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC);
 static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC);
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC);
 static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessageID,
                         char const * pszSmtpMessageID, char const * pszFrom, char const * pszRcpt,
                         char const * pszMedium, char const * pszParam);
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
                         int iMaxAddress);
-static char const  *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
-                            char * pszAddress, int iMaxAddress);
+static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
+                        char *pszAddress, int iMaxAddress);
 static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS);
-static char   **USmlGetAddressList(HSLIST & hTagList, ...);
+static char   **USmlGetAddressList(HSLIST & hTagList,...);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMaxAddress);
 static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList);
 static int      USmlCreateSpoolFile(FILE * pMailFile, char const * pszMailFrom,
@@ -1059,7 +1066,7 @@ int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
     {
         char            szTagData[512] = "";
 
-        sprintf(szTagData, "<%s>", pszAddress);
+        SysSNPrintf(szTagData, sizeof(szTagData) - 1, "<%s>", pszAddress);
 
         if (USmlAddTag(pSFD->hTagList, pszTagName, szTagData, 1) < 0)
             return (ErrGetErrorCode());
@@ -1191,21 +1198,29 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
         {
             char           *pszRetPath = USmlAddrConcat(ppszFrom);
 
-            sprintf(szReturnPath, "Return-Path: <");
-
             if (pszRetPath != NULL)
-                strcat(szReturnPath, pszRetPath), SysFree(pszRetPath);
+            {
+                int             iRetLength = strlen(pszRetPath),
+                                iExtraLength = CStringSize("Return-Path: <>");
 
-            strcat(szReturnPath, ">");
+                if (iRetLength > (int) (sizeof(szReturnPath) - iExtraLength - 2))
+                    pszRetPath[sizeof(szReturnPath) - iExtraLength - 2] = '\0';
+
+                SysSNPrintf(szReturnPath, sizeof(szReturnPath) - 1,
+                        "Return-Path: <%s>", pszRetPath);
+
+                SysFree(pszRetPath);
+            }
         }
         else
         {
-            sprintf(szReturnPath, "Return-Path: <%s@%s>", szName, szDomain);
+            SysSNPrintf(szReturnPath, sizeof(szReturnPath) - 1, "Return-Path: <%s@%s>",
+                    szName, szDomain);
 
 
-            char            szAddress[256] = "";
+            char            szAddress[MAX_ADDR_NAME] = "";
 
-            sprintf(szAddress, "%s@%s", szName, szDomain);
+            SysSNPrintf(szAddress, sizeof(szAddress) - 1, "%s@%s", szName, szDomain);
 
             USmlSetTagAddress(hFSpool, "From", szAddress);
         }
@@ -1338,7 +1353,7 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
 
 
 int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
-                        LocalMailProcConfig & LMPC)
+                        QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, LocalMailProcConfig & LMPC)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Exist user custom message processing ?
@@ -1384,7 +1399,8 @@ int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
 ///////////////////////////////////////////////////////////////////////////////
 //  Process custom mailings
 ///////////////////////////////////////////////////////////////////////////////
-        if (USmlProcessCustomMailingFile(pUI, hFSpool, szMPFile, LMPC) < 0)
+        if (USmlProcessCustomMailingFile(pUI, hFSpool, hQueue, hMessage,
+                        szMPFile, LMPC) < 0)
         {
             ErrorPush();
             SysRemove(szMPFile);
@@ -1402,7 +1418,8 @@ int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
 
 
 static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool,
-                        char const * pszMPFile, LocalMailProcConfig & LMPC)
+                        QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char const * pszMPFile,
+                        LocalMailProcConfig & LMPC)
 {
 
     FILE           *pMPFile = fopen(pszMPFile, "rt");
@@ -1433,15 +1450,20 @@ static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool
 
 
             if (stricmp(ppszCmdTokens[0], "external") == 0)
-                USmlCmd_external(ppszCmdTokens, iFieldsCount, pUI, hFSpool, LMPC);
+                USmlCmd_external(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
+                        hQueue, hMessage, LMPC);
             else if (stricmp(ppszCmdTokens[0], "wait") == 0)
-                USmlCmd_wait(ppszCmdTokens, iFieldsCount, pUI, hFSpool, LMPC);
+                USmlCmd_wait(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
+                        hQueue, hMessage, LMPC);
             else if (stricmp(ppszCmdTokens[0], "mailbox") == 0)
-                USmlCmd_mailbox(ppszCmdTokens, iFieldsCount, pUI, hFSpool, LMPC);
+                USmlCmd_mailbox(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
+                        hQueue, hMessage, LMPC);
             else if (stricmp(ppszCmdTokens[0], "redirect") == 0)
-                USmlCmd_redirect(ppszCmdTokens, iFieldsCount, pUI, hFSpool, LMPC);
+                USmlCmd_redirect(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
+                        hQueue, hMessage, LMPC);
             else if (stricmp(ppszCmdTokens[0], "lredirect") == 0)
-                USmlCmd_lredirect(ppszCmdTokens, iFieldsCount, pUI, hFSpool, LMPC);
+                USmlCmd_lredirect(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
+                        hQueue, hMessage, LMPC);
 
         }
 
@@ -1561,7 +1583,8 @@ static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
 
 
 static int      USmlCmd_external(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC)
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC)
 {
 
     if (iNumTokens < 5)
@@ -1583,7 +1606,7 @@ static int      USmlCmd_external(char **ppszCmdTokens, int iNumTokens, UserInfo 
         char const     *pszMailFrom = USmlMailFrom(hFSpool);
         char const     *pszRcptTo = USmlRcptTo(hFSpool);
 
-        QueErrLogMessage(pszSpoolFilePath,
+        QueUtErrLogMessage(hQueue, hMessage,
                 "USMAIL EXTRN-Send Prg = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
                 ppszCmdTokens[3], pszMailFrom, pszRcptTo);
 
@@ -1604,7 +1627,8 @@ static int      USmlCmd_external(char **ppszCmdTokens, int iNumTokens, UserInfo 
 
 
 static int      USmlCmd_wait(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC)
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC)
 {
 
     if (iNumTokens != 2)
@@ -1625,7 +1649,8 @@ static int      USmlCmd_wait(char **ppszCmdTokens, int iNumTokens, UserInfo * pU
 
 
 static int      USmlCmd_mailbox(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC)
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC)
 {
 
     if (iNumTokens != 1)
@@ -1674,7 +1699,8 @@ static int      USmlCmd_mailbox(char **ppszCmdTokens, int iNumTokens, UserInfo *
 
 
 static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC)
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC)
 {
 
     if (iNumTokens < 2)
@@ -1690,24 +1716,36 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
 
     for (int ii = 1; ppszCmdTokens[ii] != NULL; ii++)
     {
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "";
+///////////////////////////////////////////////////////////////////////////////
+//  Get message handle
+///////////////////////////////////////////////////////////////////////////////
+        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
-            continue;
+        if (hRedirMessage == INVALID_QMSG_HANDLE)
+            return (ErrGetErrorCode());
 
-        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii], szSpoolTmpFile) < 0)
+
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+        QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
+
+
+        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii], szQueueFilePath) < 0)
         {
-            CheckRemoveFile(szSpoolTmpFile);
-            continue;
+            ErrorPush();
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
+            return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hRedirMessage) < 0)
         {
             ErrorPush();
-            SysRemove(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
             return (ErrorPop());
         }
     }
@@ -1719,7 +1757,8 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
 
 
 static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
-                        SPLF_HANDLE hFSpool, LocalMailProcConfig & LMPC)
+                        SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        LocalMailProcConfig & LMPC)
 {
 
     if (iNumTokens < 2)
@@ -1737,24 +1776,36 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
 ///////////////////////////////////////////////////////////////////////////////
     for (int ii = 1; ppszCmdTokens[ii] != NULL; ii++)
     {
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "";
+///////////////////////////////////////////////////////////////////////////////
+//  Get message handle
+///////////////////////////////////////////////////////////////////////////////
+        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
-            continue;
+        if (hRedirMessage == INVALID_QMSG_HANDLE)
+            return (ErrGetErrorCode());
 
-        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii], szSpoolTmpFile) < 0)
+
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+        QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
+
+
+        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii], szQueueFilePath) < 0)
         {
-            CheckRemoveFile(szSpoolTmpFile);
-            continue;
+            ErrorPush();
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
+            return (ErrorPop());
         }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hRedirMessage) < 0)
         {
             ErrorPush();
-            SysRemove(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hRedirMessage);
+            QueCloseMessage(hSpoolQueue, hRedirMessage);
             return (ErrorPop());
         }
     }
@@ -1848,25 +1899,26 @@ int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCus
 
 
 
-int             USmlGetDomainCustomSpoolFile(char const * pszSpoolFilePath, char *pszCustFilePath)
+int             USmlGetDomainCustomSpoolFile(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        char *pszCustFilePath)
 {
 
-    return (QueGetQueuePath(pszSpoolFilePath, QUEUE_CUST_DIR, pszCustFilePath));
+    return (QueGetFilePath(hQueue, hMessage, pszCustFilePath, QUEUE_CUST_DIR));
 
 }
 
 
 
 
-int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, char const * pszDestDomain,
-                        char *pszCustFilePath)
+int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, char const * pszDestDomain, char *pszCustFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if exist a spooled copy
 ///////////////////////////////////////////////////////////////////////////////
     char const     *pszSpoolFilePath = USmlGetSpoolFilePath(hFSpool);
 
-    USmlGetDomainCustomSpoolFile(pszSpoolFilePath, pszCustFilePath);
+    USmlGetDomainCustomSpoolFile(hQueue, hMessage, pszCustFilePath);
 
     if (SysExistFile(pszCustFilePath))
         return (0);
@@ -1992,10 +2044,22 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
     CfgGetRootPath(szMailRootPath);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Get lower case user and domain
+///////////////////////////////////////////////////////////////////////////////
+    char            szLoUser[MAX_ADDR_NAME] = "",
+                    szLoDomain[MAX_ADDR_NAME] = "";
+
+    StrSNCpy(szLoUser, pszUser);
+    StrLower(szLoUser);
+
+    StrSNCpy(szLoDomain, pszDomain);
+    StrLower(szLoDomain);
+
+///////////////////////////////////////////////////////////////////////////////
 //  Check for user specific file
 ///////////////////////////////////////////////////////////////////////////////
     sprintf(pszFilterFilePath, "%s%s%s%s@%s.tab", szMailRootPath,
-            SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, pszUser, pszDomain);
+            SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, szLoUser, szLoDomain);
 
     if (!SysExistFile(pszFilterFilePath))
     {
@@ -2003,7 +2067,7 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
 //  Check for domain file
 ///////////////////////////////////////////////////////////////////////////////
         sprintf(pszFilterFilePath, "%s%s%s%s.tab", szMailRootPath,
-                SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, pszDomain);
+                SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, szLoDomain);
 
         if (!SysExistFile(pszFilterFilePath))
         {
@@ -2192,8 +2256,8 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
 
 
 
-static char const  *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
-                            char * pszAddress, int iMaxAddress)
+static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
+                        char *pszAddress, int iMaxAddress)
 {
 
     char const     *pszStart = pszAt;
@@ -2222,7 +2286,7 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
 
     char const     *pszCurr = pszAddrList;
 
-    for(; (pszCurr != NULL) && (*pszCurr != '\0');)
+    for (; (pszCurr != NULL) && (*pszCurr != '\0');)
     {
         char const     *pszAt = strchr(pszCurr, '@');
 
@@ -2233,7 +2297,7 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
         char            szAddress[MAX_SMTP_ADDRESS] = "";
 
         if ((pszCurr = USmlAddressFromAtPtr(pszAt, pszAddrList, szAddress,
-                sizeof(szAddress) - 1)) != NULL)
+                                sizeof(szAddress) - 1)) != NULL)
         {
             if (StrDynSize(pAddrDS) > 0)
                 StrDynAdd(pAddrDS, ADDRESS_TOKENIZER);
@@ -2249,7 +2313,7 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
 
 
 
-static char   **USmlGetAddressList(HSLIST & hTagList, ...)
+static char   **USmlGetAddressList(HSLIST & hTagList,...)
 {
 
     DynString       AddrDS;
@@ -2318,7 +2382,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 //  addresses from the message
 ///////////////////////////////////////////////////////////////////////////////
         if ((ppszRcptList = USmlGetAddressList(hTagList,
-                "To", "Cc", "Bcc", NULL)) == NULL)
+                                "To", "Cc", "Bcc", NULL)) == NULL)
             return (NULL);
 
 
@@ -2330,7 +2394,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 //  "?" + masquerade-domain
 ///////////////////////////////////////////////////////////////////////////////
         if ((ppszRcptList = USmlGetAddressList(hTagList,
-                "To", "Cc", "Bcc", NULL)) == NULL)
+                                "To", "Cc", "Bcc", NULL)) == NULL)
             return (NULL);
 
 
@@ -2360,7 +2424,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 //  "&" + add-domain
 ///////////////////////////////////////////////////////////////////////////////
         if ((ppszRcptList = USmlGetAddressList(hTagList,
-                "To", "Cc", "Bcc", NULL)) == NULL)
+                                "To", "Cc", "Bcc", NULL)) == NULL)
             return (NULL);
 
 
@@ -2389,7 +2453,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 
 
 
-int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszMailFile)
+int             USmlDeliverFetchedMsg(char const * pszSyncAddr, char const * pszMailFile)
 {
 
     FILE           *pMailFile = fopen(pszMailFile, "rb");
@@ -2454,12 +2518,13 @@ int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszM
                         (USmlCustomizedDomain(szDestDomain) < 0)))
             continue;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get unique spool/tmp file path
-///////////////////////////////////////////////////////////////////////////////
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "";
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
+///////////////////////////////////////////////////////////////////////////////
+//  Get message handle
+///////////////////////////////////////////////////////////////////////////////
+        QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+
+        if (hMessage == INVALID_QMSG_HANDLE)
         {
             ErrorPush();
             StrFreeStrings(ppszRcptList);
@@ -2467,14 +2532,17 @@ int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszM
             return (ErrorPop());
         }
 
-///////////////////////////////////////////////////////////////////////////////
-//  Create spool file
-///////////////////////////////////////////////////////////////////////////////
-        if (USmlCreateSpoolFile(pMailFile, szFromAddr, ppszRcptList[ii],
-                szSpoolTmpFile) < 0)
+
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+        QueGetFilePath(hSpoolQueue, hMessage, szQueueFilePath);
+
+
+        if (USmlCreateSpoolFile(pMailFile, szFromAddr, ppszRcptList[ii], szQueueFilePath) < 0)
         {
             ErrorPush();
-            CheckRemoveFile(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
             StrFreeStrings(ppszRcptList);
             fclose(pMailFile);
             return (ErrorPop());
@@ -2483,10 +2551,11 @@ int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszM
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hMessage) < 0)
         {
             ErrorPush();
-            SysRemove(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
             StrFreeStrings(ppszRcptList);
             fclose(pMailFile);
             return (ErrorPop());
@@ -2590,87 +2659,32 @@ static int      USmlCreateSpoolFile(FILE * pMailFile, char const * pszMailFrom,
 
 
 
-int             USmlMailLoopCheck(SPLF_HANDLE hFSpool)
+int             USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig)
 {
 
     SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Initialize received tags array
+//  Count MTA ops
 ///////////////////////////////////////////////////////////////////////////////
-    int             ii;
-    char           *pszRecvTags[MAX_RECEIVED_TAGS];
-
-    for (ii = 0; ii < MAX_RECEIVED_TAGS; ii++)
-        pszRecvTags[ii] = NULL;
-
-///////////////////////////////////////////////////////////////////////////////
-//  Collect received tags
-///////////////////////////////////////////////////////////////////////////////
-    int             iReceivedCount = 0;
+    int             iReceivedCount = 0,
+                    iMaxMTAOps = SvrGetConfigInt("MaxMTAOps", MAX_MTA_OPS, hSvrConfig);
     MessageTagData *pMTD = (MessageTagData *) ListFirst(pSFD->hTagList);
 
-    for (ii = 0; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
+    for (; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
             ListNext(pSFD->hTagList, (PLISTLINK) pMTD))
+        if (stricmp(pMTD->pszTagName, "received") == 0)
+            ++iReceivedCount;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check MTA count
+///////////////////////////////////////////////////////////////////////////////
+    if (iReceivedCount > iMaxMTAOps)
     {
-        if ((stricmp(pMTD->pszTagName, "received") == 0) &&
-                (strstr(pMTD->pszTagData, APP_NAME_STR) != NULL))
-        {
-            if (pszRecvTags[ii] != NULL)
-                SysFree(pszRecvTags[ii]), pszRecvTags[ii] = NULL;
-
-            char const     *pszEndFixed = strchr(pMTD->pszTagData, ';');
-
-            if (pszEndFixed != NULL)
-            {
-                int             iTagLength = (int) (pszEndFixed - pMTD->pszTagData) + 1;
-
-                if ((pszRecvTags[ii] = (char *) SysAlloc(iTagLength + 1)) != NULL)
-                {
-                    strncpy(pszRecvTags[ii], pMTD->pszTagData, iTagLength);
-                    pszRecvTags[ii][iTagLength] = '\0';
-                }
-            }
-            else
-                pszRecvTags[ii] = SysStrDup(pMTD->pszTagData);
-
-
-            if (pszRecvTags[ii] != NULL)
-                ii = INext(ii, MAX_RECEIVED_TAGS), ++iReceivedCount;
-        }
+        ErrSetErrorCode(ERR_MAIL_LOOP_DETECTED);
+        return (ERR_MAIL_LOOP_DETECTED);
     }
 
-    iReceivedCount = min(iReceivedCount, MAX_RECEIVED_TAGS);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Check mail loops
-///////////////////////////////////////////////////////////////////////////////
-    for (ii = 0; ii < iReceivedCount; ii++)
-    {
-        if (pszRecvTags[ii] != NULL)
-        {
-            for (int jj = (ii + 1); jj < iReceivedCount; jj++)
-            {
-                if ((pszRecvTags[jj] != NULL) &&
-                        (stricmp(pszRecvTags[ii], pszRecvTags[jj]) == 0))
-                {
-                    for (ii = 0; ii < MAX_RECEIVED_TAGS; ii++)
-                        if (pszRecvTags[ii] != NULL)
-                            SysFree(pszRecvTags[ii]);
-
-                    ErrSetErrorCode(ERR_MAIL_LOOP_DETECTED);
-                    return (ERR_MAIL_LOOP_DETECTED);
-                }
-            }
-        }
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Free received tags
-///////////////////////////////////////////////////////////////////////////////
-    for (ii = 0; ii < iReceivedCount; ii++)
-        if (pszRecvTags[ii] != NULL)
-            SysFree(pszRecvTags[ii]);
 
     return (0);
 

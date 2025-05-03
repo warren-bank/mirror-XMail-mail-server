@@ -20,12 +20,12 @@
  *
  */
 
-#ifndef _SYSTYPESLINUX_H
-#define _SYSTYPESLINUX_H
+#ifndef _SYSTYPESFREEBSD_H
+#define _SYSTYPESFREEBSD_H
 
 
 
-#define SYS_OS_PORT             "Linux/" SYS_CPU_PORT
+#define SYS_OS_PORT             "FreeBSD/" SYS_CPU_PORT
 
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
 #define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
@@ -50,7 +50,7 @@
 #define SysSNPrintf             snprintf
 #define stricmp                 strcasecmp
 #define strnicmp                strncasecmp
-#define SysFileSync(fp)         do { fflush(fp); fdatasync(fileno(fp)); } while (0)
+#define SysFileSync(fp)         do { fflush(fp); fsync(fileno(fp)); } while (0)
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO

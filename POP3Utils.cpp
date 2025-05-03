@@ -31,7 +31,8 @@
 #include "BuffSock.h"
 #include "MD5.h"
 #include "MailConfig.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
 #include "MiscUtils.h"
@@ -47,6 +48,7 @@
 
 
 #define UPOP_IPMAP_FILE         "pop3.ipmap.tab"
+#define POP3_IP_LOGFILE         ".ipconn"
 
 #define POPF_MSG_DELETED        (1 << 0)
 #define POPF_MSG_SENT           (1 << 1)
@@ -70,6 +72,7 @@ struct POP3MsgData
 
 struct POP3SessionData
 {
+    SYS_INET_ADDR   PeerInfo;
     UserInfo       *pUI;
     HSLIST          hMessageList;
     int             iMsgCount;
@@ -115,6 +118,7 @@ static int      UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount,
                         unsigned long &ulMailboxSize);
 static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName);
 static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex);
+static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath);
 
 
 
@@ -469,6 +473,7 @@ POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
         return (INVALID_POP3_HANDLE);
     }
 
+    pPOPSD->PeerInfo = *pPeerInfo;
     pPOPSD->pUI = pUI;
     pPOPSD->iLastAccessed = 0;
     pPOPSD->iTimeout = STD_POP3_TIMEOUT;
@@ -895,6 +900,40 @@ int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iN
 
 
 
+int             UPopSaveUserIP(POP3_HANDLE hPOPSession)
+{
+
+    POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
+    char            szIpFilePath[SYS_MAX_PATH] = "";
+
+    UPopGetIpLogFilePath(pPOPSD->pUI, szIpFilePath);
+
+
+    char            szIP[128] = "???.???.???.???";
+
+    SysInetNToA(pPOPSD->PeerInfo, szIP);
+
+
+    FILE           *pIpFile = fopen(szIpFilePath, "wt");
+
+    if (pIpFile == NULL)
+    {
+        ErrSetErrorCode(ERR_FILE_CREATE, szIpFilePath);
+        return (ERR_FILE_CREATE);
+    }
+
+
+    fprintf(pIpFile, "%s\n", szIP);
+
+
+    fclose(pIpFile);
+
+    return (0);
+
+}
+
+
+
 static int      UPopCheckResponse(const char *pszResponse, char *pszMessage)
 {
 
@@ -1246,7 +1285,7 @@ static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 
 
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer, const char *pszRmtName,
-                        const char *pszRmtPassword, const char *pszAuthType, const char * pszErrorAccount)
+                        const char *pszRmtPassword, const char *pszAuthType, const char *pszErrorAccount)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Connection to POP3 server
@@ -1337,6 +1376,71 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 //  Disconnect from POP3 server
 ///////////////////////////////////////////////////////////////////////////////
     UPopCloseChannel(hBSock);
+
+    return (0);
+
+}
+
+
+
+static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath)
+{
+
+    UsrGetUserPath(pUI, pszFilePath);
+
+    strcat(pszFilePath, POP3_IP_LOGFILE);
+
+    return (0);
+
+}
+
+
+
+int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
+                        unsigned int uExpireTime)
+{
+
+    char            szIpFilePath[SYS_MAX_PATH] = "";
+
+    UPopGetIpLogFilePath(pUI, szIpFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Load IP log file info and do expire check
+///////////////////////////////////////////////////////////////////////////////
+    SYS_FILE_INFO   FI;
+
+    if ((SysGetFileInfo(szIpFilePath, FI) < 0) ||
+            ((time_t) (FI.tMod + uExpireTime) < time(NULL)))
+    {
+        ErrSetErrorCode(ERR_NO_POP3_IP);
+        return (ERR_NO_POP3_IP);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Load IP from file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pIpFile = fopen(szIpFilePath, "rt");
+
+    if (pIpFile == NULL)
+    {
+        ErrSetErrorCode(ERR_NO_POP3_IP);
+        return (ERR_NO_POP3_IP);
+    }
+
+    char            szIP[128] = "";
+
+    MscFGets(szIP, sizeof(szIP) - 1, pIpFile);
+
+    fclose(pIpFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Do IP matching
+///////////////////////////////////////////////////////////////////////////////
+    if (SysInetAddr(szIP) != SysGetAddrAddress(*pPeerInfo))
+    {
+        ErrSetErrorCode(ERR_NO_POP3_IP);
+        return (ERR_NO_POP3_IP);
+    }
 
     return (0);
 

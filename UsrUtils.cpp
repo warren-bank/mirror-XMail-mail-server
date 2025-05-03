@@ -30,6 +30,8 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
@@ -678,21 +680,15 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile)
 {
 
-    CfgGetRootPath(pszInfoFile);
-
     if (pszDomain != NULL)
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to lookup domain specific configuration
 ///////////////////////////////////////////////////////////////////////////////
-        char            szLoDomain[SYS_MAX_PATH] = "";
+        MDomGetDomainPath(pszDomain, pszInfoFile, 1);
 
-        StrSNCpy(szLoDomain, pszDomain);
-        StrLower(szLoDomain);
-
-        strcat(pszInfoFile, szLoDomain);
-        AppendSlash(pszInfoFile);
         strcat(pszInfoFile, DEFAULT_USER_PROFILE_FILE);
+
 
         if (SysExistFile(pszInfoFile))
             return (0);

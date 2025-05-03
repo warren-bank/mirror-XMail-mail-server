@@ -33,6 +33,7 @@
 #include "MailConfig.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "Maildir.h"

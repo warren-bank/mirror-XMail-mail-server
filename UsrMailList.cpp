@@ -30,6 +30,8 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
@@ -70,8 +72,14 @@ struct MLUsersScanData
 
 
 
+
+
 static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings);
 static int      UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const * pMLUI);
+
+
+
+
 
 
 
@@ -84,7 +92,7 @@ static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings)
 
     int             iFieldsCount = StrStringsCount(ppszStrings);
 
-    if (iFieldsCount < mlusrAddress)
+    if (iFieldsCount <= mlusrAddress)
         return (NULL);
 
     MLUserInfo     *pMLUI = (MLUserInfo *) SysAlloc(sizeof(MLUserInfo));

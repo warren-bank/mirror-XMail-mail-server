@@ -72,7 +72,7 @@ NET_ADDRESS     SysGetHostByName(char const * pszName);
 int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN);
 int             SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
 int             SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
-char const     *SysInetNToA(SYS_INET_ADDR const & AddrInfo);
+char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char * pszIP);
 NET_ADDRESS     SysInetAddr(char const * pszDotName);
 
 SYS_SEMAPHORE   SysCreateSemaphore(int iInitCount, int iMaxCount);

@@ -129,10 +129,11 @@ int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
         return (ErrGetErrorCode());
 
 
-    char            szRegString[512] = "",
+    char            szIP[128] = "???.???.???.???",
+                    szRegString[512] = "",
                     szHTTPRequest[2048] = "";
 
-    sprintf(szRegString, pszHTTPRegString, SysInetNToA(SockAddr));
+    sprintf(szRegString, pszHTTPRegString, SysInetNToA(SockAddr, szIP));
 
     if ((pszUsername == NULL) || (pszPassword == NULL))
     {

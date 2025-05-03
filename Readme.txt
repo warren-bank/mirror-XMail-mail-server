@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.70
+Version      : 0.71
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 08-04-2001
+Date         : 29-04-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -458,16 +458,36 @@ Date 08-04-2001	 0.70
 	Added a new CTRL server command "frozdel" to delete a frozen message.
 	Added a new CTRL server command "frozgetlog" to retrieve the frozen file log file.
 	Added a new CTRL server command "frozgetmsg" to retrieve the frozen message file.
+Date 29-04-2001	0.71
+	Removed the SERVER.TAB variable "HeloUseRootDomain" and introduced a new one "HeloDomain" to specify
+	the name to send as HELO domain ( look at variable documentation ).
+	If "HeloDomain" is not specified or if empty then the reverse lookup of the local IP is sent as HELO domain.
+	Added a new SERVER.TAB variable "DUL-MAPSCheck" to implement the "dialups.mail-abuse.org" maps check.
+	Changed the meaning of the SERVER.TAB variables SMTP-RDNSCheck, RBL-MAPSCheck, RSS-MAPSCheck,
+	ORBS-MAPSCheck and DUL-MAPSCheck to give XMail the ability to delay SMTP commands for clients that fail the check.
+	The old behaviour ( dropped connection ) is obtained by setting values greater than zero,
+	while You can set the delay ( in seconds ) by specifying negative values.
+	For SMTP-RDNSCheck and DUL-MAPSCheck variables the connection is no more dropped at welcome time but
+	a "server use forbidden' message is given at MAIL_FROM time.
+	In this way XMail give authenticated users the ability to get in from "mapped" IPs.
+	Fixed a bug that cause XMail to crash if there is an empty line in a MLUSERS.TAB file.
+	Added a new SERVER.TAB variable "ErrorsAdmin" that will receive the notification message for every message
+	that has had delivery errors.
+	The feature to force XMail to initiate a PSYNC transfer has been added. This is implemented by making XMail
+	to check for a file named ".psync-trigger" inside MAIL_ROOT. When this file is found a PSYNC tranfer
+	is started and the file is deleted.
+	Added a new SERVER.TAB variable "MaxMTAOps" to set the maximum number of relay steps before to declare
+	the message as looped.
+	Added SMTP after POP3 authentication and one new command line switch ( -Se ) to set the expire time of the POP3 IP.
+	A new SERVER.TAB variable has been added to enable/disable SMTP after POP3 authentication ( EnableAuthSMTP-POP3 ).
+	Added the replacement for sendmail that will use the local mail delivery of XMail ( look at the sendmail section ).
+	The ESMTP command ETRN has been added has long as a new SMTP perm flag 'T' to give access to this feature
+	and a new SERVER.TAB variable "AllowSmtpETRN" to set the default feature access.
+	Added a new CTRL command "etrn" to support the same SMTP feature through the CTRL protocol.
+	Fixed a bug in filters selection that made XMail to case-sensitive compare user and domain filters.
+	Changed the name of the default filter to ".tab" instead of "defaultfilter.tab".
+	Finally, FreeBSD port added !!
 	
-	
-	
-
-
-	
-
-
-
-
 	
 	
 
@@ -610,7 +630,7 @@ Part 1			Overview
 
 Part 2			Features
 
-	1) SMTP server
+	1) ESMTP server
 	2) POP3 server
 	3) Finger server
 	4) Multiple domains
@@ -618,20 +638,22 @@ Part 2			Features
 	6) SMTP relay checking
 	7) SMTP RBL maps check (rbl.maps.vix.com)
 	8) SMTP RSS maps check (relays.mail-abuse.org)
-	8) SMTP ORBS relay check (relays.orbs.org)
-	10) SMTP protection over spammers ( IP based and address based )
-	11) SMTP authentication ( PLAIN LOGIN CRAM-MD5 and custom )
-	12) POP3 account syncronizer with external POP3 accounts
-	13) Aliases
-	14) Mailing lists
-	15) Custom mail processing
-	16) Locally generated mail files delivery
-	17) Remote administration
-	18) Custom mail exchangers
-	19) Logging
-	20) Multi platform
-	21) Domain message filters
-	22) Custom ( external ) POP3 authentication
+	9) SMTP ORBS relay check (relays.orbs.org)
+	10) SMTP DUL map check (dialups.mail-abuse.org)
+	11) SMTP protection over spammers ( IP based and address based )
+	12) SMTP authentication ( PLAIN LOGIN CRAM-MD5 POP3/SMTP and custom )
+	13) SMTP ETRN command support
+	14) POP3 account syncronizer with external POP3 accounts
+	15) Aliases
+	16) Mailing lists
+	17) Custom mail processing
+	18) Locally generated mail files delivery
+	19) Remote administration
+	20) Custom mail exchangers
+	21) Logging
+	22) Multi platform
+	23) Domain message filters
+	24) Custom ( external ) POP3 authentication
 
 
 
@@ -646,9 +668,9 @@ Part 2			Features
 
 Part 3			Porting status
 
-	Right now the Linux and NT ports are stable, while the Solaris one has
+	Right now the Linux and NT ports are stable, while the Solaris and FreeBSD ones have
 	not been tested like the previous OSs.
-	I'd like to port XMail to FreeBSD also.
+
 	
 
 
@@ -674,6 +696,7 @@ Part 4			Requirements
 	installed.
 	To build for Windows You need MS Visual C++ ( for which I give the project ) 
 	or any other working compiler that give support for Win32 SDK.
+
 
 
 
@@ -722,6 +745,7 @@ Part 6			Build
 
 	# make -f Makefile.lnx		( Linux )
 	# make -f Makefile.sso		( Sun/Solaris - You need GCC to build on Solaris )
+	# gmake -f Makefile.bsd		( FreeBSD - You need GCC and GMAKE to build on FreeBSD )
 
 	will build XMail and tools executables.
 	As soon as the project reach a higher maturity I plan to supply a configure script.
@@ -762,7 +786,7 @@ Part 6			Build
 
 Part 7			Configuration
 
-	[ Linux/Solaris ]
+	[ Linux/Solaris/FreeBSD ]
 
 	1) Build XMail
 	2) Log as root
@@ -1063,6 +1087,10 @@ Part 7			Configuration
 
 	where a fetched message whose To: address is graycat@felins.net will be replaced with
 	graycat@felins.net.local.
+	XMail will start PSYNC session with a delay that You can specify with the -Yi nsec
+	command line parameter ( default 120 ).
+	XMail will also check for the presence ( inside MAIL_ROOT ) of a file named ".psync-trigger" and,
+	when this file is found, a PSYNC session will start and such file will be removed.
 
 
 	SERVER.TAB :
@@ -1141,7 +1169,8 @@ Part 7			Configuration
 
 	M	= open mailing features
 	R	= open relay features ( bypass all other relay blocking traps )
-	V	= VRFY command enabler ( bypass SERVER.TAB variable )
+	V	= VRFY command enabled ( bypass SERVER.TAB variable )
+	T	= ETRN command enabled ( bypass SERVER.TAB variable )
 
 	When PLAIN, LOGIN or CRAM-MD5 authentication mode are used a first lookup in MAILUSERS.TAB
 	accounts is performed to avoid duplicating informations with SMTPAUTH.TAB.
@@ -1683,13 +1712,23 @@ Part 11			SERVER.TAB variables
 
 	[PostMaster]
 	Set the postmaster address.
+	
+	[ErrorsAdmin]
+	The email address that will receive notification messages for every message that has had delivery errors.
+	It could be empty and it such case the notification message will be sent only to the sender.
 
 	[DefaultSMTPGateways]
 	A comma separated list of SMTP servers XMail _must_ use to send its mails.
 	This has the precedence over MX records.
-
-	[HeloUseRootDomain]
-	Make XMail to use the root domain as helo domain.
+	
+	[HeloDomain]
+	If this variable is specified and is not empty, its content will be sent as HELO domain.
+	Otherwise the reverse lookup of the local IP will be sent as HELO domain.
+	This will help to deal with remote SMTP servers that are set to check the reverse lookup
+	of the incoming IP.
+	
+	[CheckMailerDomain]
+	Enable validation of the sender domain ( "MAIL FROM:<...@xxx>" ) by looking up DNS/MX entries.
 
 	[RemoveSpoolErrors]
 	Indicate if mail has to be removed or stored in  froz  directory after a failure in
@@ -1697,25 +1736,65 @@ Part 11			SERVER.TAB variables
 
 	[AllowNullSender]
 	Enable null sender ( "MAIL FROM:<>" ) messages to be accepted by XMail.
+	
+	[MaxMTAOps]
+	Set the maximum number of MTA relay steps before to declare the message as looped ( default 16 ).
 
 	[AllowSmtpVRFY]
-	Enable the use of VRFY SMTP command. This flags may be forced by SMTP authentication.
+	Enable the use of VRFY SMTP command. This flag may be forced by SMTP authentication.
+	
+	[AllowSmtpETRN]
+	Enable the use of ETRN SMTP command. This flag may be forced by SMTP authentication.
 
 	[Pop3SyncErrorAccount]
 	This defines the email account ( MUST be handled locally ) that will receive all
 	fetched email that XMail has not been able to deliver.
+	
+	[EnableAuthSMTP-POP3]
+	Enable SMTP after POP3 authentication ( default on ).
+	
+	[DefaultSmtpPerms]
+	This list SMTP permissions assigned to users looked up inside MAILUSERS.TAB during SMTP authentication.
+	It also defines the permissions for users authenticated with SMTP after POP3.
 
 	[SMTP-RDNSCheck]
 	Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
+	If 0 the check is not performed; if 1 and the check fail, the user will receive a "server use forbidden"
+	at MAIL_FROM time; if -S ( S > 0 ) and the check fail, a delay of S seconds between SMTP commands is used to prevent
+	massive spamming.
+	SMTP authentication will override the denial set by this option by giving authenticated users
+	the ability to access the server from "mapped" IPs.
 
 	[RBL-MAPSCheck]
 	Indicate if XMail must do an RBL maps (rbl.maps.vix.com) lookup before accepting an
 	incoming SMTP connection.
+	If 0 the check is not performed; if 1 and the check fail, the connection is dropped;
+	if -S ( S > 0 ) and the check fail, a delay of S seconds between SMTP commands is used to prevent
+	massive spamming.
 
 	[RSS-MAPSCheck]
 	Indicate if XMail must do an RSS maps (relays.mail-abuse.org) lookup before accepting an
 	incoming SMTP connection.
+	If 0 the check is not performed; if 1 and the check fail, the connection is dropped;
+	if -S ( S > 0 ) and the check fail, a delay of S seconds between SMTP commands is used to prevent
+	massive spamming.
 
+	[ORBS-MAPSCheck]
+	Indicate if XMail must do an RSS maps (relays.orbs.org) lookup before accepting an
+	incoming SMTP connection.
+	If 0 the check is not performed; if 1 and the check fail, the connection is dropped;
+	if -S ( S > 0 ) and the check fail, a delay of S seconds between SMTP commands is used to prevent
+	massive spamming.
+	
+	[DUL-MAPSCheck]
+	Indicate if XMail must do an RSS maps (dialups.mail-abuse.org) lookup before accepting an
+	incoming SMTP connection.
+	If 0 the check is not performed; if 1 and the check fail, the user will receive a "server use forbidden"
+	at MAIL_FROM time; if -S ( S > 0 ) and the check fail, a delay of S seconds between SMTP commands is used to prevent
+	massive spamming.
+	SMTP authentication will override the denial set by this option by giving authenticated users
+	the ability to access the server from "mapped" IPs.
+	
 	[SmartDNSHost]
 	Setup a list of smart DNS hosts to which are directed DNS queries with recursion
 	bit set to true. Such DNS hosts must support DNS recursion in queries.
@@ -1794,7 +1873,7 @@ Part 12			Domain message filters
 
 	xyzw.abc.tab
 
-	If this file is not found then XMail search for  defaultfilter.tab  inside  filters
+	If this file is not found then XMail search for  .tab  inside  filters
 	subdirectory, which offers a way to specify a default mail filtering.
 	If this file is not found then the message can continue its travel, otherwise this
 	file is processed by submitting the message to all filters stored into the file.
@@ -1929,7 +2008,6 @@ Part 15			XMail spool design
 			info	<dir>
 			temp	<dir>
 			slog	<dir>
-			lock	<dir>
 			cust	<dir>
 			froz	<dir>
 		...
@@ -1949,8 +2027,7 @@ Part 15			XMail spool design
 	During the message sending the message itself is locked by creating a file inside the  lock
 	subdirectory ( with the same name of the message file ).
 	If the message has permanent delivery errors or is expired and if the option  RemoveSpoolErrors
-	of the  SERVER.TAB  file is off, the message file is moved inside the  froz  subdirectory as long
-	as the log file ( with extension  .#slog#  ).
+	of the  SERVER.TAB  file is off, the message file is moved inside the  froz  subdirectory.
 
 
 
@@ -1968,7 +2045,7 @@ Part 15			XMail spool design
 
 Part 16			SMTP commands
 
-	These are commands understood by SMTP server :
+	These are commands understood by ESMTP server :
 
 	MAIL FROM:<>
 	RCPT TO:<>
@@ -1978,6 +2055,7 @@ Part 16			SMTP commands
 	AUTH
 	RSET
 	VRFY
+	ETRN
 	NOOP
 	QUIT
 
@@ -2045,7 +2123,7 @@ Part 18			Command line
 	-Md				= Activate debug ( verbose ) mode
 	-Mr hours		= Set log rotate hours step
 	-Mx split-level	= Set the queue split level. The value You set here is rounded to the lower
-						prime number higher or equal than the value You've set.
+						prime number higher or equal than the value You've set
 
 	[POP3]
 	-Pp port		= Set POP3 server port ( if You change this You must know what You're doing )
@@ -2066,6 +2144,7 @@ Part 18			Command line
 	-SI bindip		= Bind server to the specified ip address ( can be multiple )
 	-SX nthreads	= Set the maximum number of threads for SMTP server
 	-Sr maxrcpts	= Set the maximu number of recipients for a single SMTP message ( default 100 )
+	-Se nsecs		= Set the expire timeout for a POP3 authentication IP ( default 900 )
 
 	[SMAIL]
 	-Qn nthreads	= Set the number of mailer threads
@@ -2708,6 +2787,21 @@ Part 19			XMail admin protocol
 	In success case ( 00100 ) the frozen message file will follow, until a line containing a single dot ( <CR><LF>.<CR><LF> ).
 
 
+	*) Starting a queue flush
+	
+	"etrn"[TAB]"email-match0"...<CR><LF>
+	
+	Where :
+	
+	email-match0	= wildcard email matching for destination address
+
+	Ex :
+	
+	"etrn"	"*@*.mydomain.com"	"your-domain.org"
+	
+	will start queueing all messages with a matching destination address.
+	
+
 	*) Do nothing command
 
 	"noop"<CR><LF>
@@ -2963,8 +3057,50 @@ Part 23			MkUsers
 
 
 
+Part 24			sendmail
 
-Part 24			Miscellaneous
+	When building XMail an executable called sendmail is also created.
+	This is a replacement of the sendmail program used mostly on Unix systems and that use the local mail delivery
+	of XMail to send email generated onto the server machine.
+	The only sendmail options that are supported are ( other options are simply ignored ) :
+	
+	-f{mail from}		= Set the sender of the email
+	-F{ext mail from}	= Set the extended sender of the email
+	
+	The syntax is :
+	
+	sendmail [-f...] [-F...] recipient ...
+	
+	the message content is read from the standard input and must be RFC compliant.
+	To be RFC compliant means that the message MUST be :
+	
+	[Headers]
+	NewLine
+	Body
+	
+	So, suppose You've Your message inside the file 'msg.txt', that You're 'xmailuser@smartdomain' and
+	that You want to send the message to 'user1@dom1' and 'user2@dom2' the syntax is :
+	
+	sendmail -fxmailuser@smartdomain user1@dom1 user2@dom2 < msg.txt
+	
+	
+	
+	
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+Part 25			Miscellaneous
 
 	[1]
 	To handle multiple POP3 domains the server makes a reverse lookup of the IP address
@@ -3046,7 +3182,7 @@ Part 24			Miscellaneous
 
 
 
-Part 25			Known bugs
+Part 26			Known bugs
 
 	Version 0.1 ( Alpha-1 ) :
 
@@ -3075,18 +3211,12 @@ Part 25			Known bugs
 
 
 
-Part 26			Thanks
+Part 27			Thanks
 
 	My mother Adelisa, to give me the light.
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
 	My company, NAI.com, to give me my wage.
-
-
-
-
-
-
 
 
 

@@ -36,6 +36,7 @@
 #include "UsrAuth.h"
 #include "POP3Svr.h"
 #include "POP3Utils.h"
+#include "MessQueue.h"
 #include "MailDomains.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
@@ -47,7 +48,7 @@
 
 #define POP3SRV_ACCEPT_TIMEOUT  4
 #define STD_POP3_TIMEOUT        30
-#define POP3_LISTEN_SIZE        8
+#define POP3_LISTEN_SIZE        64
 #define POP3_WAIT_SLEEP         2
 #define MAX_CLIENTS_WAIT        300
 #define POP3_IPMAP_FILE         "pop3.ipmap.tab"
@@ -98,8 +99,6 @@ static int      POP3ThreadCountAdd(long lCount, SHB_HANDLE hShbPOP3,
 static int      POP3LogEnabled(SHB_HANDLE hShbPOP3, POP3Config * pPOP3Cfg = NULL);
 static int      POP3CheckPeerIP(SYS_SOCKET SockFD);
 static unsigned int POP3ClientThread(void *pThreadData);
-static int      POP3GetClientDomain(char const * pszFQDN, char * pszClientDomain,
-                        int iMaxDomain);
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock,
                         POP3Session & POP3S);
 static int      POP3LogSession(POP3Session & POP3S);
@@ -410,30 +409,6 @@ unsigned int    POP3ThreadProc(void *pThreadData)
 
 
 
-static int      POP3GetClientDomain(char const * pszFQDN, char * pszClientDomain,
-                        int iMaxDomain)
-{
-
-    for (; pszFQDN != NULL;)
-    {
-        if (MDomIsHandledDomain(pszFQDN) == 0)
-        {
-            StrNCpy(pszClientDomain, pszFQDN, iMaxDomain);
-
-            return (0);
-        }
-
-        if ((pszFQDN = strchr(pszFQDN, '.')) != NULL)
-            ++pszFQDN;
-    }
-
-    ErrSetErrorCode(ERR_NO_POP3_DOMAIN);
-    return (ERR_NO_POP3_DOMAIN);
-
-}
-
-
-
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Session & POP3S)
 {
 
@@ -456,15 +431,17 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
 ///////////////////////////////////////////////////////////////////////////////
 //  Get connection socket host name
 ///////////////////////////////////////////////////////////////////////////////
+    char            szIP[128] = "???.???.???.???";
+
     if (MscGetSockHost(BSckGetAttachedSocket(hBSock), POP3S.szSvrFQDN) < 0)
-        strcpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo));
+        strcpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo, szIP));
     else
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to get a valid domain from the FQDN
 ///////////////////////////////////////////////////////////////////////////////
-        if (POP3GetClientDomain(POP3S.szSvrFQDN, POP3S.szSvrDomain,
-                sizeof(POP3S.szSvrDomain) - 1) < 0)
+        if (MDomGetClientDomain(POP3S.szSvrFQDN, POP3S.szSvrDomain,
+                        sizeof(POP3S.szSvrDomain) - 1) < 0)
             StrSNCpy(POP3S.szSvrDomain, POP3S.szSvrFQDN);
     }
 
@@ -536,13 +513,15 @@ static int      POP3LogSession(POP3Session & POP3S)
         return (ErrGetErrorCode());
 
 
+    char            szIP[128] = "???.???.???.???";
+
     MscFileLog(POP3_LOG_FILE, "\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
-            "\n", POP3S.szSvrFQDN, POP3S.szSvrDomain, SysInetNToA(POP3S.PeerInfo),
+            "\n", POP3S.szSvrFQDN, POP3S.szSvrDomain, SysInetNToA(POP3S.PeerInfo, szIP),
             szTime, POP3S.szUser, POP3S.szPassword);
 
 
@@ -571,13 +550,16 @@ static int      POP3HandleSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock)
         return (ErrorPop());
     }
 
+
+    char            szIP[128] = "???.???.???.???";
+
     SysLogMessage(LOG_LEV_MESSAGE, "POP3 client connection from [%s]\n",
-            SysInetNToA(POP3S.PeerInfo));
+            SysInetNToA(POP3S.PeerInfo, szIP));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send welcome message
 ///////////////////////////////////////////////////////////////////////////////
-	char            szTime[256] = "";
+    char            szTime[256] = "";
 
     MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
@@ -596,8 +578,8 @@ static int      POP3HandleSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock)
 
     while (!SvrInShutdown() && (POP3S.iPOP3State != stateExit) &&
             (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1,
-                    POP3S.pPOP3Cfg->iSessionTimeout) != NULL) &&
-                    (MscCmdStringCheck(szCommand) == 0))
+                            POP3S.pPOP3Cfg->iSessionTimeout) != NULL) &&
+            (MscCmdStringCheck(szCommand) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve a fresh new copy of configuration and test shutdown flag
@@ -617,7 +599,7 @@ static int      POP3HandleSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock)
     }
 
     SysLogMessage(LOG_LEV_MESSAGE, "POP3 client exit [%s]\n",
-            SysInetNToA(POP3S.PeerInfo));
+            SysInetNToA(POP3S.PeerInfo, szIP));
 
     POP3ClearSession(POP3S);
 
@@ -848,6 +830,12 @@ static int      POP3HandleCmd_PASS(const char *pszCommand, BSOCK_HANDLE hBSock,
         return (ErrorPop());
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Save the user connection IP to use for SMTP authentication
+///////////////////////////////////////////////////////////////////////////////
+    UPopSaveUserIP(POP3S.hPOPSession);
+
+
     POP3S.iPOP3State = stateLogged;
 
 
@@ -966,6 +954,12 @@ static int      POP3HandleCmd_APOP(const char *pszCommand, BSOCK_HANDLE hBSock,
 
         return (ErrorPop());
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Save the user connection IP to use for SMTP authentication
+///////////////////////////////////////////////////////////////////////////////
+    UPopSaveUserIP(POP3S.hPOPSession);
+
 
     POP3S.iPOP3State = stateLogged;
 

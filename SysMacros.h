@@ -42,6 +42,7 @@
 #define CountOf(t)              (sizeof(t) / sizeof((t)[0]))
 #define SetEmptyString(s)       (s)[0] = '\0'
 #define IsEmptyString(s)        (*(s) == '\0')
+#define CStringSize(s)          (sizeof(s) - 1)
 #define StrSkipSpaces(p)        for (; (*(p) == ' ') || (*(p) == '\t'); (p)++)
 #define CharISame(a, b)         (tolower(a) == tolower(b))
 #define StrINComp(s, t)         strnicmp(s, t, strlen(t))

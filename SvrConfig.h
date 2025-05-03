@@ -29,9 +29,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Setup for the use of Maildir mailbox delivery
 ///////////////////////////////////////////////////////////////////////////////
-#if defined(__LINUX__) || defined(__SOLARIS__)
+#if defined(__LINUX__) || defined(__SOLARIS__) || defined(__FREEBSD__)
 #define CONFIG_MAILDIR
-#endif          // #if defined(__LINUX__) || defined(__SOLARIS__)
+#endif          // #if defined(__LINUX__) || defined(__SOLARIS__) || defined(__FREEBSD__)
 
 
 

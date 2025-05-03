@@ -69,10 +69,13 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
                         BSOCK_HANDLE hBSock);
 int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iNumLines,
                         BSOCK_HANDLE hBSock);
+int             UPopSaveUserIP(POP3_HANDLE hPOPSession);
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer,
                         const char *pszRmtName, const char *pszRmtPassword,
                         const char *pszAuthType = AUTH_TYPE_CLEAR,
                         const char * pszErrorAccount = NULL);
+int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
+                        unsigned int uExpireTime);
 
 
 

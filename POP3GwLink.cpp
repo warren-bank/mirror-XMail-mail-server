@@ -30,6 +30,7 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"

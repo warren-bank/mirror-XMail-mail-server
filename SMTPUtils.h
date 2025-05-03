@@ -92,6 +92,7 @@ void            USmtpMXSClose(MXS_HANDLE hMXSHandle);
 int             USmtpRBLCheck(SYS_INET_ADDR const & PeerInfo);
 int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo);
 int             USmtpORBSCheck(SYS_INET_ADDR const & PeerInfo);
+int             USmtpDULCheck(SYS_INET_ADDR const & PeerInfo);
 bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const * pszMapsServer);
 int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo);
 int             USmtpSpamAddressCheck(char const * pszAddress);

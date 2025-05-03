@@ -40,6 +40,7 @@ extern SHB_HANDLE hShbFING,
                 hShbLMAIL;
 extern char     szMailPath[SYS_MAX_PATH];
 extern bool     bServerDebug;
+extern QUEUE_HANDLE hSpoolQueue;
 extern SYS_SEMAPHORE hSyncSem;
 extern int      iLogRotateHours;
 extern int      iQueueSplitLevel;

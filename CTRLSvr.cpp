@@ -35,7 +35,8 @@
 #include "UsrUtils.h"
 #include "StrUtils.h"
 #include "POP3Utils.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "UsrMailList.h"
 #include "POP3GwLink.h"
 #include "MailDomains.h"
@@ -180,6 +181,9 @@ static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+
 
 
 
@@ -278,12 +282,14 @@ static int      CTRLLogSession(char const * pszUsername, char const * pszPasswor
         return (ErrGetErrorCode());
 
 
+    char            szIP[128] = "???.???.???.???";
+
     MscFileLog(CTRL_LOG_FILE, "\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
-            "\n", SysInetNToA(PeerInfo), pszUsername, pszPassword, szTime,
+            "\n", SysInetNToA(PeerInfo, szIP), pszUsername, pszPassword, szTime,
             (iStatus == 0) ? "REQ" : ((iStatus > 0) ? "AUTH" : "FAIL"));
 
 
@@ -482,8 +488,11 @@ static unsigned int CTRLClientThread(void *pThreadData)
         return (ErrorPop());
     }
 
+
+    char            szIP[128] = "???.???.???.???";
+
     SysLogMessage(LOG_LEV_MESSAGE, "CTRL client connection from [%s]\n",
-            SysInetNToA(PeerInfo));
+            SysInetNToA(PeerInfo, szIP));
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -493,7 +502,7 @@ static unsigned int CTRLClientThread(void *pThreadData)
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "CTRL client exit [%s]\n",
-            SysInetNToA(PeerInfo));
+            SysInetNToA(PeerInfo, szIP));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Unlink socket from the bufferer and close it
@@ -771,8 +780,10 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 
     SysGetSockInfo(BSckGetAttachedSocket(hBSock), SockInfo);
 
+    char            szIP[128] = "???.???.???.???";
+
     sprintf(szTimeStamp, "<%lu.%lu@%s>",
-            (unsigned long) time(NULL), SysGetCurrentThreadId(), SysInetNToA(SockInfo));
+            (unsigned long) time(NULL), SysGetCurrentThreadId(), SysInetNToA(SockInfo, szIP));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Welcome
@@ -926,6 +937,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_frozgetlog(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "frozgetmsg") == 0)
         iCmdResult = CTRLDo_frozgetmsg(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "etrn") == 0)
+        iCmdResult = CTRLDo_etrn(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "noop") == 0)
         iCmdResult = CTRLDo_noop(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "quit") == 0)
@@ -2392,7 +2405,7 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
             if (((pszDomain == NULL) || (stricmp(pPopLnk->pszDomain, pszDomain) == 0)) &&
                     ((pszName == NULL) || (stricmp(pPopLnk->pszName, pszName) == 0)))
             {
-                char const     *pszEnable = (GwLkCheckEnabled(pPopLnk) == 0) ? "ON": "OFF";
+                char const     *pszEnable = (GwLkCheckEnabled(pPopLnk) == 0) ? "ON" : "OFF";
                 char            szLinkLine[2048] = "";
 
                 sprintf(szLinkLine,
@@ -2652,7 +2665,7 @@ static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     SysGetTmpFile(szListFile);
 
-    if (QueGetFrozenList(NULL, szListFile) < 0)
+    if (QueUtGetFrozenList(hSpoolQueue, szListFile) < 0)
     {
         ErrorPush();
         CheckRemoveFile(szListFile);
@@ -2700,7 +2713,7 @@ static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
 
-    if (QueUnFreezeMessage(NULL, iLevel1, iLevel2, szMessageFile) < 0)
+    if (QueUtUnFreezeMessage(hSpoolQueue, iLevel1, iLevel2, szMessageFile) < 0)
     {
         ErrorPush();
         CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
@@ -2737,7 +2750,7 @@ static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
 
-    if (QueDeleteFrozenMessage(NULL, iLevel1, iLevel2, szMessageFile) < 0)
+    if (QueUtDeleteFrozenMessage(hSpoolQueue, iLevel1, iLevel2, szMessageFile) < 0)
     {
         ErrorPush();
         CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
@@ -2781,7 +2794,7 @@ static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     SysGetTmpFile(szFileSS);
 
-    if (QueGetFrozenLogFile(NULL, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
+    if (QueUtGetFrozenLogFile(hSpoolQueue, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
     {
         ErrorPush();
         CheckRemoveFile(szFileSS);
@@ -2838,7 +2851,7 @@ static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     SysGetTmpFile(szFileSS);
 
-    if (QueGetFrozenMsgFile(NULL, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
+    if (QueUtGetFrozenMsgFile(hSpoolQueue, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
     {
         ErrorPush();
         CheckRemoveFile(szFileSS);
@@ -2861,6 +2874,40 @@ static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
     SysRemove(szFileSS);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 2)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Do a matched flush of the rsnd arena
+///////////////////////////////////////////////////////////////////////////////
+    for (int ii = 1; ii < iTokensCount; ii++)
+    {
+        if (QueFlushRsndArena(hSpoolQueue, ppszTokens[ii]) < 0)
+        {
+            ErrorPush();
+            CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+            return (ErrorPop());
+        }
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
 
     return (0);
 

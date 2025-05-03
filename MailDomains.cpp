@@ -30,6 +30,7 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
@@ -152,12 +153,20 @@ static int      MDomRebuildDomainsIndexes(char const * pszDomainsFilePath)
 char           *MDomGetDomainPath(char const * pszDomain, char *pszDomainPath,
                         int iFinalSlash)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Make the domain lower-case
+///////////////////////////////////////////////////////////////////////////////
+    char            szLoDomain[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szLoDomain, pszDomain);
+    StrLower(szLoDomain);
+
 
     CfgGetRootPath(pszDomainPath);
 
     strcat(pszDomainPath, MAIL_DOMAINS_DIR);
     AppendSlash(pszDomainPath);
-    strcat(pszDomainPath, pszDomain);
+    strcat(pszDomainPath, szLoDomain);
 
     if (iFinalSlash)
         AppendSlash(pszDomainPath);
@@ -613,5 +622,29 @@ char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB)
     }
 
     return (pszDomain);
+
+}
+
+
+
+int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain,
+                        int iMaxDomain)
+{
+
+    for (; pszFQDN != NULL;)
+    {
+        if (MDomIsHandledDomain(pszFQDN) == 0)
+        {
+            StrNCpy(pszClientDomain, pszFQDN, iMaxDomain);
+
+            return (0);
+        }
+
+        if ((pszFQDN = strchr(pszFQDN, '.')) != NULL)
+            ++pszFQDN;
+    }
+
+    ErrSetErrorCode(ERR_NO_HANDLED_DOMAIN);
+    return (ERR_NO_HANDLED_DOMAIN);
 
 }

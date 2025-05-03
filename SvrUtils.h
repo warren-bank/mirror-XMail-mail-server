@@ -50,6 +50,8 @@ char           *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName,
                         const char *pszDefault = NULL);
 bool            SvrTestConfigFlag(char const * pszName, bool bDefault,
                         SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
+int             SvrGetConfigInt(char const * pszName, int iDefault,
+                        SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int             SysFlushConfig(SVRCFG_HANDLE hSvrConfig);
 int             SvrGetMessageID(SYS_UINT64 * pullMessageID);
 char           *SvrGetLogsDir(char *pszLogsPath);

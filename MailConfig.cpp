@@ -26,6 +26,7 @@
 #include "SvrDefines.h"
 #include "ShBlocks.h"
 #include "StrUtils.h"
+#include "MessQueue.h"
 #include "MailSvr.h"
 #include "MailConfig.h"
 

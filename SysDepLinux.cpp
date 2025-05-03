@@ -121,7 +121,7 @@ static void     SysSigChildHandler(int iSignal);
 static int      SysThreadSetup(ThrData * pTD);
 static void     SysThreadCleanup(ThrData * pTD);
 static int      SysExitPID(pid_t PID, int iExitCode);
-static int      SysWaitPID(pid_t PID, int * piExitCode, int iTimeout);
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
 static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
 
@@ -136,7 +136,7 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
 static SYS_SPINLOCK WaitPIDSpin = 0;
-static SYS_LIST_HEAD(WaitPIDList);
+static          SYS_LIST_HEAD(WaitPIDList);
 
 
 
@@ -672,7 +672,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
     while (ulSent < ulFileSize)
     {
-        unsigned long   ulToSend = min(STD_SENDFILE_BLKSIZE, ulFileSize - ulSent);
+        unsigned long   ulToSend = Min(STD_SENDFILE_BLKSIZE, ulFileSize - ulSent);
         off_t           ulStartOffset = (off_t) ulSent;
 
 
@@ -718,7 +718,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
     if (getsockopt(SockFD, SOL_SOCKET, SO_SNDBUF, (char *) &iSndBuffSize, &OptLenght) != 0)
         iSndBuffSize = MIN_TCP_SEND_SIZE;
     else
-        iSndBuffSize = min(iSndBuffSize, MAX_TCP_SEND_SIZE);
+        iSndBuffSize = Min(iSndBuffSize, MAX_TCP_SEND_SIZE);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
@@ -728,10 +728,10 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
     while (ulSentBytes < ulFileSize)
     {
-        int             iCurrSend = (int) min(iSndBuffSize, ulFileSize - ulSentBytes);
+        int             iCurrSend = (int) Min(iSndBuffSize, ulFileSize - ulSentBytes);
 
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
-                                max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
+                                Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
         {
             ErrorPush();
             munmap((char *) pMapAddress, (size_t) ulFileSize);
@@ -823,7 +823,9 @@ int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN)
                             AF_INET, &HostEnt, szBuffer, sizeof(szBuffer), &pHostEnt, &iErrorNo) != 0) ||
             (pHostEnt == NULL) || (pHostEnt->h_name == NULL))
     {
-        ErrSetErrorCode(ERR_GET_SOCK_HOST, SysInetNToA(AddrInfo));
+        char            szIP[128] = "???.???.???.???";
+
+        ErrSetErrorCode(ERR_GET_SOCK_HOST, SysInetNToA(AddrInfo, szIP));
         return (ERR_GET_SOCK_HOST);
     }
 
@@ -876,10 +878,24 @@ int             SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo)
 
 
 
-char const     *SysInetNToA(SYS_INET_ADDR const & AddrInfo)
+char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char *pszIP)
 {
 
-    return (inet_ntoa(AddrInfo.Addr.sin_addr));
+    union
+    {
+        unsigned int    a;
+        unsigned char   b[4];
+    }               UAddr;
+
+    memcpy(&UAddr, &AddrInfo.Addr.sin_addr, sizeof(UAddr));
+
+    sprintf(pszIP, "%u.%u.%u.%u",
+            (unsigned int) UAddr.b[0],
+            (unsigned int) UAddr.b[1],
+            (unsigned int) UAddr.b[2],
+            (unsigned int) UAddr.b[3]);
+
+    return (pszIP);
 
 }
 
@@ -1020,7 +1036,12 @@ int             SysReleaseSemaphore(SYS_SEMAPHORE hSemaphore, int iCount)
     pSD->iSemCounter += iCount;
 
     if (pSD->iSemCounter > 0)
-        pthread_cond_broadcast(&pSD->WaitCond);
+    {
+        if (pSD->iSemCounter > 1)
+            pthread_cond_broadcast(&pSD->WaitCond);
+        else
+            pthread_cond_signal(&pSD->WaitCond);
+    }
 
     pthread_mutex_unlock(&pSD->Mtx);
 
@@ -1174,7 +1195,7 @@ int             SysUnlockMutex(SYS_MUTEX hMutex)
 
     pMD->iLocked = 0;
 
-    pthread_cond_broadcast(&pMD->WaitCond);
+    pthread_cond_signal(&pMD->WaitCond);
 
     pthread_mutex_unlock(&pMD->Mtx);
 
@@ -1330,7 +1351,10 @@ int             SysSetEvent(SYS_EVENT hEvent)
 
     pED->iSignaled = 1;
 
-    pthread_cond_broadcast(&pED->WaitCond);
+    if (pED->iManualReset)
+        pthread_cond_broadcast(&pED->WaitCond);
+    else
+        pthread_cond_signal(&pED->WaitCond);
 
     pthread_mutex_unlock(&pED->Mtx);
 
@@ -1720,7 +1744,7 @@ static int      SysExitPID(pid_t PID, int iExitCode)
 
 
 
-static int      SysWaitPID(pid_t PID, int * piExitCode, int iTimeout)
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
 {
 
     PIDWaitData     PWD;
@@ -2538,11 +2562,11 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
     unsigned int    uValue;
 
-    __asm__ __volatile__(
-            "xchgl %0, %1"
-          : "=r"(uValue), "=m"(*pSpinLock)
-          : "0"(1), "m"(*pSpinLock)
-          : "memory");
+    __asm__  __volatile__(
+            "xchgl %0, %1":
+            "=r"(uValue), "=m"(*pSpinLock):
+            "0"(1), "m"(*pSpinLock):
+            "memory");
 
     return (uValue);
 

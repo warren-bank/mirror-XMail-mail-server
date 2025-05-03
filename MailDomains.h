@@ -53,7 +53,8 @@ DOMLS_HANDLE    MDomOpenDB(void);
 void            MDomCloseDB(DOMLS_HANDLE hDomainsDB);
 char const     *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB);
 char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB);
-
+int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain,
+                        int iMaxDomain);
 
 
 

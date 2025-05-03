@@ -50,8 +50,6 @@
 #define SysSNPrintf             snprintf
 #define stricmp                 strcasecmp
 #define strnicmp                strncasecmp
-#define min(a, b)               (((a) < (b)) ? (a): (b))
-#define max(a, b)               (((a) > (b)) ? (a): (b))
 #define SysFileSync(fp)         do { fflush(fp); fdatasync(fileno(fp)); } while (0)
 
 #define SYS_fd_set              fd_set

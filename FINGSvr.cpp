@@ -34,6 +34,7 @@
 #include "UsrUtils.h"
 #include "ExtAliases.h"
 #include "UsrMailList.h"
+#include "MessQueue.h"
 #include "SMTPUtils.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
@@ -48,7 +49,7 @@
 
 
 #define FINGSRV_ACCEPT_TIMEOUT  4
-#define FING_LISTEN_SIZE        8
+#define FING_LISTEN_SIZE        64
 #define FING_WAIT_SLEEP         2
 #define MAX_CLIENTS_WAIT        300
 #define FING_IPMAP_FILE         "finger.ipmap.tab"
@@ -350,12 +351,14 @@ static int      FINGLogSession(char const * pszSockHost, char const * pszSockDom
         return (ErrGetErrorCode());
 
 
+    char            szIP[128] = "???.???.???.???";
+
     MscFileLog(FING_LOG_FILE, "\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
-            "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo),
+            "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo, szIP),
             szTime, pszQuery);
 
 
@@ -409,9 +412,10 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
     MscSplitFQDN(szSvrFQDN, szSockHost, szSockDomain);
 
+    char            szIP[128] = "???.???.???.???";
 
     SysLogMessage(LOG_LEV_MESSAGE, "FINGER client connection from [%s]\n",
-            SysInetNToA(PeerInfo));
+            SysInetNToA(PeerInfo, szIP));
 
 
     char            szQuery[1024] = "";
@@ -426,7 +430,7 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
             FINGLogSession(szSockHost, szSockDomain, PeerInfo, szQuery);
 
         SysLogMessage(LOG_LEV_MESSAGE, "FINGER query [%s] : \"%s\"\n",
-                SysInetNToA(PeerInfo), szQuery);
+                SysInetNToA(PeerInfo, szIP), szQuery);
 
 
         SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
@@ -443,7 +447,7 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n",
-            SysInetNToA(PeerInfo));
+            SysInetNToA(PeerInfo, szIP));
 
     return (0);
 

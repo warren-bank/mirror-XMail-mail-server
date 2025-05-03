@@ -30,14 +30,15 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
-#include "Queue.h"
+#include "MessQueue.h"
+#include "QueueUtils.h"
 #include "UsrUtils.h"
-#include "SMAILUtils.h"
 #include "SMAILSvr.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
 #include "SvrUtils.h"
+
 
 
 
@@ -66,6 +67,7 @@ struct ServerInfoVar
 
 struct ServerConfigData
 {
+    RLCK_HANDLE     hResLock;
     int             iWriteLock;
     HSLIST          hConfigList;
 };
@@ -113,17 +115,41 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
 
     SvrGetProfileFilePath(szProfilePath);
 
-    if (iWriteLock && (SysLockFile(szProfilePath) < 0))
-        return (INVALID_SVRCFG_HANDLE);
+///////////////////////////////////////////////////////////////////////////////
+//  Lock the profile resource
+///////////////////////////////////////////////////////////////////////////////
+    RLCK_HANDLE     hResLock = INVALID_RLCK_HANDLE;
+    char            szResLock[SYS_MAX_PATH] = "";
+
+    if (iWriteLock)
+    {
+
+        if ((hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock))) == INVALID_RLCK_HANDLE)
+            return (INVALID_SVRCFG_HANDLE);
+
+    }
+    else
+    {
+
+        if ((hResLock = RLckLockSH(CfgGetBasedPath(szProfilePath, szResLock))) == INVALID_RLCK_HANDLE)
+            return (INVALID_SVRCFG_HANDLE);
+
+    }
+
 
     ServerConfigData *pSCD = (ServerConfigData *) SysAlloc(sizeof(ServerConfigData));
 
     if (pSCD == NULL)
     {
         if (iWriteLock)
-            SysUnlockFile(szProfilePath);
+            RLckUnlockEX(hResLock);
+        else
+            RLckUnlockSH(hResLock);
+
         return (INVALID_SVRCFG_HANDLE);
     }
+
+    pSCD->hResLock = hResLock;
 
     pSCD->iWriteLock = iWriteLock;
 
@@ -132,7 +158,10 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
     if (SvrLoadServerConfig(pSCD->hConfigList, szProfilePath) < 0)
     {
         if (iWriteLock)
-            SysUnlockFile(szProfilePath);
+            RLckUnlockEX(hResLock);
+        else
+            RLckUnlockSH(hResLock);
+
         SysFree(pSCD);
         return (INVALID_SVRCFG_HANDLE);
     }
@@ -148,14 +177,14 @@ void            SvrReleaseConfigHandle(SVRCFG_HANDLE hSvrConfig)
 
     ServerConfigData *pSCD = (ServerConfigData *) hSvrConfig;
 
+///////////////////////////////////////////////////////////////////////////////
+//  Unlock the profile resource
+///////////////////////////////////////////////////////////////////////////////
     if (pSCD->iWriteLock)
-    {
-        char            szProfilePath[SYS_MAX_PATH] = "";
+        RLckUnlockEX(pSCD->hResLock);
+    else
+        RLckUnlockSH(pSCD->hResLock);
 
-        SvrGetProfileFilePath(szProfilePath);
-
-        SysUnlockFile(szProfilePath);
-    }
 
     SvrFreeInfoList(pSCD->hConfigList);
 
@@ -191,6 +220,18 @@ bool            SvrTestConfigFlag(char const * pszName, bool bDefault, SVRCFG_HA
             (bDefault) ? "1" : "0");
 
     return ((atoi(szValue) != 0) ? true : false);
+
+}
+
+
+
+int             SvrGetConfigInt(char const * pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
+{
+
+    char            szValue[64] = "";
+
+    return (((SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig, NULL) < 0) ||
+            IsEmptyString(szValue)) ? iDefault: atoi(szValue));
 
 }
 

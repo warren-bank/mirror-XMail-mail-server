@@ -49,6 +49,7 @@
 static int      MLnxEventLog(char const * pszFormat,...);
 static int      MLnxSavePID(void);
 static int      MLnxRemovePID(void);
+static void     MLnxSIGCLD(int iSignal);
 static int      MLnxDaemonBootStrap(void);
 static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[]);
 static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[]);
@@ -132,6 +133,24 @@ static int      MLnxRemovePID(void)
 
 
 
+static void     MLnxSIGCLD(int iSignal)
+{
+
+    int             iExitStatus,
+                    iDeadPID;
+
+    while ((iDeadPID = wait3(&iExitStatus, WNOHANG, (struct rusage *) NULL)) > 0)
+    {
+
+    }
+
+    signal(iSignal, MLnxSIGCLD);
+
+}
+
+
+
+
 static int      MLnxDaemonBootStrap(void)
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,9 +159,6 @@ static int      MLnxDaemonBootStrap(void)
 //  I suggest You to buy all his collection, soon !
 ///////////////////////////////////////////////////////////////////////////////
 
-///////////////////////////////////////////////////////////////////////////////
-//  For BSD
-///////////////////////////////////////////////////////////////////////////////
 #ifdef SIGTTOU
     signal(SIGTTOU, SIG_IGN);
 #endif
@@ -172,30 +188,23 @@ static int      MLnxDaemonBootStrap(void)
 //  Disassociate from controlling terminal and process group. Ensure the process
 //  can't reacquire a new controlling terminal.
 ///////////////////////////////////////////////////////////////////////////////
-    if (setpgrp() == -1)
+    if (setpgrp(0, getpid()) == -1)
     {
         MLnxEventLog("Can't change process group : %s", strerror(errno));
 
         exit(errno);
     }
 
-    signal(SIGHUP, SIG_IGN);
-
-
 ///////////////////////////////////////////////////////////////////////////////
-//  2nd fork
+//  Lose controlling tty
 ///////////////////////////////////////////////////////////////////////////////
-    iChildPID = fork();
+    int             iFdTty = open("/dev/tty", O_RDWR);
 
-    if (iChildPID < 0)
+    if (iFdTty >= 0)
     {
-        MLnxEventLog("Cannot fork : %s", strerror(errno));
-
-        exit(errno);
+        ioctl(iFdTty, TIOCNOTTY, (char *) NULL);
+        close(iFdTty);
     }
-    else if (iChildPID > 0)
-        exit(0);
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Close open file descriptors
@@ -222,11 +231,7 @@ static int      MLnxDaemonBootStrap(void)
 ///////////////////////////////////////////////////////////////////////////////
 //  Ignore childs dead.
 ///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-//  System V
-///////////////////////////////////////////////////////////////////////////////
-    signal(SIGCLD, SIG_IGN);
+    signal(SIGCHLD, MLnxSIGCLD);
 
 
 

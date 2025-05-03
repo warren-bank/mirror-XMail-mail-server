@@ -166,6 +166,10 @@ SOURCE=.\MD5.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\MessQueue.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\MiscUtils.cpp
 # End Source File
 # Begin Source File
@@ -186,7 +190,7 @@ SOURCE=.\PSYNCSvr.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Queue.cpp
+SOURCE=.\QueueUtils.cpp
 # End Source File
 # Begin Source File
 
@@ -333,6 +337,10 @@ SOURCE=.\MD5.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\MessQueue.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\MiscUtils.h
 # End Source File
 # Begin Source File
@@ -353,7 +361,7 @@ SOURCE=.\PSYNCSvr.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Queue.h
+SOURCE=.\QueueUtils.h
 # End Source File
 # Begin Source File
 

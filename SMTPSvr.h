@@ -44,6 +44,7 @@ struct SMTPConfig
     int             iSessionTimeout;
     int             iTimeout;
     int             iMaxRcpts;
+    unsigned int    uPopAuthExpireTime;
     int             iNumAddr;
     ServerNetPath   SvrPath[MAX_SMTP_ACCEPT_ADDRESSES];
 

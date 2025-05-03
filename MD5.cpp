@@ -474,7 +474,7 @@ void            do_md5_file(FILE * src, long start, long bytes, char *hash)
 
     while (bytes > 0)
     {
-        n = fread(buff, 1, min(bytes, sizeof(buff)), src);
+        n = fread(buff, 1, Min(bytes, sizeof(buff)), src);
         if (n <= 0)
             break;
         md5_process_bytes(buff, n, &ctx);

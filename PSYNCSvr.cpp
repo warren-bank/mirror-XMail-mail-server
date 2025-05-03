@@ -28,10 +28,12 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MiscUtils.h"
+#include "MailConfig.h"
 #include "SvrUtils.h"
 #include "UsrUtils.h"
 #include "POP3Svr.h"
 #include "POP3Utils.h"
+#include "MessQueue.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
 #include "POP3GwLink.h"
@@ -41,9 +43,11 @@
 
 
 
+
+#define PSYNC_TRIGGER_FILE          ".psync-trigger"
 #define PSYNC_WAIT_SLEEP            2
 #define MAX_CLIENTS_WAIT            300
-#define PSYNC_WAKEUP_TIME           4
+#define PSYNC_WAKEUP_TIME           2
 #define PSYNC_SERVER_NAME           "[" APP_NAME_VERSION_OS_STR " PSYNC Server]"
 
 
@@ -52,6 +56,8 @@
 
 
 
+
+static bool     PSYNCNeedSync(void);
 static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC);
 static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
                         PSYNCConfig * pPSYNCCfg = NULL);
@@ -63,6 +69,31 @@ static int      PSYNCThreadNotifyExit(void);
 
 
 
+
+
+
+
+static bool     PSYNCNeedSync(void)
+{
+
+    char            szTriggerPath[SYS_MAX_PATH] = "";
+
+    CfgGetRootPath(szTriggerPath);
+
+    strcat(szTriggerPath, PSYNC_TRIGGER_FILE);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check for the presence of the trigger file
+///////////////////////////////////////////////////////////////////////////////
+    if (!SysExistFile(szTriggerPath))
+        return (false);
+
+
+    SysRemove(szTriggerPath);
+
+    return (true);
+
+}
 
 
 
@@ -159,7 +190,8 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
             break;
         }
 
-        if ((pPSYNCCfg->iSyncInterval == 0) || (iElapsedTime < pPSYNCCfg->iSyncInterval))
+        if ((pPSYNCCfg->iSyncInterval == 0) ||
+                ((iElapsedTime < pPSYNCCfg->iSyncInterval) && !PSYNCNeedSync()))
         {
             SysFree(pPSYNCCfg);
             continue;

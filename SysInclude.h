@@ -49,9 +49,15 @@
 #include "SysIncludeSolaris.h"
 
 #else           // #ifdef __SOLARIS__
+#ifdef __FREEBSD__
+
+#include "SysIncludeFreeBSD.h"
+
+#else           // #ifdef __FREEBSD__
 
 #error System type not defined
 
+#endif          // #ifdef __FREEBSD__
 #endif          // #ifdef __SOLARIS__
 #endif          // #ifdef __LINUX__
 #endif          // #ifdef WIN32

@@ -31,7 +31,7 @@
 #include "MiscUtils.h"
 #include "ResLocks.h"
 #include "BuffSock.h"
-#include "Queue.h"
+#include "MessQueue.h"
 #include "SvrUtils.h"
 #include "UsrUtils.h"
 #include "SMTPUtils.h"
@@ -52,7 +52,7 @@
 
 #define LMAIL_SERVER_NAME           "[" APP_NAME_VERSION_OS_STR " LMAIL Server]"
 #define LOCAL_SPOOL_DIR             "local"
-#define STD_LMAILTHREAD_SLEEP_TIME  4
+#define STD_LMAILTHREAD_SLEEP_TIME  2
 #define LMAIL_LOG_FILE              "lmail"
 
 
@@ -553,23 +553,28 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
             !IsEmptyString(szSpoolLine))
     {
 ///////////////////////////////////////////////////////////////////////////////
-//  Get unique spool/tmp file path
+//  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "";
+        QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
+        if (hMessage == INVALID_QMSG_HANDLE)
         {
             ErrorPush();
             fclose(pMailFile);
             return (ErrorPop());
         }
 
+        char            szQueueFilePath[SYS_MAX_PATH] = "";
 
-        FILE           *pSpoolFile = fopen(szSpoolTmpFile, "wb");
+        QueGetFilePath(hSpoolQueue, hMessage, szQueueFilePath);
+
+
+        FILE           *pSpoolFile = fopen(szQueueFilePath, "wb");
 
         if (pSpoolFile == NULL)
         {
-            CheckRemoveFile(szSpoolTmpFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
             fclose(pMailFile);
             ErrSetErrorCode(ERR_FILE_CREATE);
             return (ERR_FILE_CREATE);
@@ -615,8 +620,9 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
         {
             ErrorPush();
             fclose(pSpoolFile);
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
             fclose(pMailFile);
-            SysRemove(szSpoolTmpFile);
             return (ErrorPop());
         }
 
@@ -628,11 +634,12 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
+        if (QueCommitMessage(hSpoolQueue, hMessage) < 0)
         {
             ErrorPush();
+            QueCleanupMessage(hSpoolQueue, hMessage);
+            QueCloseMessage(hSpoolQueue, hMessage);
             fclose(pMailFile);
-            SysRemove(szSpoolTmpFile);
             return (ErrorPop());
         }
     }

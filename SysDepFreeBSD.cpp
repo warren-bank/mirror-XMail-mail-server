@@ -30,8 +30,6 @@
 
 
 
-#define MAX_THREAD_CONCURRENCY      512
-
 #define SHUTDOWN_RECV_TIMEOUT       2
 #define SAIN_Addr(s)                (s).sin_addr.s_addr
 
@@ -44,6 +42,7 @@
 #define MIN_TCP_SEND_SIZE           1024
 #define MAX_TCP_SEND_SIZE           (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT       64
+#define STD_SENDFILE_BLKSIZE        (4096 * 2)
 
 
 
@@ -100,7 +99,6 @@ struct PIDWaitData
     pid_t           PID;
     int             iExitCode;
 };
-
 
 
 
@@ -170,7 +168,6 @@ static void     SysIgnoreProc(int iSignal)
 int             SysInitLibrary(void)
 {
 
-    thr_setconcurrency(MAX_THREAD_CONCURRENCY);
 
     if (SysThreadSetup(NULL) < 0)
         return (ErrGetErrorCode());
@@ -719,6 +716,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
     munmap((char *) pMapAddress, (size_t) ulFileSize);
 
+
     close(iFileID);
 
     return (0);
@@ -753,10 +751,7 @@ NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo)
 NET_ADDRESS     SysGetHostByName(char const * pszName)
 {
 
-    int             iErrorNo = 0;
-    struct hostent  HostEnt;
-    char            szBuffer[1024];
-    struct hostent *pHostEnt = gethostbyname_r(pszName, &HostEnt, szBuffer, sizeof(szBuffer), &iErrorNo);
+    struct hostent *pHostEnt = gethostbyname(pszName);
 
     if ((pHostEnt == NULL) || (pHostEnt->h_addr_list[0] == NULL))
         return (SYS_INVALID_NET_ADDRESS);
@@ -775,11 +770,8 @@ NET_ADDRESS     SysGetHostByName(char const * pszName)
 int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN)
 {
 
-    int             iErrorNo = 0;
-    struct hostent  HostEnt;
-    char            szBuffer[1024];
-    struct hostent *pHostEnt = gethostbyaddr_r((const char *) &SAIN_Addr(AddrInfo.Addr),
-            sizeof(SAIN_Addr(AddrInfo.Addr)), AF_INET, &HostEnt, szBuffer, sizeof(szBuffer), &iErrorNo);
+    struct hostent *pHostEnt = gethostbyaddr((char *) &SAIN_Addr(AddrInfo.Addr),
+            sizeof(SAIN_Addr(AddrInfo.Addr)), AF_INET);
 
     if ((pHostEnt == NULL) || (pHostEnt->h_name == NULL))
     {
@@ -1176,7 +1168,7 @@ int             SysTryLockMutex(SYS_MUTEX hMutex)
     {
         pthread_mutex_unlock(&pMD->Mtx);
         ErrSetErrorCode(ERR_TIMEOUT);
-        return (-1);
+        return (ERR_TIMEOUT);
     }
 
     pMD->iLocked = 1;
@@ -1397,7 +1389,6 @@ static void    *SysThreadStartup(void *pThreadData)
 
     pthread_cleanup_pop(1);
 
-
     return ((void *) iExitCode);
 
 }
@@ -1519,7 +1510,6 @@ static int      SysThreadSetup(ThrData * pTD)
 
 static void     SysThreadCleanup(ThrData * pTD)
 {
-
 
     if (pTD != NULL)
     {
@@ -2229,7 +2219,9 @@ SYS_HANDLE      SysFirstFile(const char *pszPath, char *pszFileName)
     }
 
     struct dirent   DE;
-    struct dirent  *pDirEntry = readdir_r(pDIR, &DE);
+    struct dirent  *pDirEntry = NULL;
+
+    readdir_r(pDIR, &DE, &pDirEntry);
 
     if (pDirEntry == NULL)
     {
@@ -2297,7 +2289,9 @@ int             SysNextFile(SYS_HANDLE hFind, char *pszFileName)
 {
 
     FileFindData   *pFFD = (FileFindData *) hFind;
-    struct dirent  *pDirEntry = readdir_r(pFFD->pDIR, &pFFD->DE);
+    struct dirent  *pDirEntry = NULL;
+
+    readdir_r(pFFD->pDIR, &pFFD->DE, &pDirEntry);
 
     if (pDirEntry == NULL)
         return (0);
@@ -2482,7 +2476,7 @@ char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSaveP
 char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize)
 {
 
-    return (ctime_r(pTimer, pszBuffer, iBufferSize));
+    return (ctime_r(pTimer, pszBuffer));
 
 }
 
@@ -2509,7 +2503,7 @@ struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct)
 char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize)
 {
 
-    return (asctime_r(pTStruct, pszBuffer, iBufferSize));
+    return (asctime_r(pTStruct, pszBuffer));
 
 }
 
@@ -2520,9 +2514,11 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
     unsigned int    uValue;
 
-    __asm__ __volatile__("ldstub %1,%0":
+    __asm__  __volatile__(
+            "xchgl %0, %1":
             "=r"(uValue), "=m"(*pSpinLock):
-            "m"(*pSpinLock));
+            "0"(1), "m"(*pSpinLock):
+            "memory");
 
     return (uValue);
 
