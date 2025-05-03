@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -39,10 +39,11 @@ extern SharedBlock SHB_CTRLSvr,
                 SHB_PSYNCSvr;
 extern char     szMailPath[SYS_MAX_PATH];
 extern unsigned int uKeyMagic;
-extern SYS_IPCNAME SemSMAILSpoolName,
-                SemPSYNCThreads;
+extern SYS_IPCNAME SemPSYNCThreads;
 extern bool     bServerDebug;
 extern int      iLogRotateDays;
+extern int      iQueueSplitLevel;
+
 
 
 
@@ -51,6 +52,7 @@ extern int      iLogRotateDays;
 int             SvrMain(int iArgCount, char *pszArgs[]);
 int             SvrStopServer(bool bWait = true);
 bool            SvrInShutdown(void);
+int             SvrShutdownCB(void * pData);
 
 
 

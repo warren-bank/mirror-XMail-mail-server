@@ -6,27 +6,41 @@
 --------------------Configuration: ctrlclnt - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\TEMP\RSPE3.tmp" with contents
+Creating temporary file "C:\TEMP\RSP164.tmp" with contents
 [
 /nologo /Zp1 /MT /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Release/ctrlclnt.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
-"D:\projects\mailsvr\mailsvr\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\Base64Enc.cpp"
+"D:\projects\xmail\xmail-0.61\BuffSock.cpp"
+"D:\projects\xmail\xmail-0.61\CTRLClient.cpp"
+"D:\projects\xmail\xmail-0.61\Errors.cpp"
+"D:\projects\xmail\xmail-0.61\MD5.cpp"
+"D:\projects\xmail\xmail-0.61\MiscUtils.cpp"
+"D:\projects\xmail\xmail-0.61\StrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SysDep.cpp"
 ]
-Creating command line "cl.exe @C:\TEMP\RSPE3.tmp" 
-Creating temporary file "C:\TEMP\RSPE4.tmp" with contents
+Creating command line "cl.exe @C:\TEMP\RSP164.tmp" 
+Creating temporary file "C:\TEMP\RSP165.tmp" with contents
 [
 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/ctrlclnt.pdb" /machine:I386 /out:"Release/ctrlclnt.exe" 
-.\Release\Base64Enc.obj
-.\Release\BuffSock.obj
-.\Release\CTRLClient.obj
-.\Release\Errors.obj
-.\Release\MD5.obj
-.\Release\MiscUtils.obj
-.\Release\StrUtils.obj
-.\Release\SysDep.obj
+".\Release\Base64Enc.obj"
+".\Release\BuffSock.obj"
+".\Release\CTRLClient.obj"
+".\Release\Errors.obj"
+".\Release\MD5.obj"
+".\Release\MiscUtils.obj"
+".\Release\StrUtils.obj"
+".\Release\SysDep.obj"
 ]
-Creating command line "link.exe @C:\TEMP\RSPE4.tmp"
+Creating command line "link.exe @C:\TEMP\RSP165.tmp"
 <h3>Output Window</h3>
 Compiling...
+Base64Enc.cpp
+BuffSock.cpp
+CTRLClient.cpp
+Errors.cpp
+MD5.cpp
+MiscUtils.cpp
+StrUtils.cpp
 SysDep.cpp
 Linking...
 LINK : warning LNK4089: all references to "ADVAPI32.dll" discarded by /OPT:REF
@@ -39,27 +53,41 @@ ctrlclnt.exe - 0 error(s), 1 warning(s)
 --------------------Configuration: ctrlclnt - Win32 Debug--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\TEMP\RSPE6.tmp" with contents
+Creating temporary file "C:\TEMP\RSP167.tmp" with contents
 [
 /nologo /Zp1 /MTd /W3 /Gm /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Debug/ctrlclnt.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\projects\mailsvr\mailsvr\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\Base64Enc.cpp"
+"D:\projects\xmail\xmail-0.61\BuffSock.cpp"
+"D:\projects\xmail\xmail-0.61\CTRLClient.cpp"
+"D:\projects\xmail\xmail-0.61\Errors.cpp"
+"D:\projects\xmail\xmail-0.61\MD5.cpp"
+"D:\projects\xmail\xmail-0.61\MiscUtils.cpp"
+"D:\projects\xmail\xmail-0.61\StrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SysDep.cpp"
 ]
-Creating command line "cl.exe @C:\TEMP\RSPE6.tmp" 
-Creating temporary file "C:\TEMP\RSPE7.tmp" with contents
+Creating command line "cl.exe @C:\TEMP\RSP167.tmp" 
+Creating temporary file "C:\TEMP\RSP168.tmp" with contents
 [
 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/ctrlclnt.pdb" /debug /machine:I386 /out:"Debug/ctrlclnt.exe" /pdbtype:sept 
-.\Debug\Base64Enc.obj
-.\Debug\BuffSock.obj
-.\Debug\CTRLClient.obj
-.\Debug\Errors.obj
-.\Debug\MD5.obj
-.\Debug\MiscUtils.obj
-.\Debug\StrUtils.obj
-.\Debug\SysDep.obj
+".\Debug\Base64Enc.obj"
+".\Debug\BuffSock.obj"
+".\Debug\CTRLClient.obj"
+".\Debug\Errors.obj"
+".\Debug\MD5.obj"
+".\Debug\MiscUtils.obj"
+".\Debug\StrUtils.obj"
+".\Debug\SysDep.obj"
 ]
-Creating command line "link.exe @C:\TEMP\RSPE7.tmp"
+Creating command line "link.exe @C:\TEMP\RSP168.tmp"
 <h3>Output Window</h3>
 Compiling...
+Base64Enc.cpp
+BuffSock.cpp
+CTRLClient.cpp
+Errors.cpp
+MD5.cpp
+MiscUtils.cpp
+StrUtils.cpp
 SysDep.cpp
 Linking...
 
@@ -71,56 +99,129 @@ ctrlclnt.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: mailsvr - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\TEMP\RSPE8.tmp" with contents
+Creating temporary file "C:\TEMP\RSP16A.tmp" with contents
 [
 /nologo /Zp1 /MT /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Release/mailsvr.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
-"D:\projects\mailsvr\mailsvr\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\Base64Enc.cpp"
+"D:\projects\xmail\xmail-0.61\BuffSock.cpp"
+"D:\projects\xmail\xmail-0.61\CTRLSvr.cpp"
+"D:\projects\xmail\xmail-0.61\DNS.cpp"
+"D:\projects\xmail\xmail-0.61\DNSCache.cpp"
+"D:\projects\xmail\xmail-0.61\DynDNS.cpp"
+"D:\projects\xmail\xmail-0.61\Errors.cpp"
+"D:\projects\xmail\xmail-0.61\ExtAliases.cpp"
+"D:\projects\xmail\xmail-0.61\FINGSvr.cpp"
+"D:\projects\xmail\xmail-0.61\MailConfig.cpp"
+"D:\projects\xmail\xmail-0.61\Maildir.cpp"
+"D:\projects\xmail\xmail-0.61\MailDomains.cpp"
+"D:\projects\xmail\xmail-0.61\MailSvr.cpp"
+"D:\projects\xmail\xmail-0.61\Main.cpp"
+"D:\projects\xmail\xmail-0.61\MD5.cpp"
+"D:\projects\xmail\xmail-0.61\MemHeap.cpp"
+"D:\projects\xmail\xmail-0.61\MiscUtils.cpp"
+"D:\projects\xmail\xmail-0.61\POP3GwLink.cpp"
+"D:\projects\xmail\xmail-0.61\POP3Svr.cpp"
+"D:\projects\xmail\xmail-0.61\POP3Utils.cpp"
+"D:\projects\xmail\xmail-0.61\PSYNCSvr.cpp"
+"D:\projects\xmail\xmail-0.61\Queue.cpp"
+"D:\projects\xmail\xmail-0.61\ResLocks.cpp"
+"D:\projects\xmail\xmail-0.61\ShBlocks.cpp"
+"D:\projects\xmail\xmail-0.61\SList.cpp"
+"D:\projects\xmail\xmail-0.61\SMAILSvr.cpp"
+"D:\projects\xmail\xmail-0.61\SMAILUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SMTPSvr.cpp"
+"D:\projects\xmail\xmail-0.61\SMTPUtils.cpp"
+"D:\projects\xmail\xmail-0.61\StrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SvrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SWMR.cpp"
+"D:\projects\xmail\xmail-0.61\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\TabIndex.cpp"
+"D:\projects\xmail\xmail-0.61\UsrAuth.cpp"
+"D:\projects\xmail\xmail-0.61\UsrMailList.cpp"
+"D:\projects\xmail\xmail-0.61\UsrUtils.cpp"
 ]
-Creating command line "cl.exe @C:\TEMP\RSPE8.tmp" 
-Creating temporary file "C:\TEMP\RSPE9.tmp" with contents
+Creating command line "cl.exe @C:\TEMP\RSP16A.tmp" 
+Creating temporary file "C:\TEMP\RSP16B.tmp" with contents
 [
 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/XMail.pdb" /machine:I386 /out:"Release/XMail.exe" 
-.\Release\Base64Enc.obj
-.\Release\BuffSock.obj
-.\Release\CTRLSvr.obj
-.\Release\DNS.obj
-.\Release\DNSCache.obj
-.\Release\DynDNS.obj
-.\Release\Errors.obj
-.\Release\ExtAliases.obj
-.\Release\FINGSvr.obj
-.\Release\MailConfig.obj
-.\Release\Maildir.obj
-.\Release\MailDomains.obj
-.\Release\MailSvr.obj
-.\Release\Main.obj
-.\Release\MD5.obj
-.\Release\MemHeap.obj
-.\Release\MiscUtils.obj
-.\Release\POP3GwLink.obj
-.\Release\POP3Svr.obj
-.\Release\POP3Utils.obj
-.\Release\PSYNCSvr.obj
-.\Release\ResLocks.obj
-.\Release\ShBlocks.obj
-.\Release\SList.obj
-.\Release\SMAILSvr.obj
-.\Release\SMAILUtils.obj
-.\Release\SMTPSvr.obj
-.\Release\SMTPUtils.obj
-.\Release\StrUtils.obj
-.\Release\SvrUtils.obj
-.\Release\SWMR.obj
-.\Release\SysDep.obj
-.\Release\TabIndex.obj
-.\Release\UsrAuth.obj
-.\Release\UsrMailList.obj
-.\Release\UsrUtils.obj
+".\Release\Base64Enc.obj"
+".\Release\BuffSock.obj"
+".\Release\CTRLSvr.obj"
+".\Release\DNS.obj"
+".\Release\DNSCache.obj"
+".\Release\DynDNS.obj"
+".\Release\Errors.obj"
+".\Release\ExtAliases.obj"
+".\Release\FINGSvr.obj"
+".\Release\MailConfig.obj"
+".\Release\Maildir.obj"
+".\Release\MailDomains.obj"
+".\Release\MailSvr.obj"
+".\Release\Main.obj"
+".\Release\MD5.obj"
+".\Release\MemHeap.obj"
+".\Release\MiscUtils.obj"
+".\Release\POP3GwLink.obj"
+".\Release\POP3Svr.obj"
+".\Release\POP3Utils.obj"
+".\Release\PSYNCSvr.obj"
+".\Release\Queue.obj"
+".\Release\ResLocks.obj"
+".\Release\ShBlocks.obj"
+".\Release\SList.obj"
+".\Release\SMAILSvr.obj"
+".\Release\SMAILUtils.obj"
+".\Release\SMTPSvr.obj"
+".\Release\SMTPUtils.obj"
+".\Release\StrUtils.obj"
+".\Release\SvrUtils.obj"
+".\Release\SWMR.obj"
+".\Release\SysDep.obj"
+".\Release\TabIndex.obj"
+".\Release\UsrAuth.obj"
+".\Release\UsrMailList.obj"
+".\Release\UsrUtils.obj"
 ]
-Creating command line "link.exe @C:\TEMP\RSPE9.tmp"
+Creating command line "link.exe @C:\TEMP\RSP16B.tmp"
 <h3>Output Window</h3>
 Compiling...
+Base64Enc.cpp
+BuffSock.cpp
+CTRLSvr.cpp
+DNS.cpp
+DNSCache.cpp
+DynDNS.cpp
+Errors.cpp
+ExtAliases.cpp
+FINGSvr.cpp
+MailConfig.cpp
+Maildir.cpp
+MailDomains.cpp
+MailSvr.cpp
+Main.cpp
+MD5.cpp
+MemHeap.cpp
+MiscUtils.cpp
+POP3GwLink.cpp
+POP3Svr.cpp
+POP3Utils.cpp
+PSYNCSvr.cpp
+Queue.cpp
+ResLocks.cpp
+ShBlocks.cpp
+SList.cpp
+SMAILSvr.cpp
+SMAILUtils.cpp
+SMTPSvr.cpp
+SMTPUtils.cpp
+StrUtils.cpp
+SvrUtils.cpp
+SWMR.cpp
 SysDep.cpp
+TabIndex.cpp
+UsrAuth.cpp
+UsrMailList.cpp
+UsrUtils.cpp
 Linking...
 
 
@@ -131,56 +232,129 @@ XMail.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: mailsvr - Win32 Debug--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\TEMP\RSPEB.tmp" with contents
+Creating temporary file "C:\TEMP\RSP16D.tmp" with contents
 [
 /nologo /Zp1 /MTd /W3 /Gm /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Debug/mailsvr.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\projects\mailsvr\mailsvr\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\Base64Enc.cpp"
+"D:\projects\xmail\xmail-0.61\BuffSock.cpp"
+"D:\projects\xmail\xmail-0.61\CTRLSvr.cpp"
+"D:\projects\xmail\xmail-0.61\DNS.cpp"
+"D:\projects\xmail\xmail-0.61\DNSCache.cpp"
+"D:\projects\xmail\xmail-0.61\DynDNS.cpp"
+"D:\projects\xmail\xmail-0.61\Errors.cpp"
+"D:\projects\xmail\xmail-0.61\ExtAliases.cpp"
+"D:\projects\xmail\xmail-0.61\FINGSvr.cpp"
+"D:\projects\xmail\xmail-0.61\MailConfig.cpp"
+"D:\projects\xmail\xmail-0.61\Maildir.cpp"
+"D:\projects\xmail\xmail-0.61\MailDomains.cpp"
+"D:\projects\xmail\xmail-0.61\MailSvr.cpp"
+"D:\projects\xmail\xmail-0.61\Main.cpp"
+"D:\projects\xmail\xmail-0.61\MD5.cpp"
+"D:\projects\xmail\xmail-0.61\MemHeap.cpp"
+"D:\projects\xmail\xmail-0.61\MiscUtils.cpp"
+"D:\projects\xmail\xmail-0.61\POP3GwLink.cpp"
+"D:\projects\xmail\xmail-0.61\POP3Svr.cpp"
+"D:\projects\xmail\xmail-0.61\POP3Utils.cpp"
+"D:\projects\xmail\xmail-0.61\PSYNCSvr.cpp"
+"D:\projects\xmail\xmail-0.61\Queue.cpp"
+"D:\projects\xmail\xmail-0.61\ResLocks.cpp"
+"D:\projects\xmail\xmail-0.61\ShBlocks.cpp"
+"D:\projects\xmail\xmail-0.61\SList.cpp"
+"D:\projects\xmail\xmail-0.61\SMAILSvr.cpp"
+"D:\projects\xmail\xmail-0.61\SMAILUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SMTPSvr.cpp"
+"D:\projects\xmail\xmail-0.61\SMTPUtils.cpp"
+"D:\projects\xmail\xmail-0.61\StrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SvrUtils.cpp"
+"D:\projects\xmail\xmail-0.61\SWMR.cpp"
+"D:\projects\xmail\xmail-0.61\SysDep.cpp"
+"D:\projects\xmail\xmail-0.61\TabIndex.cpp"
+"D:\projects\xmail\xmail-0.61\UsrAuth.cpp"
+"D:\projects\xmail\xmail-0.61\UsrMailList.cpp"
+"D:\projects\xmail\xmail-0.61\UsrUtils.cpp"
 ]
-Creating command line "cl.exe @C:\TEMP\RSPEB.tmp" 
-Creating temporary file "C:\TEMP\RSPEC.tmp" with contents
+Creating command line "cl.exe @C:\TEMP\RSP16D.tmp" 
+Creating temporary file "C:\TEMP\RSP16E.tmp" with contents
 [
 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/XMail.pdb" /debug /machine:I386 /out:"Debug/XMail.exe" /pdbtype:sept 
-.\Debug\Base64Enc.obj
-.\Debug\BuffSock.obj
-.\Debug\CTRLSvr.obj
-.\Debug\DNS.obj
-.\Debug\DNSCache.obj
-.\Debug\DynDNS.obj
-.\Debug\Errors.obj
-.\Debug\ExtAliases.obj
-.\Debug\FINGSvr.obj
-.\Debug\MailConfig.obj
-.\Debug\Maildir.obj
-.\Debug\MailDomains.obj
-.\Debug\MailSvr.obj
-.\Debug\Main.obj
-.\Debug\MD5.obj
-.\Debug\MemHeap.obj
-.\Debug\MiscUtils.obj
-.\Debug\POP3GwLink.obj
-.\Debug\POP3Svr.obj
-.\Debug\POP3Utils.obj
-.\Debug\PSYNCSvr.obj
-.\Debug\ResLocks.obj
-.\Debug\ShBlocks.obj
-.\Debug\SList.obj
-.\Debug\SMAILSvr.obj
-.\Debug\SMAILUtils.obj
-.\Debug\SMTPSvr.obj
-.\Debug\SMTPUtils.obj
-.\Debug\StrUtils.obj
-.\Debug\SvrUtils.obj
-.\Debug\SWMR.obj
-.\Debug\SysDep.obj
-.\Debug\TabIndex.obj
-.\Debug\UsrAuth.obj
-.\Debug\UsrMailList.obj
-.\Debug\UsrUtils.obj
+".\Debug\Base64Enc.obj"
+".\Debug\BuffSock.obj"
+".\Debug\CTRLSvr.obj"
+".\Debug\DNS.obj"
+".\Debug\DNSCache.obj"
+".\Debug\DynDNS.obj"
+".\Debug\Errors.obj"
+".\Debug\ExtAliases.obj"
+".\Debug\FINGSvr.obj"
+".\Debug\MailConfig.obj"
+".\Debug\Maildir.obj"
+".\Debug\MailDomains.obj"
+".\Debug\MailSvr.obj"
+".\Debug\Main.obj"
+".\Debug\MD5.obj"
+".\Debug\MemHeap.obj"
+".\Debug\MiscUtils.obj"
+".\Debug\POP3GwLink.obj"
+".\Debug\POP3Svr.obj"
+".\Debug\POP3Utils.obj"
+".\Debug\PSYNCSvr.obj"
+".\Debug\Queue.obj"
+".\Debug\ResLocks.obj"
+".\Debug\ShBlocks.obj"
+".\Debug\SList.obj"
+".\Debug\SMAILSvr.obj"
+".\Debug\SMAILUtils.obj"
+".\Debug\SMTPSvr.obj"
+".\Debug\SMTPUtils.obj"
+".\Debug\StrUtils.obj"
+".\Debug\SvrUtils.obj"
+".\Debug\SWMR.obj"
+".\Debug\SysDep.obj"
+".\Debug\TabIndex.obj"
+".\Debug\UsrAuth.obj"
+".\Debug\UsrMailList.obj"
+".\Debug\UsrUtils.obj"
 ]
-Creating command line "link.exe @C:\TEMP\RSPEC.tmp"
+Creating command line "link.exe @C:\TEMP\RSP16E.tmp"
 <h3>Output Window</h3>
 Compiling...
+Base64Enc.cpp
+BuffSock.cpp
+CTRLSvr.cpp
+DNS.cpp
+DNSCache.cpp
+DynDNS.cpp
+Errors.cpp
+ExtAliases.cpp
+FINGSvr.cpp
+MailConfig.cpp
+Maildir.cpp
+MailDomains.cpp
+MailSvr.cpp
+Main.cpp
+MD5.cpp
+MemHeap.cpp
+MiscUtils.cpp
+POP3GwLink.cpp
+POP3Svr.cpp
+POP3Utils.cpp
+PSYNCSvr.cpp
+Queue.cpp
+ResLocks.cpp
+ShBlocks.cpp
+SList.cpp
+SMAILSvr.cpp
+SMAILUtils.cpp
+SMTPSvr.cpp
+SMTPUtils.cpp
+StrUtils.cpp
+SvrUtils.cpp
+SWMR.cpp
 SysDep.cpp
+TabIndex.cpp
+UsrAuth.cpp
+UsrMailList.cpp
+UsrUtils.cpp
 Linking...
 
 
@@ -191,6 +365,22 @@ XMail.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: mkusers - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
+Creating temporary file "C:\TEMP\RSP170.tmp" with contents
+[
+/nologo /ML /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Release/mkusers.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\projects\xmail\xmail-0.61\MkUsers.cpp"
+]
+Creating command line "cl.exe @C:\TEMP\RSP170.tmp" 
+Creating temporary file "C:\TEMP\RSP171.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/mkusers.pdb" /machine:I386 /out:"Release/mkusers.exe" 
+".\Release\MkUsers.obj"
+]
+Creating command line "link.exe @C:\TEMP\RSP171.tmp"
+<h3>Output Window</h3>
+Compiling...
+MkUsers.cpp
+Linking...
 
 
 
@@ -200,6 +390,22 @@ mkusers.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: mkusers - Win32 Debug--------------------
 </h3>
 <h3>Command Lines</h3>
+Creating temporary file "C:\TEMP\RSP173.tmp" with contents
+[
+/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/mkusers.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
+"D:\projects\xmail\xmail-0.61\MkUsers.cpp"
+]
+Creating command line "cl.exe @C:\TEMP\RSP173.tmp" 
+Creating temporary file "C:\TEMP\RSP174.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/mkusers.pdb" /debug /machine:I386 /out:"Debug/mkusers.exe" /pdbtype:sept 
+".\Debug\MkUsers.obj"
+]
+Creating command line "link.exe @C:\TEMP\RSP174.tmp"
+<h3>Output Window</h3>
+Compiling...
+MkUsers.cpp
+Linking...
 
 
 
@@ -209,6 +415,22 @@ mkusers.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: xmcrypter - Win32 Release--------------------
 </h3>
 <h3>Command Lines</h3>
+Creating temporary file "C:\TEMP\RSP176.tmp" with contents
+[
+/nologo /Zp1 /ML /W3 /GX /O2 /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Release/xmcrypter.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\projects\xmail\xmail-0.61\XMCrypt.cpp"
+]
+Creating command line "cl.exe @C:\TEMP\RSP176.tmp" 
+Creating temporary file "C:\TEMP\RSP177.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:no /pdb:"Release/xmcrypt.pdb" /machine:I386 /out:"Release/xmcrypt.exe" 
+".\Release\XMCrypt.obj"
+]
+Creating command line "link.exe @C:\TEMP\RSP177.tmp"
+<h3>Output Window</h3>
+Compiling...
+XMCrypt.cpp
+Linking...
 
 
 
@@ -218,6 +440,22 @@ xmcrypt.exe - 0 error(s), 0 warning(s)
 --------------------Configuration: xmcrypter - Win32 Debug--------------------
 </h3>
 <h3>Command Lines</h3>
+Creating temporary file "C:\TEMP\RSP179.tmp" with contents
+[
+/nologo /Zp1 /MLd /W3 /Gm /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "XMAIL_X86" /Fp"Debug/xmcrypter.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
+"D:\projects\xmail\xmail-0.61\XMCrypt.cpp"
+]
+Creating command line "cl.exe @C:\TEMP\RSP179.tmp" 
+Creating temporary file "C:\TEMP\RSP17A.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/xmcrypt.pdb" /debug /machine:I386 /out:"Debug/xmcrypt.exe" /pdbtype:sept 
+".\Debug\XMCrypt.obj"
+]
+Creating command line "link.exe @C:\TEMP\RSP17A.tmp"
+<h3>Output Window</h3>
+Compiling...
+XMCrypt.cpp
+Linking...
 
 
 

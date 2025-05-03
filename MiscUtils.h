@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -29,6 +29,9 @@
 #define LOCK_FILE_WAITSTEP          1
 
 #define INVALID_FSCAN_HANDLE        ((FSCAN_HANDLE) 0)
+
+#define HASH_INIT_VALUE             5381
+
 
 
 
@@ -44,6 +47,11 @@ struct AddressFilter
     SYS_UINT8       Mask[sizeof(NET_ADDRESS)];
 };
 
+struct ServerNetPath
+{
+    NET_ADDRESS     NetAddr;
+    int             iPortNo;
+};
 
 
 
@@ -59,9 +67,10 @@ char           *MscTranslatePath(char *pszPath);
 void           *MscLoadFile(char const * pszFilePath, unsigned int &uFileSize);
 int             MscLockFile(const char *pszFileName, int iMaxWait,
                         int iWaitStep = LOCK_FILE_WAITSTEP);
-int             MscGetLogTimeStr(char *pszTimeStr, int iStringSize);
-int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins);
-int             MscGetTimeStr(char *pszTimeStr, int iStringSize);
+int             MscGetTimeNbrString(char *pszTimeStr, int iStringSize, time_t tTime = 0);
+int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
+                        time_t tCurr = 0);
+int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr = 0);
 int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigned long &ulDirSize);
 FSCAN_HANDLE    MscFirstFile(char const * pszPath, int iListDirs, char *pszFileName);
 int             MscNextFile(FSCAN_HANDLE hFileScan, char *pszFileName);
@@ -86,10 +95,11 @@ char           *MscLogFilePath(char const * pszLogFile, char *pszLogFilePath);
 int             MscFileLog(char const * pszLogFile, char const * pszFormat,...);
 int             MscSplitPath(char const * pszFilePath, char *pszDir, char *pszFName,
                         char *pszExt);
+int             MscGetFileName(char const * pszFilePath, char * pszFileName);
 int             MscCreateClientSocket(char const * pszServer, int iPortNo, int iSockType,
                         SYS_SOCKET * pSockFD, SYS_INET_ADDR * pSvrAddr,
                         SYS_INET_ADDR * pSockAddr, int iTimeout);
-int             MscCreateServerSockets(int iNumAddr, NET_ADDRESS const * pSvrAddr, int iPortNo,
+int             MscCreateServerSockets(int iNumAddr, ServerNetPath const * pSvrPath, int iPortNo,
                         int iListenSize, SYS_SOCKET * pSockFDs, int &iNumSockFDs);
 int             MscGetMaxSockFD(SYS_SOCKET const * pSockFDs, int iNumSockFDs);
 int             MscAcceptServerConnection(SYS_SOCKET const * pSockFDs, int iNumSockFDs,
@@ -108,7 +118,12 @@ int             MscBase64FileEncode(char const * pszBoundary, char const * pszFi
 int             MscRootedName(char const * pszHostName);
 int             MscCramMD5(char const * pszSecret, char const * pszChallenge,
                         char *pszDigest);
-SYS_UINT32      MscHashString(char const * pszBuffer, int iLength);
+SYS_UINT32      MscHashString(char const * pszBuffer, int iLength,
+                        SYS_UINT32 uHashInit = HASH_INIT_VALUE);
+int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszConnSpec,
+                        int iDefPortNo);
+int             MscSplitAddressPort(char const * pszConnSpec, char * pszAddress,
+                        int & iPortNo, int iDefPortNo);
 
 
 

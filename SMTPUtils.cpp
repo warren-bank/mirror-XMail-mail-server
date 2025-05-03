@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -52,11 +52,14 @@
 #define STD_SMTP_TIMEOUT        STD_SERVER_TIMEOUT
 #define SMTPGW_LINE_MAX         1024
 #define SMTPGW_TABLE_FILE       "smtpgw.tab"
+#define SMTPFWD_LINE_MAX        1024
+#define SMTPFWD_TABLE_FILE      "smtpfwd.tab"
 #define SMTPRELAY_LINE_MAX      512
 #define SMTP_RELAY_FILE         "smtprelay.tab"
 #define MAX_MX_RECORDS          32
 #define RBL_MAPS_DOMAIN         "rbl.maps.vix.com."
 #define RSS_MAPS_DOMAIN         "relays.mail-abuse.org."
+#define ORBS_MAPS_DOMAIN        "relays.orbs.org."
 #define SMTP_SPAMMERS_FILE      "spammers.tab"
 #define SMTP_SPAM_ADDRESS_FILE  "spam-address.tab"
 #define SPAMMERS_LINE_MAX       512
@@ -80,6 +83,14 @@ enum SmtpGwFileds
     gwGateway,
 
     gwMax
+};
+
+enum SmtpFwdFileds
+{
+    fwdDomain = 0,
+    fwdGateway,
+
+    fwdMax
 };
 
 enum SmtpRelayFileds
@@ -112,6 +123,7 @@ struct SmtpMXRecords
 
 static int      USmtpWriteGateway(FILE * pGwFile, const char *pszDomain, const char *pszGateway);
 static char    *USmtpGetGwTableFilePath(char *pszGwFilePath);
+static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath);
 static char    *USmtpGetRelayFilePath(char *pszRelayFilePath);
 static int      USmtpSetError(SMTPError * pSMTPE, int iSTMPResponse, char const * pszSTMPResponse);
 static int      USmtpResponseClass(int iResponseCode, int iResponseClass);
@@ -156,6 +168,81 @@ static char    *USmtpGetGwTableFilePath(char *pszGwFilePath)
     strcat(pszGwFilePath, SMTPGW_TABLE_FILE);
 
     return (pszGwFilePath);
+
+}
+
+
+
+static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath)
+{
+
+    CfgGetRootPath(pszFwdFilePath);
+
+    strcat(pszFwdFilePath, SMTPFWD_TABLE_FILE);
+
+    return (pszFwdFilePath);
+
+}
+
+
+
+char          **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDomain)
+{
+
+    char            szFwdFilePath[SYS_MAX_PATH] = "";
+
+    USmtpGetFwdTableFilePath(szFwdFilePath);
+
+
+    char            szResLock[SYS_MAX_PATH] = "";
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFwdFilePath, szResLock));
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+        return (NULL);
+
+
+    FILE           *pFwdFile = fopen(szFwdFilePath, "rt");
+
+    if (pFwdFile == NULL)
+    {
+        RLckUnlockSH(hResLock);
+
+        ErrSetErrorCode(ERR_SMTPFWD_FILE_NOT_FOUND);
+        return (NULL);
+    }
+
+    char            szFwdLine[SMTPFWD_LINE_MAX] = "";
+
+    while (MscGetConfigLine(szFwdLine, sizeof(szFwdLine) - 1, pFwdFile) != NULL)
+    {
+        char          **ppszStrings = StrGetTabLineStrings(szFwdLine);
+
+        if (ppszStrings == NULL)
+            continue;
+
+        int             iFieldsCount = StrStringsCount(ppszStrings);
+
+        if ((iFieldsCount >= fwdMax) && StrIWildMatch(pszDomain, ppszStrings[fwdDomain]))
+        {
+            char          **ppszFwdGws = StrTokenize(ppszStrings[fwdGateway], ",");
+
+            StrFreeStrings(ppszStrings);
+            fclose(pFwdFile);
+
+            RLckUnlockSH(hResLock);
+
+            return (ppszFwdGws);
+        }
+
+        StrFreeStrings(ppszStrings);
+    }
+
+    fclose(pFwdFile);
+
+    RLckUnlockSH(hResLock);
+
+    ErrSetErrorCode(ERR_SMTPFWD_NOT_FOUND);
+    return (NULL);
 
 }
 
@@ -523,7 +610,10 @@ int             USmtpGetSpoolFileInfo(char const * pszPkgFile, char *pszDomain, 
 
         int             iFromDomains = StrStringsCount(ppszFrom);
 
-        StrNCpy(pszFrom, ppszFrom[iFromDomains - 1], MAX_ADDR_NAME);
+        if (iFromDomains > 0)
+            StrNCpy(pszFrom, ppszFrom[iFromDomains - 1], MAX_ADDR_NAME);
+        else
+            SetEmptyString(pszFrom);
 
         StrFreeStrings(ppszFrom);
     }
@@ -559,53 +649,6 @@ int             USmtpGetSpoolFileInfo(char const * pszPkgFile, char *pszDomain, 
 
 
     fclose(pPkgFile);
-
-    return (0);
-
-}
-
-
-
-int             USmtpCopyToSpool(char const * pszMsgFile, char *pszMessageID,
-                        char const * pszSpoolFileName)
-{
-
-    char            szSpoolFileName[SYS_MAX_PATH] = "";
-
-    if (SvrGetUniqueMessageFile(szSpoolFileName) < 0)
-        return (ErrGetErrorCode());
-
-
-    if (SvrCopyToSpool(pszMsgFile, szSpoolFileName) < 0)
-        return (ErrGetErrorCode());
-
-
-    if (pszMessageID != NULL)
-        strcpy(pszMessageID, szSpoolFileName);
-
-
-    return (0);
-
-}
-
-
-
-int             USmtpMoveToSpool(char const * pszMsgFile, char *pszMessageID)
-{
-
-    char            szSpoolFileName[SYS_MAX_PATH] = "";
-
-    if (SvrGetUniqueMessageFile(szSpoolFileName) < 0)
-        return (ErrGetErrorCode());
-
-
-    if (SvrMoveToSpool(pszMsgFile, szSpoolFileName) < 0)
-        return (ErrGetErrorCode());
-
-
-    if (pszMessageID != NULL)
-        strcpy(pszMessageID, szSpoolFileName);
-
 
     return (0);
 
@@ -1402,10 +1445,19 @@ static int      USmtpServerAuthenticate(BSOCK_HANDLE hBSock, char const * pszSer
 BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
                         SMTPError * pSMTPE)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Decode server address
+///////////////////////////////////////////////////////////////////////////////
+    int             iPortNo = STD_SMTP_PORT;
+    char            szAddress[MAX_ADDR_NAME] = "";
+
+    if (MscSplitAddressPort(pszServer, szAddress, iPortNo, STD_SMTP_PORT) < 0)
+        return (INVALID_BSOCK_HANDLE);
+
 
     NET_ADDRESS     NetAddr;
 
-    if (MscGetServerAddress(pszServer, NetAddr) < 0)
+    if (MscGetServerAddress(szAddress, NetAddr) < 0)
         return (INVALID_BSOCK_HANDLE);
 
 
@@ -1416,7 +1468,7 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
 
     SYS_INET_ADDR   SvrAddr;
 
-    SysSetupAddress(SvrAddr, AF_INET, NetAddr, htons(STD_SMTP_PORT));
+    SysSetupAddress(SvrAddr, AF_INET, NetAddr, htons(iPortNo));
 
     if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), STD_SMTP_TIMEOUT) < 0)
     {
@@ -1622,7 +1674,8 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 ///////////////////////////////////////////////////////////////////////////////
 //  Send file
 ///////////////////////////////////////////////////////////////////////////////
-    if (SysSendFile(BSckGetAttachedSocket(hBSock), pszFileName, STD_SMTP_TIMEOUT) < 0)
+    if (SysSendFile(BSckGetAttachedSocket(hBSock), pszFileName, STD_SMTP_TIMEOUT,
+                    SvrShutdownCB, NULL) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1937,6 +1990,21 @@ int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo)
 
 
 
+int             USmtpORBSCheck(SYS_INET_ADDR const & PeerInfo)
+{
+
+    if (USmtpDnsMapsContained(PeerInfo, ORBS_MAPS_DOMAIN))
+    {
+        ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo));
+        return (ERR_RSS_SPAMMER);
+    }
+
+    return (0);
+
+}
+
+
+
 bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const * pszMapsServer)
 {
 
@@ -2106,5 +2174,62 @@ int             USmtpSpamAddressCheck(char const * pszAddress)
     RLckUnlockSH(hResLock);
 
     return (0);
+
+}
+
+
+
+int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomain,
+                        SYS_INET_ADDR const & PeerInfo, char const * pszServerDomain,
+                        SYS_INET_ADDR const & SockInfo, char const * pszSmtpServerLogo)
+{
+
+    char            szTime[256] = "";
+
+    MscGetTimeStr(szTime, sizeof(szTime) - 1);
+
+
+    char            szPeerIP[128] = "",
+                    szSockIP[128] = "";
+
+    strcpy(szPeerIP, SysInetNToA(PeerInfo));
+    strcpy(szSockIP, SysInetNToA(SockInfo));
+
+///////////////////////////////////////////////////////////////////////////////
+//  Write message info. If You change the order ( or add new fields ) You must
+//  arrange fields into the SmtpMsgInfo union defined in SMTPUtils.h
+///////////////////////////////////////////////////////////////////////////////
+    fprintf(pMsgFile, "%s;%s;%s;%s;%s;%s\r\n",
+            pszClientDomain, szPeerIP,
+            pszServerDomain, szSockIP,
+            szTime, pszSmtpServerLogo);
+
+    return (0);
+
+}
+
+
+
+char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+                        char const * pszRcptTo)
+{
+
+    char            szFrom[MAX_SPOOL_LINE] = "",
+                    szRcpt[MAX_SPOOL_LINE] = "";
+
+    if ((USmlParseAddress(pszMailFrom, NULL, szFrom) < 0) ||
+            (USmlParseAddress(pszRcptTo, NULL, szRcpt) < 0))
+        return (NULL);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Return "Received:" tag
+///////////////////////////////////////////////////////////////////////////////
+    return (StrSprint(
+                    "Received: from %s (%s)\r\n"
+                    "\tby %s (%s) with %s\r\n"
+                    "\tfor <%s> from <%s>;\r\n"
+                    "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientIP],
+                    ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverIP],
+                    ppszMsgInfo[smsgiSeverName], szRcpt, szFrom, ppszMsgInfo[smsgiTime]));
 
 }

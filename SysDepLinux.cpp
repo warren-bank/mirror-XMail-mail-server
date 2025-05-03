@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -39,14 +39,22 @@
 #define SYS_SEMAPHORE_SLOT(sem)     (((int) (sem) - 1) / MAX_SEM_X_ID)
 #define SYS_SEMAPHORE_NBR(sem)      (((int) (sem) - 1) % MAX_SEM_X_ID)
 
+#define SCHED_PRIORITY_INC          6
+
 #define MIN_TCP_SEND_SIZE           1024
-#define MAX_TCP_SEND_SIZE           16384
+#define MAX_TCP_SEND_SIZE           (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT       64
+#define STD_SENDFILE_BLKSIZE        (4092 * 2)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Comment this if You want to use select() instead of alarm()
 ///////////////////////////////////////////////////////////////////////////////
 #define USE_ALARM_TIMEOUT
+
+///////////////////////////////////////////////////////////////////////////////
+//  Uncomment this if You want to use sendfile()
+///////////////////////////////////////////////////////////////////////////////
+#define USE_SENDFILE
 
 
 
@@ -124,8 +132,10 @@ static int      SysSemUnlock(int iSemID, int iCount, int iSemNumber);
 static int      SysSetSemaphore(int iSemID, int iSemCount, int iSemNumber);
 static int      SysSemKill(int iSemID);
 static int      SysShmKill(int iShmID);
-static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff);
+static int      SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay);
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD);
+static int      SysSendFileTimeout(int iSockFD, int iFileID, off_t ulStartOffset,
+                        unsigned long ulSize, int iTimeout);
 static int      SysThreadSetup(void);
 static int      SysThreadCleanup(void);
 static void     SysBreakHandlerRoutine(int iSignal);
@@ -716,8 +726,7 @@ SYS_SOCKET      SysCreateSocket(int iAddressFamily, int iType, int iProtocol)
 
 
 
-
-static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff)
+static int      SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay)
 {
 
     long            lSockFlags = fcntl((int) SockFD, F_GETFL, 0);
@@ -728,10 +737,10 @@ static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff)
         return (ERR_NETWORK);
     }
 
-    if (OnOff)
-        lSockFlags &= ~O_NONBLOCK;
-    else
+    if (iNoDelay)
         lSockFlags |= O_NONBLOCK;
+    else
+        lSockFlags &= ~O_NONBLOCK;
 
     if (fcntl((int) SockFD, F_SETFL, lSockFlags) == -1)
     {
@@ -845,7 +854,7 @@ int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize,
 
     return (iRecvBytes);
 
-#else // #ifdef USE_ALARM_TIMEOUT
+#else           // #ifdef USE_ALARM_TIMEOUT
 
     fd_set          rfds;
     struct timeval  tv;
@@ -879,7 +888,7 @@ int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize,
 
     return (iRecvBytes);
 
-#endif // #ifdef USE_ALARM_TIMEOUT
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 }
 
@@ -934,7 +943,7 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 
     return (iRecvBytes);
 
-#else // #ifdef USE_ALARM_TIMEOUT
+#else           // #ifdef USE_ALARM_TIMEOUT
 
     fd_set          rfds;
     struct timeval  tv;
@@ -969,7 +978,7 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 
     return (iRecvBytes);
 
-#endif // #ifdef USE_ALARM_TIMEOUT
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 }
 
@@ -1000,7 +1009,7 @@ int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBuff
 
     return (iSendBytes);
 
-#else // #ifdef USE_ALARM_TIMEOUT
+#else           // #ifdef USE_ALARM_TIMEOUT
 
     fd_set          wfds;
     struct timeval  tv;
@@ -1034,7 +1043,7 @@ int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBuff
 
     return (iSendBytes);
 
-#endif // #ifdef USE_ALARM_TIMEOUT
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 }
 
@@ -1088,7 +1097,7 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
 
     return (iSendBytes);
 
-#else // #ifdef USE_ALARM_TIMEOUT
+#else           // #ifdef USE_ALARM_TIMEOUT
 
     fd_set          wfds;
     struct timeval  tv;
@@ -1122,7 +1131,7 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
 
     return (iSendBytes);
 
-#endif // #ifdef USE_ALARM_TIMEOUT
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 }
 
@@ -1130,6 +1139,8 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
 
 int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, int iNameLen, int iTimeout)
 {
+
+#ifdef USE_ALARM_TIMEOUT
 
     SysSetAlarm(iTimeout);
 
@@ -1151,6 +1162,53 @@ int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, i
     }
 
     return (iConnectResult);
+
+#else           // #ifdef USE_ALARM_TIMEOUT
+
+    if (SysSetSockNoDelay(SockFD, 1) < 0)
+	    return (ErrGetErrorCode());
+	
+	if (connect((int) SockFD, (const struct sockaddr *) & pSockName->Addr, iNameLen) == 0)
+	{
+		SysSetSockNoDelay(SockFD, 0);
+	    return (0);
+	}
+	
+	if ((errno != EINPROGRESS) && (errno != EWOULDBLOCK))
+	{
+	    SysSetSockNoDelay(SockFD, 0);
+	
+	    ErrSetErrorCode(ERR_NETWORK);
+        return (ERR_NETWORK);
+	}
+	
+	fd_set wfds;
+	struct timeval tv;
+
+	FD_ZERO(&wfds);
+	FD_SET((int) SockFD, &wfds);
+	tv.tv_sec = iTimeout;
+	tv.tv_usec = 0;
+
+	if (select((int) SockFD + 1, (fd_set *) 0, &wfds, (fd_set *) 0, &tv) == -1)
+	{
+	    SysSetSockNoDelay(SockFD, 0);
+		
+		ErrSetErrorCode(ERR_NETWORK);
+        return (ERR_NETWORK);
+	}
+	
+	SysSetSockNoDelay(SockFD, 0);
+	
+	if (!FD_ISSET((int) SockFD, &wfds))
+	{
+	    ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+	}
+	
+	return (0);
+
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 }
 
@@ -1181,7 +1239,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
         return (SYS_INVALID_SOCKET);
     }
 
-#else // #ifdef USE_ALARM_TIMEOUT
+#else           // #ifdef USE_ALARM_TIMEOUT
 
     fd_set          rfds;
     struct timeval  tv;
@@ -1215,7 +1273,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
         return (ERR_NETWORK);
     }
 
-#endif // #ifdef USE_ALARM_TIMEOUT
+#endif          // #ifdef USE_ALARM_TIMEOUT
 
 
     if (SysSetSocketsOptions((SYS_SOCKET) iAcptSock) < 0)
@@ -1265,7 +1323,31 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout)
+static int      SysSendFileTimeout(int iSockFD, int iFileID, off_t ulStartOffset,
+                        unsigned long ulSize, int iTimeout)
+{
+
+    void            (*pOldHandler) (int) = signal(SIGALRM, SysAlarmProc);
+
+    alarm(iTimeout);
+
+
+    unsigned long   ulSendSize = (unsigned long) sendfile(iSockFD, iFileID,
+            &ulStartOffset, ulSize);
+
+
+    alarm(0);
+
+    signal(SIGALRM, pOldHandler);
+
+    return ((ulSendSize == ulSize) ? 0 : -1);
+
+}
+
+
+
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
+                        int (*pSendCB) (void *), void *pUserData)
 {
 
     int             iFileID = open(pszFileName, O_RDONLY);
@@ -1282,9 +1364,35 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
 #ifdef USE_SENDFILE
 
-    off_t           StartOffset = 0;
-    unsigned long   ulSendSize = (unsigned long) sendfile((int) SockFD, iFileID,
-            &StartOffset, ulFileSize);
+    siginterrupt(SIGALRM, 1);
+
+    unsigned long   ulSent = 0;
+
+    while (ulSent < ulFileSize)
+    {
+        unsigned long   ulToSend = min(STD_SENDFILE_BLKSIZE, ulFileSize - ulSent);
+
+
+        int             iSendResult = SysSendFileTimeout((int) SockFD, iFileID, (off_t) ulSent,
+                ulToSend, max(iTimeout, ulToSend / MIN_BYTES_SEC_TIMEOUT));
+
+
+        if (iSendResult < 0)
+        {
+            close(iFileID);
+            ErrSetErrorCode(ERR_TIMEOUT);
+            return (ERR_TIMEOUT);
+        }
+
+        if ((pSendCB != NULL) && (pSendCB(pUserData) < 0))
+        {
+            close(iFileID);
+            ErrSetErrorCode(ERR_USER_BREAK);
+            return (ERR_USER_BREAK);
+        }
+
+        ulSent += ulToSend;
+    }
 
 #else           // #ifdef USE_SENDFILE
 
@@ -1293,6 +1401,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 
     if (pMapAddress == (void *) -1)
     {
+        close(iFileID);
         ErrSetErrorCode(ERR_MMAP);
         return (ERR_MMAP);
     }
@@ -1325,6 +1434,14 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
             munmap(pMapAddress, (size_t) ulFileSize);
             close(iFileID);
             return (ErrorPop());
+        }
+
+        if ((pSendCB != NULL) && (pSendCB(pUserData) < 0))
+        {
+            munmap(pMapAddress, (size_t) ulFileSize);
+            close(iFileID);
+            ErrSetErrorCode(ERR_USER_BREAK);
+            return (ERR_USER_BREAK);
         }
 
         pszBuffer += iCurrSend;
@@ -1721,6 +1838,38 @@ void            SysCloseThread(SYS_THREAD ThreadID, int iForce)
 
 
 
+int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
+{
+
+    int             iSetResult = -1;
+
+    switch (iPriority)
+    {
+        case (SYS_PRIORITY_NORMAL):
+            iSetResult = setpriority(PRIO_PROCESS, (pid_t) ThreadID, 0);
+            break;
+
+        case (SYS_PRIORITY_LOWER):
+            iSetResult = setpriority(PRIO_PROCESS, (pid_t) ThreadID, SCHED_PRIORITY_INC);
+            break;
+
+        case (SYS_PRIORITY_HIGHER):
+            iSetResult = setpriority(PRIO_PROCESS, (pid_t) ThreadID, -SCHED_PRIORITY_INC);
+            break;
+    }
+
+    if (iSetResult < 0)
+    {
+        ErrSetErrorCode(ERR_SET_THREAD_PRIORITY);
+        return (ERR_SET_THREAD_PRIORITY);
+    }
+
+    return (0);
+
+}
+
+
+
 int             SysWaitThread(SYS_THREAD ThreadID, int iTimeout)
 {
 
@@ -1779,16 +1928,7 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
     }
 
 
-    switch (iPriority)
-    {
-        case (SYS_PRIORITY_LOWER):
-
-            break;
-
-        case (SYS_PRIORITY_HIGHER):
-
-            break;
-    }
+    SysSetThreadPriority((SYS_THREAD) ThreadID, iPriority);
 
 
     if (iWaitTimeout > 0)
@@ -1900,12 +2040,12 @@ void           *SysRealloc(void *pData, unsigned int uSize)
 
 
 
-int             SysLockFile(const char *pszFileName)
+int             SysLockFile(const char *pszFileName, char const * pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s.lock", pszFileName);
+    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
 
     int             iFileID = open(szLockFile, O_CREAT | O_EXCL | O_RDWR, S_IREAD | S_IWRITE);
 
@@ -1929,12 +2069,12 @@ int             SysLockFile(const char *pszFileName)
 
 
 
-int             SysUnlockFile(const char *pszFileName)
+int             SysUnlockFile(const char *pszFileName, char const * pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s.lock", pszFileName);
+    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
 
     if (unlink(szLockFile) != 0)
     {
@@ -2038,7 +2178,7 @@ int             SysEventLogV(char const * pszFormat, va_list Args)
 
     vsnprintf(szBuffer, sizeof(szBuffer) - 1, pszFormat, Args);
 
-    syslog(LOG_ERR, "%s", szBuffer);
+    syslog(LOG_DAEMON | LOG_ERR, "%s", szBuffer);
 
 
     closelog();
@@ -2130,6 +2270,20 @@ void            SysMsSleep(int iMsTimeout)
 {
 
     usleep(1000 * (unsigned long) iMsTimeout);
+
+}
+
+
+
+SYS_INT64       SysMsTime(void)
+{
+
+    struct timeval  tv;
+
+    if (gettimeofday(&tv, NULL) != 0)
+        return (0);
+
+    return (1000 * (SYS_INT64) tv.tv_sec + (SYS_INT64) tv.tv_usec / 1000 );
 
 }
 
@@ -2273,6 +2427,9 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
     }
 
     ZeroData(FI);
+    FI.iFileType = (S_ISREG(stat_buffer.st_mode)) ? ftNormal:
+            ((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory:
+            ((S_ISLNK(stat_buffer.st_mode)) ? ftLink: ftOther));
     FI.ulSize = (unsigned long) stat_buffer.st_size;
     FI.tCreat = stat_buffer.st_ctime;
     FI.tMod = stat_buffer.st_mtime;

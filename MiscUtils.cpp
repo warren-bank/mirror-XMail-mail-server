@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -35,15 +35,6 @@
 #include "SvrUtils.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
-
-
-
-
-
-
-
-
-#define HASH_INIT_VALUE             5381
 
 
 
@@ -90,18 +81,15 @@ int             MscUniqueFile(char const * pszDir, char *pszFilePath)
 
 
     SYS_FILE_INFO   FI;
-    static THRDLS unsigned int uSeqNr = 0;
-    static THRDLS time_t tLast = 0;
 
     do
     {
-        time_t          tCurr = time(NULL);
+        SysMsSleep(2);
 
-        uSeqNr = (tCurr == tLast) ? (uSeqNr + 1) : 0;
-        tLast = tCurr;
+        SYS_INT64       iMsTime = SysMsTime();
 
-        sprintf(pszFilePath, "%s" SYS_SLASH_STR "%lu%03u.%lu.%s", pszDir,
-                (unsigned long) tCurr, uSeqNr, ulThreadID, szHostName);
+        sprintf(pszFilePath, "%s" SYS_SLASH_STR SYS_LLU_FMT ".%lu.%s",
+                pszDir, iMsTime, ulThreadID, szHostName);
 
     } while (SysGetFileInfo(pszFilePath, FI) == 0);
 
@@ -272,14 +260,14 @@ int             MscLockFile(const char *pszFileName, int iMaxWait, int iWaitStep
 
 
 
-int             MscGetLogTimeStr(char *pszTimeStr, int iStringSize)
+int             MscGetTimeNbrString(char *pszTimeStr, int iStringSize, time_t tTime)
 {
 
-    time_t          tSession;
+    if (tTime == 0)
+        time(&tTime);
 
-    time(&tSession);
 
-    struct tm       tmSession = *localtime(&tSession);
+    struct tm       tmSession = *localtime(&tTime);
 
     SysSNPrintf(pszTimeStr, iStringSize, "%04d-%02d-%02d %02d:%02d:%02d",
             tmSession.tm_year + 1900,
@@ -296,12 +284,12 @@ int             MscGetLogTimeStr(char *pszTimeStr, int iStringSize)
 
 
 
-int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins)
+int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
+                        time_t tCurr)
 {
 
-    time_t          tCurr;
-
-    time(&tCurr);
+    if (tCurr == 0)
+        time(&tCurr);
 
     tmLocal = *localtime(&tCurr);
 
@@ -330,14 +318,14 @@ int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins)
 
 
 
-int             MscGetTimeStr(char *pszTimeStr, int iStringSize)
+int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
 {
 
     int             iDiffHours = 0,
                     iDiffMins = 0;
     struct tm       tmTime;
 
-    MscGetTime(tmTime, iDiffHours, iDiffMins);
+    MscGetTime(tmTime, iDiffHours, iDiffMins, tCurr);
 
 
     char            szDiffTime[128] = "";
@@ -685,7 +673,7 @@ int             MscCopyFile(FILE * pFileOut, FILE * pFileIn, unsigned long ulBas
 
     fseek(pFileIn, 0, SEEK_END);
 
-    unsigned long   ulFileSize = (unsigned long ) ftell(pFileIn);
+    unsigned long   ulFileSize = (unsigned long) ftell(pFileIn);
 
     if (ulCopySize == (unsigned long) -1)
         ulCopySize = ulFileSize - ulBaseOffset;
@@ -1034,6 +1022,18 @@ int             MscSplitPath(char const * pszFilePath, char *pszDir, char *pszFN
 
 
 
+int             MscGetFileName(char const * pszFilePath, char *pszFileName)
+{
+
+    char const     *pszSlash = strrchr(pszFilePath, SYS_SLASH_CHAR);
+
+    strcpy(pszFileName, (pszSlash != NULL) ? (pszSlash + 1) : pszFilePath);
+
+    return (0);
+
+}
+
+
 
 int             MscCreateClientSocket(char const * pszServer, int iPortNo, int iSockType,
                         SYS_SOCKET * pSockFD, SYS_INET_ADDR * pSvrAddr,
@@ -1092,7 +1092,7 @@ int             MscCreateClientSocket(char const * pszServer, int iPortNo, int i
 
 
 
-int             MscCreateServerSockets(int iNumAddr, NET_ADDRESS const * pSvrAddr, int iPortNo,
+int             MscCreateServerSockets(int iNumAddr, ServerNetPath const * pSvrPath, int iPortNo,
                         int iListenSize, SYS_SOCKET * pSockFDs, int &iNumSockFDs)
 {
 
@@ -1103,11 +1103,11 @@ int             MscCreateServerSockets(int iNumAddr, NET_ADDRESS const * pSvrAdd
         if (SvrSockFD == SYS_INVALID_SOCKET)
             return (ErrGetErrorCode());
 
-        SYS_INET_ADDR   SvrAddr;
+        SYS_INET_ADDR   InSvrAddr;
 
-        SysSetupAddress(SvrAddr, AF_INET, htonl(INADDR_ANY), htons(iPortNo));
+        SysSetupAddress(InSvrAddr, AF_INET, htonl(INADDR_ANY), htons(iPortNo));
 
-        if (SysBindSocket(SvrSockFD, (struct sockaddr *) & SvrAddr, sizeof(SvrAddr)) < 0)
+        if (SysBindSocket(SvrSockFD, (struct sockaddr *) & InSvrAddr, sizeof(InSvrAddr)) < 0)
         {
             ErrorPush();
             SysCloseSocket(SvrSockFD);
@@ -1135,11 +1135,12 @@ int             MscCreateServerSockets(int iNumAddr, NET_ADDRESS const * pSvrAdd
                 return (ErrorPop());
             }
 
-            SYS_INET_ADDR   SvrAddr;
+            SYS_INET_ADDR   InSvrAddr;
 
-            SysSetupAddress(SvrAddr, AF_INET, pSvrAddr[ii], htons(iPortNo));
+            SysSetupAddress(InSvrAddr, AF_INET, pSvrPath[ii].NetAddr,
+                    htons((pSvrPath[ii].iPortNo > 0) ? pSvrPath[ii].iPortNo : iPortNo));
 
-            if (SysBindSocket(SvrSockFD, (struct sockaddr *) & SvrAddr, sizeof(SvrAddr)) < 0)
+            if (SysBindSocket(SvrSockFD, (struct sockaddr *) & InSvrAddr, sizeof(InSvrAddr)) < 0)
             {
                 ErrorPush();
                 SysCloseSocket(SvrSockFD);
@@ -1525,10 +1526,10 @@ int             MscCramMD5(char const * pszSecret, char const * pszChallenge,
 
 
 
-SYS_UINT32      MscHashString(char const * pszBuffer, int iLength)
+SYS_UINT32      MscHashString(char const * pszBuffer, int iLength, SYS_UINT32 uHashInit)
 {
 
-    SYS_UINT32      uHashVal = HASH_INIT_VALUE;
+    SYS_UINT32      uHashVal = uHashInit;
 
     while (iLength > 0)
     {
@@ -1539,5 +1540,66 @@ SYS_UINT32      MscHashString(char const * pszBuffer, int iLength)
     }
 
     return (uHashVal);
+
+}
+
+
+
+
+int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszConnSpec,
+                        int iDefPortNo)
+{
+
+    char const     *pszColon = strchr(pszConnSpec, ':');
+
+    ZeroData(SvrPath);
+
+    if (pszColon != NULL)
+    {
+        int             iIPLen = (int) (pszColon - pszConnSpec);
+        char            szIP[256] = "";
+
+        strncpy(szIP, pszConnSpec, iIPLen = Min(iIPLen, sizeof(szIP) - 1));
+        szIP[iIPLen] = '\0';
+
+        SvrPath.NetAddr = SysInetAddr(szIP);
+        SvrPath.iPortNo = atoi(pszColon + 1);
+    }
+    else
+    {
+        SvrPath.NetAddr = SysInetAddr(pszConnSpec);
+        SvrPath.iPortNo = iDefPortNo;
+    }
+
+    return (0);
+
+}
+
+
+
+
+int             MscSplitAddressPort(char const * pszConnSpec, char * pszAddress,
+                        int & iPortNo, int iDefPortNo)
+{
+
+    char const     *pszColon = strchr(pszConnSpec, ':');
+
+    if (pszColon != NULL)
+    {
+        int             iAddrLen = (int) (pszColon - pszConnSpec);
+
+        strncpy(pszAddress, pszConnSpec, iAddrLen);
+        pszAddress[iAddrLen] = '\0';
+
+        iPortNo = atoi(pszColon + 1);
+    }
+    else
+    {
+    	strcpy(pszAddress, pszConnSpec);
+
+        iPortNo = iDefPortNo;
+    }
+
+    return (0);
 
 }

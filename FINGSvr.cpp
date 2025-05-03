@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -238,7 +238,7 @@ unsigned int    FINGThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_FING_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pFINGCfg->iNumAddr, pFINGCfg->SvrAddr, pFINGCfg->iPort,
+    if (MscCreateServerSockets(pFINGCfg->iNumAddr, pFINGCfg->SvrPath, pFINGCfg->iPort,
                     FING_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
@@ -284,6 +284,8 @@ unsigned int    FINGThreadProc(void *pThreadData)
 
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
+            else
+                SysCloseSocket(ConnSockFD[ss], 1);
 
         }
     }
@@ -328,7 +330,7 @@ static int      FINGLogSession(char const * pszSockHost, char const * pszSockDom
 
     char            szTime[256] = "";
 
-    MscGetLogTimeStr(szTime, sizeof(szTime) - 1);
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
     RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" FING_LOG_FILE);

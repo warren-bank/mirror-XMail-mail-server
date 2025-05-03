@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -45,7 +45,7 @@
 #define SAIN_Addr(s)                    (s).sin_addr.S_un.S_addr
 
 #define MIN_TCP_SEND_SIZE               1024
-#define MAX_TCP_SEND_SIZE               16384
+#define MAX_TCP_SEND_SIZE               (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT           64
 
 
@@ -88,6 +88,9 @@ static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
 
 
 
+static time_t   tSysStart;
+static SYS_INT64 PCFreq,
+                PCSysStart;
 static SYS_IPCNAME LogSemIPCName;
 static SYS_SEMAPHORE RootLogSemID;
 static THRDLS SYS_SEMAPHORE LogSemID;
@@ -133,7 +136,24 @@ static char const *SysGetLastError(void)
 
 int             SysInitLibrary(void)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Setup timers
+///////////////////////////////////////////////////////////////////////////////
+    LARGE_INTEGER   PerfCntFreq,
+                    PerfCntCurr;
 
+    QueryPerformanceFrequency(&PerfCntFreq);
+    QueryPerformanceCounter(&PerfCntCurr);
+
+    PCFreq = *(SYS_INT64 *) & PerfCntFreq;
+    PCFreq /= 1000;
+    PCSysStart = *(SYS_INT64 *) & PerfCntCurr;
+
+    time(&tSysStart);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Setup sockets
+///////////////////////////////////////////////////////////////////////////////
     WSADATA         WSD;
 
     ZeroData(WSD);
@@ -759,7 +779,8 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout)
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
+                        int (*pSendCB) (void *), void *pUserData)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Open the source file
@@ -831,6 +852,15 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
             CloseHandle(hFileMap);
             CloseHandle(hFile);
             return (ErrorPop());
+        }
+
+        if ((pSendCB != NULL) && (pSendCB(pUserData) < 0))
+        {
+            UnmapViewOfFile(pAddress);
+            CloseHandle(hFileMap);
+            CloseHandle(hFile);
+            ErrSetErrorCode(ERR_USER_BREAK);
+            return (ERR_USER_BREAK);
         }
 
         pszBuffer += iCurrSend;
@@ -1204,6 +1234,38 @@ void            SysCloseThread(SYS_THREAD ThreadID, int iForce)
 
 
 
+int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
+{
+
+    BOOL            bSetResult = FALSE;
+
+    switch (iPriority)
+    {
+        case (SYS_PRIORITY_NORMAL):
+            bSetResult = SetThreadPriority((HANDLE) ThreadID, THREAD_PRIORITY_NORMAL);
+            break;
+
+        case (SYS_PRIORITY_LOWER):
+            bSetResult = SetThreadPriority((HANDLE) ThreadID, THREAD_PRIORITY_BELOW_NORMAL);
+            break;
+
+        case (SYS_PRIORITY_HIGHER):
+            bSetResult = SetThreadPriority((HANDLE) ThreadID, THREAD_PRIORITY_ABOVE_NORMAL);
+            break;
+    }
+
+    if (!bSetResult)
+    {
+        ErrSetErrorCode(ERR_SET_THREAD_PRIORITY);
+        return (ERR_SET_THREAD_PRIORITY);
+    }
+
+    return (0);
+
+}
+
+
+
 int             SysWaitThread(SYS_THREAD ThreadID, int iTimeout)
 {
 
@@ -1276,16 +1338,7 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
     SysFree(pszCmdLine);
 
 
-    switch (iPriority)
-    {
-        case (SYS_PRIORITY_LOWER):
-            SetThreadPriority(PI.hThread, THREAD_PRIORITY_BELOW_NORMAL);
-            break;
-
-        case (SYS_PRIORITY_HIGHER):
-            SetThreadPriority(PI.hThread, THREAD_PRIORITY_ABOVE_NORMAL);
-            break;
-    }
+    SysSetThreadPriority((SYS_THREAD) PI.hThread, iPriority);
 
 
     if (iWaitTimeout > 0)
@@ -1398,12 +1451,12 @@ void           *SysRealloc(void *pData, unsigned int uSize)
 
 
 
-int             SysLockFile(const char *pszFileName)
+int             SysLockFile(const char *pszFileName, char const * pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s.lock", pszFileName);
+    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
 
     int             iFileID = _open(szLockFile, _O_CREAT | _O_EXCL | _O_BINARY | _O_RDWR,
             _S_IREAD | _S_IWRITE);
@@ -1428,12 +1481,12 @@ int             SysLockFile(const char *pszFileName)
 
 
 
-int             SysUnlockFile(const char *pszFileName)
+int             SysUnlockFile(const char *pszFileName, char const * pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s.lock", pszFileName);
+    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
 
     if (_unlink(szLockFile) != 0)
     {
@@ -1684,6 +1737,25 @@ void            SysMsSleep(int iMsTimeout)
 
 
 
+SYS_INT64       SysMsTime(void)
+{
+
+    LARGE_INTEGER   PerfCntCurr;
+
+    QueryPerformanceCounter(&PerfCntCurr);
+
+    SYS_INT64       MsTicks = *(SYS_INT64 *) & PerfCntCurr;
+
+    MsTicks -= PCSysStart;
+    MsTicks /= PCFreq;
+    MsTicks += (SYS_INT64) tSysStart *1000;
+
+    return (MsTicks);
+
+}
+
+
+
 int             SysExistFile(const char *pszFilePath)
 {
 
@@ -1793,6 +1865,8 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
     }
 
     ZeroData(FI);
+    FI.iFileType = (stat_buffer.st_mode & _S_IFREG) ? ftNormal:
+            ((stat_buffer.st_mode & _S_IFDIR) ? ftDirectory: ftOther);
     FI.ulSize = (unsigned long) stat_buffer.st_size;
     FI.tCreat = stat_buffer.st_ctime;
     FI.tMod = stat_buffer.st_mtime;

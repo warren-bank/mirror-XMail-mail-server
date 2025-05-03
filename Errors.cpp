@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -229,6 +229,14 @@ static THRDLS ErrorInfo Errors[] =
     {ERR_DNS_CACHE_FILE_EXPIRED, "DNS cache file expired", NULL},
     {ERR_MMAP, "Error in function {mmap}", NULL},
     {ERR_NOT_LOCKED, "Not locked", NULL},
+    {ERR_SMTPFWD_FILE_NOT_FOUND, "SMTP forward gateway file not found", NULL},
+    {ERR_SMTPFWD_NOT_FOUND, "SMTP forward gateway not found", NULL},
+    {ERR_USER_BREAK, "Operation interrupted", NULL},
+    {ERR_SET_THREAD_PRIORITY, "Error setting thread priority", NULL},
+    {ERR_INVALID_QUEUE_PATH, "Invalid queue path", NULL},
+    {ERR_QUEUE_ARRAY_FULL, "Queue array is full", NULL},
+    {ERR_QUEUE_ENTRY_NOT_FOUND, "Queue entry not found", NULL},
+    {ERR_NULL_SENDER, "Empty message sender", NULL},
 
 };
 

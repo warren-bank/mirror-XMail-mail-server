@@ -18,7 +18,7 @@
  *
  *  Written by      Ulrich Drepper <drepper@gnu.ai.mit.edu>, 1995
  *  Written by      Glynn Clements <glynn@sensei.co.uk>, 1997
- *  Modified by     Davide Libenzi <davidel@maticad.it>, 2000
+ *  Modified by     Davide Libenzi <davide_libenzi@mycio.com>, 2000
  *
  */
 

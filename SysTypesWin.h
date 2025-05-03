@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -53,6 +53,7 @@
 #define SYS_INVALID_IPCNAME     ((SYS_IPCNAME) 0)
 
 #define SysSNPrintf             _snprintf
+#define SysVSNPrintf            _vsnprintf
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO
@@ -90,8 +91,19 @@ struct SYS_INET_ADDR
     struct sockaddr_in Addr;
 };
 
+enum SysFileTypes
+{
+    ftNormal = 1,
+    ftDirectory,
+    ftLink,
+    ftOther,
+
+    ftMax
+};
+
 struct SYS_FILE_INFO
 {
+    int             iFileType;
     unsigned long   ulSize;
     time_t          tCreat;
     time_t          tMod;

@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -31,6 +31,8 @@
 
 #define AUTH_TYPE_CLEAR             "CLR"
 #define AUTH_TYPE_APOP              "APOP"
+
+#define POP3_USER_SPLITTERS         "@:"
 
 
 
@@ -67,8 +69,9 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
                         BSOCK_HANDLE hBSock);
 int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iNumLines,
                         BSOCK_HANDLE hBSock);
-int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, const char *pszRmtName,
-                        const char *pszRmtPassword, const char *pszAuthType = AUTH_TYPE_CLEAR);
+int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer,
+                        const char *pszRmtName, const char *pszRmtPassword,
+                        const char *pszAuthType = AUTH_TYPE_CLEAR);
 
 
 

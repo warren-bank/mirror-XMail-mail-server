@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -67,6 +67,7 @@ POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB);
 int             GwLkLinkLock(POP3Link const * pPopLnk);
 void            GwLkLinkUnlock(POP3Link const * pPopLnk);
 int             GwLkClearLinkLocksDir(void);
+int             GwLkLocalDomain(POP3Link const * pPopLnk);
 int             GwLkCheckEnabled(POP3Link const * pPopLnk);
 int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable);
 int             GwLkEnable(char const * pszDomain, char const * pszName,

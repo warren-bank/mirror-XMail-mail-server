@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -42,18 +42,29 @@ struct SMTPError
     char           *pszSTMPResponse;
 };
 
+enum SmtpMsgInfo
+{
+    smsgiClientDomain = 0,
+    smsgiClientIP,
+    smsgiServerDomain,
+    smsgiSeverIP,
+    smsgiTime,
+    smsgiSeverName,
+
+    smsgiMax
+};
 
 
 
 
+
+char          **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
 int             USmtpGetGateway(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
                         char *pszGateway);
 int             USmtpAddGateway(const char *pszDomain, const char *pszGateway);
 int             USmtpRemoveGateway(const char *pszDomain);
 int             USmtpGetSpoolFileInfo(char const * pszPkgFile, char *pszDomain, char *pszSmtpMessageID,
                         char *pszFrom, char *pszRcpt);
-int             USmtpCopyToSpool(char const * pszMsgFile, char *pszMessageID = NULL);
-int             USmtpMoveToSpool(char const * pszMsgFile, char *pszMessageID = NULL);
 int             USmtpIsAllowedRelay(const SYS_INET_ADDR & PeerInfo,
                         SVRCFG_HANDLE hSvrConfig);
 char          **USmtpGetPathStrings(const char *pszMailCmd);
@@ -79,9 +90,15 @@ int             USmtpGetMXNext(MXS_HANDLE hMXSHandle, char *pszMXHost);
 void            USmtpMXSClose(MXS_HANDLE hMXSHandle);
 int             USmtpRBLCheck(SYS_INET_ADDR const & PeerInfo);
 int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo);
+int             USmtpORBSCheck(SYS_INET_ADDR const & PeerInfo);
 bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const * pszMapsServer);
 int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo);
 int             USmtpSpamAddressCheck(char const * pszAddress);
+int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomain,
+                        SYS_INET_ADDR const & PeerInfo, char const * pszServerDomain,
+                        SYS_INET_ADDR const & SockInfo, char const * pszSmtpServerLogo);
+char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+                        char const * pszRcptTo);
 
 
 

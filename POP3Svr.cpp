@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -51,7 +51,6 @@
 #define MAX_CLIENTS_WAIT        300
 #define POP3_IPMAP_FILE         "pop3.ipmap.tab"
 #define POP3_LOG_FILE           "pop3"
-#define POP3_USER_SPLITTERS     "@:"
 #define POP3_SERVER_NAME        "[" APP_NAME_VERSION_OS_STR " POP3 Server]"
 
 
@@ -356,7 +355,7 @@ unsigned int    POP3ThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_POP3_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pPOP3Cfg->iNumAddr, pPOP3Cfg->SvrAddr, pPOP3Cfg->iPort,
+    if (MscCreateServerSockets(pPOP3Cfg->iNumAddr, pPOP3Cfg->SvrPath, pPOP3Cfg->iPort,
                     POP3_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
@@ -403,6 +402,8 @@ unsigned int    POP3ThreadProc(void *pThreadData)
 
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
+            else
+                SysCloseSocket(ConnSockFD[ss], 1);
 
         }
     }
@@ -526,7 +527,7 @@ static int      POP3LogSession(POP3Session & POP3S)
 
     char            szTime[256] = "";
 
-    MscGetLogTimeStr(szTime, sizeof(szTime) - 1);
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
     RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" POP3_LOG_FILE);
@@ -576,8 +577,13 @@ static int      POP3HandleSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Send welcome message
 ///////////////////////////////////////////////////////////////////////////////
+	char            szTime[256] = "";
+
+    MscGetTimeStr(szTime, sizeof(szTime) - 1);
+
     if (BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
-                    "+OK %s %s service ready", POP3S.szTimeStamp, POP3_SERVER_NAME) < 0)
+                    "+OK %s %s service ready; %s", POP3S.szTimeStamp,
+                    POP3_SERVER_NAME, szTime) < 0)
     {
         POP3ClearSession(POP3S);
         return (ErrGetErrorCode());

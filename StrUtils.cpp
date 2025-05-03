@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -548,31 +548,33 @@ char           *StrLoadFile(FILE * pFile)
 char           *StrVSprint(char const * pszFormat, va_list Args)
 {
 
-    char            szMsgFile[SYS_MAX_PATH] = "";
+    int             iCurrSize = 256;
+    char           *pszMessage = (char *) SysAlloc(iCurrSize);
 
-    SysGetTmpFile(szMsgFile);
-
-    FILE           *pMsgFile = fopen(szMsgFile, "w+b");
-
-    if (pMsgFile == NULL)
-    {
-        SysRemove(szMsgFile);
-
-        ErrSetErrorCode(ERR_FILE_CREATE);
+    if (pszMessage == NULL)
         return (NULL);
+
+    for (;;)
+    {
+	    int             iNeededBytes = SysVSNPrintf(pszMessage, iCurrSize - 1, pszFormat, Args);
+
+        if ((iNeededBytes >= 0) && (iNeededBytes < (iCurrSize - 1)))
+            return (pszMessage);
+
+        iCurrSize *= 2;
+
+        char           *pszNew = (char *) SysRealloc(pszMessage, iCurrSize);
+
+        if (pszNew == NULL)
+        {
+            SysFree(pszMessage);
+            return (NULL);
+        }
+
+        pszMessage = pszNew;
     }
 
-
-    vfprintf(pMsgFile, pszFormat, Args);
-
-
-    char           *pszMessage = StrLoadFile(pMsgFile);
-
-
-    fclose(pMsgFile);
-    SysRemove(szMsgFile);
-
-    return (pszMessage);
+    return (NULL);
 
 }
 

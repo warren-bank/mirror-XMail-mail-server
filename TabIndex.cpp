@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -461,7 +461,7 @@ static int      TbixSeekHash(TabIndex & TI, SYS_UINT32 uHashVal, int &iMinIndex,
             break;
     }
 
-    if (uHashVal != IR.uHashVal)
+    if (iRight < iLeft)
     {
         ErrSetErrorCode(ERR_INDEX_HASH_NOT_FOUND);
         return (ERR_INDEX_HASH_NOT_FOUND);

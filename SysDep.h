@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -64,7 +64,8 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
                         int iTimeout);
 int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
                         int iTimeout);
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout);
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
+                        int (*pSendCB) (void *) = NULL, void *pUserData = NULL);
 int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRESS NetAddr, int iPortNo);
 NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo);
 NET_ADDRESS     SysGetHostByName(char const * pszName);
@@ -86,6 +87,7 @@ int             SysReleaseSemaphore(SYS_SEMAPHORE SemID, int iCount);
 SYS_THREAD      SysCreateThread(unsigned int (*pThreadProc) (void *), void *pThreadData);
 SYS_THREAD      SysCreateServiceThread(unsigned int (*pThreadProc) (void *), SYS_SOCKET SockFD);
 void            SysCloseThread(SYS_THREAD ThreadID, int iForce);
+int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority);
 int             SysWaitThread(SYS_THREAD ThreadID, int iTimeout);
 unsigned long   SysGetCurrentThreadId(void);
 void            SysIgnoreThreadsExit(void);
@@ -97,8 +99,8 @@ void           *SysAlloc(unsigned int uSize);
 void            SysFree(void *pData);
 void           *SysRealloc(void *pData, unsigned int uSize);
 
-int             SysLockFile(const char *pszFileName);
-int             SysUnlockFile(const char *pszFileName);
+int             SysLockFile(const char *pszFileName, char const * pszLockExt = ".lock");
+int             SysUnlockFile(const char *pszFileName, char const * pszLockExt = ".lock");
 
 SYS_SHMEM       SysCreateSharedMem(unsigned int uSize, SYS_IPCNAME ShmName);
 SYS_SHMEM       SysConnectSharedMem(unsigned int uSize, SYS_IPCNAME ShmName);
@@ -112,6 +114,7 @@ int             SysEventLog(char const * pszFormat,...);
 int             SysLogMessage(int iLogLevel, char const * pszFormat,...);
 void            SysSleep(int iTimeout);
 void            SysMsSleep(int iMsTimeout);
+SYS_INT64       SysMsTime(void);
 int             SysExistFile(const char *pszFilePath);
 SYS_HANDLE      SysFirstFile(const char *pszPath, char *pszFileName);
 int             SysIsDirectory(SYS_HANDLE hFind);

@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -29,7 +29,7 @@
 
 #define APP_PRODUCER            "GNU"
 #define APP_NAME_STR            "XMail"
-#define APP_VERSION_STR         "0.60"
+#define APP_VERSION_STR         "0.61"
 #define APP_NAME_VERSION_STR    APP_NAME_STR " " APP_VERSION_STR
 #define APP_NAME_VERSION_OS_STR APP_NAME_VERSION_STR " (" SYS_OS_PORT ")"
 

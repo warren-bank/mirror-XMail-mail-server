@@ -181,6 +181,10 @@ SOURCE=.\PSYNCSvr.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\Queue.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\ResLocks.cpp
 # End Source File
 # Begin Source File
@@ -340,6 +344,10 @@ SOURCE=.\POP3Utils.h
 # Begin Source File
 
 SOURCE=.\PSYNCSvr.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\Queue.h
 # End Source File
 # Begin Source File
 

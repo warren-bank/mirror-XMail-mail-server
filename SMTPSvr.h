@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -45,7 +45,7 @@ struct SMTPConfig
     int             iTimeout;
     int             iMaxRcpts;
     int             iNumAddr;
-    NET_ADDRESS     SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
+    ServerNetPath   SvrPath[MAX_SMTP_ACCEPT_ADDRESSES];
 
 };
 

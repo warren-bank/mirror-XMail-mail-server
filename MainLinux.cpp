@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -35,6 +35,8 @@
 
 #define RUNNING_PIDS_DIR            "/var/run"
 #define NOFILE                      64
+#define XMAIL_DEBUG_OPTION          "-Md"
+
 
 
 
@@ -47,6 +49,7 @@ static int      MLnxSavePID(void);
 static int      MLnxRemovePID(void);
 static void     MLnxSIGCLD(int iSignal);
 static int      MLnxDaemonBootStrap(void);
+static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[]);
 static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[]);
 
 
@@ -289,14 +292,27 @@ static int      MLnxDaemonBootStrap(void)
 
 
 
+static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[])
+{
+
+    for (int ii = 0; ii < iArgCount; ii++)
+        if (strcmp(pszArgs[ii], XMAIL_DEBUG_OPTION) == 0)
+            return (1);
+
+    return (0);
+
+}
+
+
 
 static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[])
 {
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Daemon bootstrap code
+//  Daemon bootstrap code if We're not in debug mode
 ///////////////////////////////////////////////////////////////////////////////
-    MLnxDaemonBootStrap();
+    if (!MLnxIsDebugStartup(iArgCount, pszArgs))
+        MLnxDaemonBootStrap();
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create PID file

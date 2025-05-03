@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -898,6 +898,15 @@ int             GwLkClearLinkLocksDir(void)
     GwLkGetLocksDir(szLocksDir);
 
     return (MscClearDirectory(szLocksDir));
+
+}
+
+
+
+int             GwLkLocalDomain(POP3Link const * pPopLnk)
+{
+
+    return (((pPopLnk != NULL) && (pPopLnk->pszDomain[0] != '@')) ? 1: 0);
 
 }
 

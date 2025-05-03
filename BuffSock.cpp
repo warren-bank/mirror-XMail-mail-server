@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -194,6 +194,8 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
         {
             if (iPrevChar == '\r')
                 pszBuffer[--ii] = '\0';
+            else
+                pszBuffer[ii] = '\0';
 
             return (pszBuffer);
         }

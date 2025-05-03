@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -205,6 +205,14 @@
 #define ERR_DNS_CACHE_FILE_EXPIRED  (-178)
 #define ERR_MMAP                    (-179)
 #define ERR_NOT_LOCKED              (-180)
+#define ERR_SMTPFWD_FILE_NOT_FOUND  (-181)
+#define ERR_SMTPFWD_NOT_FOUND       (-182)
+#define ERR_USER_BREAK              (-183)
+#define ERR_SET_THREAD_PRIORITY     (-184)
+#define ERR_INVALID_QUEUE_PATH      (-185)
+#define ERR_QUEUE_ARRAY_FULL        (-186)
+#define ERR_QUEUE_ENTRY_NOT_FOUND   (-187)
+#define ERR_NULL_SENDER             (-188)
 
 
 

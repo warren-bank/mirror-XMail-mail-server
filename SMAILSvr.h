@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -25,8 +25,6 @@
 #define _SMAILSVR_H
 
 
-
-#define MAX_SPOOL_FILES             8192
 
 #define SMAILF_STOP_SERVER          (1 << 0)
 #define SMAILF_LOG_ENABLED          (1 << 1)
@@ -41,7 +39,6 @@ struct SMAILConfig
     int             iRetryTimeout;
     int             iRetryIncrRatio;
     int             iMaxRetry;
-    int             iMsg_x_Wakeup;
 
 };
 

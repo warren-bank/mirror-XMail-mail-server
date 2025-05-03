@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -26,6 +26,9 @@
 
 
 
+
+
+#define SRand()                 srand((unsigned int) (SysMsTime() * SysGetCurrentThreadId()))
 #define NbrCeil(n, a)           ((((n) + (a) - 1) / (a)) * (a))
 #define NbrFloor(n, a)          (((n) / (a)) * (a))
 #define Sign(v)                 (((v) < 0) ? -1: +1)
@@ -34,6 +37,7 @@
 #define Abs(v)                  (((v) > 0) ? (v): -(v))
 #define INext(i, n)             ((((i) + 1) < (n)) ? ((i) + 1): 0)
 #define IPrev(i, n)             (((i) > 0) ? ((i) - 1): ((n) - 1))
+#define LIndex2D(i, j, n)       ((i) * (n) + (j))
 #define ZeroData(d)             memset(&(d), 0, sizeof(d))
 #define CountOf(t)              (sizeof(t) / sizeof((t)[0]))
 #define SetEmptyString(s)       (s)[0] = '\0'

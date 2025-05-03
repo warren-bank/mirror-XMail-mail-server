@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -29,6 +29,7 @@
 #include "BuffSock.h"
 #include "ResLocks.h"
 #include "StrUtils.h"
+#include "Queue.h"
 #include "SvrUtils.h"
 #include "MiscUtils.h"
 #include "UsrUtils.h"
@@ -115,18 +116,6 @@ struct SMTPSession
 
 };
 
-enum SmtpMsgInfo
-{
-    smsgiClientDomain = 0,
-    smsgiClientIP,
-    smsgiServerDomain,
-    smsgiSeverIP,
-    smsgiTime,
-    smsgiSeverName,
-
-    smsgiMax
-};
-
 enum SmtpAuthFields
 {
     smtpaUsername = 0,
@@ -192,8 +181,10 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                         char const * pszAuthParam);
 static char    *SMTPGetAuthFilePath(char *pszFilePath);
 static char    *SMTPGetExtAuthFilePath(char *pszFilePath);
-static int      SMTPCheckUsrPwdAuth(char const * pszUsername, char const * pszPassword,
-                        char *pszPerms);
+static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
+                        char const * pszPassword, char *pszPerms);
+static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
+                        char const * pszPassword, char *pszPerms);
 static int      SMTPCheckCramMD5Auth(char const * pszChallenge,
                         char const * pszResponse, char *pszPerms);
 static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
@@ -433,7 +424,7 @@ unsigned int    SMTPThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_SMTP_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pSMTPCfg->iNumAddr, pSMTPCfg->SvrAddr, pSMTPCfg->iPort,
+    if (MscCreateServerSockets(pSMTPCfg->iNumAddr, pSMTPCfg->SvrPath, pSMTPCfg->iPort,
                     SMTP_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
@@ -480,6 +471,8 @@ unsigned int    SMTPThreadProc(void *pThreadData)
 
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
+            else
+                SysCloseSocket(ConnSockFD[ss], 1);
 
         }
     }
@@ -585,6 +578,17 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     if (SvrTestConfigFlag("RSS-MAPSCheck", false, SMTPS.hSvrConfig) &&
             (USmtpRSSCheck(SMTPS.PeerInfo) < 0))
+    {
+        ErrorPush();
+        SvrReleaseConfigHandle(SMTPS.hSvrConfig);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  ORBS-MAPS client check (relays.orbs.org.)
+///////////////////////////////////////////////////////////////////////////////
+    if (SvrTestConfigFlag("ORBS-MAPSCheck", false, SMTPS.hSvrConfig) &&
+            (USmtpORBSCheck(SMTPS.PeerInfo) < 0))
     {
         ErrorPush();
         SvrReleaseConfigHandle(SMTPS.hSvrConfig);
@@ -705,7 +709,7 @@ static int      SMTPLogSession(SMTPSession & SMTPS)
 
     char            szTime[256] = "";
 
-    MscGetLogTimeStr(szTime, sizeof(szTime) - 1);
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
     RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" SMTP_LOG_FILE);
@@ -758,8 +762,13 @@ static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Send welcome message
 ///////////////////////////////////////////////////////////////////////////////
+	char            szTime[256] = "";
+
+    MscGetTimeStr(szTime, sizeof(szTime) - 1);
+
     if (BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                    "220 %s %s service ready", SMTPS.szTimeStamp, SMTP_SERVER_NAME) < 0)
+                    "220 %s %s service ready; %s", SMTPS.szTimeStamp,
+                    SMTP_SERVER_NAME, szTime) < 0)
     {
         ErrorPush();
         SMTPClearSession(SMTPS);
@@ -903,10 +912,20 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
 
     if (iDomainCount == 0)
     {
-        pszSMTPError = SysStrDup("501 Syntax error in return path");
+        if (!SvrTestConfigFlag("AllowNullSender", true, SMTPS.hSvrConfig))
+        {
+            pszSMTPError = SysStrDup("501 Syntax error in return path");
 
-        ErrSetErrorCode(ERR_BAD_RETURN_PATH);
-        return (ERR_BAD_RETURN_PATH);
+            ErrSetErrorCode(ERR_BAD_RETURN_PATH);
+            return (ERR_BAD_RETURN_PATH);
+        }
+
+        if (SMTPS.pszFrom != NULL)
+            SysFree(SMTPS.pszFrom);
+
+        SMTPS.pszFrom = SysStrDup("");
+
+        return (0);
     }
 
     char            szMailerUser[MAX_ADDR_NAME] = "",
@@ -950,28 +969,8 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
 static int      SMTPAddMessageInfo(SMTPSession & SMTPS)
 {
 
-    char            szTime[256] = "";
-
-    MscGetTimeStr(szTime, sizeof(szTime) - 1);
-
-
-    char            szPeerIP[128] = "",
-                    szSockIP[128] = "";
-
-    strcpy(szPeerIP, SysInetNToA(SMTPS.PeerInfo));
-    strcpy(szSockIP, SysInetNToA(SMTPS.SockInfo));
-
-///////////////////////////////////////////////////////////////////////////////
-//  Write message info. If You change the order ( or add new fields ) You must
-//  arrange fields into the SmtpMsgInfo union defined ahead of this file
-///////////////////////////////////////////////////////////////////////////////
-    fprintf(SMTPS.pMsgFile, "%s;%s;%s;%s;%s;%s\r\n",
-            SMTPS.szClientDomain, szPeerIP,
-            SMTPS.szSvrDomain, szSockIP,
-            szTime, SMTP_SERVER_NAME);
-
-
-    return (0);
+    return (USmtpAddMessageInfo(SMTPS.pMsgFile, SMTPS.szClientDomain, SMTPS.PeerInfo,
+                    SMTPS.szSvrDomain, SMTPS.SockInfo, SMTP_SERVER_NAME));
 
 }
 
@@ -1484,24 +1483,18 @@ static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * p
                         char const * pszRcptTo, FILE * pMailFile)
 {
 
-    char            szFrom[MAX_SPOOL_LINE] = "",
-                    szRcpt[MAX_SPOOL_LINE] = "";
+    char           *pszReceived = USmtpGetReceived(ppszMsgInfo, pszMailFrom, pszRcptTo);
 
-    if ((USmlParseAddress(pszMailFrom, NULL, szFrom) < 0) ||
-            (USmlParseAddress(pszRcptTo, NULL, szRcpt) < 0))
+    if (pszReceived == NULL)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "Received:" tag
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pMailFile,
-            "Received: from %s (%s)\r\n"
-            "\tby %s (%s) with %s\r\n"
-            "\tfor <%s> from <%s>;\r\n"
-            "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientIP],
-            ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverIP],
-            ppszMsgInfo[smsgiSeverName], szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+    fputs(pszReceived, pMailFile);
 
+
+    SysFree(pszReceived);
 
     return (0);
 
@@ -1608,7 +1601,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 ///////////////////////////////////////////////////////////////////////////////
         char            szSpoolTmpFile[SYS_MAX_PATH] = "";
 
-        if (SvrGetUniqueMessageTmpPath(szSpoolTmpFile) < 0)
+        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
         {
             ErrorPush();
             StrFreeStrings(ppszMsgInfo);
@@ -1681,9 +1674,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        char            szMessageId[MAX_MESSAGE_ID] = "";
-
-        if (SvrMoveTmpToSpool(szSpoolTmpFile, szMessageId) < 0)
+        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             StrFreeStrings(ppszMsgInfo);
@@ -2140,7 +2131,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 ///////////////////////////////////////////////////////////////////////////////
     char            szPerms[128] = "";
 
-    if (SMTPCheckUsrPwdAuth(ppszTokens[0], ppszTokens[1], szPerms) < 0)
+    if (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, ppszTokens[0], ppszTokens[1], szPerms) < 0)
     {
         ErrorPush();
         StrFreeStrings(ppszTokens);
@@ -2267,7 +2258,8 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
     char            szPerms[128] = "";
 
-    if (SMTPCheckUsrPwdAuth(pszUsername, pszPassword, szPerms) < 0)
+    if ((SMTPCheckLocalAuth(SMTPS.hSvrConfig, pszUsername, pszPassword, szPerms) < 0) &&
+            (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, pszUsername, pszPassword, szPerms) < 0))
     {
         ErrorPush();
 
@@ -2356,7 +2348,8 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
     char            szPerms[128] = "";
 
-    if (SMTPCheckUsrPwdAuth(szUsername, szPassword, szPerms) < 0)
+    if ((SMTPCheckLocalAuth(SMTPS.hSvrConfig, szUsername, szPassword, szPerms) < 0) &&
+            (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, szUsername, szPassword, szPerms) < 0))
     {
         ErrorPush();
 
@@ -2407,8 +2400,58 @@ static char    *SMTPGetExtAuthFilePath(char *pszFilePath)
 
 
 
-static int      SMTPCheckUsrPwdAuth(char const * pszUsername, char const * pszPassword,
-                        char *pszPerms)
+static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
+                        char const * pszPassword, char *pszPerms)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  First try to lookup  mailusers.tab
+///////////////////////////////////////////////////////////////////////////////
+    char            szAccountUser[MAX_ADDR_NAME] = "",
+                    szAccountDomain[MAX_HOST_NAME] = "";
+
+    if (StrSplitString(pszUsername, POP3_USER_SPLITTERS, szAccountUser, sizeof(szAccountUser),
+                    szAccountDomain, sizeof(szAccountDomain)) < 0)
+        return (ErrGetErrorCode());
+
+    UserInfo       *pUI = UsrGetUserByName(szAccountDomain, szAccountUser);
+
+    if (pUI != NULL)
+    {
+        int             iPasswdCompare = strcmp(pUI->pszPassword, pszPassword);
+
+        UsrFreeUserInfo(pUI);
+
+
+        if (iPasswdCompare == 0)
+        {
+///////////////////////////////////////////////////////////////////////////////
+//  Match found, get the default permissions
+///////////////////////////////////////////////////////////////////////////////
+            char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig, "DefaultSmtpPerms", "MR");
+
+            if (pszDefultPerms != NULL)
+            {
+                strcpy(pszPerms, pszDefultPerms);
+
+                SysFree(pszDefultPerms);
+            }
+            else
+                SetEmptyString(pszPerms);
+
+            return (0);
+        }
+    }
+
+
+    ErrSetErrorCode(ERR_SMTP_AUTH_FAILED);
+    return (ERR_SMTP_AUTH_FAILED);
+
+}
+
+
+
+static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
+                        char const * pszPassword, char *pszPerms)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";

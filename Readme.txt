@@ -1,11 +1,12 @@
 
 			< XMail Server >
 
-Version      :	0.60 ( Beta-14 )
-Release type :	Gnu Public License	http://www.gnu.org
-Date         :	31-08-2000
-Project by   :	"Davide Libenzi"	davidel@maticad.it	http://www.maticad.it/davide/xmail.asp
-Contrib by   :	
+Version      : 0.61 ( Beta-15 )
+Release type : Gnu Public License	http://www.gnu.org
+Date         : 12-09-2000
+Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
+Credits      :
+             : Michael Hartle <mhartle@hartle-klug.com>
 
 
 
@@ -147,7 +148,7 @@ Date 26-04-2000
 	Now messages coming from external POP3 links are pushed into the spool and not directly
 	into the target user mailbox - this enable custom user mail processing also on this
 	kind of messages.
-	Added "lredirect" command to MAILPROC.TAB that makes XMail to impersonate the local 
+	Added "lredirect" command to MAILPROC.TAB that makes XMail to impersonate the local
 	domain when redirect messages.
 	Added "lredirect" command to custom domain mail processing that makes XMail 
 	to impersonate the local domain when redirect messages.
@@ -299,6 +300,58 @@ Date 31-08-2000		0.60
 	Improved I/O performance due to a new way of sending files through TCP/IP connections,
 	to a more efficent way to copy message files and to a reduced number of temporary files
 	that are created by XMail.
+Date 12-09-2000		0.61
+	Added a new CTRL command  "userauth"  that helps to check users authentication.
+	This command can be used by external modules that need to check XMail username/password
+	authentication ( ex: external IMAP auth modules ).
+	A new file  SMTPFWD.TAB  has been introduced to supply customizable mail exchangers
+	for external domains ( see section  SMTPFWD.TAB ).
+	Not local POP3 sync has been introduced to make it possible to download external POP3
+	accounts without having to setup local accounts ( see section POP3LINKS.TAB ).
+	This feature can be used, for example, to catch mails from a set of remote accounts
+	and redirect these to another SMTP server.
+	Now it's possible to set per IP server port in command line params by specifying  bindip[:port]
+	PSYNC flags  -Qx  has been removed due the new queue system.
+	A new global command line parameter  -Mx  has been introduced to setup the queue split level
+	even if my suggestion is to leave the default value ( 23 , that means that the queue is splitted
+	in 23 * 23 = 529 subdirectories ).
+	***************************************************************************************
+	* A new spool format has been coded to enable XMail to handle very large sending queues.
+	* See section "XMail spool design" for a description of how the spool works.
+	* Due to the new spool format the following directories can be removed :
+	*
+	* custdomains/spool
+	* spool/tmp
+	* spool/errors
+	* spool/logs
+	* spool/locks
+	*
+	* You've to leave XMail flush its queue ( spool ) before upgrading to this version.
+	* A more complex solution, if You've a lot of file pending into the spool, is :
+	*
+	* 1) Stop XMail
+	* 2) Upgrade to 0.61
+	* 3) Start XMail and wait it has created all the queue tree structure
+	* 4) Stop XMail
+	* 5) Move all old spool/ files into 0/0/mess
+	* 6) Rename all spool/logs/ files removing the .log extension
+	* 7) Move all spool/logs/ file into 0/0/slog
+	* 8) Now You can remove the above directories and restart XMail
+	***************************************************************************************
+	ORBS relays checking has been added and is activated by the new  SERVER.TAB  option
+	"ORBS-MAPSCheck".
+	A new  SERVER.TAB  variable  "AllowNullSender"  ( default true ) has been introduced to
+	change the XMail default behaviour that reject null sender messages. Now if You want null
+	sender messages to be rejected You've to set this variable to zero.
+	Fixed a bug in Linux XMail debug startup.
+	Now SMTP authentication does a previous lookup in  mailusers.tab  using the complete
+	email address as username ( @ or : as separators ).
+	Authenticated users will get the permission stored in the new  "DefaultSmtpPerms"  SERVER.TAB
+	variable.
+
+
+
+
 
 
 
@@ -475,9 +528,9 @@ Part 4			Requirements
 	Any version of Linux.
 	Windows NT with ws2_32.dll correctly installed.
 	A working DNS and gateway to the internet ( if You plan to use it ).
-	To build for Linux You need any version of gcc and libc or glibc ( better ) 
+	To build for Linux You need any version of gcc and libc or glibc ( better )
 	installed.
-	To build for Windows You need MS Visual C++ ( for which I give the project ) 
+	To build for Windows You need MS Visual C++ ( for which I give the project )
 	or any other working compiler that give support for Win32 SDK.
 
 
@@ -495,10 +548,9 @@ Part 4			Requirements
 
 Part 5			Getting sources
 
-	You can download sources from ftp://ftp.maticad.it/pub/misc/mailsvr.tar.gz
-	for Linux and other <CR> terminated OSs and from ftp://ftp.maticad.it/pub/misc/mailsvr.crlf.zip 
-	for NT ( <CR><LF> terminated ).
-	Do not mix files coz bad line termination is the most common cause of XMail failures !
+	Get the latest sources at the XMail home page http://www.mycio.com/davidel/xmail
+	Use the correct distribution for Your system and don't mix Linux files with
+	Windows ones coz this is one of the most common cause of XMail bad behaviour.
 
 
 
@@ -573,7 +625,7 @@ Part 7			Configuration
 	7) If You've  inetd  installed You must comment out the lines of  /etc/inetd.conf
 		that involves SMTP POP3 Finger and restart  inetd  ( kill -HUP ... )
 	8) Since XMail use syslog to log messages, enable  syslogd  if it's not running
-	9) Setup  server.tab  configuration option after a well read to the rest of this doc
+	9) Setup  SERVER.TAB  configuration option after a well read to the rest of this doc
 	10) Add Your users and domains ( after a well read to the rest of this doc )
 	11) Change or comment out ( # ) the example account in  ctrlaccounts.tab
 	12) Copy  xmail  startup script to Your init.d directory ( it's position depends on Your distro ).
@@ -611,7 +663,7 @@ Part 7			Configuration
 		for an automatic startup
 	10) If You've other services that gives the same functionalities of XMail, that is
 		SMTP POP3 or Finger servers, You must stop these services
-	11) Setup  server.tab  configuration option after a well read to the rest of this doc
+	11) Setup  SERVER.TAB  configuration option after a well read to the rest of this doc
 	12) Add Your users and domains ( after a well read to the rest of this doc )
 	13) Setup file permissions of  C:\MailRoot  directory to grant access only SYSTEM and
 		Domain Adminis
@@ -647,6 +699,7 @@ Part 7			Configuration
 		pop3links.tab	<file>
 		server.tab	<file>
 		smtpgw.tab	<file>
+		smtpfwd.tab	<file>
 		smtprelay.tab	<file>
 		smtpauth.tab	<file>
 		smtpextauth.tab	<file>
@@ -666,16 +719,23 @@ Part 7			Configuration
 			mx	<dir>
 			ns	<dir>
 		custdomains	<dir>
-			spool	<dir>
 		filters		<dir>
 		logs		<dir>
 		pop3locks	<dir>
 		pop3linklocks	<dir>
 		spool		<dir>
-			errors	<dir>
-			locks	<dir>
-			logs	<dir>
-			tmp	<dir>
+			0	<dir>
+				0	<dir>
+					mess	<dir>
+					rsnd	<dir>
+					info	<dir>
+					temp	<dir>
+					slog	<dir>
+					lock	<dir>
+					cust	<dir>
+					froz	<dir>
+				...
+			...
 		userauth	<dir>
 			pop3	<dir>
 			smtp	<dir>
@@ -761,7 +821,7 @@ Part 7			Configuration
 	This file define "Return-Path: <...>" mapping for internal mail delivery.
 	If You are using a Mail client like Outlook, Eudora, KMail ... You have configured 
 	Your email address with the external account say "dlibenzi@maticad.it".
-	When You post an inernal message to "foo@maticad" the mail client put Your external 
+	When You post an inernal message to "foo@maticad" the mail client put Your external
 	email address ( "dlibenzi@maticad.it" ) in the "MAIL FROM: <...>" SMTP request.
 	Now if the user "foo" reply to this message, it'll reply to "dlibenzi@maticad.it" 
 	then it'll be sent to the external mail server.
@@ -816,13 +876,22 @@ Part 7			Configuration
 
 	"maticad"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"APOP"
 
-	This entry is used to syncronize the external account "dlibenzi@maticad.it" with encrypted 
+	This entry is used to syncronize the external account "dlibenzi@maticad.it" with encrypted
 	password "XYZ..." with the local account "dlibenzi@maticad" using  APOP  authentication.
-	It connect with the "maticad.it" POP3 server and download all messages for "dlibenzi@maticad.it" into 
+	It connect with the "maticad.it" POP3 server and download all messages for "dlibenzi@maticad.it" into
 	the local account "dlibenzi@maticad".
 	The remote server must support  APOP  authentication to specify APOP as authtype.
 	Even if using APOP authentication is more secure coz clear usernames and password does not
 	travel on the network, if You're not sure about it, specify  CLR  as authtype.
+	For non local POP3 sync You've to specify a line like this one ( @ as the first domain char ) :
+
+	"@maticad.com"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+
+	This entry is used to syncronize the external account "dlibenzi@maticad.com" with encrypted
+	password "XYZ..." with the account "dlibenzi@maticad.com" using  CLR  authentication.
+	The message will be pushed into the spool having as destination  dlibenzi@maticad.com  ,
+	so You've to have some kind of processing for that user or domain in Your XMail configuration
+	( for example custom domain processing ).
 
 
 	SERVER.TAB :
@@ -838,12 +907,12 @@ Part 7			Configuration
 
 	Ex :
 
-	"foo.example.com"	"maticad.it"
+	"foo.example.com"	"@maticad.it"
 
 	will send all mail for "foo.example.com" through the "maticad.it" SMTP server,
 	while :
 
-	"*.dummy.net"	"relay.maticad.it"
+	"*.dummy.net"	"@relay.maticad.it"
 
 	will send all mail for  "*.dummy.net"  through  "relay.maticad.it".
 	The  smtp-gateway  can be a complex routing also, ex :
@@ -852,6 +921,23 @@ Part 7			Configuration
 
 	will send all mail for  "*.dummy.net"  through  "@relay.maticad.it,@mail.nowhere.org",
 	in this way  relay.maticad.it --> mail.nowhere.org --> @DESTINATION
+
+
+	SMTPFWD.TAB :
+
+	"domain"[TAB]"smtp-mx-list"[NEWLINE]
+
+	Ex :
+
+	"foo.example.com"	"mail.maticad.it:7001,192.168.1.1:6123,mx.maticad.it"
+
+	will send all mail for "foo.example.com" using the provided list of mail exchangers,
+	while :
+
+	"*.dummy.net"	"mail.maticad.it,192.168.1.1,mx.maticad.it:6423"
+
+	will send all mail for  "*.dummy.net"  through the provided list of mail exchangers.
+	If the port ( :nn ) is not specified the default SMTP port ( 25 ) is assumed.
 
 
 	SMTPRELAY.TAB :
@@ -882,6 +968,14 @@ Part 7			Configuration
 
 	M	= open mailing features
 	R	= open relay features ( bypass all other relay blocking traps )
+
+	When PLAIN or LOGIN authentication mode are used a first lookup in MAILUSERS.TAB
+	accounts is performed to avoid duplicating informations with SMTPAUTH.TAB.
+	So using these authentication modes a user must use as username the full email address
+	( the : separator is permitted instead @ ) and as password his POP3 password.
+	If the lookup succeed the  SERVER.TAB  variable  "DefaultSmtpPerms"  is used to assign
+	user SMTP permissions ( default MR ).
+	If the lookup will fail then  SMTPAUTH.TAB  lookup is done.
 
 
 	SMTPEXTAUTH.TAB :
@@ -1042,7 +1136,7 @@ Part 7			Configuration
 
 	Ex:
 
-	"dlibenzi@maticad.it"
+	"davide_libenzi@mycio.com"
 	"ghostuser@nightmare.net"
 
 	If the  USER.TAB  file defines a "ClosedML" variable as 1 then a client can post
@@ -1380,7 +1474,7 @@ Part 11			SERVER.TAB variables
 	This has the precedence over MX records.
 
 	[RemoveSpoolErrors]
-	Indicate if mail has to be removed or stored in spool/errors after a failure in
+	Indicate if mail has to be removed or stored in  froz  directory after a failure in
 	delivery or filtering.
 
 	[SMTP-RDNSCheck]
@@ -1493,7 +1587,7 @@ Part 12			Domain message filters
 
 	Here  "command"  is the name of an external program that must process the message and
 	return its processing result. If it return  99  the message is rejected and pushed 
-	into  spool/errors  subdirectory.
+	into  froz  subdirectory.
 	If all filters return values different from 99 the message can continue its trip.
 	The spool files has this structure :
 
@@ -1577,7 +1671,59 @@ Part 14			Mail Routing Through Addresses
 
 
 
-Part 15			SMTP commands
+
+Part 15			XMail spool design
+
+	The new spool fs tree format has been designed to enable XMail to handle very
+	large queues.
+	Instead of having a single spool directory ( like versions older than 0.61 )
+	a two layer deep splitting has been introduced so that its structure is :
+
+	0	<dir>
+		0	<dir>
+			mess	<dir>
+			rsnd	<dir>
+			info	<dir>
+			temp	<dir>
+			slog	<dir>
+			lock	<dir>
+			cust	<dir>
+			froz	<dir>
+		...
+	...
+
+	When XMail needs to create a new spool file a spool path is choosen in a random way and
+	a new file with the format :
+
+	mstime.pid.hostname
+
+	is created inside the temp subdirectory.
+	When the spool file is ready to be committed, it's moved in the mess subdirectory that holds
+	newer spool files.
+	If XMail fails sending a new message ( the ones in  mess  subdirectory ) it creates a log file
+	( with the same name of the message file ) inside the  slog  subdirectory and move the file
+	from  mess  to  rsnd.
+	During the message sending the message itself is locked by creating a file inside the  lock
+	subdirectory ( with the same name of the message file ).
+	If the message has permanent delivery errors or is expired and if the option  RemoveSpoolErrors
+	of the  SERVER.TAB  file is off, the message file is moved inside the  froz  subdirectory as long
+	as the log file ( with extension  .#slog#  ).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Part 16			SMTP commands
 
 	These are commands understood by SMTP server :
 
@@ -1608,7 +1754,7 @@ Part 15			SMTP commands
 
 
 
-Part 16			POP3 commands
+Part 17			POP3 commands
 
 	These are commands understood by POP3 server :
 
@@ -1646,7 +1792,7 @@ Part 16			POP3 commands
 
 
 
-Part 17			Command line
+Part 18			Command line
 
 	Most of XMail configuration settings are command line tunables.
 	These are command line switches organized by server.
@@ -1661,6 +1807,8 @@ Part 17			Command line
 			  of accounts that it should keep up. If You set it to 10000 XMail would be
 			  able to sustain up to 12000-12500 accounts, but You can't set it to 10000
 			  and leave XMail to handle 20000 accounts. The default value is 25000.
+	-Mx split-level	= Set the queue split level. The value You set here is rounded to the lower
+			  prime number higher or equal than the value You've set.
 
 	[POP3]
 	-Pp port	= Set POP3 server port ( if You change this You must know what You're doing )
@@ -1670,7 +1818,7 @@ Part 17			Command line
 	-Pw timeout	= Set the delay timeout in response to a bad POP3 login. Such time will be
 			  doubled at the next bad login
 	-Ph		= Hang the connection in bad login response
-	-PI bindip	= Bind server to the specified ip address ( can be multiple )
+	-PI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-PX nthreads	= Set the maximum number of threads for POP3 server
 
 	[SMTP]
@@ -1684,7 +1832,6 @@ Part 17			Command line
 
 	[SMAIL]
 	-Qn nthreads	= Set the number of mailer threads
-	-Qx nmessages	= Set the number of messages processes at every thread wakeup
 	-Qt timeout	= Set the timeout to be waited for a next try after send failure
 	-Qi ratio	= Set the increment ratio of the reschedule time in sending a messages.
 			  At every failure in delivery a message, reschedule time T is incremented
@@ -1700,14 +1847,14 @@ Part 17			Command line
 	[FINGER]
 	-Fp port	= Set FINGER server port ( if You change this You must know what You're doing )
 	-Fl		= Enable FINGER logging
-	-FI bindip	= Bind server to the specified ip address ( can be multiple )
+	-FI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 
 	[CTRL]
 	-Cp port	= Set CTRL server port ( if You change this You must know what You're doing )
 	-Ct timeout	= Set CTRL session timeout ( seconds ) after which the server will close
 			  the connection if not receive any commands
 	-Cl		= Enable CTRL logging
-	-CI bindip	= Bind server to the specified ip address ( can be multiple )
+	-CI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-CX nthreads	= Set the maximum number of threads for CTRL server
 
 
@@ -1723,7 +1870,7 @@ Part 17			Command line
 
 
 
-Part 18			XMail admin protocol
+Part 19			XMail admin protocol
 
 	It's possible to remote admin XMail due to the existence of a "controller server"
 	that run with XMail and that wait for TCP/IP connections on a port ( 6017 or tunable
@@ -1830,6 +1977,19 @@ Part 18			XMail admin protocol
 
 	The result will be a RESSTRING.
 
+	
+	*) Authenticate user
+
+	"userauth"[TAB]"domain"[TAB]"username"[TAB]"password"<CR><LF>
+
+	where :
+
+	domain		= domain name
+	username	= username
+	password	= password
+
+	The result will be a RESSTRING.
+	
 
 	*) Adding an alias
 
@@ -2239,7 +2399,7 @@ Part 18			XMail admin protocol
 	Are there guys that want to build GUI configuration tools using common scripting
 	languages ( Java, TCL/Tk, etc ) and XMail controller protocol ?
 	Are there guys that want to build Web configuration tools ?
-	Let me know <davidel@maticad.it>.
+	Let me know <davide_libenzi@mycio.com>.
 
 	
 
@@ -2256,7 +2416,7 @@ Part 18			XMail admin protocol
 
 
 
-Part 19			CtrlClnt ( XMail administration )
+Part 20			CtrlClnt ( XMail administration )
 
 	You can use CtrlClnt to send administration commands to XMail.
 	These commands are defined in the previous section.
@@ -2292,7 +2452,7 @@ Part 19			CtrlClnt ( XMail administration )
 
 
 
-Part 20			Server Shutdown
+Part 21			Server Shutdown
 
 	[Linux]
 	Under Linux XMail creates a file named XMail.pid under /var/run that contain the PID
@@ -2336,7 +2496,7 @@ Part 20			Server Shutdown
 
 
 
-Part 21			MkUsers
+Part 22			MkUsers
 
 	This command line utility enable You to create user accounts structure by giving
 	it a formatted list of users parameters ( or a formatted text file ).
@@ -2418,7 +2578,7 @@ Part 21			MkUsers
 
 
 
-Part 22			Miscellaneous
+Part 23			Miscellaneous
 
 	[1]
 	To handle multiple POP3 domains the server makes a reverse lookup of the IP address
@@ -2489,7 +2649,7 @@ Part 22			Miscellaneous
 
 	[-]
 	Please report me errors about XMail itself and about this document.
-	If You successfully build and run XMail please let me know at davidel@maticad.it ,
+	If You successfully build and run XMail please let me know at davide_libenzi@mycio.com ,
 	I don't want money ;)
 
 
@@ -2506,7 +2666,7 @@ Part 22			Miscellaneous
 
 
 
-Part 23			Known bugs
+Part 24			Known bugs
 
 	Version 0.1 ( Alpha-1 ) :
 
@@ -2535,11 +2695,15 @@ Part 23			Known bugs
 
 
 
-Part 24			Thanks
+Part 25			Thanks
 
 	My mother Adelisa, to give me the light.
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
 	My company, myCIO.com, to give me my wage.
+
+
+
+
 
 

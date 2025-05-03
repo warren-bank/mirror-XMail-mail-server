@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -31,6 +31,7 @@
 #include "BuffSock.h"
 #include "MD5.h"
 #include "MailConfig.h"
+#include "Queue.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
 #include "MiscUtils.h"
@@ -778,7 +779,8 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
     if (BSckSendString(hBSock, szResponse, pPOPSD->iTimeout) < 0)
         return (ErrGetErrorCode());
 
-    if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, pPOPSD->iTimeout) < 0)
+    if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, pPOPSD->iTimeout,
+                    SvrShutdownCB, NULL) < 0)
         return (ErrGetErrorCode());
 
     if (BSckSendString(hBSock, ".", pPOPSD->iTimeout) < 0)
@@ -1242,7 +1244,7 @@ static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 
 
 
-int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, const char *pszRmtName,
+int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer, const char *pszRmtName,
                         const char *pszRmtPassword, const char *pszAuthType)
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1269,10 +1271,6 @@ int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, con
 
     if (iMsgCount > 0)
     {
-        char            szUserAddress[MAX_ADDR_NAME] = "";
-
-        UsrGetAddress(pUI, szUserAddress);
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve messages
 ///////////////////////////////////////////////////////////////////////////////
@@ -1298,7 +1296,7 @@ int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, con
 ///////////////////////////////////////////////////////////////////////////////
             char            szSpoolTmpFile[SYS_MAX_PATH] = "";
 
-            if (SvrGetUniqueMessageTmpPath(szSpoolTmpFile) < 0)
+            if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
             {
                 ErrorPush();
                 SysRemove(szMsgFileName);
@@ -1309,7 +1307,7 @@ int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, con
 ///////////////////////////////////////////////////////////////////////////////
 //  Build spool file
 ///////////////////////////////////////////////////////////////////////////////
-            if (USmlCreateSpoolFile(szMsgFileName, szUserAddress, szSpoolTmpFile) < 0)
+            if (USmlCreateSpoolFile(szMsgFileName, pszSyncAddr, szSpoolTmpFile) < 0)
             {
                 ErrorPush();
                 CheckRemoveFile(szSpoolTmpFile);
@@ -1323,9 +1321,7 @@ int             UPopSyncRemoteLink(UserInfo * pUI, const char *pszRmtServer, con
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-            char            szMessageId[MAX_MESSAGE_ID] = "";
-
-            if (SvrMoveTmpToSpool(szSpoolTmpFile, szMessageId) < 0)
+            if (QueCommitTempMessage(szSpoolTmpFile) < 0)
             {
                 ErrorPush();
                 SysRemove(szSpoolTmpFile);

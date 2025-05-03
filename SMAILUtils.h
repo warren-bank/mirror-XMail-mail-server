@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -74,9 +74,10 @@ void            USmlCleanupSpoolFileHeader(SpoolFileHeader & SFH);
 char           *USmlAddrConcat(char const * const * ppszStrings);
 char           *USmlBuildSendMailFrom(char const * const * ppszFrom, char const * const * ppszRcpt);
 char           *USmlBuildSendRcptTo(char const * const * ppszFrom, char const * const * ppszRcpt);
-SPLF_HANDLE     USmlCreateHandle(const char *pszSpoolFile);
+SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath);
 void            USmlCloseHandle(SPLF_HANDLE hFSpool);
 char const     *USmlGetRelayDomain(SPLF_HANDLE hFSpool);
+char const     *USmlGetSpoolFilePath(SPLF_HANDLE hFSpool);
 char const     *USmlGetSpoolFile(SPLF_HANDLE hFSpool);
 char const     *USmlGetSMTPDomain(SPLF_HANDLE hFSpool);
 char const     *USmlGetSmtpMessageID(SPLF_HANDLE hFSpool);
@@ -102,7 +103,7 @@ int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
                         LocalMailProcConfig & LMPC);
 int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash = 1);
 int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCustFilePath);
-int             USmlGetDomainCustomSpoolFile(char const * pszSpoolFile, char *pszCustFilePath);
+int             USmlGetDomainCustomSpoolFile(char const * pszSpoolFilePath, char *pszCustFilePath);
 int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, char const * pszDestDomain,
                         char *pszCustFilePath);
 int             USmlGetCustomDomainFile(char const * pszDestDomain, char const * pszCustFilePath);

@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -130,6 +130,8 @@ static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 static int      CTRLDo_usergetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
@@ -254,7 +256,7 @@ static int      CTRLLogSession(char const * pszUsername, char const * pszPasswor
 
     char            szTime[256] = "";
 
-    MscGetLogTimeStr(szTime, sizeof(szTime) - 1);
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
     RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" CTRL_LOG_FILE);
@@ -336,7 +338,7 @@ unsigned int    CTRLThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_CTRL_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pCTRLCfg->iNumAddr, pCTRLCfg->SvrAddr, pCTRLCfg->iPort,
+    if (MscCreateServerSockets(pCTRLCfg->iNumAddr, pCTRLCfg->SvrPath, pCTRLCfg->iPort,
                     CTRL_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
@@ -383,6 +385,8 @@ unsigned int    CTRLThreadProc(void *pThreadData)
 
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
+            else
+                SysCloseSocket(ConnSockFD[ss], 1);
 
         }
     }
@@ -792,8 +796,12 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Welcome
 ///////////////////////////////////////////////////////////////////////////////
-    CTRLVSendCmdResult(pCTRLCfg, hBSock, 0, "%s %s CTRL Server",
-            szTimeStamp, APP_NAME_VERSION_OS_STR);
+	char            szTime[256] = "";
+
+    MscGetTimeStr(szTime, sizeof(szTime) - 1);
+
+    CTRLVSendCmdResult(pCTRLCfg, hBSock, 0, "%s %s CTRL Server; %s",
+            szTimeStamp, APP_NAME_VERSION_OS_STR, szTime);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  User login
@@ -888,6 +896,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_usergetmproc(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "usersetmproc") == 0)
         iCmdResult = CTRLDo_usersetmproc(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "userauth") == 0)
+        iCmdResult = CTRLDo_userauth(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "aliasadd") == 0)
         iCmdResult = CTRLDo_aliasadd(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "aliasdel") == 0)
@@ -1610,6 +1620,52 @@ static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
     SysRemove(szMPFile);
+
+    UsrFreeUserInfo(pUI);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 4)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check real user account existence
+///////////////////////////////////////////////////////////////////////////////
+    UserInfo       *pUI = UsrGetUserByName(ppszTokens[1], ppszTokens[2]);
+
+    if (pUI == NULL)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check password
+///////////////////////////////////////////////////////////////////////////////
+    if (strcmp(pUI->pszPassword, ppszTokens[3]) != 0)
+    {
+        UsrFreeUserInfo(pUI);
+
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_INVALID_PASSWORD);
+        ErrSetErrorCode(ERR_INVALID_PASSWORD);
+        return (ERR_INVALID_PASSWORD);
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
 
     UsrFreeUserInfo(pUI);
 

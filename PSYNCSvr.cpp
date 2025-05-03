@@ -16,7 +16,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- *  Davide Libenzi <davidel@maticad.it>
+ *  Davide Libenzi <davide_libenzi@mycio.com>
  *
  */
 
@@ -41,6 +41,8 @@
 
 
 
+#define PSYNC_WAIT_SLEEP            2
+#define MAX_CLIENTS_WAIT            300
 #define PSYNC_WAKEUP_TIME           4
 #define PSYNC_SERVER_NAME           "[" APP_NAME_VERSION_OS_STR " PSYNC Server]"
 
@@ -178,6 +180,26 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
 
 
         SysFree(pPSYNCCfg);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Wait for client completion
+///////////////////////////////////////////////////////////////////////////////
+    for (int iTotalWait = 0; (iTotalWait < MAX_CLIENTS_WAIT); iTotalWait += PSYNC_WAIT_SLEEP)
+    {
+        PSYNCConfig    *pPSYNCCfg = (PSYNCConfig *) ShbLock(hShbPSYNC);
+
+        if (pPSYNCCfg == NULL)
+            break;
+
+        long            lThreadCount = pPSYNCCfg->lThreadCount;
+
+        ShbUnlock(hShbPSYNC);
+
+        if (lThreadCount == 0)
+            break;
+
+        SysSleep(PSYNC_WAIT_SLEEP);
     }
 
 
@@ -322,30 +344,61 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     PSYNCThreadCountAdd(+1, hShbPSYNC);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Sync for real internal account ?
+///////////////////////////////////////////////////////////////////////////////
+    if (GwLkLocalDomain(pPopLnk))
+    {
+///////////////////////////////////////////////////////////////////////////////
 //  Verify user credentials
 ///////////////////////////////////////////////////////////////////////////////
-    UserInfo       *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
+        UserInfo       *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
 
-    if (pUI != NULL)
-    {
-        SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\"\n",
-                pPopLnk->pszName, pPopLnk->pszDomain);
+        if (pUI != NULL)
+        {
+            SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\"\n",
+                    pPopLnk->pszName, pPopLnk->pszDomain);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync
 ///////////////////////////////////////////////////////////////////////////////
-        if (UPopSyncRemoteLink(pUI, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
-            ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
-                    pPopLnk->pszName, pPopLnk->pszDomain);
+            char            szUserAddress[MAX_ADDR_NAME] = "";
+
+            UsrGetAddress(pUI, szUserAddress);
+
+            if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+                            pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+                ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
+                        pPopLnk->pszName, pPopLnk->pszDomain);
 
 
-        UsrFreeUserInfo(pUI);
+            UsrFreeUserInfo(pUI);
+        }
+        else
+            SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n"
+                    "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
+
     }
     else
-        SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n"
-                "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
+    {
+        char            szSyncAddress[MAX_ADDR_NAME] = "";
 
+        sprintf(szSyncAddress, "%s%s", pPopLnk->pszName, pPopLnk->pszDomain);
+
+
+        SysLogMessage(LOG_LEV_MESSAGE,
+                "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
+                szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Sync
+///////////////////////////////////////////////////////////////////////////////
+        if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+            ErrLogMessage(LOG_LEV_MESSAGE,
+                    "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
+                    szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Decrease threads count
