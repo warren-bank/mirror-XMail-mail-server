@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.4
+Version      : 1.5
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 18-01-2002
+Date         : 05-02-2002
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -574,7 +574,12 @@ Date 18-01-2002	1.4
 	 Added an extra message header field "X-AuthUser:" to log the username used by the account to send the message.
 	 Added Reply-To: RFC822 header for mailing lists sends.
 	 Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.
-
+Date 05-02-2002	1.5
+	 Fixed a bug in wildcard aliases domain lookup.
+	 Fixed a bug in CTRL command "aliasdel" that failed to remove aliases with wildcard domains.
+	 Fixed a bug that caused XMail to timeout on very slow network connections.
+	 
+	 
 
 
 

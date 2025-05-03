@@ -50,7 +50,8 @@
 
 #define SAIN_Addr(s)                    (s).sin_addr.S_un.S_addr
 
-#define TCP_SEND_SIZE                   (1024 * 128)
+#define MIN_TCP_SEND_SIZE               (1024 * 8)
+#define MAX_TCP_SEND_SIZE               (1024 * 128)
 
 #define MAX_STACK_SHIFT                 2048
 #define STACK_ALIGN_BYTES               8
@@ -974,17 +975,19 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    int             iSndBuffSize = TCP_SEND_SIZE;
+    int             iSndBuffSize = MIN_TCP_SEND_SIZE;
     SYS_UINT64      ullFileSize = (((SYS_UINT64) dwFileSizeHi) << 32) | (SYS_UINT64) dwFileSizeLo,
                     ullEndOffset = (ulEndOffset != (unsigned long) -1) ?
                             ((SYS_UINT64) ulEndOffset): ullFileSize,
                     ullCurrOffset = (SYS_UINT64) ulBaseOffset;
     char           *pszBuffer = (char *) pAddress + ulBaseOffset;
+    time_t          tStart;
 
     while (ullCurrOffset < ullEndOffset)
     {
         int             iCurrSend = (int) Min(iSndBuffSize, ullEndOffset - ullCurrOffset);
 
+        tStart = time(NULL);
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend, iTimeout)) < 0)
         {
             ErrorPush();
@@ -993,6 +996,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             CloseHandle(hFile);
             return (ErrorPop());
         }
+
+        if ((((time(NULL) - tStart) * 8) < iTimeout) && (iSndBuffSize < MAX_TCP_SEND_SIZE))
+            iSndBuffSize = Min(iSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         pszBuffer += iCurrSend;
         ullCurrOffset += (SYS_UINT64) iCurrSend;

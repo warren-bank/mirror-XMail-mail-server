@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.4
+Version: 1.5
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,11 @@ fi
 
 
 %changelog
+
+* Tue Feb 05 2002 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a bug in wildcard aliases domain lookup.
+    Fixed a bug in CTRL command "aliasdel" that failed to remove aliases with wildcard domains.
+    Fixed a bug that caused XMail to timeout on very slow network connections.
 
 * Fri Jan 18 2002 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug that made XMail to fail to parse custom maps lists in SERVER.TAB.

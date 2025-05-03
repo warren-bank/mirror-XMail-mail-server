@@ -1213,13 +1213,6 @@ static int      CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    if (MDomIsHandledDomain(ppszTokens[1]) < 0)
-    {
-        ErrorPush();
-        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
-        return (ErrorPop());
-    }
-
 
     if (UsrRemoveAlias(ppszTokens[1], ppszTokens[2]) < 0)
     {

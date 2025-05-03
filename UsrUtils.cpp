@@ -191,7 +191,8 @@ static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const *
 ///////////////////////////////////////////////////////////////////////////////
     int             iFieldsCount = StrStringsCount(ppszTabTokens);
 
-    if ((iFieldsCount > alsAlias) && UsrIsWildAlias(ppszTabTokens[alsAlias]))
+    if ((iFieldsCount > alsAlias) &&
+            (UsrIsWildAlias(ppszTabTokens[alsAlias]) || UsrIsWildAlias(ppszTabTokens[alsDomain])))
     {
         *puHashVal = WILD_ALIASES_HASH;
 

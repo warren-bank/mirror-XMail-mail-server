@@ -39,7 +39,8 @@
 #define MAX_SPIN_COUNT              64
 #define SPIN_SLEEP_TIME             (50 * 1000)
 
-#define TCP_SEND_SIZE               (1024 * 128)
+#define MIN_TCP_SEND_SIZE           (1024 * 8)
+#define MAX_TCP_SEND_SIZE           (1024 * 128)
 
 #define MAX_STACK_SHIFT             2048
 #define STACK_ALIGN_BYTES           8
@@ -743,15 +744,18 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulCurrOffset = ulBaseOffset,
+    unsigned long   ulSndBuffSize = MIN_TCP_SEND_SIZE,
+                    ulCurrOffset = ulBaseOffset,
                     ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
+    time_t          tStart;
 
     while (ulCurrOffset < ulSndEndOffset)
     {
-        unsigned long   ulToSend = Min(TCP_SEND_SIZE, ulSndEndOffset - ulCurrOffset);
+        unsigned long   ulToSend = Min(ulSndBuffSize, ulSndEndOffset - ulCurrOffset);
         off_t           ulStartOffset = (off_t) ulCurrOffset;
 
 
+        tStart = time(NULL);
         unsigned long   ulSendSize = (unsigned long) sendfile((int) SockFD, iFileID,
                 &ulStartOffset, ulToSend);
 
@@ -763,6 +767,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             ErrSetErrorCode(ERR_SENDFILE);
             return (ERR_SENDFILE);
         }
+
+        if ((((time(NULL) - tStart) * 8) < iTimeout) && (ulSndBuffSize < MAX_TCP_SEND_SIZE))
+            ulSndBuffSize = Min(ulSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         ulCurrOffset += ulToSend;
     }
@@ -784,15 +791,17 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    int             iSndBuffSize = TCP_SEND_SIZE;
+    int             iSndBuffSize = MIN_TCP_SEND_SIZE;
     unsigned long   ulCurrOffset = ulBaseOffset,
                     ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
     char           *pszBuffer = (char *) pMapAddress + ulBaseOffset;
+    time_t          tStart;
 
     while (ulCurrOffset < ulSndEndOffset)
     {
         int             iCurrSend = (int) Min(iSndBuffSize, ulSndEndOffset - ulCurrOffset);
 
+        tStart = time(NULL);
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend, iTimeout)) < 0)
         {
             ErrorPush();
@@ -800,6 +809,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             close(iFileID);
             return (ErrorPop());
         }
+
+        if ((((time(NULL) - tStart) * 8) < iTimeout) && (iSndBuffSize < MAX_TCP_SEND_SIZE))
+            iSndBuffSize = Min(iSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         pszBuffer += iCurrSend;
         ulCurrOffset += (unsigned long) iCurrSend;
