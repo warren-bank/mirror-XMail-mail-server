@@ -811,7 +811,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
     if (pDNSQ->DNSH.RCode != 0)
     {
-        int         iErrorCode = ERR_BAD_DNS_RESPONSE;
+        int             iErrorCode = ERR_BAD_DNS_RESPONSE;
 
         if (pDNSQ->DNSH.RCode == RCODE_NXDOMAIN)
             iErrorCode = ERR_DNS_NXDOMAIN;
@@ -989,7 +989,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
     if (pDNSQ->DNSH.RCode != 0)
     {
-        int         iErrorCode = ERR_BAD_DNS_RESPONSE;
+        int             iErrorCode = ERR_BAD_DNS_RESPONSE;
 
         if (pDNSQ->DNSH.RCode == RCODE_NXDOMAIN)
             iErrorCode = ERR_DNS_NXDOMAIN;
@@ -1112,7 +1112,7 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
     if (pDNSQ->DNSH.RCode != 0)
     {
-        int         iErrorCode = ERR_BAD_DNS_RESPONSE;
+        int             iErrorCode = ERR_BAD_DNS_RESPONSE;
 
         if (pDNSQ->DNSH.RCode == RCODE_NXDOMAIN)
             iErrorCode = ERR_DNS_NXDOMAIN;

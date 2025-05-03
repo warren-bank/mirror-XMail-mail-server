@@ -35,15 +35,15 @@
 #include "SysDepSolaris.cpp"
 
 #else           // #ifdef __SOLARIS__
-#ifdef __FREEBSD__
+#ifdef __BSD__
 
-#include "SysDepFreeBSD.cpp"
+#include "SysDepBSD.cpp"
 
-#else           // #ifdef __FREEBSD__
+#else           // #ifdef __BSD__
 
 #error System type not defined
 
-#endif          // #ifdef __FREEBSD__
+#endif          // #ifdef __BSD__
 #endif          // #ifdef __SOLARIS__
 #endif          // #ifdef __LINUX__
 #endif          // #ifdef WIN32

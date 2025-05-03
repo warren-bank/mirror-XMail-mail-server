@@ -1831,7 +1831,7 @@ int             UsrModifyUser(UserInfo * pUI)
 ///////////////////////////////////////////////////////////////////////////////
 //  Try ( if defined ) to modify external auth user
 ///////////////////////////////////////////////////////////////////////////////
-    UAthModifyUser(AUTH_SERVICE_POP3, pFoundUI);
+    UAthModifyUser(AUTH_SERVICE_POP3, pUI);
 
 
     UsrFreeUserInfo(pFoundUI);

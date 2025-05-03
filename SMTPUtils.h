@@ -81,6 +81,8 @@ int             USmtpIsAllowedRelay(const SYS_INET_ADDR & PeerInfo,
                         SVRCFG_HANDLE hSvrConfig);
 char          **USmtpGetPathStrings(const char *pszMailCmd);
 int             USmtpSplitEmailAddr(const char *pszAddr, char *pszUser, char *pszDomain);
+int             USmtpCheckAddressPart(char const *pszName);
+int             USmtpCheckAddress(char const *pszAddress);
 int             USmtpInitError(SMTPError * pSMTPE);
 bool            USmtpIsFatalError(SMTPError const * pSMTPE);
 char const     *USmtpGetErrorMessage(SMTPError const * pSMTPE);

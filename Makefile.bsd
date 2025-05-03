@@ -18,16 +18,28 @@
 #
 #  Davide Libenzi <davidel@xmailserver.org>
 #
-SYSTYPE = freebsd
+ifeq ($(OSTYPE),OpenBSD)
+	SYSTYPE = openbsd
+else
+	SYSTYPE = freebsd
+endif
 O = o
 A = a
 CPP = cpp
 CC = c++
 LD = gcc
 
-CFLAGS = -O2 -I. -D__UNIX__ -D__FREEBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
+ifeq ($(OSTYPE),OpenBSD)
+	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__OPENBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
+else
+	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1
+endif
 
-LDFLAGS = -lkvm -lcrypt -pthread -lc_r
+ifeq ($(OSTYPE),OpenBSD)
+	LDFLAGS = -lkvm -pthread -lc_r
+else
+	LDFLAGS = -lkvm -lcrypt -pthread -lc_r
+endif
 MAILSVR = XMail
 CRTLCLNT = CtrlClnt
 XMCRYPT = XMCrypt

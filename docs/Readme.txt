@@ -30,7 +30,8 @@ OVERVIEW
     mailing lists, remote administration, custom mail exchangers, logging,
     and multi-platform code.
 
-    XMail sources compile under GNU/Linux, FreeBSD, Solaris and NT/2K.
+    XMail sources compile under GNU/Linux, FreeBSD, OpenBSD, Solaris and
+    NT/2K.
 
     This server born due to the need of having a free and stable Mail Server
     to be used inside my old company, which used a Windows Network. I don't
@@ -56,13 +57,13 @@ OVERVIEW
 
     The first code of XMail Server is started on Windows NT and Linux, and
     now, the FreeBSD and Solaris version ready. The compilers supported are
-    gcc for Linux, FreeBSD and Solaris and M$ Visual C++ for NT/2K.
+    gcc for Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 VERSION
 
   current
 
-    1.11
+    1.12
 
   release type
 
@@ -70,7 +71,7 @@ VERSION
 
   release date
 
-    01-09-2002
+    25-01-2003
 
   project by
 
@@ -83,6 +84,8 @@ VERSION
     Shawn Anderson <sanderson@eye-catcher.com>
 
     Dick van der Kaaden <dick@netrex.nl>
+
+    Beau E, Cox <beau@beaucox.com>
 
   warning
 
@@ -176,8 +179,8 @@ FEATURES
 
 PORTING STATUS
 
-    Right now the Linux and NT ports are stable, while the Solaris and
-    FreeBSD ones have not been tested as well as the previous OSs.
+    Right now the Linux and NT ports are stable, while the Solaris, FreeBSD
+    and OpenBSD ones have not been tested as well as the previous OSs.
 
 REQUIREMENTS
 
@@ -219,7 +222,7 @@ BUILD
      # make -f Makefile.lnx      (Linux)
      # make -f Makefile.slx      (Linux on SPARC)
      # make -f Makefile.plx      (Linux on PPC)
-     # gmake -f Makefile.bsd     (FreeBSD - you need GCC and GMAKE to build on FreeBSD)
+     # gmake -f Makefile.bsd     (FreeBSD, OpenBSD - you need GCC and GMAKE to build on FreeBSD, OpenBSD)
      # make -f Makefile.sso      (Sun/Solaris on SPARC - you need GCC to build on Solaris)
      # make -f Makefile.ssx      (Sun/Solaris on Intel - you need GCC to build on Solaris)
 
@@ -256,7 +259,7 @@ BUILD
 
 CONFIGURATION
 
-  Linux/Solaris/FreeBSD
+  Linux/Solaris/FreeBSD/OpenBSD
 
     1.  Build XMail.
 
@@ -1445,6 +1448,18 @@ SERVER.TAB VARIABLES
         The string "+X-Deliver-To,To,Cc" is the default if nothing is
         specified.
 
+    [SmtpMsgIPBanSpammers]
+        Used to set the message that is sent to the SMTP client when the
+        client IP is listed inside the file SPAMMER.TAB.
+
+    [SmtpMsgIPBanSpamAddress]
+        Used to set the message that is sent to the SMTP client when the
+        client IP is listed inside the file SPAM-ADDRESS.TAB.
+
+    [SmtpMsgIPBanMaps]
+        Used to set the message that is sent to the SMTP client when the
+        client IP is listed inside one of the "CustMapsList".
+
     [CustomSMTPMessage]
         Set this to the message that you want to follow the standard SMTP
         error response sent by XMail, as in (one line, remember the =>):
@@ -1594,15 +1609,17 @@ DOMAIN MESSAGE FILTERS
     stopped in its travel. If the filter modifies the message it must return
     '100'.
 
-    When a message is received by the SMTP server for user 'foo@xyzw.abc'
-    XMail searches inside the 'filters' subdirectory to find a file named
-    (user processing):
+    When a message is received by the SMTP server for user
+    'foo@xyzw.aiai.abc' XMail searches inside the 'filters' subdirectory to
+    find a file named (user processing):
 
-     foo@xyzw.abc.tab
+     foo@xyzw.aiai.abc.tab
 
     If this file is not found then XMail searches for (domain processing):
 
-     xyzw.abc.tab
+     xyzw.aiai.abc.tab
+     aiai.abc.tab
+     abc.tab
 
     If this file is not found then XMail searches for (default processing):
 
@@ -1893,9 +1910,12 @@ COMMAND LINE
         -Qi ratio
                 Set the increment ratio of the reschedule time in sending a
                 messages. At every failure in delivery a message, reschedule
-                time T is incremented by (T / ratio), therefore T(i) =
-                T(i-1) + T(i-1)/ratio. If you set this ratio to zero, T
-                remain unchanged over delivery tentatives. Default 16.
+                time T is incremented by (T / ratio), therefore :
+
+                 T(i) = T(i-1) + T(i-1)/ratio.
+
+                If you set this ratio to zero, T remain unchanged over
+                delivery tentatives. Default 16.
 
         -Qr nretries
                 Set the maximum number of times to try to send the message.

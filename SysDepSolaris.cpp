@@ -48,7 +48,7 @@
 #define MAX_SWAP_NAME_SIZE          256
 
 #define MAX_STACK_SHIFT             2048
-#define STACK_ALIGN_BYTES           8
+#define STACK_ALIGN_BYTES           sizeof(int)
 
 
 

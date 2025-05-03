@@ -67,7 +67,7 @@ char const     *SysErrStr(void)
 
 
 #else           // #if defined(WIN32)
-#if defined(__LINUX__) || defined(__SOLARIS__) || defined(__FREEBSD__)
+#if defined(__LINUX__) || defined(__SOLARIS__) || defined(__BSD__)
 
 #include <sys/stat.h>
 #include <stdio.h>

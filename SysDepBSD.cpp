@@ -44,7 +44,7 @@
 #define K_IO_TIME_RATIO             8
 
 #define MAX_STACK_SHIFT             2048
-#define STACK_ALIGN_BYTES           8
+#define STACK_ALIGN_BYTES           sizeof(int)
 
 
 
@@ -117,6 +117,10 @@ static void    *SysThreadStartup(void *pThreadData);
 static void     SysSigChildHandler(int iSignal);
 static int      SysThreadSetup(ThrData * pTD);
 static void     SysThreadCleanup(ThrData * pTD);
+#ifdef __OPENBSD__
+static int      SysGetPriorityMin(int iPolicy);
+static int      SysGetPriorityMax(int iPolicy);
+#endif // #ifdef __OPENBSD__
 static int      SysExitPID(pid_t PID, int iExitCode);
 static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
@@ -1623,6 +1627,56 @@ void            SysCloseThread(SYS_THREAD ThreadID, int iForce)
 }
 
 
+#ifdef __OPENBSD__
+
+static int      SysGetPriorityMin(int iPolicy)
+{
+
+    int            iPriority = 0;
+
+    switch (iPolicy)
+    {
+    case SCHED_FIFO:
+        iPriority = 0;
+        break;
+    case SCHED_OTHER:
+        iPriority = -20;
+        break;
+    case SCHED_RR:
+        iPriority = 0;
+        break;
+    }
+
+    return (iPriority);
+
+}
+
+
+
+static int      SysGetPriorityMax(int iPolicy)
+{
+
+    int            iPriority = 0;
+
+    switch (iPolicy)
+    {
+    case SCHED_FIFO:
+        iPriority = 31;
+        break;
+    case SCHED_OTHER:
+        iPriority = +20;
+        break;
+    case SCHED_RR:
+        iPriority = 31;
+        break;
+    }
+
+    return (iPriority);
+
+}
+
+#endif // #ifdef __OPENBSD__
+
 
 int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 {
@@ -1637,23 +1691,31 @@ int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
         return (ERR_SET_THREAD_PRIORITY);
     }
 
+#ifdef __FREEBSD__
     int             iMinPriority = sched_get_priority_min(iPolicy),
-                    iMaxPriority = sched_get_priority_max(iPolicy),
-                    iStdPriority = (iMinPriority + iMaxPriority) / 2;
+        iMaxPriority = sched_get_priority_max(iPolicy);
+#else // #ifdef __FREEBSD__
+#ifdef __OPENBSD__
+    int             iMinPriority = SysGetPriorityMin(iPolicy),
+        iMaxPriority = SysGetPriorityMax(iPolicy);
+#endif // #ifdef __OPENBSD__
+#endif // #ifdef __FREEBSD__
+
+    int             iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
     switch (iPriority)
     {
-        case (SYS_PRIORITY_NORMAL):
-            SchParam.sched_priority = iStdPriority;
-            break;
+    case (SYS_PRIORITY_NORMAL):
+        SchParam.sched_priority = iStdPriority;
+        break;
 
-        case (SYS_PRIORITY_LOWER):
-            SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
-            break;
+    case (SYS_PRIORITY_LOWER):
+        SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
+        break;
 
-        case (SYS_PRIORITY_HIGHER):
-            SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
-            break;
+    case (SYS_PRIORITY_HIGHER):
+        SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
+        break;
     }
 
     if (pthread_setschedparam(pTD->ThreadId, iPolicy, &SchParam) != 0)
@@ -2725,11 +2787,11 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
                         SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
 {
 
+#ifdef __FREEBSD__
     int             iValue;
     size_t          DataLen;
 
     DataLen = sizeof(iValue);
-
     if (sysctlbyname("vm.stats.vm.v_page_size", &iValue, &DataLen, NULL, 0) != 0)
     {
         ErrSetErrorCode(ERR_GET_MEMORY_INFO);
@@ -2740,7 +2802,6 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 
     DataLen = sizeof(iValue);
-
     if (sysctlbyname("vm.stats.vm.v_page_count", &iValue, &DataLen, NULL, 0) != 0)
     {
         ErrSetErrorCode(ERR_GET_MEMORY_INFO);
@@ -2751,7 +2812,6 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 
     DataLen = sizeof(iValue);
-
     if (sysctlbyname("vm.stats.vm.v_free_count", &iValue, &DataLen, NULL, 0) != 0)
     {
         ErrSetErrorCode(ERR_GET_MEMORY_INFO);
@@ -2786,6 +2846,41 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
     kvm_close(pKD);
 
     return (0);
+#else // #ifdef __FREEBSD__
+#ifdef __OPENBSD__
+    int             iResult = 0, iHwPhisMem, iHwPageSize;
+    size_t          DataLen;
+    struct vmtotal  VmMeter;
+    static int      iHwPhisMem_mib[] = { CTL_HW, HW_PHYSMEM };
+    static int      iHwPageSize_mib[] = { CTL_HW, HW_PAGESIZE };
+    static int      VmMeter_mib[] = { CTL_VM, VM_METER };
+
+    DataLen = sizeof(iHwPhisMem);
+    if (iResult >= 0)
+        iResult = sysctl(iHwPhisMem_mib, 2, &iHwPhisMem, &DataLen, NULL, 0);
+
+    DataLen = sizeof(iHwPageSize);
+    if (iResult >= 0)
+        iResult = sysctl(iHwPageSize_mib, 2, &iHwPageSize, &DataLen, NULL, 0);
+
+    DataLen = sizeof(vmtotal);
+    if (iResult >= 0)
+        iResult = sysctl(VmMeter_mib, 2, &VmMeter, &DataLen, NULL, 0);
+
+    if (iResult < 0)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+    *pRamTotal = iHwPhisMem;
+    *pRamFree = (SYS_INT64) iHwPageSize * (SYS_INT64) VmMeter.t_free;
+    *pVirtTotal = (SYS_INT64) iHwPageSize * (SYS_INT64) VmMeter.t_vm;
+    *pVirtFree = *pVirtTotal - (SYS_INT64) iHwPageSize * (SYS_INT64) VmMeter.t_avm;
+
+    return (0);
+#endif // #ifdef __OPENBSD__
+#endif // #ifdef __FREEBSD__
 
 }
 

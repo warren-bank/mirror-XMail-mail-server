@@ -1002,9 +1002,17 @@ static int      CTRLDo_useradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ErrorPop());
     }
 
+    if ((USmtpCheckAddressPart(ppszTokens[1]) < 0) ||
+        (USmtpCheckAddressPart(ppszTokens[2]) < 0))
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
 
-    UserInfo       *pUI = UsrCreateDefaultUser(ppszTokens[1], ppszTokens[2],
-            ppszTokens[3], (ppszTokens[4][0] == 'M') ? usrTypeML : usrTypeUser);
+
+    UserInfo       *pUI = UsrCreateDefaultUser(ppszTokens[1], ppszTokens[2], ppszTokens[3],
+                                               (ppszTokens[4][0] == 'M') ? usrTypeML : usrTypeUser);
 
     if (pUI == NULL)
     {
@@ -1053,7 +1061,6 @@ static int      CTRLDo_userdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ErrorPop());
     }
 
-
     if (UsrRemoveUser(ppszTokens[1], ppszTokens[2], 0) < 0)
     {
         ErrorPush();
@@ -1088,7 +1095,6 @@ static int      CTRLDo_userpasswd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
         return (ErrorPop());
     }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check real user account existence
@@ -1145,7 +1151,7 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 //  Check real user account existence
 ///////////////////////////////////////////////////////////////////////////////
     char            szAccountName[MAX_ADDR_NAME] = "",
-                    szAccountDomain[MAX_ADDR_NAME] = "";
+        szAccountDomain[MAX_ADDR_NAME] = "";
 
     if (USmtpSplitEmailAddr(ppszTokens[3], szAccountName, szAccountDomain) < 0)
     {
@@ -1218,7 +1224,6 @@ static int      CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
         return (ERR_BAD_CTRL_COMMAND);
     }
-
 
     if (UsrRemoveAlias(ppszTokens[1], ppszTokens[2]) < 0)
     {
@@ -1815,6 +1820,12 @@ static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ErrorPop());
     }
 
+    if (USmtpCheckAddress(ppszTokens[3]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
 
     UserInfo       *pUI = UsrGetUserByName(ppszTokens[1], ppszTokens[2]);
 
@@ -2022,6 +2033,13 @@ static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
+    if (USmtpCheckAddressPart(ppszTokens[1]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
+
 
     char            szDomain[MAX_HOST_NAME] = "";
 
@@ -2185,6 +2203,13 @@ static int      CTRLDo_custdomset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
         ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
         return (ERR_BAD_CTRL_COMMAND);
+    }
+
+    if (USmtpCheckAddressPart(ppszTokens[1]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
     }
 
 

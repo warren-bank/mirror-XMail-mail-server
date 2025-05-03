@@ -244,7 +244,7 @@
 #define ERR_EMPTY_LOG               (-228)
 #define ERR_BAD_RELATIVE_PATH       (-229)
 #define ERR_DNS_NXDOMAIN            (-230)
-
+#define ERR_BAD_RFCNAME             (-231)
 
 
 

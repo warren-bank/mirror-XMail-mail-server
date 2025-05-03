@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.11
+Version: 1.12
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -34,6 +34,7 @@ make -f Makefile.lnx
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/MailRoot/bin
+mkdir -p $RPM_BUILD_ROOT/var/MailRoot/docs
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
 cp -R MailRoot $RPM_BUILD_ROOT/var/MailRoot.sample
 
@@ -44,7 +45,10 @@ install -m 755 MkUsers $RPM_BUILD_ROOT/var/MailRoot/bin/MkUsers
 install -m 4755 sendmail $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail
 install -m 755 sendmail.sh $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail.sh
 
-install -m 644 Readme.txt $RPM_BUILD_ROOT/var/MailRoot/bin/Readme.txt
+install -m 644 docs/Readme.txt $RPM_BUILD_ROOT/var/MailRoot/docs/Readme.txt
+install -m 644 docs/Readme.html $RPM_BUILD_ROOT/var/MailRoot/docs/Readme.html
+install -m 644 docs/ChangeLog.txt $RPM_BUILD_ROOT/var/MailRoot/docs/ChangeLog.txt
+install -m 644 docs/ChangeLog.html $RPM_BUILD_ROOT/var/MailRoot/docs/ChangeLog.html
 
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/rc.d/rc0.d
@@ -111,7 +115,10 @@ fi
 /usr/sbin/sendmail.xmail
 /usr/sbin/sendmail.xmail.sh
 
-/var/MailRoot/bin/Readme.txt
+/var/MailRoot/docs/Readme.txt
+/var/MailRoot/docs/Readme.html
+/var/MailRoot/docs/ChangeLog.txt
+/var/MailRoot/docs/ChangeLog.html
 
 /var/MailRoot.sample
 
@@ -126,6 +133,21 @@ fi
 
 
 %changelog
+
+* Sat Jan 25 2003 Davide Libenzi <davidel@xmailserver.org>
+    Better check for user/domain names.
+    Changed search pattern for filters. Now a domain name is scanned for all sub-domains.
+    Fixed a boundary check inside the Base64 decoder.
+    Added the client FQDN inside the SMTP log file in case the RDNS check is enabled.
+    Added a new SERVER.TAB variable "SmtpMsgIPBanSpammers" to set the message that is sent
+    to the SMTP client when the client IP is listed inside the file SPAMMER.TAB.
+    Added a new SERVER.TAB variable "SmtpMsgIPBanMaps" to set the message that is sent
+    to the SMTP client when the client IP is listed inside one of the "CustMapsList".
+    Added a new SERVER.TAB variable "SmtpMsgIPBanSpamAddress" to set the message that is sent
+    to the SMTP client when the client IP is listed inside the file SPAM-ADDRESS.TAB.
+    Fixed a bug inside the custom account handling that made XMail to pass the old password
+    instead of the new one.
+    Added OpenBSD support.
 
 * Sat Nov 9 2002 Davide Libenzi <davidel@xmailserver.org>
     Added a new command line parameter -QT to enable a configurable timeout for filter commands.

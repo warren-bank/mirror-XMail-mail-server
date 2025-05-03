@@ -126,8 +126,8 @@ int             decode64(const char *in, unsigned inlen, char *out, unsigned *ou
                     c3,
                     c4;
 
-    if (in[0] == '+' && in[1] == ' ')
-        in += 2;
+    if (inlen >= 2 && in[0] == '+' && in[1] == ' ')
+        in += 2, inlen -= 2;
 
     if (*in == '\0')
         return FAIL;

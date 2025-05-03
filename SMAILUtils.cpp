@@ -189,7 +189,7 @@ int             USmlLoadSpoolFileHeader(char const * pszSpoolFile, SpoolFileHead
 
     MscSplitPath(pszSpoolFile, NULL, szFName, szExt);
 
-    sprintf(SFH.szSpoolFile, "%s%s", szFName, szExt);
+    SysSNPrintf(SFH.szSpoolFile, sizeof(SFH.szSpoolFile) - 1, "%s%s", szFName, szExt);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Read SMTP domain ( 1st row of the spool file )
@@ -667,7 +667,7 @@ static int      USmlLoadHandle(SpoolFileData  *pSFD, const char *pszMessFilePath
 
     MscSplitPath(pszMessFilePath, NULL, szFName, szExt);
 
-    sprintf(pSFD->szSpoolFile, "%s%s", szFName, szExt);
+    SysSNPrintf(pSFD->szSpoolFile, sizeof(pSFD->szSpoolFile) - 1, "%s%s", szFName, szExt);
 
 
     FILE           *pSpoolFile = fopen(pszMessFilePath, "rb");
@@ -2433,7 +2433,7 @@ int             USmlDomainCustomFileName(char const * pszDestDomain, char *pszCu
     USmlGetDomainCustomDir(szCustomDir, sizeof(szCustomDir), 1);
 
 
-    sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, szDestDomain);
+    SysSNPrintf(pszCustFilePath, SYS_MAX_PATH - 1, "%s%s.tab", szCustomDir, szDestDomain);
 
     return (0);
 
@@ -2461,14 +2461,14 @@ int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCus
     for (char const * pszSubDom = szDestDomain; pszSubDom != NULL;
          pszSubDom = strchr(pszSubDom + 1, '.'))
     {
-        sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, pszSubDom);
+        SysSNPrintf(pszCustFilePath, SYS_MAX_PATH - 1, "%s%s.tab", szCustomDir, pszSubDom);
 
         if (SysExistFile(pszCustFilePath))
             return (0);
 
     }
 
-    sprintf(pszCustFilePath, "%s.tab", szCustomDir);
+    SysSNPrintf(pszCustFilePath, SYS_MAX_PATH - 1, "%s.tab", szCustomDir);
 
     if (SysExistFile(pszCustFilePath))
         return (0);
@@ -2641,8 +2641,8 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
 ///////////////////////////////////////////////////////////////////////////////
 //  Get lower case user and domain
 ///////////////////////////////////////////////////////////////////////////////
-    char            szLoUser[MAX_ADDR_NAME] = "",
-        szLoDomain[MAX_ADDR_NAME] = "";
+    char            szLoUser[MAX_ADDR_NAME] = "";
+    char            szLoDomain[MAX_ADDR_NAME] = "";
 
     StrSNCpy(szLoUser, pszUser);
     StrLower(szLoUser);
@@ -2653,30 +2653,39 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for user specific file
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszFilterFilePath, "%s%s%s%s@%s.tab", szMailRootPath,
-            SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, szLoUser, szLoDomain);
+    SysSNPrintf(pszFilterFilePath, SYS_MAX_PATH - 1, "%s%s%s%s@%s.tab", szMailRootPath,
+                SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, szLoUser, szLoDomain);
 
     if (!SysExistFile(pszFilterFilePath))
     {
-///////////////////////////////////////////////////////////////////////////////
-//  Check for domain file
-///////////////////////////////////////////////////////////////////////////////
-        sprintf(pszFilterFilePath, "%s%s%s%s.tab", szMailRootPath,
-                SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, szLoDomain);
+        char const     *pszCurDomain = szLoDomain;
 
-        if (!SysExistFile(pszFilterFilePath))
+///////////////////////////////////////////////////////////////////////////////
+//  Walks through all sub-domains ...
+///////////////////////////////////////////////////////////////////////////////
+        do
         {
+            SysSNPrintf(pszFilterFilePath, SYS_MAX_PATH - 1, "%s%s%s%s.tab", szMailRootPath,
+                        SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, pszCurDomain);
+
+            if (SysExistFile(pszFilterFilePath))
+                return (0);
+
+            if ((pszCurDomain = strchr(pszCurDomain, '.')) != NULL)
+                pszCurDomain++;
+
+        } while (pszCurDomain != NULL);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for default file
 ///////////////////////////////////////////////////////////////////////////////
-            sprintf(pszFilterFilePath, "%s%s%s%s", szMailRootPath,
+        SysSNPrintf(pszFilterFilePath, SYS_MAX_PATH - 1, "%s%s%s%s", szMailRootPath,
                     SMAIL_DOMAIN_FILTER_DIR, SYS_SLASH_STR, SMAIL_DEFAULT_FILTER);
 
-            if (!SysExistFile(pszFilterFilePath))
-            {
-                ErrSetErrorCode(ERR_NO_DOMAIN_FILTER);
-                return (ERR_NO_DOMAIN_FILTER);
-            }
+        if (!SysExistFile(pszFilterFilePath))
+        {
+            ErrSetErrorCode(ERR_NO_DOMAIN_FILTER);
+            return (ERR_NO_DOMAIN_FILTER);
         }
     }
 

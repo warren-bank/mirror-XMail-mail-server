@@ -44,7 +44,7 @@
 #define K_IO_TIME_RATIO             8
 
 #define MAX_STACK_SHIFT             2048
-#define STACK_ALIGN_BYTES           8
+#define STACK_ALIGN_BYTES           sizeof(int)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Uncomment this if You want to use sendfile()

@@ -160,7 +160,7 @@ static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
                                   char *pszMapName, int iMaxMapName, int & iMapCode);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
-                                SMTPSession & SMTPS);
+                                SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
 static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms);
 static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI);
@@ -588,7 +588,7 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
 
 
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
-                                SMTPSession & SMTPS)
+                                SMTPSession & SMTPS, char *&pszSMTPError)
 {
 
     ZeroData(SMTPS);
@@ -636,6 +636,8 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, "", "", "SNDRIP=EIPSPAM", 0);
 
+        pszSMTPError = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpMsgIPBanSpammers");
+
         SvrReleaseConfigHandle(SMTPS.hSvrConfig);
         return (ErrorPop());
     }
@@ -648,8 +650,11 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     if (pszMapsList != NULL)
     {
         int             iMapCode = 0;
+        char           *pszCfgError = NULL;
+        char            szMapName[256] = "";
 
-        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, NULL, 0, iMapCode) < 0)
+        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, szMapName, sizeof(szMapName) - 1,
+                              iMapCode) < 0)
         {
             if (iMapCode == 1)
             {
@@ -657,6 +662,16 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 
                 if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
                     SMTPLogSession(SMTPS, "", "", "SNDRIP=EIPMAP", 0);
+
+                if ((pszCfgError = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpMsgIPBanMaps")) != NULL)
+                {
+                    pszSMTPError = StrSprint("%s (%s)", pszCfgError, szMapName);
+
+                    SysFree(pszCfgError);
+                }
+                else
+                    pszSMTPError = StrSprint("550 Denied due inclusion of your IP inside (%s)",
+                                             szMapName);
 
                 SysFree(pszMapsList);
                 SvrReleaseConfigHandle(SMTPS.hSvrConfig);
@@ -926,9 +941,10 @@ static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
                "\t\"%s\""
                "\t\"%s\""
                "\t\"%lu\""
+               "\t\"%s\""
                "\n", SMTPS.szSvrFQDN, SMTPS.szSvrDomain, SysInetNToA(SMTPS.PeerInfo, szIP),
                szTime, SMTPS.szClientDomain, SMTPS.szDestDomain, pszSender, pszRecipient,
-               SMTPS.szMessageID, pszStatus, SMTPS.szLogonUser, ulMsgSize);
+               SMTPS.szMessageID, pszStatus, SMTPS.szLogonUser, ulMsgSize, SMTPS.szClientFQDN);
 
 
     RLckUnlockEX(hResLock);
@@ -989,14 +1005,22 @@ static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Session structure declaration and init
 ///////////////////////////////////////////////////////////////////////////////
+    char           *pszSMTPError = NULL;
     SMTPSession     SMTPS;
 
-    if (SMTPInitSession(hShbSMTP, hBSock, SMTPS) < 0)
+    if (SMTPInitSession(hShbSMTP, hBSock, SMTPS, pszSMTPError) < 0)
     {
         ErrorPush();
-        BSckVSendString(hBSock, STD_SMTP_TIMEOUT,
-                        "421 %s service not available (%d), closing transmission channel",
-                        SMTP_SERVER_NAME, ErrorFetch());
+        if (pszSMTPError != NULL)
+        {
+            BSckSendString(hBSock, pszSMTPError, STD_SMTP_TIMEOUT);
+
+            SysFree(pszSMTPError);
+        }
+        else
+            BSckVSendString(hBSock, STD_SMTP_TIMEOUT,
+                            "421 %s service not available (%d), closing transmission channel",
+                            SMTP_SERVER_NAME, ErrorFetch());
 
         return (ErrorPop());
     }
@@ -1279,7 +1303,8 @@ static int      SMTPCheckReturnPath(const char *pszCommand, char **ppszRetDomain
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, ppszRetDomains[0], "", "SNDR=ESPAM", 0);
 
-        pszSMTPError = SysStrDup("504 You are registered as spammer");
+        if ((pszSMTPError = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpMsgIPBanSpamAddress")) == NULL)
+            pszSMTPError = SysStrDup("504 You are registered as spammer");
 
         return (ErrorPop());
     }
@@ -3555,7 +3580,7 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, "", "", "VRFY=EACCESS", 0);
 
-        SMTPSendError(hBSock, SMTPS, "501 Command not accepted");
+        SMTPSendError(hBSock, SMTPS, "252 Argument not checked");
         return (-1);
     }
 

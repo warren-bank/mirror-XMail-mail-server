@@ -35,7 +35,7 @@
 	<LI><A HREF="#configuration">CONFIGURATION</A></LI>
 	<UL>
 
-		<LI><A HREF="#linux/solaris/freebsd">Linux/Solaris/FreeBSD</A></LI>
+		<LI><A HREF="#linux/solaris/freebsd/openbsd">Linux/Solaris/FreeBSD/OpenBSD</A></LI>
 		<LI><A HREF="#nt/win2k">NT/Win2K</A></LI>
 		<LI><A HREF="#environment variable">Environment variable</A></LI>
 		<LI><A HREF="#mailroot structure">MailRoot structure</A></LI>
@@ -174,7 +174,7 @@ a POP3 account synchronizer with external POP3 accounts, account aliases,
 domain aliases, custom mail processing, direct mail files delivery,
 custom mail filters, mailing lists, remote administration, custom mail exchangers,
 logging, and multi-platform code.</P>
-<P>XMail sources compile under GNU/Linux, FreeBSD, Solaris and NT/2K.</P>
+<P>XMail sources compile under GNU/Linux, FreeBSD, OpenBSD, Solaris and NT/2K.</P>
 <P>This server born due to the need of having a free and stable Mail Server
 to be used inside my old company, which used a Windows Network.
 I don't like to reinvent the wheel but the need of some special features
@@ -195,20 +195,20 @@ With XMail you get an all-in-one package with a central administration that can
 simplify the above common steps.</P>
 <P>The first code of XMail Server is started on Windows NT and Linux, and
 now, the FreeBSD and Solaris version ready. The compilers supported are gcc for
-Linux, FreeBSD and Solaris and M$ Visual C++ for NT/2K.</P>
+Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</P>
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
 <H1><A NAME="version">VERSION</A></H1>
 <P>
 <H2><A NAME="current">current</A></H2>
-<P>1.11</P>
+<P>1.12</P>
 <P>
 <H2><A NAME="release type">release type</A></H2>
 <P>Gnu Public License <A HREF="http://www.gnu.org">http://www.gnu.org</A></P>
 <P>
 <H2><A NAME="release date">release date</A></H2>
-<P>01-09-2002</P>
+<P>25-01-2003</P>
 <P>
 <H2><A NAME="project by">project by</A></H2>
 <P>Davide Libenzi &lt;<A HREF="mailto:davidel@xmailserver.org">davidel@xmailserver.org</A>&gt; <A HREF="http://www.xmailserver.org/">http://www.xmailserver.org/</A></P>
@@ -217,6 +217,7 @@ Linux, FreeBSD and Solaris and M$ Visual C++ for NT/2K.</P>
 <P>Michael Hartle &lt;<A HREF="mailto:mhartle@hartle-klug.com">mhartle@hartle-klug.com</A>&gt;</P>
 <P>Shawn Anderson &lt;<A HREF="mailto:sanderson@eye-catcher.com">sanderson@eye-catcher.com</A>&gt;</P>
 <P>Dick van der Kaaden &lt;<A HREF="mailto:dick@netrex.nl">dick@netrex.nl</A>&gt;</P>
+<P>Beau E, Cox &lt;<A HREF="mailto:beau@beaucox.com">beau@beaucox.com</A>&gt;</P>
 <P>
 <H2><A NAME="warning">warning</A></H2>
 <PRE>
@@ -334,8 +335,8 @@ Custom (external) POP3 authentication
 <P>
 <HR>
 <H1><A NAME="porting status">PORTING STATUS</A></H1>
-<P>Right now the Linux and NT ports are stable, while the Solaris and FreeBSD ones have
-not been tested as well as the previous OSs.</P>
+<P>Right now the Linux and NT ports are stable, while the Solaris, FreeBSD and OpenBSD
+ones have not been tested as well as the previous OSs.</P>
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
@@ -380,7 +381,7 @@ some unzippers don't restore empty directories.</P>
  # make -f Makefile.lnx      (Linux)
  # make -f Makefile.slx      (Linux on SPARC)
  # make -f Makefile.plx      (Linux on PPC)
- # gmake -f Makefile.bsd     (FreeBSD - you need GCC and GMAKE to build on FreeBSD)
+ # gmake -f Makefile.bsd     (FreeBSD, OpenBSD - you need GCC and GMAKE to build on FreeBSD, OpenBSD)
  # make -f Makefile.sso      (Sun/Solaris on SPARC - you need GCC to build on Solaris)
  # make -f Makefile.ssx      (Sun/Solaris on Intel - you need GCC to build on Solaris)</PRE>
 <P>will build XMail and tools executables.</P>
@@ -411,7 +412,7 @@ executing:</P>
 <HR>
 <H1><A NAME="configuration">CONFIGURATION</A></H1>
 <P>
-<H2><A NAME="linux/solaris/freebsd">Linux/Solaris/FreeBSD</A></H2>
+<H2><A NAME="linux/solaris/freebsd/openbsd">Linux/Solaris/FreeBSD/OpenBSD</A></H2>
 <OL>
 <LI>
 Build XMail.
@@ -1607,6 +1608,21 @@ This is a comma delimited list (no extra space or TABs must be included inside t
 <P>Tags preceded by a '+' character must be listed before other tags.</P>
 <P>The string ``+X-Deliver-To,To,Cc'' is the default if nothing is specified.</P>
 <P></P>
+<DT><STRONG><A NAME="item_%5BSmtpMsgIPBanSpammers%5D">[SmtpMsgIPBanSpammers]</A></STRONG><BR>
+<DD>
+Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SPAMMER.TAB.
+<P></P>
+<DT><STRONG><A NAME="item_%5BSmtpMsgIPBanSpamAddress%5D">[SmtpMsgIPBanSpamAddress]</A></STRONG><BR>
+<DD>
+Used to set the message that is sent to the SMTP client when the client IP is listed inside
+the file SPAM-ADDRESS.TAB.
+<P></P>
+<DT><STRONG><A NAME="item_%5BSmtpMsgIPBanMaps%5D">[SmtpMsgIPBanMaps]</A></STRONG><BR>
+<DD>
+Used to set the message that is sent to the SMTP client when the client IP is listed inside
+one of the ``CustMapsList''.
+<P></P>
 <DT><STRONG><A NAME="item_%5BCustomSMTPMessage%5D">[CustomSMTPMessage]</A></STRONG><BR>
 <DD>
 Set this to the message that you want to follow the standard SMTP error
@@ -1756,13 +1772,15 @@ and so on.</P>
 <P>If this filters returns '<STRONG>97, 98 or 99</STRONG>' the message is rejected and
 is stopped in its travel.
 If the filter modifies the message it must return '<STRONG>100</STRONG>'.</P>
-<P>When a message is received by the SMTP server for user '<STRONG>foo&#64;xyzw.abc</STRONG>' XMail
+<P>When a message is received by the SMTP server for user '<STRONG>foo&#64;xyzw.aiai.abc</STRONG>' XMail
 searches inside the '<STRONG>filters</STRONG>' subdirectory to find a file named (user processing):</P>
 <PRE>
- foo@xyzw.abc.tab</PRE>
+ foo@xyzw.aiai.abc.tab</PRE>
 <P>If this file is not found then XMail searches for (domain processing):</P>
 <PRE>
- xyzw.abc.tab</PRE>
+ xyzw.aiai.abc.tab
+ aiai.abc.tab
+ abc.tab</PRE>
 <P>If this file is not found then XMail searches for (default processing):</P>
 <PRE>
  .tab</PRE>
@@ -2121,9 +2139,11 @@ Set the time to be wait for a next try after send failure. Default 480.
 <DD>
 Set the increment ratio of the reschedule time in sending a messages.
 At every failure in delivery a message, reschedule time T is incremented
-by (T / ratio), therefore  <A HREF="#item_T"><CODE>T(i)</CODE></A> = <A HREF="#item_T"><CODE>T(i-1)</CODE></A> + T(i-1)/ratio.
-If you set this ratio to zero, T remain unchanged over delivery tentatives.
-Default 16.
+by (T / ratio), therefore :
+<PRE>
+ T(i) = T(i-1) + T(i-1)/ratio.</PRE>
+<P>If you set this ratio to zero, T remain unchanged over delivery tentatives.
+Default 16.</P>
 <P></P>
 <DT><STRONG><A NAME="item_%2DQr_nretries">-Qr nretries</A></STRONG><BR>
 <DD>

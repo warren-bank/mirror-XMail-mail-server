@@ -68,6 +68,7 @@
 #define SMTP_EXTAUTH_PRIORITY   SYS_PRIORITY_NORMAL
 #define SMTP_EXTAUTH_SUCCESS    0
 #define DEFAULT_SMTP_ERR        "417 Temporary delivery error"
+#define RFC_SPECIALS            "()<>@,/\\;:\"[]*?"
 
 #define SMTPCH_SUPPORT_SIZE     (1 << 0)
 
@@ -832,6 +833,37 @@ int             USmtpSplitEmailAddr(const char *pszAddr, char *pszUser, char *ps
 
 }
 
+
+
+int             USmtpCheckAddressPart(char const *pszName)
+{
+
+    for (; *pszName; pszName++)
+        if ((*pszName <= ' ') || (*pszName == 127) ||
+            (strchr(RFC_SPECIALS, *pszName) != NULL))
+        {
+            ErrSetErrorCode(ERR_BAD_RFCNAME);
+            return (ERR_BAD_RFCNAME);
+        }
+
+    return (0);
+
+}
+
+
+
+int             USmtpCheckAddress(char const *pszAddress)
+{
+    char            szUser[MAX_ADDR_NAME] = "";
+    char            szDomain[MAX_ADDR_NAME] = "";
+
+    if ((USmtpSplitEmailAddr(pszAddress, szUser, szDomain) < 0) ||
+        (USmtpCheckAddressPart(szUser) < 0) || (USmtpCheckAddressPart(szDomain) < 0))
+        return (ErrGetErrorCode());
+
+    return (0);
+
+}
 
 
 int             USmtpInitError(SMTPError * pSMTPE)

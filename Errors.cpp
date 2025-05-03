@@ -279,6 +279,7 @@ static ErrorStrings Errors[] =
     {ERR_EMPTY_LOG, "Log file is empty"},
     {ERR_BAD_RELATIVE_PATH, "Error in relative path syntax"},
     {ERR_DNS_NXDOMAIN, "DNS name not exist"},
+    {ERR_BAD_RFCNAME, "Name does not respect RFC822"},
 
 };
 
