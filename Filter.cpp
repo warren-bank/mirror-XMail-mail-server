@@ -380,10 +380,15 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 
 
             int             iExitCode = 0;
+            int             iExecResult = SysExec(ppszCmdTokens[0], &ppszCmdTokens[0],
+                                                  iFilterTimeout, FILTER_PRIORITY, &iExitCode);
 
-            if (SysExec(ppszCmdTokens[0], &ppszCmdTokens[0], iFilterTimeout,
-                        FILTER_PRIORITY, &iExitCode) == 0)
+            if (iExecResult == 0)
             {
+                SysLogMessage(LOG_LEV_MESSAGE,
+                              "Filter run: Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\" Retcode = %d\n",
+                              FMI.szSender, FMI.szRecipient, ppszCmdTokens[0], iExitCode);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Separate code from flags
 ///////////////////////////////////////////////////////////////////////////////
@@ -404,9 +409,10 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
                     char            *pszRejMsg = FilGetFilterRejMessage(FMI);
 
                     if (iExitCode == FILTER_OUT_EXITCODE)
-                        QueUtCleanupNotifyErrDelivery(hQueue, hMessage, NULL,
-                                                      (pszRejMsg != NULL) ? pszRejMsg:
-                                                      ErrGetErrorString(ERR_FILTERED_MESSAGE), NULL);
+                        QueUtNotifyPermErrDelivery(hQueue, hMessage, NULL,
+                                                   (pszRejMsg != NULL) ? pszRejMsg:
+                                                   ErrGetErrorString(ERR_FILTERED_MESSAGE),
+                                                   NULL, true);
                     else if (iExitCode == FILTER_OUT_NN_EXITCODE)
                         QueCleanupMessage(hQueue, hMessage, !QueUtRemoveSpoolErrors());
                     else
@@ -446,13 +452,13 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
             }
             else
             {
-                SysLogMessage(LOG_LEV_MESSAGE,
-                              "Filter error: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
-                              FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
+                SysLogMessage(LOG_LEV_ERROR,
+                              "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
+                              iExecResult, FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
 
                 QueUtErrLogMessage(hQueue, hMessage,
-                                   "Filter error: Sender = \"%s\" Recipient = \"%s\" (%s)\n",
-                                   FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
+                                   "Filter error (%d): Sender = \"%s\" Recipient = \"%s\" Filter = \"%s\"\n",
+                                   iExecResult, FMI.szSender, FMI.szRecipient, ppszCmdTokens[0]);
             }
         }
 

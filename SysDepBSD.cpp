@@ -123,7 +123,7 @@ static int      SysGetPriorityMin(int iPolicy);
 static int      SysGetPriorityMax(int iPolicy);
 #endif // #ifdef __OPENBSD__
 static int      SysExitPID(pid_t PID, int iExitCode);
-static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout, int iSyncFD);
 static void     SysBreakHandlerRoutine(int iSignal);
 static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK *pSpinLock);
 static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData);
@@ -656,13 +656,13 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNam
     if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
-        return (ERR_NETWORK);
+        return (SYS_INVALID_SOCKET);
     }
 
     if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
-        return (ERR_TIMEOUT);
+        return (SYS_INVALID_SOCKET);
     }
 
 
@@ -673,7 +673,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNam
     if (iAcptSock == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
-        return (ERR_NETWORK);
+        return (SYS_INVALID_SOCKET);
     }
 
 
@@ -1878,7 +1878,7 @@ static int      SysExitPID(pid_t PID, int iExitCode)
 
 
 
-static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
+static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout, int iSyncFD)
 {
 
     PIDWaitData     PWD;
@@ -1899,20 +1899,32 @@ static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
     SysSpinRelease(&WaitPIDSpin);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Let the child go since we already dropped the link inside our PID list
+///////////////////////////////////////////////////////////////////////////////
+    write(iSyncFD, "X", 1);
+
+///////////////////////////////////////////////////////////////////////////////
 //  Wait for PID exit
 ///////////////////////////////////////////////////////////////////////////////
+    pid_t           ExitTaskPID;
     int             iExitStatus = 0;
 
-    if (waitpid((pid_t) PID, &iExitStatus, WUNTRACED | WNOHANG) != PID)
+    if ((ExitTaskPID = waitpid((pid_t) PID, &iExitStatus, WUNTRACED | WNOHANG)) != PID)
     {
-        if (errno == ECHILD)
+        if ((long) ExitTaskPID < 0)
         {
             SysSpinAcquire(&WaitPIDSpin);
             SYS_LIST_DEL(&PWD.LLink);
             SysSpinRelease(&WaitPIDSpin);
 
-            ErrSetErrorCode(ERR_PROCESS_EXECUTE);
-            return (ERR_PROCESS_EXECUTE);
+            if ((errno == ECHILD) && (PWD.PID != 0))
+            {
+                ErrSetErrorCode(ERR_PROCESS_EXECUTE);
+                return (ERR_PROCESS_EXECUTE);
+            }
+
+            ErrSetErrorCode(ERR_WAITPID);
+            return (ERR_WAITPID);
         }
 
         iTimeout *= 1000;
@@ -1959,16 +1971,46 @@ int             SysExec(char const *pszCommand, char const *const *pszArgs, int 
                         int iPriority, int *piExitStatus)
 {
 
+///////////////////////////////////////////////////////////////////////////////
+//  Pipe used to syncronize with the child
+///////////////////////////////////////////////////////////////////////////////
+    int             iPipeFds[2];
+
+    if (pipe(iPipeFds) == -1)
+    {
+        ErrSetErrorCode(ERR_PIPE);
+        return (ERR_PIPE);
+    }
+
+
     pid_t           ProcessID = (pid_t) fork();
 
     if (ProcessID == 0)
     {
+///////////////////////////////////////////////////////////////////////////////
+//  Syncronize with the parent
+///////////////////////////////////////////////////////////////////////////////
+        unsigned char   bSync;
 
-        exit((int) execv(pszCommand, (char **) pszArgs));
+        read(iPipeFds[0], &bSync, 1);
+        close(iPipeFds[0]);
+        close(iPipeFds[1]);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Execute the command
+///////////////////////////////////////////////////////////////////////////////
+        execv(pszCommand, (char **) pszArgs);
+
+        SysEventLog("execv error: cmd='%s' errno=%d errstr='%s'\n",
+                    pszCommand, errno, strerror(errno));
+
+        exit(errno);
     }
 
     if (ProcessID == (pid_t) (-1))
     {
+        close(iPipeFds[0]);
+        close(iPipeFds[1]);
         ErrSetErrorCode(ERR_FORK);
         return (ERR_FORK);
     }
@@ -1994,15 +2036,32 @@ int             SysExec(char const *pszCommand, char const *const *pszArgs, int 
     {
         int             iExitStatus = 0;
 
-        if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout) < 0)
+        if (SysWaitPID(ProcessID, &iExitStatus, iWaitTimeout, iPipeFds[1]) < 0)
+        {
+            close(iPipeFds[0]);
+            close(iPipeFds[1]);
             return (ErrGetErrorCode());
+        }
+
+        close(iPipeFds[0]);
+        close(iPipeFds[1]);
 
         if (piExitStatus != NULL)
             *piExitStatus = iExitStatus;
     }
-    else if (piExitStatus != NULL)
-        *piExitStatus = -1;
+    else
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Let the child go
+///////////////////////////////////////////////////////////////////////////////
+        write(iPipeFds[1], "X", 1);
 
+        close(iPipeFds[0]);
+        close(iPipeFds[1]);
+
+        if (piExitStatus != NULL)
+            *piExitStatus = -1;
+    }
 
     return (0);
 
@@ -2759,7 +2818,7 @@ long            SysGetTimeZone(void)
 
     localtime_r(&tCurr, &tmCurr);
 
-    return (-tmCurr.tm_gmtoff + (tmCurr.tm_isdst ? 3600: 0));
+    return ((long) -tmCurr.tm_gmtoff);
 
 }
 
@@ -2773,7 +2832,7 @@ long            SysGetDayLight(void)
 
     localtime_r(&tCurr, &tmCurr);
 
-    return ((long) tmCurr.tm_isdst);
+    return ((long) ((tmCurr.tm_isdst <= 0) ? 0: 3600));
 
 }
 

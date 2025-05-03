@@ -247,6 +247,8 @@
 #define ERR_BAD_RFCNAME             (-231)
 #define ERR_CONNECT                 (-232)
 #define ERR_MESSAGE_DELETED         (-233)
+#define ERR_PIPE                    (-234)
+#define ERR_WAITPID                 (-235)
 
 
 

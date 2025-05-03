@@ -288,8 +288,8 @@ static int      SMAILHandleResendNotify(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE h
         return (ErrGetErrorCode());
 
 
-    int             iNotifyResult = QueUtNotifyErrDelivery(hQueue, hMessage, hFSpool,
-                                                           NULL, pszText, NULL);
+    int             iNotifyResult = QueUtNotifyTempErrDelivery(hQueue, hMessage, hFSpool,
+                                                               NULL, pszText, NULL);
 
 
     SysFree(pszText);
@@ -571,7 +571,7 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 
             QueUtErrLogMessage(hQueue, hMessage, "%s\n", szBounceMsg);
 
-            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool, szBounceMsg, NULL);
+            QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool, szBounceMsg, NULL, true);
 
             return (ErrorPop());
         }
@@ -1047,9 +1047,9 @@ static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDL
 //  sender and remove the spool file
 ///////////////////////////////////////////////////////////////////////////////
         if (USmtpIsFatalError(&SMTPE))
-            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool,
-                                          USmtpGetErrorMessage(&SMTPE),
-                                          USmtpGetErrorServer(&SMTPE));
+            QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
+                                       USmtpGetErrorMessage(&SMTPE),
+                                       USmtpGetErrorServer(&SMTPE), true);
 
         USmtpCleanupError(&SMTPE);
 
@@ -1386,6 +1386,14 @@ static int      SMAILCmd_smtp(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
         int             iReturnCode = USmtpIsFatalError(&SMTPE) ? ErrGetErrorCode():
             -ErrGetErrorCode();
 
+///////////////////////////////////////////////////////////////////////////////
+//  If a permanent SMTP error has been detected, then notify the message sender
+///////////////////////////////////////////////////////////////////////////////
+        if (USmtpIsFatalError(&SMTPE))
+            QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
+                                       USmtpGetErrorMessage(&SMTPE),
+                                       USmtpGetErrorServer(&SMTPE), false);
+
         USmtpCleanupError(&SMTPE);
 
         return (iReturnCode);
@@ -1513,6 +1521,7 @@ static int      SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAI
             return (0);
         }
 
+        int             iErrorCode = ErrGetErrorCode();
         char            szSmtpError[512] = "";
 
         USmtpGetSMTPError(&SMTPE, szSmtpError, sizeof(szSmtpError));
@@ -1531,8 +1540,16 @@ static int      SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAI
                            SMTP_ERROR_VARNAME, szSmtpError,
                            SMTP_SERVER_VARNAME, USmtpGetErrorServer(&SMTPE));
 
+///////////////////////////////////////////////////////////////////////////////
+//  If a permanent SMTP error has been detected, then notify the message sender
+///////////////////////////////////////////////////////////////////////////////
+        if (USmtpIsFatalError(&SMTPE))
+            QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
+                                       USmtpGetErrorMessage(&SMTPE),
+                                       USmtpGetErrorServer(&SMTPE), false);
 
-        iReturnCode = USmtpIsFatalError(&SMTPE) ? ErrGetErrorCode() : -ErrGetErrorCode();
+
+        iReturnCode = USmtpIsFatalError(&SMTPE) ? iErrorCode: -iErrorCode;
     }
 
     USmtpCleanupError(&SMTPE);

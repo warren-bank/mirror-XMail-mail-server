@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail mail server v 1.16</title>
+<title>XMail mail server v 1.17</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <link rev="made" href="mailto:root@localhost" />
 </head>
@@ -209,7 +209,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="current">current</a></h2>
-<p>1.16</p>
+<p>1.17</p>
 <p>
 </p>
 <h2><a name="release_type">release type</a></h2>
@@ -217,7 +217,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="release_date">release date</a></h2>
-<p>03-05-2003</p>
+<p>09-14-2003</p>
 <p>
 </p>
 <h2><a name="project_by">project by</a></h2>
@@ -1512,6 +1512,7 @@ the file  @@RFILE (without new line termination).</p>
 <hr />
 <h1><a name="custom_domain_mail_processing">CUSTOM DOMAIN MAIL PROCESSING</a></h1>
 <p>If a message that has as target domain of '<strong>sub1.sub2.domain.net</strong>' arrives at the XMail server,
+'<strong>AND</strong>' XMail does not have a real domain '<strong>sub1.sub2.domain.net</strong>' inside its domain list,
 XMail decides if this domain gets a custom domain processing by trying to lookup:</p>
 <pre>
  sub1.sub2.domain.net.tab
@@ -1708,7 +1709,7 @@ and won't be explained again here.</p>
 is created inside the '<strong>cmdaliases</strong>' subdirectory.
 This directory is automatically created and removed when you add/remove domains through the
 CTRL protocol (or '<strong>CtrlClnt</strong>').</p>
-<p>When a mail from '<strong>USER&#64;DOMAIN</strong>' is received by the server, the domain '<strong>DOMAIN</strong>'
+<p>When a mail for '<strong>USER&#64;DOMAIN</strong>' is received by the server, the domain '<strong>DOMAIN</strong>'
 is to be
 handled locally, and the standard users/aliases lookup fails, a file named '<strong>USER.tab</strong>' is searched
 inside '<strong>$MAIL_ROOT/cmdaliases/DOMAIN</strong>'.
@@ -2156,7 +2157,7 @@ Suppose also that a filter wants to block the filter selection list processing b
 specifying a flags value of <strong>16</strong>, the value to be returned will be :</p>
 <p><strong>FRC</strong> = <strong>7</strong> + <strong>16</strong> = <strong>23</strong></p>
 <p>Filter selection is driven by two files '<strong>FILTERS.IN.TAB</strong>' and '<strong>FILTERS.OUT.TAB</strong>'
-that have the following format:</p>
+located inside the $MAIL_ROOT/ directory and that have the following format:</p>
 <pre>
  &quot;sender&quot;[TAB]&quot;recipient&quot;[TAB]&quot;remote-addr&quot;[TAB]&quot;local-addr&quot;[TAB]&quot;filename&quot;[NEWLINE]</pre>
 <p>For example:</p>
@@ -2704,6 +2705,12 @@ the PSYNC task. Default 120.
 </dt>
 <dd>
 Set the number of POP3 sync threads.
+</dd>
+<p></p>
+<dt><strong><a name="item_%2dyl">-Yl</a></strong><br />
+</dt>
+<dd>
+Enable PSYNC logging.
 </dd>
 <p></p></dl>
 <dt><strong><a name="item_%5bfinger%5d">[FINGER]</a></strong><br />
@@ -4004,7 +4011,7 @@ The format of these files is strict:</p>
  rcpt to:&lt;...&gt;[CR][LF]
  ...
  [CR][LF]
- message text with [CR][LF] line termination</pre>
+ message text in RFC822 format with [CR][LF] line termination</pre>
 <p>All lines must be [CR][LF] terminated, with one mail-from statement, one or more
 rcpt-to statements, an empty line and the message text.
 Mail files must not be created directly inside the '<strong>/spool/local</strong>' directory but

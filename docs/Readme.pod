@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.16
+1.17
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-03-05-2003
+09-14-2003
 
 =head2 project by
 
@@ -1558,6 +1558,7 @@ the file  @@RFILE (without new line termination).
 =head1 CUSTOM DOMAIN MAIL PROCESSING
 
 If a message that has as target domain of 'B<sub1.sub2.domain.net>' arrives at the XMail server,
+'B<AND>' XMail does not have a real domain 'B<sub1.sub2.domain.net>' inside its domain list,
 XMail decides if this domain gets a custom domain processing by trying to lookup:
 
  sub1.sub2.domain.net.tab
@@ -1718,7 +1719,7 @@ is created inside the 'B<cmdaliases>' subdirectory.
 This directory is automatically created and removed when you add/remove domains through the
 CTRL protocol (or 'B<CtrlClnt>').
 
-When a mail from 'B<USERE<64>DOMAIN>' is received by the server, the domain 'B<DOMAIN>'
+When a mail for 'B<USERE<64>DOMAIN>' is received by the server, the domain 'B<DOMAIN>'
 is to be
 handled locally, and the standard users/aliases lookup fails, a file named 'B<USER.tab>' is searched
 inside 'B<$MAIL_ROOT/cmdaliases/DOMAIN>'.
@@ -2073,7 +2074,7 @@ specifying a flags value of B<16>, the value to be returned will be :
 B<FRC> = B<7> + B<16> = B<23>
 
 Filter selection is driven by two files 'B<FILTERS.IN.TAB>' and 'B<FILTERS.OUT.TAB>'
-that have the following format:
+located inside the $MAIL_ROOT/ directory and that have the following format:
 
  "sender"[TAB]"recipient"[TAB]"remote-addr"[TAB]"local-addr"[TAB]"filename"[NEWLINE]
 
@@ -2539,6 +2540,10 @@ the PSYNC task. Default 120.
 =item -Yt nthreads
 
 Set the number of POP3 sync threads.
+
+=item -Yl
+
+Enable PSYNC logging.
 
 =back
 
@@ -3869,7 +3874,7 @@ The format of these files is strict:
  rcpt to:<...>[CR][LF]
  ...
  [CR][LF]
- message text with [CR][LF] line termination
+ message text in RFC822 format with [CR][LF] line termination
 
 All lines must be [CR][LF] terminated, with one mail-from statement, one or more
 rcpt-to statements, an empty line and the message text.

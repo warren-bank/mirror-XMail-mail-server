@@ -49,12 +49,12 @@ int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
 int             QueUtGetLastLogInfo(char const *pszLogFilePath, QueLogInfo *pQLI);
 void            QueUtFreeLastLogInfo(QueLogInfo *pQLI);
 bool            QueUtRemoveSpoolErrors(void);
-int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                                              SPLF_HANDLE hFSpool, char const *pszReason,
-                                              char const *pszServer);
-int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                                       SPLF_HANDLE hFSpool, char const *pszReason,
-                                       char const *pszText, char const *pszServer);
+int             QueUtNotifyPermErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                                           SPLF_HANDLE hFSpool, char const *pszReason,
+                                           char const *pszServer, bool bCleanup);
+int             QueUtNotifyTempErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                                           SPLF_HANDLE hFSpool, char const *pszReason,
+                                           char const *pszText, char const *pszServer);
 int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                                        SPLF_HANDLE hFSpool, char const *pszReason);
 int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,

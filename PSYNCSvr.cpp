@@ -27,6 +27,7 @@
 #include "ShBlocks.h"
 #include "SList.h"
 #include "BuffSock.h"
+#include "ResLocks.h"
 #include "MiscUtils.h"
 #include "MailConfig.h"
 #include "SvrUtils.h"
@@ -44,6 +45,7 @@
 
 
 
+#define PSYNC_LOG_FILE              "psync"
 #define PSYNC_TRIGGER_FILE          ".psync-trigger"
 #define PSYNC_WAIT_SLEEP            2
 #define MAX_CLIENTS_WAIT            300
@@ -52,6 +54,12 @@
 
 
 
+
+struct PSYNCThreadData
+{
+    PSYNCConfig    *pPSYNCCfg;
+    POP3Link       *pPopLnk;
+};
 
 
 
@@ -62,10 +70,13 @@ static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC);
 static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
                                     PSYNCConfig *pPSYNCCfg = NULL);
 static int      PSYNCTimeToStop(SHB_HANDLE hShbPSYNC);
+static SYS_THREAD   PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link *pPopLnk);
 static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg);
 unsigned int    PSYNCThreadSyncProc(void *pThreadData);
 static int      PSYNCThreadNotifyExit(void);
-
+static int      PSYNCLogEnabled(PSYNCConfig *pPSYNCCfg);
+static int      PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
+                                char const *pszStatus);
 
 
 
@@ -235,6 +246,38 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
 
 
 
+static SYS_THREAD   PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link *pPopLnk)
+{
+
+    PSYNCThreadData    *pSTD = (PSYNCThreadData *) SysAlloc(sizeof(PSYNCThreadData));
+
+    if (pSTD == NULL)
+        return (SYS_INVALID_THREAD);
+
+    if ((pSTD->pPSYNCCfg = PSYNCGetConfigCopy(hShbPSYNC)) == NULL)
+    {
+        SysFree(pSTD);
+        return (SYS_INVALID_THREAD);
+    }
+
+    pSTD->pPopLnk = pPopLnk;
+
+
+    SYS_THREAD      hThread = SysCreateThread(PSYNCThreadSyncProc, pSTD);
+
+    if (hThread == SYS_INVALID_THREAD)
+    {
+        SysFree(pSTD->pPSYNCCfg);
+        SysFree(pSTD);
+        return (SYS_INVALID_THREAD);
+    }
+
+    return (hThread);
+
+}
+
+
+
 static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
 {
 
@@ -266,16 +309,18 @@ static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
             break;
 
 
-        SYS_THREAD      hClientThread = SysCreateThread(PSYNCThreadSyncProc, pPopLnk);
+        SYS_THREAD      hClientThread = PSYNCCreateSyncThread(hShbPSYNC, pPopLnk);
 
-        if (hClientThread != SYS_INVALID_THREAD)
-            SysCloseThread(hClientThread, 0);
-        else
+        if (hClientThread == SYS_INVALID_THREAD)
         {
+            ErrorPush();
             GwLkFreePOP3Link(pPopLnk);
-
             SysReleaseSemaphore(hSyncSem, 1);
+            GwLkCloseDB(hLinksDB);
+            return (ErrorPop());
         }
+
+        SysCloseThread(hClientThread, 0);
     }
 
     GwLkCloseDB(hLinksDB);
@@ -301,7 +346,11 @@ static int      PSYNCThreadNotifyExit(void)
 unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 {
 
-    POP3Link       *pPopLnk = (POP3Link *) pThreadData;
+    PSYNCThreadData    *pSTD = (PSYNCThreadData *) pThreadData;
+    POP3Link       *pPopLnk = pSTD->pPopLnk;
+    PSYNCConfig    *pPSYNCCfg = pSTD->pPSYNCCfg;
+
+    SysFree(pSTD);
 
     SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] entry\n");
 
@@ -316,6 +365,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
         SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
 
         GwLkFreePOP3Link(pPopLnk);
+        SysFree(pPSYNCCfg);
 ///////////////////////////////////////////////////////////////////////////////
 //  Notify thread exit semaphore
 ///////////////////////////////////////////////////////////////////////////////
@@ -352,6 +402,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 
         SvrReleaseConfigHandle(hSvrConfig);
         GwLkFreePOP3Link(pPopLnk);
+        SysFree(pPSYNCCfg);
 ///////////////////////////////////////////////////////////////////////////////
 //  Notify thread exit semaphore
 ///////////////////////////////////////////////////////////////////////////////
@@ -367,6 +418,8 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync for real internal account ?
 ///////////////////////////////////////////////////////////////////////////////
+    PopSyncReport   SRep;
+
     if (GwLkLocalDomain(pPopLnk))
     {
 ///////////////////////////////////////////////////////////////////////////////
@@ -387,18 +440,33 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
             UsrGetAddress(pUI, szUserAddress);
 
             if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                                   pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                                   pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
                                    pszErrorAccount) < 0)
+            {
                 ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
                               pPopLnk->pszName, pPopLnk->pszDomain);
 
+                ZeroData(SRep);
+                if (PSYNCLogEnabled(pPSYNCCfg))
+                    PSYNCLogSession(pPopLnk, &SRep, "SYNC=EFAIL");
+            }
+            else
+            {
+                if (PSYNCLogEnabled(pPSYNCCfg))
+                    PSYNCLogSession(pPopLnk, &SRep, "SYNC=OK");
+            }
 
             UsrFreeUserInfo(pUI);
         }
         else
+        {
             SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n"
                           "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
 
+            ZeroData(SRep);
+            if (PSYNCLogEnabled(pPSYNCCfg))
+                PSYNCLogSession(pPopLnk, &SRep, "SYNC=ENOUSER");
+        }
     }
     else if (GwLkMasqueradeDomain(pPopLnk))
     {
@@ -410,18 +478,28 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                               pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                               pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
                                pszErrorAccount) < 0)
+        {
             ErrLogMessage(LOG_LEV_MESSAGE,
                           "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                           pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
+            ZeroData(SRep);
+            if (PSYNCLogEnabled(pPSYNCCfg))
+                PSYNCLogSession(pPopLnk, &SRep, "SYNC=EFAIL");
+        }
+        else
+        {
+            if (PSYNCLogEnabled(pPSYNCCfg))
+                PSYNCLogSession(pPopLnk, &SRep, "SYNC=OK");
+        }
     }
     else
     {
         char            szSyncAddress[MAX_ADDR_NAME] = "";
 
-        sprintf(szSyncAddress, "%s%s", pPopLnk->pszName, pPopLnk->pszDomain);
+        SysSNPrintf(szSyncAddress, sizeof(szSyncAddress) - 1, "%s%s", pPopLnk->pszName, pPopLnk->pszDomain);
 
 
         SysLogMessage(LOG_LEV_MESSAGE,
@@ -432,11 +510,22 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "@" + domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                               pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                               pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
                                pszErrorAccount) < 0)
+        {
             ErrLogMessage(LOG_LEV_MESSAGE,
                           "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                           szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+
+            ZeroData(SRep);
+            if (PSYNCLogEnabled(pPSYNCCfg))
+                PSYNCLogSession(pPopLnk, &SRep, "SYNC=EFAIL");
+        }
+        else
+        {
+            if (PSYNCLogEnabled(pPSYNCCfg))
+                PSYNCLogSession(pPopLnk, &SRep, "SYNC=OK");
+        }
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -448,6 +537,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     GwLkLinkUnlock(pPopLnk);
     SvrReleaseConfigHandle(hSvrConfig);
     GwLkFreePOP3Link(pPopLnk);
+    SysFree(pPSYNCCfg);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Notify thread exit semaphore
@@ -456,6 +546,55 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] exit\n");
+
+    return (0);
+
+}
+
+
+
+static int      PSYNCLogEnabled(PSYNCConfig *pPSYNCCfg)
+{
+
+    return ((pPSYNCCfg->ulFlags & PSYNCF_LOG_ENABLED) ? 1 : 0);
+
+}
+
+
+
+static int      PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
+                                char const *pszStatus)
+{
+
+    char            szTime[256] = "";
+
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
+
+
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR PSYNC_LOG_FILE);
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+        return (ErrGetErrorCode());
+
+
+    MscFileLog(PSYNC_LOG_FILE,
+               "\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%d\""
+               "\t\"%lu\""
+               "\t\"%d\""
+               "\t\"%lu\""
+               "\n", szTime, pPopLnk->pszDomain, pPopLnk->pszName,
+               pPopLnk->pszRmtDomain, pPopLnk->pszRmtName, pPopLnk->pszAuthType, pszStatus,
+               pSRep->iMsgSync, pSRep->ulSizeSync, pSRep->iMsgErr, pSRep->ulSizeErr);
+
+
+    RLckUnlockEX(hResLock);
 
     return (0);
 

@@ -118,7 +118,8 @@ static int      UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount,
                                      unsigned long &ulMailboxSize);
 static int      UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount,
                                      unsigned long &ulMailboxSize);
-static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName);
+static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName,
+                                    unsigned long *pulMsgSize);
 static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex);
 static int      UPopGetIpLogFilePath(UserInfo *pUI, char *pszFilePath, int iMaxPath);
 
@@ -1266,7 +1267,8 @@ static int      UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount,
 
 
 
-static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName)
+static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName,
+                                    unsigned long *pulMsgSize)
 {
 
     FILE           *pMsgFile = fopen(pszFileName, "wb");
@@ -1291,6 +1293,7 @@ static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const ch
     int             iLineLength = 0;
     int             iGotNL;
     int             iGotNLPrev = 1;
+    unsigned long   ulMsgSize = 0;
 
     for (;;)
     {
@@ -1324,10 +1327,15 @@ static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const ch
             return (ERR_FILE_WRITE);
         }
 
+        ulMsgSize += (unsigned long) iLineLength;
+
         iGotNLPrev = iGotNL;
     }
 
     fclose(pMsgFile);
+
+    if (pulMsgSize != NULL)
+        *pulMsgSize = ulMsgSize;
 
     return (0);
 
@@ -1352,8 +1360,8 @@ static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 
 
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer, const char *pszRmtName,
-                                   const char *pszRmtPassword, const char *pszFetchHdrTags, const char *pszAuthType,
-                                   const char *pszErrorAccount)
+                                   const char *pszRmtPassword, PopSyncReport *pSRep, const char *pszFetchHdrTags,
+                                   const char *pszAuthType, const char *pszErrorAccount)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Connection to POP3 server
@@ -1377,6 +1385,14 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
         return (ErrorPop());
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Initialize the report structure with current mailbox informations
+///////////////////////////////////////////////////////////////////////////////
+    pSRep->iMsgSync = 0;
+    pSRep->iMsgErr = iMsgCount;
+    pSRep->ulSizeSync = 0;
+    pSRep->ulSizeErr = ulMailboxSize;
+
     if (iMsgCount > 0)
     {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1391,7 +1407,9 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 ///////////////////////////////////////////////////////////////////////////////
 //  Get the message
 ///////////////////////////////////////////////////////////////////////////////
-            if (UPopRetrieveMessage(hBSock, ii + 1, szMsgFileName) < 0)
+            unsigned long   ulMsgSize;
+
+            if (UPopRetrieveMessage(hBSock, ii + 1, szMsgFileName, &ulMsgSize) < 0)
             {
                 ErrorPush();
                 CheckRemoveFile(szMsgFileName);
@@ -1425,6 +1443,8 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 ///////////////////////////////////////////////////////////////////////////////
                 UPopDeleteMessage(hBSock, ii + 1);
 
+                pSRep->iMsgSync++;
+                pSRep->ulSizeSync += ulMsgSize;
             }
 
             SysRemove(szMsgFileName);
@@ -1444,6 +1464,12 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 //  Disconnect from POP3 server
 ///////////////////////////////////////////////////////////////////////////////
     UPopCloseChannel(hBSock);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Update report struct to reflect final status
+///////////////////////////////////////////////////////////////////////////////
+    pSRep->iMsgErr -= pSRep->iMsgSync;
+    pSRep->ulSizeErr = (pSRep->ulSizeErr > pSRep->ulSizeSync) ? (pSRep->ulSizeErr - pSRep->ulSizeSync): 0;
 
     return (0);
 

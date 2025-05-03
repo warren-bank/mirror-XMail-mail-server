@@ -477,9 +477,9 @@ bool            QueUtRemoveSpoolErrors(void)
 
 
 
-int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                                              SPLF_HANDLE hFSpool, char const *pszReason,
-                                              char const *pszServer)
+int             QueUtNotifyPermErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                                           SPLF_HANDLE hFSpool, char const *pszReason,
+                                           char const *pszServer, bool bCleanup)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message file path
@@ -514,14 +514,17 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
                                                                "ErrorsAdmin", pszReason, NULL,
                                                                pszServer, szQueueLogFilePath);
 
-    if (((iNotifyResult != 0) && (iNotifyResult != ERR_NULL_SENDER)) ||
-        !QueUtRemoveSpoolErrors())
-        bFreeze = true;
+    if (bCleanup)
+    {
+        if (((iNotifyResult != 0) && (iNotifyResult != ERR_NULL_SENDER)) ||
+            !QueUtRemoveSpoolErrors())
+            bFreeze = true;
 
-    if (bFreeLogInfo)
-        QueUtFreeLastLogInfo(&QLI);
+        if (bFreeLogInfo)
+            QueUtFreeLastLogInfo(&QLI);
 
-    QueCleanupMessage(hQueue, hMessage, bFreeze);
+        QueCleanupMessage(hQueue, hMessage, bFreeze);
+    }
 
     return (0);
 
@@ -529,9 +532,9 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
 
 
 
-int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                                       SPLF_HANDLE hFSpool, char const *pszReason,
-                                       char const *pszText, char const *pszServer)
+int             QueUtNotifyTempErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                                           SPLF_HANDLE hFSpool, char const *pszReason,
+                                           char const *pszText, char const *pszServer)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message file path
@@ -1214,9 +1217,9 @@ int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
 ///////////////////////////////////////////////////////////////////////////////
 //  Handle notifications and cleanup the message
 ///////////////////////////////////////////////////////////////////////////////
-        iResendResult = QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool,
-                                                      "The maximum number of delivery attempts has been reached",
-                                                      NULL);
+        iResendResult = QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
+                                                   "The maximum number of delivery attempts has been reached",
+                                                   NULL, true);
 
         QueCloseMessage(hQueue, hMessage);
     }

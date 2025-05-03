@@ -613,7 +613,7 @@ static int      SMTPApplyIPProps(SMTPSession & SMTPS)
         char           *pszName = ppszProps[ii];
         char           *pszVal = strchr(pszName, '=');
 
-        if (!pszVal)
+        if (pszVal == NULL)
             continue;
 
         iNameLen = pszVal - pszName;

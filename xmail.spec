@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.16
+Version: 1.17
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,20 @@ fi
 
 
 %changelog
+
+* Sun Sep 14 2003 Davide Libenzi <davidel@xmailserver.org>
+    Added Bcc: removal from message headers in XMail's sendmail.
+    Added PSYNC logging (-Yl).
+    Added domain completion to XMail's sendmail when the specified sender address (-f or -F)
+    does not contain one. The environment variable (or registry in Windows) DEFAULT_DOMAIN is
+    looked up to try to complete the address.
+    Fixed a bug in the return code of SysAccept() in all Unix versions.
+    Fixed a bug that was triggered by external command and filter exiting soon. XMail was not
+    able to correctly sync with the child process by losing it. This apply only to Unix
+    versions of XMail.
+    A notification message is now sent to the sender if the message is handled with
+    "smtp" or "smtprelay" commands and a permanent error happen when sending to the
+    remote SMTP server.
 
 * Tue Jul 08 2003 Davide Libenzi <davidel@xmailserver.org>
     Added a new configuration file "smtp.ipprop.tab" to be able to specify peer IP based

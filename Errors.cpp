@@ -281,6 +281,8 @@ static ErrorStrings Errors[] =
     {ERR_BAD_RFCNAME, "Name does not respect RFC822"},
     {ERR_CONNECT, "Error connecting to remote address"},
     {ERR_MESSAGE_DELETED, "Message marked for deletion"},
+    {ERR_PIPE, "Pipe creation error"},
+    {ERR_WAITPID, "Error in function {waitpid}"},
 
 };
 

@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.16
+    1.17
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    03-05-2003
+    09-14-2003
 
   project by
 
@@ -1337,8 +1337,9 @@ SMTP CLIENT AUTHENTICATION
 CUSTOM DOMAIN MAIL PROCESSING
 
     If a message that has as target domain of 'sub1.sub2.domain.net' arrives
-    at the XMail server, XMail decides if this domain gets a custom domain
-    processing by trying to lookup:
+    at the XMail server, 'AND' XMail does not have a real domain
+    'sub1.sub2.domain.net' inside its domain list, XMail decides if this
+    domain gets a custom domain processing by trying to lookup:
 
      sub1.sub2.domain.net.tab
      .sub2.domain.net.tab
@@ -1477,7 +1478,7 @@ CMD ALIASES
     This directory is automatically created and removed when you add/remove
     domains through the CTRL protocol (or 'CtrlClnt').
 
-    When a mail from 'USER@DOMAIN' is received by the server, the domain
+    When a mail for 'USER@DOMAIN' is received by the server, the domain
     'DOMAIN' is to be handled locally, and the standard users/aliases lookup
     fails, a file named 'USER.tab' is searched inside
     '$MAIL_ROOT/cmdaliases/DOMAIN'. If such file is found, commands listed
@@ -1780,7 +1781,8 @@ MESSAGE FILTERS
     FRC = 7 + 16 = 23
 
     Filter selection is driven by two files 'FILTERS.IN.TAB' and
-    'FILTERS.OUT.TAB' that have the following format:
+    'FILTERS.OUT.TAB' located inside the $MAIL_ROOT/ directory and that have
+    the following format:
 
      "sender"[TAB]"recipient"[TAB]"remote-addr"[TAB]"local-addr"[TAB]"filename"[NEWLINE]
 
@@ -2149,6 +2151,8 @@ COMMAND LINE
 
         -Yt nthreads
                 Set the number of POP3 sync threads.
+
+        -Yl     Enable PSYNC logging.
 
     [FINGER]
 
@@ -3180,7 +3184,7 @@ XMAIL LOCAL MAILER
      rcpt to:<...>[CR][LF]
      ...
      [CR][LF]
-     message text with [CR][LF] line termination
+     message text in RFC822 format with [CR][LF] line termination
 
     All lines must be [CR][LF] terminated, with one mail-from statement, one
     or more rcpt-to statements, an empty line and the message text. Mail

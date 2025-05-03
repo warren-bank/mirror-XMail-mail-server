@@ -2343,6 +2343,7 @@ static int      USmlCmd_smtprelay(char **ppszCmdTokens, int iNumTokens, SVRCFG_H
         }
 
 
+        int             iErrorCode = ErrGetErrorCode();
         char            szSmtpError[512] = "";
 
         USmtpGetSMTPError(&SMTPE, szSmtpError, sizeof(szSmtpError));
@@ -2357,8 +2358,16 @@ static int      USmlCmd_smtprelay(char **ppszCmdTokens, int iNumTokens, SVRCFG_H
                            "%s = \"%s\"\n", ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo,
                            SMTP_ERROR_VARNAME, szSmtpError);
 
+///////////////////////////////////////////////////////////////////////////////
+//  If a permanent SMTP error has been detected, then notify the message sender
+///////////////////////////////////////////////////////////////////////////////
+        if (USmtpIsFatalError(&SMTPE))
+            QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
+                                       USmtpGetErrorMessage(&SMTPE),
+                                       USmtpGetErrorServer(&SMTPE), false);
 
-        iReturnCode = USmtpIsFatalError(&SMTPE) ? ErrGetErrorCode() : -ErrGetErrorCode();
+
+        iReturnCode = USmtpIsFatalError(&SMTPE) ? iErrorCode: -iErrorCode;
     }
 
     USmtpCleanupError(&SMTPE);

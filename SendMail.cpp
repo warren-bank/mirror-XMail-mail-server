@@ -38,6 +38,8 @@
 #define SYS_SLASH_STR               "\\"
 #define SYS_MAX_PATH                256
 
+#define SysSNPrintf                 _snprintf
+
 #define Sign(v)                     (((v) < 0) ? -1: +1)
 #define Min(a, b)                   (((a) < (b)) ? (a): (b))
 #define Max(a, b)                   (((a) > (b)) ? (a): (b))
@@ -172,6 +174,7 @@ char           *SysGetEnv(const char *pszVarName)
 #define SYS_SLASH_STR               "/"
 #define SYS_MAX_PATH                256
 
+#define SysSNPrintf                 snprintf
 #define stricmp                     strcasecmp
 #define strnicmp                    strncasecmp
 
@@ -281,6 +284,7 @@ char           *SysGetEnv(const char *pszVarName)
 #define MAX_ADDR_NAME           256
 #define SAPE_OPEN_TENTATIVES    5
 #define SAPE_OPEN_DELAY         500
+#define ENV_DEFAULT_DOMAIN      "DEFAULT_DOMAIN"
 
 #define SetEmptyString(s)       (s)[0] = '\0'
 #define IsEmptyString(s)        (*(s) == '\0')
@@ -307,7 +311,6 @@ static FILE    *SafeOpenFile(char const *pszFilePath, char const *pszMode)
 }
 
 
-
 static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase,
                                     char *pszAddress)
 {
@@ -330,7 +333,6 @@ static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase,
     return (pszEnd);
 
 }
-
 
 
 static int      EmitRecipients(FILE *pMailFile, char const *pszAddrList)
@@ -357,7 +359,6 @@ static int      EmitRecipients(FILE *pMailFile, char const *pszAddrList)
         }
 
     }
-
 
     return (iRcptCount);
 
@@ -398,6 +399,23 @@ static int      GetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
 }
 
 
+char           *MscStrftime(struct tm const *ptmTime, char *pszDateStr, int iSize)
+{
+
+    const char *pszWDays[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+    const char *pszMonths[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    SysSNPrintf(pszDateStr, iSize, "%s, %d %s %d %02d:%02d:%02d",
+                pszWDays[ptmTime->tm_wday], ptmTime->tm_mday,
+                pszMonths[ptmTime->tm_mon], ptmTime->tm_year + 1900,
+                ptmTime->tm_hour, ptmTime->tm_min, ptmTime->tm_sec);
+
+    return (pszDateStr);
+
+}
+
+
 static int      GetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
 {
 
@@ -416,7 +434,7 @@ static int      GetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
         sprintf(szDiffTime, " -%02d%02d", -iDiffHours, iDiffMins);
 
 
-    strftime(pszTimeStr, iStringSize - strlen(szDiffTime) - 1, "%a, %d %b %Y %H:%M:%S", &tmTime);
+    MscStrftime(&tmTime, pszTimeStr, iStringSize - strlen(szDiffTime) - 1);
 
     strcat(pszTimeStr, szDiffTime);
 
@@ -424,6 +442,20 @@ static int      GetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
 
 }
 
+
+static char    *CopyAddress(char *pszDest, char const *pszAddr, int iSize)
+{
+
+    char           *pszDomain;
+
+    if (strchr(pszAddr, '@') || ((pszDomain = SysGetEnv(ENV_DEFAULT_DOMAIN)) == NULL))
+        StrNCpy(pszDest, pszAddr, iSize);
+    else
+        SysSNPrintf(pszDest, iSize, "%s@%s", pszAddr, pszDomain);
+
+    return (pszDest);
+
+}
 
 
 int             main(int iArgCount, char *pszArgs[])
@@ -508,10 +540,10 @@ int             main(int iArgCount, char *pszArgs[])
                 case ('f'):
                 {
                     if (pszArgs[ii][jj + 1] != '\0')
-                        StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                        CopyAddress(szMailFrom, pszArgs[ii] + jj + 1, sizeof(szMailFrom) - 1);
                     else if ((ii + 1) < iArgCount)
                     {
-                        StrSNCpy(szMailFrom, pszArgs[ii + 1]);
+                        CopyAddress(szMailFrom, pszArgs[ii + 1], sizeof(szMailFrom) - 1);
                         iSkipParam = 1;
                     }
 
@@ -532,15 +564,19 @@ int             main(int iArgCount, char *pszArgs[])
                     char const     *pszOpen = strchr(szExtMailFrom, '<');
 
                     if (pszOpen == NULL)
-                        StrSNCpy(szMailFrom, szExtMailFrom);
+                        CopyAddress(szMailFrom, szExtMailFrom, sizeof(szMailFrom) - 1);
                     else
                     {
-                        StrSNCpy(szMailFrom, pszOpen + 1);
+                        char            szTmpMailFrom[256] = "";
 
-                        char           *pszClose = (char *) strchr(szMailFrom, '>');
+                        StrSNCpy(szTmpMailFrom, pszOpen + 1);
+
+                        char           *pszClose = (char *) strchr(szTmpMailFrom, '>');
 
                         if (pszClose != NULL)
                             *pszClose = '\0';
+
+                        CopyAddress(szMailFrom, szTmpMailFrom, sizeof(szMailFrom) - 1);
                     }
 
                     bEatAll = true;
@@ -653,7 +689,13 @@ int             main(int iArgCount, char *pszArgs[])
 //  Emit recipients
 ///////////////////////////////////////////////////////////////////////////////
     for (ii = iRcptIndex; ii < iArgCount; ii++)
-        fprintf(pMailFile, "rcpt to:<%s>\r\n", pszArgs[ii]);
+    {
+        char            szAddr[256] = "";
+
+        CopyAddress(szAddr, pszArgs[ii], sizeof(szAddr) - 1);
+
+        fprintf(pMailFile, "rcpt to:<%s>\r\n", szAddr);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit message by reading from stdin
@@ -662,6 +704,7 @@ int             main(int iArgCount, char *pszArgs[])
     bool            bHasFrom = false;
     bool            bHasDate = false;
     bool            bRcptSource = false;
+    bool            bNoEmit = false;
     char            szBuffer[1536] = "";
 
     while (fgets(szBuffer, sizeof(szBuffer) - 1, pInFile) != NULL)
@@ -698,6 +741,7 @@ int             main(int iArgCount, char *pszArgs[])
             if (iLineLength == 0)
             {
                 bInHeaders = false;
+                bNoEmit = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Add mail from ( if not present )
@@ -736,6 +780,7 @@ int             main(int iArgCount, char *pszArgs[])
             }
             else
             {
+                bNoEmit = (strnicmp(szBuffer, "Bcc:", 4) == 0);
                 bRcptSource = (strnicmp(szBuffer, "To:", 3) == 0) ||
                     (strnicmp(szBuffer, "Cc:", 3) == 0) ||
                     (strnicmp(szBuffer, "Bcc:", 4) == 0);
@@ -759,7 +804,8 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit mail line
 ///////////////////////////////////////////////////////////////////////////////
-        fprintf(pDataFile, "%s\r\n", szBuffer);
+        if (!bNoEmit)
+            fprintf(pDataFile, "%s\r\n", szBuffer);
 
     }
 

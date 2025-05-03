@@ -27,6 +27,7 @@
 
 
 #define PSYNCF_STOP_SERVER          (1 << 0)
+#define PSYNCF_LOG_ENABLED          (1 << 1)
 
 
 

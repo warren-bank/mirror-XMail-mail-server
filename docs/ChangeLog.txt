@@ -1,12 +1,33 @@
 NAME
 
-    XMail Change Log as of Version 1.16
+    XMail Change Log as of Version 1.17
 
     [top]
 
 CHANGE LOG
 
-  May 3, 2003 v 1.16
+  Sep 14, 2003 v 1.17
+
+    *   Added Bcc: removal from message headers in XMail's sendmail.
+
+    *   Added PSYNC logging (-Yl).
+
+    *   Added domain completion to XMail's sendmail when the specified
+        sender address (-f or -F) does not contain one. The environment
+        variable (or registry in Windows) DEFAULT_DOMAIN is looked up to try
+        to complete the address.
+
+    *   Fixed a bug in the return code of SysAccept() in all Unix versions.
+
+    *   Fixed a bug that was triggered by external command and filter
+        exiting soon. XMail was not able to correctly sync with the child
+        process by losing it. This apply only to Unix versions of XMail.
+
+    *   A notification message is now sent to the sender if the message is
+        handled with "smtp" or "smtprelay" commands and a permanent error
+        happen when sending to the remote SMTP server.
+
+  Jul 8, 2003 v 1.16
 
     *   Added a new configuration file "smtp.ipprop.tab" to be able to
         specify peer IP based configuration option, like for example IP

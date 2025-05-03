@@ -817,6 +817,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
 
     int             iSyncInterval = STD_PSYNC_INTERVAL;
     int             iNumSyncThreads = STD_PSYNC_NUM_THREADS;
+    unsigned long   ulFlags = 0;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -835,6 +836,10 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
                 iNumSyncThreads = atoi(pszArgs[ii]);
 
             iNumSyncThreads = Min(MAX_PSYNC_NUM_THREADS, Max(1, iNumSyncThreads));
+            break;
+
+        case ('l'):
+            ulFlags |= PSYNCF_LOG_ENABLED;
             break;
         }
     }
@@ -860,7 +865,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
         return (ErrorPop());
     }
 
-    pPSYNCCfg->ulFlags = 0;
+    pPSYNCCfg->ulFlags = ulFlags;
     pPSYNCCfg->lThreadCount = 0;
     pPSYNCCfg->iTimeout = STD_SERVER_TIMEOUT;
     pPSYNCCfg->iSyncInterval = iSyncInterval;

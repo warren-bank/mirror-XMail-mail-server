@@ -38,8 +38,8 @@ stop_xmail()
 {
 	if [ -f /var/run/$NAME.pid ]
 	then
-        kill -INT `cat /var/run/$NAME.pid`
     	echo `date` > $XMAIL_ROOT/.shutdown
+        kill -INT `cat /var/run/$NAME.pid`
     	while [ -f $XMAIL_ROOT/.shutdown ]
     	do
         	sleep 1

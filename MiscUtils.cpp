@@ -324,6 +324,24 @@ int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
 
 
 
+char           *MscStrftime(struct tm const *ptmTime, char *pszDateStr, int iSize)
+{
+
+    const char *pszWDays[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+    const char *pszMonths[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+    SysSNPrintf(pszDateStr, iSize, "%s, %d %s %d %02d:%02d:%02d",
+                pszWDays[ptmTime->tm_wday], ptmTime->tm_mday,
+                pszMonths[ptmTime->tm_mon], ptmTime->tm_year + 1900,
+                ptmTime->tm_hour, ptmTime->tm_min, ptmTime->tm_sec);
+
+    return (pszDateStr);
+
+}
+
+
+
 
 int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
 {
@@ -343,7 +361,7 @@ int             MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
         sprintf(szDiffTime, " -%02d%02d", -iDiffHours, iDiffMins);
 
 
-    strftime(pszTimeStr, iStringSize - strlen(szDiffTime) - 1, "%a, %d %b %Y %H:%M:%S", &tmTime);
+    MscStrftime(&tmTime, pszTimeStr, iStringSize - strlen(szDiffTime) - 1);
 
     strcat(pszTimeStr, szDiffTime);
 
@@ -902,27 +920,28 @@ char           *MscLogFilePath(char const *pszLogFile, char *pszLogFilePath)
 
     time(&tCurrent);
 
+
     long            lRotStep = (unsigned long) (3600L * iLogRotateHours);
     long            lTimeZone = SysGetTimeZone();
-    long            lDayLight = SysGetDayLight() * 3600L;
+    long            lDayLight = SysGetDayLight();
     time_t          tLogFileTime = (time_t) (NbrFloor((SYS_INT64) tCurrent -
                                                       lTimeZone + lDayLight,
                                                       lRotStep) + lTimeZone - lDayLight);
-    struct tm       tmLogFileTime;
+    struct tm       tmLocTime;
     char            szLogsDir[SYS_MAX_PATH] = "";
 
-    SysLocalTime(&tLogFileTime, &tmLogFileTime);
+    SysLocalTime(&tLogFileTime, &tmLocTime);
 
     SvrGetLogsDir(szLogsDir, sizeof(szLogsDir));
     AppendSlash(szLogsDir);
 
     sprintf(pszLogFilePath, "%s%s-%04d%02d%02d%02d%02d",
             szLogsDir, pszLogFile,
-            tmLogFileTime.tm_year + 1900,
-            tmLogFileTime.tm_mon + 1,
-            tmLogFileTime.tm_mday,
-            tmLogFileTime.tm_hour,
-            tmLogFileTime.tm_min);
+            tmLocTime.tm_year + 1900,
+            tmLocTime.tm_mon + 1,
+            tmLocTime.tm_mday,
+            tmLocTime.tm_hour,
+            tmLocTime.tm_min);
 
 
     return (pszLogFilePath);
@@ -1362,7 +1381,7 @@ char          **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR 
     SysGetAddrAddress(PeerInfo, PeerAddr);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Open the IP properties database. Fail smootly if the file does not exist
+//  Open the IP properties database. Fail smoothly if the file does not exist
 ///////////////////////////////////////////////////////////////////////////////
     FILE           *pFile = fopen(pszFileName, "rt");
 

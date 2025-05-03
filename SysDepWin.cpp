@@ -933,7 +933,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNam
             (SysSetSocketsOptions(SockFDAccept) < 0))
         {
             SysCloseSocket(SockFDAccept);
-            return (ErrGetErrorCode());
+            return (SYS_INVALID_SOCKET);
         }
     }
 
@@ -2583,7 +2583,10 @@ long            SysGetTimeZone(void)
 long            SysGetDayLight(void)
 {
 
-    return ((long) _daylight);
+    time_t          tCurr = time(NULL);
+    struct tm       tmCurr = *localtime(&tCurr);
+
+    return ((long) ((tmCurr.tm_isdst <= 0) ? 0: 3600));
 
 }
 
