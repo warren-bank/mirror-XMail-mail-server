@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.7
+Version: 1.8
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -118,6 +118,19 @@ fi
 
 %changelog
 
+* Sun May 19 2002 Davide Libenzi <davidel@xmailserver.org>
+    Changed XMail's behaviour upon receival on long ( RFC compared ) data lines on SMTP and POP3 fetch
+    inbound doors. Before the operation was aborted while now data is accepted without truncation,
+    that might make XMail to behave non conforming the RFC. Added @@RRCPT macro to the "external"
+    MAILPROC.TAB command to emit the real recipient of the message ( @@RCPT could be an alias ).	
+    Added HOSTNAME:PORT capability to POP3LINKS.TAB entries. Added Linux/PowerPC port.
+    Added "filelist" CTRL protocol command. Added SMTP HELP command.
+    Changed bounce message format to add the last SMTP error and to make it works with Ecartis
+    mail bounce processing. Changed the XMail's sendmail implementation to accept "-f FROM" and "-F FROM"
+    non standard sendmail paramenter specification.
+    Fixed a bug inside the PSYNC server code that made XMail to fail to resolve POP3 server addresses.
+    Various code cleanups.
+	
 * Mon Apr 01 2002 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug inside the POP3 server that caused bad responses to UIDL and LIST commands
     in case of certain command patterns.

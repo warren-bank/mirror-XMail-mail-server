@@ -39,6 +39,7 @@
 
 
 
+#define DEVNULL                     "/dev/null"
 #define RUNNING_PIDS_DIR            "/var/run"
 
 #if !defined(NOFILE)
@@ -54,13 +55,13 @@
 
 
 
-static int      MLnxEventLog(char const * pszFormat,...);
-static int      MLnxSavePID(void);
-static int      MLnxRemovePID(void);
-static void     MLnxSIGCLD(int iSignal);
-static int      MLnxDaemonBootStrap(void);
-static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[]);
-static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[]);
+static int      MnEventLog(char const * pszFormat,...);
+static int      MnSavePID(void);
+static int      MnRemovePID(void);
+static void     MnSIGCLD(int iSignal);
+static int      MnDaemonBootStrap(void);
+static int      MnIsDebugStartup(int iArgCount, char *pszArgs[]);
+static int      MnDaemonStartup(int iArgCount, char *pszArgs[]);
 
 
 
@@ -68,7 +69,7 @@ static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[]);
 
 
 
-static int      MLnxEventLog(char const * pszFormat,...)
+static int      MnEventLog(char const * pszFormat,...)
 {
 
     openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
@@ -96,7 +97,7 @@ static int      MLnxEventLog(char const * pszFormat,...)
 
 
 
-static int      MLnxSavePID(void)
+static int      MnSavePID(void)
 {
 
     char            szPidFile[SYS_MAX_PATH] = "";
@@ -122,7 +123,7 @@ static int      MLnxSavePID(void)
 
 
 
-static int      MLnxRemovePID(void)
+static int      MnRemovePID(void)
 {
 
     char            szPidFile[SYS_MAX_PATH] = "";
@@ -141,7 +142,7 @@ static int      MLnxRemovePID(void)
 
 
 
-static void     MLnxSIGCLD(int iSignal)
+static void     MnSIGCLD(int iSignal)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  For BSD
@@ -161,7 +162,31 @@ static void     MLnxSIGCLD(int iSignal)
 
 
 
-static int      MLnxDaemonBootStrap(void)
+static void     MnSetupStdHandles(void)
+{
+
+    int         iFD = open(DEVNULL, O_RDWR, 0);
+
+    if (iFD == -1)
+    {
+        MnEventLog("Cannot open file %s : %s", DEVNULL, strerror(errno));
+        exit(errno);
+    }
+
+    if ((dup2(iFD, 0) == -1) || (dup2(iFD, 1) == -1) || (dup2(iFD, 2) == -1))
+    {
+        MnEventLog("File descriptor duplication error : %s", strerror(errno));
+        exit(errno);
+    }
+
+    close(iFD);
+
+}
+
+
+
+
+static int      MnDaemonBootStrap(void)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  This code is inspired from the code of the great Richard Stevens books.
@@ -189,7 +214,7 @@ static int      MLnxDaemonBootStrap(void)
 
     if (iChildPID < 0)
     {
-        MLnxEventLog("Cannot fork : %s", strerror(errno));
+        MnEventLog("Cannot fork : %s", strerror(errno));
 
         exit(errno);
     }
@@ -208,7 +233,7 @@ static int      MLnxDaemonBootStrap(void)
 ///////////////////////////////////////////////////////////////////////////////
     if (setpgrp(0, getpid()) == -1)
     {
-        MLnxEventLog("Can't change process group : %s", strerror(errno));
+        MnEventLog("Can't change process group : %s", strerror(errno));
 
         exit(errno);
     }
@@ -230,7 +255,7 @@ static int      MLnxDaemonBootStrap(void)
 ///////////////////////////////////////////////////////////////////////////////
     if (setpgrp() == -1)
     {
-        MLnxEventLog("Can't change process group : %s", strerror(errno));
+        MnEventLog("Can't change process group : %s", strerror(errno));
 
         exit(errno);
     }
@@ -245,7 +270,7 @@ static int      MLnxDaemonBootStrap(void)
 
     if (iChildPID < 0)
     {
-        MLnxEventLog("Cannot fork : %s", strerror(errno));
+        MnEventLog("Cannot fork : %s", strerror(errno));
 
         exit(errno);
     }
@@ -259,6 +284,11 @@ static int      MLnxDaemonBootStrap(void)
 ///////////////////////////////////////////////////////////////////////////////
     for (int fd = 0; fd < NOFILE; fd++)
         close(fd);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set std handles
+///////////////////////////////////////////////////////////////////////////////
+    MnSetupStdHandles();
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Probably got set to EBADF from a close
@@ -284,7 +314,7 @@ static int      MLnxDaemonBootStrap(void)
 ///////////////////////////////////////////////////////////////////////////////
 //  BSD
 ///////////////////////////////////////////////////////////////////////////////
-    signal(SIGCLD, MLnxSIGCLD);
+    signal(SIGCLD, MnSIGCLD);
 
 #else
 ///////////////////////////////////////////////////////////////////////////////
@@ -302,7 +332,7 @@ static int      MLnxDaemonBootStrap(void)
 
 
 
-static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[])
+static int      MnIsDebugStartup(int iArgCount, char *pszArgs[])
 {
 
     for (int ii = 0; ii < iArgCount; ii++)
@@ -315,19 +345,19 @@ static int      MLnxIsDebugStartup(int iArgCount, char *pszArgs[])
 
 
 
-static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[])
+static int      MnDaemonStartup(int iArgCount, char *pszArgs[])
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Daemon bootstrap code if We're not in debug mode
 ///////////////////////////////////////////////////////////////////////////////
-    if (!MLnxIsDebugStartup(iArgCount, pszArgs))
-        MLnxDaemonBootStrap();
+    if (!MnIsDebugStartup(iArgCount, pszArgs))
+        MnDaemonBootStrap();
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create PID file
 ///////////////////////////////////////////////////////////////////////////////
-    MLnxSavePID();
+    MnSavePID();
 
 
     int             iServerResult = SvrMain(iArgCount, pszArgs);
@@ -336,7 +366,7 @@ static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove PID file
 ///////////////////////////////////////////////////////////////////////////////
-    MLnxRemovePID();
+    MnRemovePID();
 
 
     return (iServerResult);
@@ -349,6 +379,6 @@ static int      MLnxDaemonStartup(int iArgCount, char *pszArgs[])
 int             main(int iArgCount, char *pszArgs[])
 {
 
-    return (MLnxDaemonStartup(iArgCount, pszArgs));
+    return (MnDaemonStartup(iArgCount, pszArgs));
 
 }

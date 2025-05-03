@@ -61,6 +61,7 @@
 #define FILTER_OUT_NN_EXITCODE      98
 #define FILTER_OUT_EXITCODE         99
 #define FILTER_MODIFY_EXITCODE      100
+#define LOCAL_SMAIL_SMTP_ERR        "417 Temporary delivery error"
 
 
 
@@ -85,6 +86,7 @@ static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL);
 static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool);
+static char    *SMAILGetSMTPError(SMTPError * pSMTPE, char * pszError, int iMaxError);
 static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszDestDomain, SMTPError * pSMTPE = NULL);
@@ -695,6 +697,21 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 
 
 
+static char    *SMAILGetSMTPError(SMTPError * pSMTPE, char * pszError, int iMaxError)
+{
+
+    char const     *pszSmtpErr = (pSMTPE != NULL) ? USmtpGetErrorMessage(pSMTPE): LOCAL_SMAIL_SMTP_ERR;
+
+    if (IsEmptyString(pszSmtpErr))
+        pszSmtpErr = LOCAL_SMAIL_SMTP_ERR;
+
+    StrNCpy(pszError, pszSmtpErr, iMaxError);
+
+    return (pszError);
+
+}
+
+
 
 static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
@@ -745,13 +762,19 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
         {
             ErrorPush();
 
+            char            szSmtpError[512] = "";
+
+            SMAILGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
+
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             QueUtErrLogMessage(hQueue, hMessage,
-                    "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             return (ErrorPop());
         }
@@ -796,13 +819,19 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
             }
 
 
+            char            szSmtpError[512] = "";
+
+            SMAILGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
+
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             QueUtErrLogMessage(hQueue, hMessage,
-                    "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", ppszFwdGws[ss], pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             if ((pSMTPE != NULL) && USmtpIsFatalError(pSMTPE))
                 break;
@@ -850,13 +879,19 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
                 }
 
 
+                char            szSmtpError[512] = "";
+
+                SMAILGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
+
                 ErrLogMessage(LOG_LEV_MESSAGE,
-                        "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                        szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                        "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                        "%s = \"%s\"\n", szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                        SMTP_ERROR_VARNAME, szSmtpError);
 
                 QueUtErrLogMessage(hQueue, hMessage,
-                        "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                        szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                        "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                        "%s = \"%s\"\n", szDomainMXHost, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                        SMTP_ERROR_VARNAME, szSmtpError);
 
                 if ((pSMTPE != NULL) && USmtpIsFatalError(pSMTPE))
                     break;
@@ -890,13 +925,19 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
             {
                 ErrorPush();
 
+                char            szSmtpError[512] = "";
+
+                SMAILGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
+
                 ErrLogMessage(LOG_LEV_MESSAGE,
-                        "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                        pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                        "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                        "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                        SMTP_ERROR_VARNAME, szSmtpError);
 
                 QueUtErrLogMessage(hQueue, hMessage,
-                        "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                        pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
+                        "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                        "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo,
+                        SMTP_ERROR_VARNAME, szSmtpError);
 
                 return (ErrorPop());
             }
@@ -933,13 +974,19 @@ static int      SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShb
             }
 
 
+            char            szSmtpError[512] = "";
+
+            SMAILGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
+
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             QueUtErrLogMessage(hQueue, hMessage,
-                    "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
-                    ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+                    "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+                    "%s = \"%s\"\n", ppszMXGWs[ss], pszSMTPDomain, pszMailFrom, pszRcptTo,
+                    SMTP_ERROR_VARNAME, szSmtpError);
 
             if ((pSMTPE != NULL) && USmtpIsFatalError(pSMTPE))
                 break;

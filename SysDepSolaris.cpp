@@ -2275,7 +2275,26 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    return ((access(pszFilePath, F_OK) == 0) ? 1 : 0);
+    struct stat     FS;
+
+    if (stat(pszFilePath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 0 : 1);
+
+}
+
+
+
+int             SysExistDir(const char *pszDirPath)
+{
+
+    struct stat     FS;
+
+    if (stat(pszDirPath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 1 : 0);
 
 }
 
@@ -2293,7 +2312,17 @@ SYS_HANDLE      SysFirstFile(const char *pszPath, char *pszFileName)
     }
 
     struct dirent   DE;
-    struct dirent  *pDirEntry = readdir_r(pDIR, &DE);
+    struct dirent  *pDirEntry = NULL;
+
+#if (_POSIX_C_SOURCE - 0 >= 199506L) || defined(_POSIX_PTHREAD_SEMANTICS)
+
+    readdir_r(pDIR, &DE, &pDirEntry);
+
+#else   // #if (_POSIX_C_SOURCE - 0 >= 199506L) || ...
+
+    pDirEntry = readdir_r(pDIR, &DE);
+
+#endif  // #if (_POSIX_C_SOURCE - 0 >= 199506L) || ...
 
     if (pDirEntry == NULL)
     {
@@ -2361,7 +2390,17 @@ int             SysNextFile(SYS_HANDLE hFind, char *pszFileName)
 {
 
     FileFindData   *pFFD = (FileFindData *) hFind;
-    struct dirent  *pDirEntry = readdir_r(pFFD->pDIR, &pFFD->DE);
+    struct dirent  *pDirEntry = NULL;
+
+#if (_POSIX_C_SOURCE - 0 >= 199506L) || defined(_POSIX_PTHREAD_SEMANTICS)
+
+    readdir_r(pFFD->pDIR, &pFFD->DE, &pDirEntry);
+
+#else   // #if (_POSIX_C_SOURCE - 0 >= 199506L) || ...
+
+    pDirEntry = readdir_r(pFFD->pDIR, &pFFD->DE);
+
+#endif  // #if (_POSIX_C_SOURCE - 0 >= 199506L) || ...
 
     if (pDirEntry == NULL)
         return (0);
@@ -2580,8 +2619,15 @@ char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSaveP
 char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize)
 {
 
+#if (_POSIX_C_SOURCE - 0 >= 199506L) || defined(_POSIX_PTHREAD_SEMANTICS)
+
+    return (ctime_r(pTimer, pszBuffer));
+
+#else   // #if (_POSIX_C_SOURCE - 0 >= 199506L) ||
+
     return (ctime_r(pTimer, pszBuffer, iBufferSize));
 
+#endif  // #if (_POSIX_C_SOURCE - 0 >= 199506L) ||
 }
 
 
@@ -2607,8 +2653,15 @@ struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct)
 char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize)
 {
 
+#if (_POSIX_C_SOURCE - 0 >= 199506L) || defined(_POSIX_PTHREAD_SEMANTICS)
+
+    return (asctime_r(pTStruct, pszBuffer));
+
+#else   // #if (_POSIX_C_SOURCE - 0 >= 199506L) ||
+
     return (asctime_r(pTStruct, pszBuffer, iBufferSize));
 
+#endif  // #if (_POSIX_C_SOURCE - 0 >= 199506L) ||
 }
 
 

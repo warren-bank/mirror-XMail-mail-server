@@ -85,16 +85,16 @@ static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomai
 
 
 
-char           *UAthGetRootPath(char const * pszService, char *pszAuthPath)
+char           *UAthGetRootPath(char const * pszService, char *pszAuthPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszAuthPath);
+    CfgGetRootPath(pszAuthPath, iMaxPath);
 
-    strcat(pszAuthPath, USER_AUTH_DIR);
+    StrNCat(pszAuthPath, USER_AUTH_DIR, iMaxPath);
 
     AppendSlash(pszAuthPath);
 
-    strcat(pszAuthPath, pszService);
+    StrNCat(pszAuthPath, pszService, iMaxPath);
 
     AppendSlash(pszAuthPath);
 
@@ -113,7 +113,7 @@ static int      UAthGetConfigPath(char const * pszService, char const * pszDomai
 
     char            szAuthPath[SYS_MAX_PATH] = "";
 
-    UAthGetRootPath(pszService, szAuthPath);
+    UAthGetRootPath(pszService, szAuthPath, sizeof(szAuthPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check domain specific config
@@ -319,7 +319,7 @@ static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomai
         {
             char            szUserPath[SYS_MAX_PATH] = "";
 
-            UsrGetUserPath(pUI, szUserPath, 0);
+            UsrGetUserPath(pUI, szUserPath, sizeof(szUserPath), 0);
 
 
             char           *pszNewValue = SysStrDup(szUserPath);

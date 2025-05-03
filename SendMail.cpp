@@ -373,7 +373,7 @@ int             main(int iArgCount, char *pszArgs[])
         return (1);
     }
 
-    strcpy(szMailRoot, pszMailRoot);
+    StrSNCpy(szMailRoot, pszMailRoot);
 
     if (szMailRoot[iVarLength - 1] != SYS_SLASH_CHAR)
         strcat(szMailRoot, SYS_SLASH_STR);
@@ -430,19 +430,33 @@ int             main(int iArgCount, char *pszArgs[])
                         break;
 
                     case ('f'):
-                        StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                        {
+                            if (pszArgs[ii][jj + 1] != '\0')
+                                StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                            else if ((ii + 1) < iArgCount)
+                            {
+                                StrSNCpy(szMailFrom, pszArgs[ii + 1]);
+                                iSkipParam = 1;
+                            }
 
-                        bEatAll = true;
+                            bEatAll = true;
+                        }
                         break;
 
                     case ('F'):
                         {
-                            StrSNCpy(szExtMailFrom, pszArgs[ii] + jj + 1);
+                            if (pszArgs[ii][jj + 1] != '\0')
+                                StrSNCpy(szExtMailFrom, pszArgs[ii] + jj + 1);
+                            else if ((ii + 1) < iArgCount)
+                            {
+                                StrSNCpy(szExtMailFrom, pszArgs[ii + 1]);
+                                iSkipParam = 1;
+                            }
 
-                            char const     *pszOpen = strchr(pszArgs[ii] + jj + 1, '<');
+                            char const     *pszOpen = strchr(szExtMailFrom, '<');
 
                             if (pszOpen == NULL)
-                                StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+                                StrSNCpy(szMailFrom, szExtMailFrom);
                             else
                             {
                                 StrSNCpy(szMailFrom, pszOpen + 1);

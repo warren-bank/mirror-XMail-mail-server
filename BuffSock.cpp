@@ -179,10 +179,12 @@ int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
 
 
 char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                        int *pLineLength)
+                        int *pLineLength, int *piGotNL)
 {
 
-    for (int ii = 0; ii < iMaxChars; ii++)
+    int             ii;
+
+    for (ii = 0; ii < iMaxChars; ii++)
     {
         int             iChar = BSckGetChar(hBSock, iTimeout);
 
@@ -199,6 +201,8 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
             if (pLineLength != NULL)
                 *pLineLength = ii;
 
+            if (piGotNL != NULL)
+                *piGotNL = 1;
 
             return (pszBuffer);
         }
@@ -207,6 +211,14 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
 
     }
 
+    if (pLineLength != NULL)
+        *pLineLength = ii;
+
+    if (piGotNL != NULL)
+    {
+        *piGotNL = 0;
+        return (pszBuffer);
+    }
 
     ErrSetErrorCode(ERR_LINE_TOO_LONG);
 
@@ -217,7 +229,7 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
 
 
 char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                        int *pLineLength)
+                        int *pLineLength, int *piGotNL)
 {
 
     BuffSocketData     *pBSD = (BuffSocketData *) hBSock;
@@ -267,6 +279,8 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
                     if (pLineLength != NULL)
                         *pLineLength = ii;
 
+                    if (piGotNL != NULL)
+                        *piGotNL = 1;
 
                     return (pszBuffer);
                 }
@@ -286,6 +300,14 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
         }
     }
 
+    if (pLineLength != NULL)
+        *pLineLength = ii;
+
+    if (piGotNL != NULL)
+    {
+        *piGotNL = 0;
+        return (pszBuffer);
+    }
 
     ErrSetErrorCode(ERR_LINE_TOO_LONG);
 

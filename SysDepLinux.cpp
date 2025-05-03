@@ -2333,7 +2333,26 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    return ((access(pszFilePath, F_OK) == 0) ? 1 : 0);
+    struct stat     FS;
+
+    if (stat(pszFilePath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 0 : 1);
+
+}
+
+
+
+int             SysExistDir(const char *pszDirPath)
+{
+
+    struct stat     FS;
+
+    if (stat(pszDirPath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 1 : 0);
 
 }
 
@@ -2695,6 +2714,8 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
             "=r"(uValue), "=m"(*pSpinLock):
             "m"(*pSpinLock));
 
+    return (uValue);
+
 #elif defined(XMAIL_X86)
 
     __asm__  __volatile__(
@@ -2703,13 +2724,29 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
             "0"(1), "m"(*pSpinLock):
             "memory");
 
+    return (uValue);
+
+#elif defined(XMAIL_PPC)
+
+    __asm__ __volatile__(
+            "      sync;\n"
+            "0:    lwarx %0,0,%1;\n"
+            "      xor. %0,%3,%0;\n"
+            "      bne 1f;\n"
+            "      stwcx. %2,0,%1;\n"
+            "      bne- 0b;\n"
+            "1:    sync;\n":
+            "=&r"(uValue):
+            "r"(pSpinLock), "r"(1), "r"(0):
+            "cr0", "memory");
+
+    return ((uValue == 0) ? 1: 0);
+
 #else
 
 #error CPU type not defined
 
 #endif
-
-    return (uValue);
 
 }
 
@@ -2848,6 +2885,22 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 
     __asm__ __volatile__(
             "add %0, %%esp\n":
+            :
+            "r"(uStkDisp));
+
+#elif defined(XMAIL_PPC)
+
+    __asm__ __volatile__(
+            "subf %%r1, %0, %%r1\n":
+            :
+            "r"(uStkDisp));
+
+
+    uResult = pProc(pData);
+
+
+    __asm__ __volatile__(
+            "add %%r1, %0, %%r1\n":
             :
             "r"(uStkDisp));
 

@@ -62,6 +62,7 @@ QUEUE_HANDLE    QueOpen(char const * pszRootPath, int iMaxRetry, int iRetryTimeo
 int             QueClose(QUEUE_HANDLE hQueue);
 int             QueGetDirsLevel(QUEUE_HANDLE hQueue);
 char const     *QueGetRootPath(QUEUE_HANDLE hQueue);
+char           *QueLoadLastLogEntry(char const * pszLogFilePath);
 QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue);
 int             QueGetFilePath(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char * pszFilePath,
                         char const * pszQueueDir = NULL);

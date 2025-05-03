@@ -374,9 +374,9 @@ int             MscGetDirectorySize(char const * pszPath, bool bRecurse, unsigne
                                 ulSubNumFiles = 0;
                 char            szSubPath[SYS_MAX_PATH] = "";
 
-                strcpy(szSubPath, pszPath);
+                StrSNCpy(szSubPath, pszPath);
                 AppendSlash(szSubPath);
-                strcat(szSubPath, szFileName);
+                StrSNCat(szSubPath, szFileName);
 
                 if (MscGetDirectorySize(szSubPath, bRecurse, ulSubDirSize,
                         ulSubNumFiles, pFNValidate) < 0)
@@ -563,9 +563,9 @@ int             MscClearDirectory(const char *pszPath, int iRecurseSubs)
             {
                 char            szSubPath[SYS_MAX_PATH] = "";
 
-                strcpy(szSubPath, pszPath);
+                StrSNCpy(szSubPath, pszPath);
                 AppendSlash(szSubPath);
-                strcat(szSubPath, szFileName);
+                StrSNCat(szSubPath, szFileName);
 
                 if (MscClearDirectory(szSubPath, iRecurseSubs) < 0)
                 {
@@ -601,9 +601,9 @@ int             MscClearDirectory(const char *pszPath, int iRecurseSubs)
         {
             char            szFilePath[SYS_MAX_PATH] = "";
 
-            strcpy(szFilePath, pszPath);
+            StrSNCpy(szFilePath, pszPath);
             AppendSlash(szFilePath);
-            strcat(szFilePath, szFileName);
+            StrSNCat(szFilePath, szFileName);
 
             if (SysRemove(szFilePath) < 0)
             {
@@ -893,7 +893,7 @@ char           *MscLogFilePath(char const * pszLogFile, char *pszLogFilePath)
 
     SysLocalTime(&tLogFileTime, &tmLogFileTime);
 
-    SvrGetLogsDir(szLogsDir);
+    SvrGetLogsDir(szLogsDir, sizeof(szLogsDir));
     AppendSlash(szLogsDir);
 
     sprintf(pszLogFilePath, "%s%s-%04d%02d%02d%02d%02d",
@@ -1546,7 +1546,9 @@ int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszC
     }
     else
     {
-        SvrPath.NetAddr = SysInetAddr(pszConnSpec);
+        if (MscGetServerAddress(pszConnSpec, SvrPath.NetAddr) < 0)
+            return (ErrGetErrorCode());
+
         SvrPath.iPortNo = iDefPortNo;
     }
 

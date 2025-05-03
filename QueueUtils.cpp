@@ -388,6 +388,47 @@ int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
 
 
 
+char           *QueUtGetLastSmptReason(char const * pszLogFilePath)
+{
+
+    char           *pszEntry = QueLoadLastLogEntry(pszLogFilePath);
+
+    if (pszEntry == NULL)
+        return (NULL);
+
+    char           *pszEPos = strstr(pszEntry, SMTP_ERROR_VARNAME);
+
+    if ((pszEPos == NULL) || ((pszEPos = strchr(pszEPos, '=')) == NULL))
+    {
+        SysFree(pszEntry);
+        return (NULL);
+    }
+
+    ++pszEPos;
+
+    StrSkipSpaces(pszEPos);
+
+    char           *pszEnd = strchr(pszEPos, '\r');
+
+    if ((pszEnd != NULL) || ((pszEnd = strchr(pszEPos, '\n')) != NULL))
+        *pszEnd = '\0';
+
+    if (*pszEPos == '"')
+    {
+        ++pszEPos;
+        DelFinalChar(pszEPos, '"');
+    }
+
+    char           *pszReason = SysStrDup(pszEPos);
+
+    SysFree(pszEntry);
+
+    return (pszReason);
+
+}
+
+
+
 bool            QueUtRemoveSpoolErrors(void)
 {
 
@@ -409,6 +450,14 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
     QueGetFilePath(hQueue, hMessage, szQueueFilePath);
     QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Load ( eventually ) the last SMTP reason
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszSmtpReason = NULL;
+
+    if (pszReason == NULL)
+        pszReason = pszSmtpReason = QueUtGetLastSmptReason(szQueueLogFilePath);
+
 
     bool            bFreeze = false;
     int             iNotifyResult = QueUtTXErrorExNotifySender(hFSpool, szQueueFilePath,
@@ -417,6 +466,10 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
     if ((iNotifyResult != ERR_NULL_SENDER) &&
             ((iNotifyResult != 0) || !QueUtRemoveSpoolErrors()))
         bFreeze = true;
+
+
+    if (pszSmtpReason != NULL)
+        SysFree(pszSmtpReason);
 
 
     QueCleanupMessage(hQueue, hMessage, bFreeze);
@@ -437,9 +490,24 @@ int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage
 
     QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Load ( eventually ) the last SMTP reason
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszSmtpReason = NULL;
 
-    return (QueUtTXErrorNotifySender(hFSpool, "TempErrorsAdmin", pszReason,
-            pszText, szQueueLogFilePath));
+    if (pszReason == NULL)
+        pszReason = pszSmtpReason = QueUtGetLastSmptReason(szQueueLogFilePath);
+
+
+    int             iNotifyResult = QueUtTXErrorNotifySender(hFSpool, "TempErrorsAdmin",
+                            pszReason, pszText, szQueueLogFilePath);
+
+
+    if (pszSmtpReason != NULL)
+        SysFree(pszSmtpReason);
+
+
+    return (iNotifyResult);
 
 }
 
@@ -457,6 +525,14 @@ int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage
     QueGetFilePath(hQueue, hMessage, szQueueFilePath);
     QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Load ( eventually ) the last SMTP reason
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszSmtpReason = NULL;
+
+    if (pszReason == NULL)
+        pszReason = pszSmtpReason = QueUtGetLastSmptReason(szQueueLogFilePath);
+
 
     bool            bFreeze = false;
     int             iNotifyResult = QueUtTXErrorExNotifyRoot(hFSpool, szQueueFilePath, pszReason,
@@ -464,6 +540,10 @@ int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage
 
     if ((iNotifyResult != 0) || !QueUtRemoveSpoolErrors())
         bFreeze = true;
+
+
+    if (pszSmtpReason != NULL)
+        SysFree(pszSmtpReason);
 
 
     QueCleanupMessage(hQueue, hMessage, bFreeze);
@@ -814,7 +894,7 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
                     szTo[MAX_ADDR_NAME] = "";
 
     if (USmlMapAddress(pszTo, szDomain, szName) < 0)
-        strcpy(szTo, pszTo);
+        StrSNCpy(szTo, pszTo);
     else
         SysSNPrintf(szTo, sizeof(szTo) - 1, "%s@%s", szName, szDomain);
 
@@ -866,12 +946,12 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
 ///////////////////////////////////////////////////////////////////////////////
 //  Write From ( mail data )
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pRespFile, "From:   %s PostMaster <%s>\r\n", pszSMTPDomain, pszFrom);
+    fprintf(pRespFile, "From: %s PostMaster <%s>\r\n", pszSMTPDomain, pszFrom);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write To ( mail data )
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pRespFile, "To:     %s\r\n", pszTo);
+    fprintf(pRespFile, "To: %s\r\n", pszTo);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write Subject ( mail data )
@@ -896,11 +976,17 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     fprintf(pRespFile, "\r\n");
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Write error message ( mail data )
+//  Write XMail bounce identifier
 ///////////////////////////////////////////////////////////////////////////////
     char const     *pszMailFrom = USmlMailFrom(hFSpool);
     char const     *pszRcptTo = USmlRcptTo(hFSpool);
 
+    fprintf(pRespFile, "[<00>] XMail bounce: Rcpt=[%s];Error=[%s]\r\n\r\n\r\n",
+            pszRcptTo, (pszReason != NULL) ? pszReason: "");
+
+///////////////////////////////////////////////////////////////////////////////
+//  Write error message ( mail data )
+///////////////////////////////////////////////////////////////////////////////
     fprintf(pRespFile, "[<01>] Error sending message [%s] from [%s].\r\n\r\n"
             "ID:        <%s>\r\n"
             "Mail From: <%s>\r\n"

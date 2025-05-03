@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <alloca.h>
 #include <limits.h>
 #include <string.h>
 #include <ctype.h>

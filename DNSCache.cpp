@@ -102,9 +102,9 @@ int             CDNS_Initialize(int iCacheDirCount)
 ///////////////////////////////////////////////////////////////////////////////
     char            szCacheBasePath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szCacheBasePath);
+    CfgGetRootPath(szCacheBasePath, sizeof(szCacheBasePath));
 
-    strcat(szCacheBasePath, DNS_CACHE_DIRCTORY);
+    StrNCat(szCacheBasePath, DNS_CACHE_DIRCTORY, sizeof(szCacheBasePath));
     AppendSlash(szCacheBasePath);
 
 
@@ -118,7 +118,7 @@ int             CDNS_Initialize(int iCacheDirCount)
         sprintf(szCachePath, "%s%s" SYS_SLASH_STR "%d",
                 szCacheBasePath, DNS_MX_CACHE_DIRCTORY, ii);
 
-        if (SysExistFile(szCachePath))
+        if (SysExistDir(szCachePath))
         {
 
             if (CDNS_CleanupPath(szCachePath) < 0)
@@ -156,7 +156,7 @@ static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSu
 
     char            szRootPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szRootPath);
+    CfgGetRootPath(szRootPath, sizeof(szRootPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Calculate domain string hash
@@ -208,7 +208,8 @@ static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -293,7 +294,8 @@ static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, S
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

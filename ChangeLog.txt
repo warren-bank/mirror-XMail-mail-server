@@ -534,62 +534,76 @@ Date 12-11-2001	1.2
 	parameters ( -Ooet ).
 	Implemented a new XMail's  sendmail  switch -i to relax the <CR><LF>.<CR><LF> ond of message indicator.
 Date 19-12-2001	1.3
-	 ORBS maps test removed due old ORBS dead, the SERVER.TAB variable "CustMapsList" can be used
-	 to setup new ORBS ( and other ) maps.
-	 Fixed a bug in XMail's  sendmail  that was introduced in version 1.2 and made it to incorrectly
-	 interpret command line parameters.
-	 Fixed a bug that made XMail to not correctly recognize user type characters when lowercase.
-	 Fixed a bug that caused XMail to not start is the MAIL_ROOT environment variable had
-	 a final slash on Windows.
-	 Added a new filter return code ( 97 ) to reject messages without notification and without frozen processing.
-	 Added two new command line options  -MR  and  -MS  to set the I/O socket buffers sizes in bytes
-	 ( do not use them if You don't know what You're doing ).
-	 Changed system library to have a better performace, expecially on the Windows platform.
-	 Users that are using XMail mainly inside their local LAN are strongly encouraged to switch to this version.
-	 Fixed a bug that enabled insertion of aliases that overlapped real accounts.
+	ORBS maps test removed due old ORBS dead, the SERVER.TAB variable "CustMapsList" can be used
+	to setup new ORBS ( and other ) maps.
+	Fixed a bug in XMail's  sendmail  that was introduced in version 1.2 and made it to incorrectly
+	interpret command line parameters.
+	Fixed a bug that made XMail to not correctly recognize user type characters when lowercase.
+	Fixed a bug that caused XMail to not start is the MAIL_ROOT environment variable had
+	a final slash on Windows.
+	Added a new filter return code ( 97 ) to reject messages without notification and without frozen processing.
+	Added two new command line options  -MR  and  -MS  to set the I/O socket buffers sizes in bytes
+	( do not use them if You don't know what You're doing ).
+	Changed system library to have a better performace, expecially on the Windows platform.
+	Users that are using XMail mainly inside their local LAN are strongly encouraged to switch to this version.
+	Fixed a bug that enabled insertion of aliases that overlapped real accounts.
 Date 18-01-2002	1.4
-	 Fixed a bug that made XMail to fail to parse custom maps lists in SERVER.TAB.
-	 Fixed a bug that prevented XMail to add wildcard-domain aliases.
-	 Added a filter feature to the CTRL commands "domainlist" and "aliasdomainlist".
-	 Added an extra message header field "X-AuthUser:" to log the username used by the account to send the message.
-	 Added Reply-To: RFC822 header for mailing lists sends.
-	 Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.
+	Fixed a bug that made XMail to fail to parse custom maps lists in SERVER.TAB.
+	Fixed a bug that prevented XMail to add wildcard-domain aliases.
+	Added a filter feature to the CTRL commands "domainlist" and "aliasdomainlist".
+	Added an extra message header field "X-AuthUser:" to log the username used by the account to send the message.
+	Added Reply-To: RFC822 header for mailing lists sends.
+	Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.
 Date 05-02-2002	1.5
-	 Fixed a bug in wildcard aliases domain lookup.
-	 Fixed a bug in CTRL command "aliasdel" that failed to remove aliases with wildcard domains.
-	 Fixed a bug that caused XMail to timeout on very slow network connections.
+	Fixed a bug in wildcard aliases domain lookup.
+	Fixed a bug in CTRL command "aliasdel" that failed to remove aliases with wildcard domains.
+	Fixed a bug that caused XMail to timeout on very slow network connections.
 Date 03-03-2002	1.6
-	 Added a new USER.TAB variable "UseReplyTo" ( default 1 ) to make it possible to disable the emission
-	 of the Reply-To: header for mailing lists.
-	 Fixed a bug that caused XMail to uncorrectly deliver POP3 fetched messages when used togheter with
-	 domain masquerading.
-	 Changed index file structure to use an hash table for faster lookups and index rebuilding.
-	 New files inside the  tabindex  directory now have the extension  .hdx  and old  .idx  files can be removed.
-	 Added X-Deliver-To: header to messages redirected with MAILPROC.TAB file.
-	 Added configurable Received: tag option in SERVER.TAB by using the variable "ReceivedHdrType".
-	 Added a configurable list of header tags to be used to extract addresses for POP3 fetched messages
-	 by using the SERVER.TAB variable "FetchHdrTags".
-	 History ( change log ) entries have been moved from the main documentation file and a new file ( ChangeLog.txt )
-	 has been created to store change-log entries.
-	 Removed RBL-MAPSCheck ( currently blackholes.mail-abuse.org. ), RSS-MAPSCheck ( currently relays.mail-abuse.org. )
-	 and DUL-MAPSCheck ( currently dialups.mail-abuse.org. ) specific variables and now everything must
-	 be handled with CustMapsList ( please look at the documentation ).
-	 Added  NotifyMsgLinesExtra  SERVER.TAB variable to specify the number of lines of the bounced message
-	 to include inside the notify reply ( default zero, that means only header ).
-	 The message log file is now listed inside the notification message sent to  ErrorsAdmin  ( or  PostMaster  ).
-	 Added  NotifySendLogToSender  SERVER.TAB variable to enable/disable the send of the message log file
-	 inside the notify message to the sender ( default is off ).
-	 Added  TempErrorsAdmin  SERVER.TAB variable to specify an account that will receive temporary delivery
-	 failures notifications ( default is empty ).
-	 Added a new SERVER.TAB variable  NotifyTryPattern  to specify at which delivery attempt failure
-	 the system has to send the notification message.
-	 Fixed a bug that caused alias domains to have higher priority lookup compared to standard domains.
+	Added a new USER.TAB variable "UseReplyTo" ( default 1 ) to make it possible to disable the emission
+	of the Reply-To: header for mailing lists.
+	Fixed a bug that caused XMail to uncorrectly deliver POP3 fetched messages when used togheter with
+	domain masquerading.
+	Changed index file structure to use an hash table for faster lookups and index rebuilding.
+	New files inside the  tabindex  directory now have the extension  .hdx  and old  .idx  files can be removed.
+	Added X-Deliver-To: header to messages redirected with MAILPROC.TAB file.
+	Added configurable Received: tag option in SERVER.TAB by using the variable "ReceivedHdrType".
+	Added a configurable list of header tags to be used to extract addresses for POP3 fetched messages
+	by using the SERVER.TAB variable "FetchHdrTags".
+	History ( change log ) entries have been moved from the main documentation file and a new file ( ChangeLog.txt )
+	has been created to store change-log entries.
+	Removed RBL-MAPSCheck ( currently blackholes.mail-abuse.org. ), RSS-MAPSCheck ( currently relays.mail-abuse.org. )
+	and DUL-MAPSCheck ( currently dialups.mail-abuse.org. ) specific variables and now everything must
+	be handled with CustMapsList ( please look at the documentation ).
+	Added  NotifyMsgLinesExtra  SERVER.TAB variable to specify the number of lines of the bounced message
+	to include inside the notify reply ( default zero, that means only header ).
+	The message log file is now listed inside the notification message sent to  ErrorsAdmin  ( or  PostMaster  ).
+	Added  NotifySendLogToSender  SERVER.TAB variable to enable/disable the send of the message log file
+	inside the notify message to the sender ( default is off ).
+	Added  TempErrorsAdmin  SERVER.TAB variable to specify an account that will receive temporary delivery
+	failures notifications ( default is empty ).
+	Added a new SERVER.TAB variable  NotifyTryPattern  to specify at which delivery attempt failure
+	the system has to send the notification message.
+	Fixed a bug that caused alias domains to have higher priority lookup compared to standard domains.
 Date 03-03-2002	1.7
-	 Fixed a bug inside the POP3 server that caused bad responses to UIDL and LIST commands in case of
-	 certain command patterns.
-	 Added support for HOSTNAME:PORT ( or IP:PORT ) for the DefaultSMTPGateways SERVER.TAB variable.
-	 Added domain aliases cleanup upon main domain removal.
-	 Added "MaxMessageSize" inside USER.TAB files to override the global ( SERVER.TAB ) one.
-
-	 
-
+	Fixed a bug inside the POP3 server that caused bad responses to UIDL and LIST commands in case of
+	certain command patterns.
+	Added support for HOSTNAME:PORT ( or IP:PORT ) for the DefaultSMTPGateways SERVER.TAB variable.
+	Added domain aliases cleanup upon main domain removal.
+	Added "MaxMessageSize" inside USER.TAB files to override the global ( SERVER.TAB ) one.
+Date 19-05-2002	1.8
+	Changed XMail's behaviour upon receival on long ( RFC compared ) data lines on SMTP and POP3 fetch
+	inbound doors. Before the operation was aborted while now data is accepted without truncation,
+	that might make XMail to behave non conforming the RFC.
+	Added @@RRCPT macro to the "external" MAILPROC.TAB command to emit the real recipient of the message
+	( @@RCPT could be an alias ).	 
+	Added HOSTNAME:PORT capability to POP3LINKS.TAB entries.
+	Added Linux/PowerPC port.
+	Added "filelist" CTRL protocol command.
+	Added SMTP HELP command.
+	Changed bounce message format to add the last SMTP error and to make it works with Ecartis mail bounce processing.
+	Changed the XMail's sendmail implementation to accept "-f FROM" and "-F FROM" non standard sendmail
+	paramenter specification.
+	Fixed a bug inside the PSYNC server code that made XMail to fail to resolve POP3 server addresses.
+	Various code cleanups.
+	
+	

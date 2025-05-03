@@ -56,10 +56,10 @@ int             MdirCreateStructure(char const * pszBasePath)
 ///////////////////////////////////////////////////////////////////////////////
     char            szMaildirPath[SYS_MAX_PATH] = "";
 
-    strcpy(szMaildirPath, pszBasePath);
+    StrSNCpy(szMaildirPath, pszBasePath);
 
     AppendSlash(szMaildirPath);
-    strcat(szMaildirPath, MAILDIR_DIRECTORY);
+    StrSNCat(szMaildirPath, MAILDIR_DIRECTORY);
 
     if (SysMakeDir(szMaildirPath) < 0)
         return (ErrGetErrorCode());
@@ -135,9 +135,9 @@ int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
                    *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
     char            szNewEntryPath[SYS_MAX_PATH] = "";
 
-    strcpy(szNewEntryPath, pszTmpEntryPath);
-    strcpy(szNewEntryPath + iBaseLength, pszNewDir);
-    strcat(szNewEntryPath, pszSlash + 1);
+    StrSNCpy(szNewEntryPath, pszTmpEntryPath);
+    StrNCpy(szNewEntryPath + iBaseLength, pszNewDir, sizeof(szNewEntryPath) - iBaseLength);
+    StrNCat(szNewEntryPath, pszSlash + 1, sizeof(szNewEntryPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Move to Maildir/new

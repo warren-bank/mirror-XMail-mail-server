@@ -27,9 +27,9 @@
 
 
 
-char           *CfgGetRootPath(char *pszPath);
-char           *CfgGetBasedPath(char const * pszFullPath, char *pszBasePath);
-char           *CfgGetFullPath(char const * pszRelativePath, char *pszFullPath);
+char           *CfgGetRootPath(char *pszPath, int iMaxPath);
+char           *CfgGetBasedPath(char const * pszFullPath, char *pszBasePath, int iMaxPath);
+char           *CfgGetFullPath(char const * pszRelativePath, char *pszFullPath, int iMaxPath);
 
 
 

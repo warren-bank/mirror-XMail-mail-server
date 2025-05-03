@@ -131,7 +131,7 @@ static int      DNS_QueryDomainMX(char const * pszDNSServer, char const * pszDom
                         char *&pszMXDomains, SYS_UINT32 * pTTL = NULL);
 static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * pszDomain,
                         char const * pszRespFile, HSLIST & hNameList, SYS_UINT32 * pTTL = NULL);
-static char    *DNS_GetRootsFile(char *pszRootsFilePath);
+static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath);
 
 
 
@@ -1506,8 +1506,8 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
     char            szRootsFile[SYS_MAX_PATH] = "",
                     szRespFile[SYS_MAX_PATH] = "";
 
-    DNS_GetRootsFile(szRootsFile);
-    strcpy(szRespFile, szRootsFile);
+    DNS_GetRootsFile(szRootsFile, sizeof(szRootsFile));
+    StrSNCpy(szRespFile, szRootsFile);
 
 
     char          **ppszDomains = StrTokenize(pszDomain, ". \t");
@@ -1523,7 +1523,7 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
         char            szCurrDomain[MAX_HOST_NAME] = "";
 
         sprintf(szCurrDomain, "%s.%s", ppszDomains[iSubDomains], szPrevDomain);
-        strcpy(szPrevDomain, szCurrDomain);
+        StrSNCpy(szPrevDomain, szCurrDomain);
 
 
         FILE           *pNSFile = fopen(szRespFile, "rt");
@@ -1566,7 +1566,7 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
         if (strcmp(szRespFile, szRootsFile) != 0)
             SysRemove(szRespFile);
 
-        strcpy(szRespFile, szRespFile2);
+        StrSNCpy(szRespFile, szRespFile2);
     }
 
     StrFreeStrings(ppszDomains);
@@ -1590,12 +1590,12 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
 
 
 
-static char    *DNS_GetRootsFile(char *pszRootsFilePath)
+static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszRootsFilePath);
+    CfgGetRootPath(pszRootsFilePath, iMaxPath);
 
-    strcat(pszRootsFilePath, ROOTS_FILE);
+    StrNCat(pszRootsFilePath, ROOTS_FILE, iMaxPath);
 
     return (pszRootsFilePath);
 

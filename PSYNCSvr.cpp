@@ -78,9 +78,9 @@ static bool     PSYNCNeedSync(void)
 
     char            szTriggerPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szTriggerPath);
+    CfgGetRootPath(szTriggerPath, sizeof(szTriggerPath));
 
-    strcat(szTriggerPath, PSYNC_TRIGGER_FILE);
+    StrNCat(szTriggerPath, PSYNC_TRIGGER_FILE, sizeof(szTriggerPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for the presence of the trigger file
@@ -340,7 +340,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     char            szFetchHdrTags[256] = "";
 
     SvrConfigVar("FetchHdrTags", szFetchHdrTags, sizeof(szFetchHdrTags) - 1,
-            hSvrConfig, "+X-Deliver-To,To,Cc");
+            hSvrConfig, "+X-Deliver-To,+Received,To,Cc");
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lock the link

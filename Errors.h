@@ -239,8 +239,9 @@
 #define ERR_GETSOCKOPT              (-223)
 #define ERR_NO_HDR_FETCH_TAGS       (-224)
 #define ERR_SET_FILE_TIME           (-225)
-
-
+#define ERR_LISTDIR_NOT_FOUND       (-226)
+#define ERR_DUPLICATE_HANDLE        (-227)
+#define ERR_EMPTY_LOG               (-228)
 
 
 

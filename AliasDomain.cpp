@@ -80,7 +80,7 @@ static bool     ADomIsWildAlias(char const * pszAlias);
 static int      ADomCalcAliasHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
                         SYS_UINT32 * puHashVal, bool bCaseSens);
 static int      ADomRebuildADomainIndexes(char const * pszADomainFilePath);
-static char    *ADomGetADomainFilePath(char *pszADomainFilePath);
+static char    *ADomGetADomainFilePath(char *pszADomainFilePath, int iMaxPath);
 static int      ADomLookupDomainLK(const char *pszADomainFilePath, const char *pszADomain,
                         char *pszDomain, bool bWildMatch);
 
@@ -145,7 +145,7 @@ int             ADomCheckDomainsIndexes(void)
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align RmtDomain-RmtName index
@@ -179,12 +179,12 @@ static int      ADomRebuildADomainIndexes(char const * pszADomainFilePath)
 
 
 
-static char    *ADomGetADomainFilePath(char *pszADomainFilePath)
+static char    *ADomGetADomainFilePath(char *pszADomainFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszADomainFilePath);
+    CfgGetRootPath(pszADomainFilePath, iMaxPath);
 
-    strcat(pszADomainFilePath, ADOMAIN_FILE);
+    StrNCat(pszADomainFilePath, ADOMAIN_FILE, iMaxPath);
 
     return (pszADomainFilePath);
 
@@ -272,11 +272,12 @@ int             ADomLookupDomain(const char *pszADomain, char *pszDomain, bool b
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szADomainFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szADomainFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (0);
@@ -300,11 +301,12 @@ int             ADomAddADomain(char const *pszADomain, char const *pszDomain)
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -374,7 +376,7 @@ int             ADomRemoveADomain(char const * pszADomain)
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 
     char            szTmpFile[SYS_MAX_PATH] = "";
@@ -383,7 +385,8 @@ int             ADomRemoveADomain(char const * pszADomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -496,7 +499,7 @@ int             ADomRemoveLinkedDomains(char const * pszDomain)
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 
     char            szTmpFile[SYS_MAX_PATH] = "";
@@ -505,7 +508,8 @@ int             ADomRemoveLinkedDomains(char const * pszDomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -616,11 +620,12 @@ int             ADomGetADomainFileSnapShot(const char *pszFileName)
 
     char            szADomainFilePath[SYS_MAX_PATH] = "";
 
-    ADomGetADomainFilePath(szADomainFilePath);
+    ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szADomainFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szADomainFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

@@ -131,9 +131,9 @@ struct SmtpChannel
 
 
 static int      USmtpWriteGateway(FILE * pGwFile, const char *pszDomain, const char *pszGateway);
-static char    *USmtpGetGwTableFilePath(char *pszGwFilePath);
-static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath);
-static char    *USmtpGetRelayFilePath(char *pszRelayFilePath);
+static char    *USmtpGetGwTableFilePath(char *pszGwFilePath, int iMaxPath);
+static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath, int iMaxPath);
+static char    *USmtpGetRelayFilePath(char *pszRelayFilePath, int iMaxPath);
 static int      USmtpSetError(SMTPError * pSMTPE, int iSTMPResponse, char const * pszSTMPResponse);
 static int      USmtpResponseClass(int iResponseCode, int iResponseClass);
 static int      USmtpGetResultCode(const char *pszResult);
@@ -158,8 +158,8 @@ static int      USmtpServerAuthenticate(SmtpChannel * pSmtpCh, char const * pszS
 static int      USmtpParseEhloResponse(SmtpChannel * pSmtpCh, char const * pszResponse);
 static int      USmtpGetDomainMX(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
                         char *&pszMXDomains);
-static char    *USmtpGetSpammersFilePath(char *pszSpamFilePath);
-static char    *USmtpGetSpamAddrFilePath(char *pszSpamFilePath);
+static char    *USmtpGetSpammersFilePath(char *pszSpamFilePath, int iMaxPath);
+static char    *USmtpGetSpamAddrFilePath(char *pszSpamFilePath, int iMaxPath);
 
 
 
@@ -170,12 +170,12 @@ static char    *USmtpGetSpamAddrFilePath(char *pszSpamFilePath);
 
 
 
-static char    *USmtpGetGwTableFilePath(char *pszGwFilePath)
+static char    *USmtpGetGwTableFilePath(char *pszGwFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszGwFilePath);
+    CfgGetRootPath(pszGwFilePath, iMaxPath);
 
-    strcat(pszGwFilePath, SMTPGW_TABLE_FILE);
+    StrNCat(pszGwFilePath, SMTPGW_TABLE_FILE, iMaxPath);
 
     return (pszGwFilePath);
 
@@ -183,12 +183,12 @@ static char    *USmtpGetGwTableFilePath(char *pszGwFilePath)
 
 
 
-static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath)
+static char    *USmtpGetFwdTableFilePath(char *pszFwdFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszFwdFilePath);
+    CfgGetRootPath(pszFwdFilePath, iMaxPath);
 
-    strcat(pszFwdFilePath, SMTPFWD_TABLE_FILE);
+    StrNCat(pszFwdFilePath, SMTPFWD_TABLE_FILE, iMaxPath);
 
     return (pszFwdFilePath);
 
@@ -201,11 +201,12 @@ char          **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDom
 
     char            szFwdFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetFwdTableFilePath(szFwdFilePath);
+    USmtpGetFwdTableFilePath(szFwdFilePath, sizeof(szFwdFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFwdFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFwdFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -281,12 +282,12 @@ char          **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDom
 
 
 
-static char    *USmtpGetRelayFilePath(char *pszRelayFilePath)
+static char    *USmtpGetRelayFilePath(char *pszRelayFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszRelayFilePath);
+    CfgGetRootPath(pszRelayFilePath, iMaxPath);
 
-    strcat(pszRelayFilePath, SMTP_RELAY_FILE);
+    StrNCat(pszRelayFilePath, SMTP_RELAY_FILE, iMaxPath);
 
     return (pszRelayFilePath);
 
@@ -300,11 +301,12 @@ int             USmtpGetGateway(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
 
     char            szGwFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetGwTableFilePath(szGwFilePath);
+    USmtpGetGwTableFilePath(szGwFilePath, sizeof(szGwFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szGwFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szGwFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -395,11 +397,12 @@ int             USmtpAddGateway(const char *pszDomain, const char *pszGateway)
 
     char            szGwFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetGwTableFilePath(szGwFilePath);
+    USmtpGetGwTableFilePath(szGwFilePath, sizeof(szGwFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szGwFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szGwFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -466,7 +469,7 @@ int             USmtpRemoveGateway(const char *pszDomain)
 
     char            szGwFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetGwTableFilePath(szGwFilePath);
+    USmtpGetGwTableFilePath(szGwFilePath, sizeof(szGwFilePath));
 
 
     char            szTmpFile[SYS_MAX_PATH] = "";
@@ -475,7 +478,8 @@ int             USmtpRemoveGateway(const char *pszDomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szGwFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szGwFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -695,11 +699,12 @@ int             USmtpIsAllowedRelay(const SYS_INET_ADDR & PeerInfo,
 
     char            szRelayFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetRelayFilePath(szRelayFilePath);
+    USmtpGetRelayFilePath(szRelayFilePath, sizeof(szRelayFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szRelayFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szRelayFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -995,7 +1000,7 @@ static int      USmtpGetServerAuthFile(char const * pszServer, char *pszAuthFile
     int             iRootedName = MscRootedName(pszServer);
     char            szAuthPath[SYS_MAX_PATH] = "";
 
-    UAthGetRootPath(AUTH_SERVICE_SMTP, szAuthPath);
+    UAthGetRootPath(AUTH_SERVICE_SMTP, szAuthPath, sizeof(szAuthPath));
 
     char const     *pszDot = pszServer;
 
@@ -1581,7 +1586,7 @@ SMTPCH_HANDLE   USmtpCreateChannel(const char *pszServer, const char *pszDomain,
 
             char            szIP[128] = "???.???.???.???";
 
-            strcpy(szHeloHost, SysInetNToA(SockInfo, szIP));
+            StrSNCpy(szHeloHost, SysInetNToA(SockInfo, szIP));
         }
 
         pszDomain = szHeloHost;
@@ -2201,12 +2206,12 @@ bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const
 
 
 
-static char    *USmtpGetSpammersFilePath(char *pszSpamFilePath)
+static char    *USmtpGetSpammersFilePath(char *pszSpamFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszSpamFilePath);
+    CfgGetRootPath(pszSpamFilePath, iMaxPath);
 
-    strcat(pszSpamFilePath, SMTP_SPAMMERS_FILE);
+    StrNCat(pszSpamFilePath, SMTP_SPAMMERS_FILE, iMaxPath);
 
     return (pszSpamFilePath);
 
@@ -2220,11 +2225,12 @@ int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo)
 
     char            szSpammersFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetSpammersFilePath(szSpammersFilePath);
+    USmtpGetSpammersFilePath(szSpammersFilePath, sizeof(szSpammersFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpammersFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpammersFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2283,12 +2289,12 @@ int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo)
 
 
 
-static char    *USmtpGetSpamAddrFilePath(char *pszSpamFilePath)
+static char    *USmtpGetSpamAddrFilePath(char *pszSpamFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszSpamFilePath);
+    CfgGetRootPath(pszSpamFilePath, iMaxPath);
 
-    strcat(pszSpamFilePath, SMTP_SPAM_ADDRESS_FILE);
+    StrNCat(pszSpamFilePath, SMTP_SPAM_ADDRESS_FILE, iMaxPath);
 
     return (pszSpamFilePath);
 
@@ -2302,11 +2308,12 @@ int             USmtpSpamAddressCheck(char const * pszAddress)
 
     char            szSpammersFilePath[SYS_MAX_PATH] = "";
 
-    USmtpGetSpamAddrFilePath(szSpammersFilePath);
+    USmtpGetSpamAddrFilePath(szSpammersFilePath, sizeof(szSpammersFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpammersFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpammersFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

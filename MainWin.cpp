@@ -42,6 +42,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #define SERVICE
 
+#define NULFILE         "nul"
 
 
 
@@ -84,7 +85,7 @@ int             main(int iArgCount, char *pszArgs[])
 
 
 
-
+static int      MnSetupStdHandles(void);
 static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode);
 static VOID WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[]);
 static BOOL     CmdInstallService(DWORD dwStartType);
@@ -109,6 +110,50 @@ static TCHAR    szErr[2048] = _T("");
 
 
 
+
+static int      MnSetupStdHandles(void)
+{
+
+    HANDLE      hInFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL, OPEN_EXISTING, 0, NULL);
+
+    if (hInFile == INVALID_HANDLE_VALUE)
+    {
+        AddToMessageLog(_T("CreateFile"));
+        return (-1);
+    }
+
+    HANDLE      hOutFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL, OPEN_EXISTING, 0, NULL);
+
+    if (hOutFile == INVALID_HANDLE_VALUE)
+    {
+        AddToMessageLog(_T("CreateFile"));
+        CloseHandle(hInFile);
+        return (-1);
+    }
+
+    HANDLE      hErrFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL, OPEN_EXISTING, 0, NULL);
+
+    if (hErrFile == INVALID_HANDLE_VALUE)
+    {
+        AddToMessageLog(_T("CreateFile"));
+        CloseHandle(hOutFile);
+        CloseHandle(hInFile);
+        return (-1);
+    }
+
+    SetStdHandle(STD_INPUT_HANDLE, hInFile);
+    SetStdHandle(STD_OUTPUT_HANDLE, hOutFile);
+    SetStdHandle(STD_ERROR_HANDLE, hErrFile);
+
+    return (0);
+
+}
 
 
 
@@ -155,7 +200,15 @@ int             _tmain(int argc, TCHAR * argv[])
     _tprintf(_T("This may take several seconds.  Please wait.\n"));
 
 
+///////////////////////////////////////////////////////////////////////////////
+//  Setup std handles
+///////////////////////////////////////////////////////////////////////////////
+    if (MnSetupStdHandles() < 0)
+        return (1);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Service loop
+///////////////////////////////////////////////////////////////////////////////
     if (!StartServiceCtrlDispatcher(DispTable))
         AddToMessageLog(_T("StartServiceCtrlDispatcher"));
 

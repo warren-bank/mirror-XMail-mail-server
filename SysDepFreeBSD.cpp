@@ -2260,7 +2260,26 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    return ((access(pszFilePath, F_OK) == 0) ? 1 : 0);
+    struct stat     FS;
+
+    if (stat(pszFilePath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 0 : 1);
+
+}
+
+
+
+int             SysExistDir(const char *pszDirPath)
+{
+
+    struct stat     FS;
+
+    if (stat(pszDirPath, &FS) != 0)
+        return (0);
+
+    return ((S_ISDIR(FS.st_mode)) ? 1 : 0);
 
 }
 

@@ -105,7 +105,7 @@ static int      CTRLVSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, i
                         char const * pszFormat,...);
 static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const * pszMessage,
                         int iTimeout);
-static char    *CTRLGetAccountsFilePath(char *pszAccFilePath);
+static char    *CTRLGetAccountsFilePath(char *pszAccFilePath, int iMaxPath);
 static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername,
                         char const * pszPassword, char const * pszTimeStamp);
 static int      CTRLLogin(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
@@ -169,6 +169,8 @@ static int      CTRLDo_poplnkdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
@@ -255,8 +257,8 @@ static int      CTRLCheckPeerIP(SYS_SOCKET SockFD)
 
     char            szIPMapFile[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szIPMapFile);
-    strcat(szIPMapFile, CTRL_IPMAP_FILE);
+    CfgGetRootPath(szIPMapFile, sizeof(szIPMapFile));
+    StrSNCat(szIPMapFile, CTRL_IPMAP_FILE);
 
     if (SysExistFile(szIPMapFile))
     {
@@ -594,12 +596,12 @@ static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char cons
 
 
 
-static char    *CTRLGetAccountsFilePath(char *pszAccFilePath)
+static char    *CTRLGetAccountsFilePath(char *pszAccFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszAccFilePath);
+    CfgGetRootPath(pszAccFilePath, iMaxPath);
 
-    strcat(pszAccFilePath, CTRL_ACCOUNTS_FILE);
+    StrNCat(pszAccFilePath, CTRL_ACCOUNTS_FILE, iMaxPath);
 
     return (pszAccFilePath);
 
@@ -614,11 +616,12 @@ static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername
 
     char            szAccFilePath[SYS_MAX_PATH] = "";
 
-    CTRLGetAccountsFilePath(szAccFilePath);
+    CTRLGetAccountsFilePath(szAccFilePath, sizeof(szAccFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAccFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAccFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -934,6 +937,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_poplnklist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "poplnkenable") == 0)
         iCmdResult = CTRLDo_poplnkenable(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "filelist") == 0)
+        iCmdResult = CTRLDo_filelist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "cfgfileget") == 0)
         iCmdResult = CTRLDo_cfgfileget(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "cfgfileset") == 0)
@@ -2250,7 +2255,7 @@ static int      CTRLDo_custdomlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     char            szCustomPath[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomDir(szCustomPath, 0);
+    USmlGetDomainCustomDir(szCustomPath, sizeof(szCustomPath), 0);
 
 
     char            szCustFileName[SYS_MAX_PATH] = "";
@@ -2560,6 +2565,77 @@ static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
+static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount != 3)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Setup listing file path
+///////////////////////////////////////////////////////////////////////////////
+    char            szRelativePath[SYS_MAX_PATH] = "",
+                    szFullPath[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szRelativePath, ppszTokens[1]);
+    MscTranslatePath(szRelativePath);
+
+    CfgGetFullPath(szRelativePath, szFullPath, sizeof(szFullPath));
+    DelFinalSlash(szFullPath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check directory existance
+///////////////////////////////////////////////////////////////////////////////
+    if (!SysExistDir(szFullPath))
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_LISTDIR_NOT_FOUND);
+        ErrSetErrorCode(ERR_LISTDIR_NOT_FOUND);
+        return (ERR_LISTDIR_NOT_FOUND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Send command continue response
+///////////////////////////////////////////////////////////////////////////////
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+///////////////////////////////////////////////////////////////////////////////
+//  List files
+///////////////////////////////////////////////////////////////////////////////
+    char            szFileName[SYS_MAX_PATH] = "";
+    FSCAN_HANDLE    hFileScan = MscFirstFile(szFullPath, 0, szFileName);
+
+    if (hFileScan != INVALID_FSCAN_HANDLE)
+    {
+        do
+        {
+            if (!SYS_IS_VALID_FILENAME(szFileName) || !StrWildMatch(szFileName, ppszTokens[2]))
+                continue;
+
+            if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"", szFileName) < 0)
+            {
+                ErrorPush();
+                MscCloseFindFile(hFileScan);
+                return (ErrorPop());
+            }
+
+        } while (MscNextFile(hFileScan, szFileName));
+
+        MscCloseFindFile(hFileScan);
+    }
+
+    BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
+
+    return (0);
+
+}
+
+
+
 static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount)
 {
@@ -2580,13 +2656,14 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
 
-    CfgGetFullPath(szRelativePath, szFullPath);
+    CfgGetFullPath(szRelativePath, szFullPath, sizeof(szFullPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock client target file
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFullPath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFullPath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -2655,7 +2732,7 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
 
-    CfgGetFullPath(szRelativePath, szFullPath);
+    CfgGetFullPath(szRelativePath, szFullPath, sizeof(szFullPath));
 
 
     CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_WAITDATA_RESULT);
@@ -2692,7 +2769,8 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 //  Exclusive lock client target file
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFullPath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFullPath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {

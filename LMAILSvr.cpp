@@ -94,14 +94,14 @@ static int      LMAILLogMessage(char const * pszMailFile, char const * pszSMTPDo
 
 
 
-char           *LMAILGetSpoolDir(char *pszSpoolPath)
+char           *LMAILGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 {
 
-    SvrGetSpoolDir(pszSpoolPath);
+    SvrGetSpoolDir(pszSpoolPath, iMaxPath);
 
     AppendSlash(pszSpoolPath);
 
-    strcat(pszSpoolPath, LOCAL_SPOOL_DIR);
+    StrNCat(pszSpoolPath, LOCAL_SPOOL_DIR, iMaxPath);
 
     return (pszSpoolPath);
 
@@ -295,14 +295,15 @@ static int      LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId,
 
     char            szSpoolDir[SYS_MAX_PATH] = "";
 
-    LMAILGetSpoolDir(szSpoolDir);
+    LMAILGetSpoolDir(szSpoolDir, sizeof(szSpoolDir));
 
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock local spool directory
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpoolDir, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szSpoolDir, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -368,14 +369,15 @@ static int      LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const * pszLi
 
     char            szSpoolDir[SYS_MAX_PATH] = "";
 
-    LMAILGetSpoolDir(szSpoolDir);
+    LMAILGetSpoolDir(szSpoolDir, sizeof(szSpoolDir));
 
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock local spool directory
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szSpoolDir, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szSpoolDir, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -417,7 +419,7 @@ static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
 
     char            szSpoolDir[SYS_MAX_PATH] = "";
 
-    LMAILGetSpoolDir(szSpoolDir);
+    LMAILGetSpoolDir(szSpoolDir, sizeof(szSpoolDir));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve SMTP domain

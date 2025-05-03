@@ -103,6 +103,7 @@ static int      SysSendLL(SYS_SOCKET SockFD, char const * pszBuffer, int iBuffer
 static unsigned int SysThreadRunner(void *pRunData);
 static int      SysThreadSetup(void);
 static int      SysThreadCleanup(void);
+static int      SysSetupStartupInfo(STARTUPINFO *pSI);
 static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
 static void     SysTimetToFileTime(time_t tTime, LPFILETIME pFT);
 static time_t   SysFileTimeToTimet(LPFILETIME pFT);
@@ -1556,6 +1557,43 @@ unsigned long   SysGetCurrentThreadId(void)
 
 
 
+static int      SysSetupStartupInfo(STARTUPINFO *pSI)
+{
+
+    ZeroData(*pSI);
+    pSI->cb = sizeof(STARTUPINFO);
+    pSI->dwFlags = STARTF_USESTDHANDLES;
+
+    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_INPUT_HANDLE), GetCurrentProcess(),
+            &pSI->hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS))
+    {
+        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
+        return (ERR_DUPLICATE_HANDLE);
+    }
+
+    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_OUTPUT_HANDLE), GetCurrentProcess(),
+            &pSI->hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS))
+    {
+        CloseHandle(pSI->hStdInput);
+        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
+        return (ERR_DUPLICATE_HANDLE);
+    }
+
+    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_ERROR_HANDLE), GetCurrentProcess(),
+            &pSI->hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS))
+    {
+        CloseHandle(pSI->hStdOutput);
+        CloseHandle(pSI->hStdInput);
+        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
+        return (ERR_DUPLICATE_HANDLE);
+    }
+
+    return (0);
+
+}
+
+
+
 int             SysExec(char const * pszCommand, char const * const * pszArgs, int iWaitTimeout,
                         int iPriority, int *piExitStatus)
 {
@@ -1580,20 +1618,30 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
     STARTUPINFO     SI;
     PROCESS_INFORMATION PI;
 
-    ZeroData(SI);
     ZeroData(PI);
-    SI.cb = sizeof(STARTUPINFO);
 
-    if (!CreateProcess(NULL, pszCmdLine, NULL, NULL, FALSE,
-                    CREATE_NO_WINDOW | DETACHED_PROCESS | NORMAL_PRIORITY_CLASS, NULL, NULL, &SI, &PI))
+    if (SysSetupStartupInfo(&SI) < 0)
     {
         SysFree(pszCmdLine);
+        return (ErrGetErrorCode());
+    }
 
+
+    BOOL            bProcessCreated = CreateProcess(NULL, pszCmdLine, NULL, NULL, TRUE,
+                            CREATE_NO_WINDOW | NORMAL_PRIORITY_CLASS, NULL, NULL, &SI, &PI);
+
+
+    CloseHandle(SI.hStdInput);
+    CloseHandle(SI.hStdOutput);
+    CloseHandle(SI.hStdError);
+    SysFree(pszCmdLine);
+
+
+    if (!bProcessCreated)
+    {
         ErrSetErrorCode(ERR_PROCESS_EXECUTE);
         return (ERR_PROCESS_EXECUTE);
     }
-
-    SysFree(pszCmdLine);
 
 
     SysSetThreadPriority((SYS_THREAD) PI.hThread, iPriority);
@@ -2094,7 +2142,26 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    return ((GetFileAttributes(pszFilePath) == (DWORD) -1) ? 0: 1);
+    DWORD           dwAttr = GetFileAttributes(pszFilePath);
+
+    if (dwAttr == (DWORD) -1)
+        return (0);
+
+    return ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 0: 1);
+
+}
+
+
+
+int             SysExistDir(const char *pszDirPath)
+{
+
+    DWORD           dwAttr = GetFileAttributes(pszDirPath);
+
+    if (dwAttr == (DWORD) -1)
+        return (0);
+
+    return ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) ? 1: 0);
 
 }
 

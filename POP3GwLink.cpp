@@ -78,9 +78,9 @@ struct GwLkDBScanData
 
 
 
-static char    *GwLkGetTableFilePath(char *pszLnkFilePath);
-static char    *GwLkEnableDir(char *pszEnableDir);
-static char    *GwLkGetLocksDir(char *pszLocksDir);
+static char    *GwLkGetTableFilePath(char *pszLnkFilePath, int iMaxPath);
+static char    *GwLkEnableDir(char *pszEnableDir, int iMaxPath);
+static char    *GwLkGetLocksDir(char *pszLocksDir, int iMaxPath);
 static POP3Link *GwLkGetLinkFromStrings(char **ppszStrings);
 static int      GwLkWriteLink(FILE * pLnkFile, POP3Link * pPopLnk);
 static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile);
@@ -95,12 +95,12 @@ static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnable
 
 
 
-static char    *GwLkGetTableFilePath(char *pszLnkFilePath)
+static char    *GwLkGetTableFilePath(char *pszLnkFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszLnkFilePath);
+    CfgGetRootPath(pszLnkFilePath, iMaxPath);
 
-    strcat(pszLnkFilePath, SVR_LINKS_FILE);
+    StrNCat(pszLnkFilePath, SVR_LINKS_FILE, iMaxPath);
 
     return (pszLnkFilePath);
 
@@ -108,12 +108,12 @@ static char    *GwLkGetTableFilePath(char *pszLnkFilePath)
 
 
 
-static char    *GwLkEnableDir(char *pszEnableDir)
+static char    *GwLkEnableDir(char *pszEnableDir, int iMaxPath)
 {
 
-    CfgGetRootPath(pszEnableDir);
+    CfgGetRootPath(pszEnableDir, iMaxPath);
 
-    strcat(pszEnableDir, SVR_LINKS_ENABLE_DIR);
+    StrNCat(pszEnableDir, SVR_LINKS_ENABLE_DIR, iMaxPath);
 
     return (pszEnableDir);
 
@@ -121,12 +121,12 @@ static char    *GwLkEnableDir(char *pszEnableDir)
 
 
 
-static char    *GwLkGetLocksDir(char *pszLocksDir)
+static char    *GwLkGetLocksDir(char *pszLocksDir, int iMaxPath)
 {
 
-    CfgGetRootPath(pszLocksDir);
+    CfgGetRootPath(pszLocksDir, iMaxPath);
 
-    strcat(pszLocksDir, SVR_POP3LOCKS_DIR);
+    StrNCat(pszLocksDir, SVR_POP3LOCKS_DIR, iMaxPath);
 
     return (pszLocksDir);
 
@@ -306,11 +306,12 @@ int             GwLkAddLink(POP3Link * pPopLnk)
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
 
-    GwLkGetTableFilePath(szLnkFilePath);
+    GwLkGetTableFilePath(szLnkFilePath, sizeof(szLnkFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -379,7 +380,7 @@ int             GwLkRemoveLink(POP3Link * pPopLnk)
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
 
-    GwLkGetTableFilePath(szLnkFilePath);
+    GwLkGetTableFilePath(szLnkFilePath, sizeof(szLnkFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -387,7 +388,8 @@ int             GwLkRemoveLink(POP3Link * pPopLnk)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -509,7 +511,7 @@ int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
 
-    GwLkGetTableFilePath(szLnkFilePath);
+    GwLkGetTableFilePath(szLnkFilePath, sizeof(szLnkFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -517,7 +519,8 @@ int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -624,7 +627,7 @@ int             GwLkRemoveDomainLinks(const char *pszDomain)
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
 
-    GwLkGetTableFilePath(szLnkFilePath);
+    GwLkGetTableFilePath(szLnkFilePath, sizeof(szLnkFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -632,7 +635,8 @@ int             GwLkRemoveDomainLinks(const char *pszDomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -744,11 +748,12 @@ int             GwLkGetDBFileSnapShot(const char *pszFileName)
 
     char            szGwLkFilePath[SYS_MAX_PATH] = "";
 
-    GwLkGetTableFilePath(szGwLkFilePath);
+    GwLkGetTableFilePath(szGwLkFilePath, sizeof(szGwLkFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szGwLkFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szGwLkFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -883,12 +888,23 @@ POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB)
 static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile)
 {
 
-    char            szLocksDir[SYS_MAX_PATH] = "";
+    char            szLocksDir[SYS_MAX_PATH] = "",
+                    szRmtDomain[MAX_HOST_NAME] = "";
 
-    GwLkGetLocksDir(szLocksDir);
+    GwLkGetLocksDir(szLocksDir, sizeof(szLocksDir));
+
+    StrSNCpy(szRmtDomain, pPopLnk->pszRmtDomain);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Sanitize the ':' coming from the port specification
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszColon = strchr(szRmtDomain, ':');
+
+    if (pszColon != NULL)
+        *pszColon = '_';
 
     sprintf(pszLockFile, "%s%s%s@%s", szLocksDir, SYS_SLASH_STR, pPopLnk->pszRmtName,
-            pPopLnk->pszRmtDomain);
+            szRmtDomain);
 
     return (pszLockFile);
 
@@ -927,7 +943,7 @@ int             GwLkClearLinkLocksDir(void)
 
     char            szLocksDir[SYS_MAX_PATH] = "";
 
-    GwLkGetLocksDir(szLocksDir);
+    GwLkGetLocksDir(szLocksDir, sizeof(szLocksDir));
 
     return (MscClearDirectory(szLocksDir));
 
@@ -967,7 +983,7 @@ static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnable
 
         char            szUserPath[SYS_MAX_PATH] = "";
 
-        if (UsrGetUserPath(pUI, szUserPath) == NULL)
+        if (UsrGetUserPath(pUI, szUserPath, sizeof(szUserPath), 1) == NULL)
         {
             ErrorPush();
             UsrFreeUserInfo(pUI);
@@ -982,7 +998,7 @@ static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnable
     {
         char            szEnableDir[SYS_MAX_PATH] = "";
 
-        GwLkEnableDir(szEnableDir);
+        GwLkEnableDir(szEnableDir, sizeof(szEnableDir));
 
         sprintf(pszEnableFile, "%s%s%s@%s.disabled", szEnableDir, SYS_SLASH_STR,
                 pPopLnk->pszRmtName, pPopLnk->pszRmtDomain);

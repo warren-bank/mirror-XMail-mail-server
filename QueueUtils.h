@@ -39,6 +39,7 @@ int             QueUtGetFrozenLogFile(QUEUE_HANDLE hQueue, int iLevel1, int iLev
                         char const * pszMessageFile, char const * pszOutFile);
 int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszFormat, ...);
+char           *QueUtGetLastSmptReason(char const * pszLogFilePath);
 bool            QueUtRemoveSpoolErrors(void);
 int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         SPLF_HANDLE hFSpool, char const * pszReason);

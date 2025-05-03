@@ -74,7 +74,7 @@ typedef struct ALSF_HANDLE_struct
 
 int             UsrCheckUsersIndexes(void);
 int             UsrCheckAliasesIndexes(void);
-char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath);
+char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int iMaxPath);
 UserType        UsrGetUserType(UserInfo * pUI);
 UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszName,
                         char const * pszPassword, UserType TypeUser);
@@ -112,8 +112,8 @@ UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB);
 int             UsrPOP3Lock(UserInfo * pUI);
 void            UsrPOP3Unlock(UserInfo * pUI);
 int             UsrClearPop3LocksDir(void);
-char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iFinalSlash = 1);
-char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iFinalSlash = 1);
+char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, int iFinalSlash);
+char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash);
 int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
                         char const * pszMessageID);
 int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath);

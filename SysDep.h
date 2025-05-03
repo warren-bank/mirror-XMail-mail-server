@@ -132,6 +132,7 @@ void            SysSleep(int iTimeout);
 void            SysMsSleep(int iMsTimeout);
 SYS_INT64       SysMsTime(void);
 int             SysExistFile(const char *pszFilePath);
+int             SysExistDir(const char *pszDirPath);
 SYS_HANDLE      SysFirstFile(const char *pszPath, char *pszFileName);
 int             SysIsDirectory(SYS_HANDLE hFind);
 unsigned long   SysGetSize(SYS_HANDLE hFind);

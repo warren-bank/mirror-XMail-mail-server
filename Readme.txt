@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.6
+Version      : 1.8
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 05-02-2002
+Date         : 19-05-2002
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -227,6 +227,7 @@ Part 6			Build
 
 	# make -f Makefile.lnx		( Linux )
 	# make -f Makefile.slx		( Linux on SPARC )
+	# make -f Makefile.plx		( Linux on PPC )
 	# gmake -f Makefile.bsd		( FreeBSD - You need GCC and GMAKE to build on FreeBSD )
 	# make -f Makefile.sso		( Sun/Solaris on SPARC - You need GCC to build on Solaris )
 	# make -f Makefile.ssx		( Sun/Solaris on Intel - You need GCC to build on Solaris )
@@ -570,7 +571,7 @@ Part 7			Configuration
 	travel on the network, if You're not sure about it, specify  CLR  as authtype.
 	For non local POP3 sync You've to specify a line like this one ( @ as the first domain char ) :
 
-	"@home.bogus.com"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
+	"@home.bogus.com"	"dlibenzi"	"xmailserver.org:110"	"dlibenzi"	"XYZ..."	"CLR"
 
 	This entry is used to syncronize the external account "dlibenzi@xmailserver.org" with encrypted
 	password "XYZ..." with the account "dlibenzi@home.bogus.com" using  CLR  authentication.
@@ -897,7 +898,8 @@ Part 7			Configuration
 	Each argument can be a macro also :
 
 	@@FROM		will be substituted with the sender of the message
-	@@RCPT		will be substituted with the target of the message
+	@@RCPT		will be substituted with the recipient of the message
+	@@RRCPT		will be substituted with the real recipient ( @@RCPT could be an alias ) of the message
 	@@FILE		will be substituted with the message file path ( the external command _must_ only read the file )
 	@@MSGID		will be substituted with the ( XMail unique ) message id
 	@@MSGREF	will be substituted with the reference SMTP message id
@@ -1553,7 +1555,7 @@ Part 14			USER.TAB variables
 	[ListSender]
 	Specify the mailing list sender or administrator :
 
-	"ListSender"	"ml-admin@nai.com"
+	"ListSender"	"ml-admin@xmailserver.org"
 
 	This variable should be set to avoid delivery error notifications to reach the
 	original message senders.
@@ -1570,6 +1572,9 @@ Part 14			USER.TAB variables
 	[UseReplyTo]
 	Enable/Disable the emission of the Reply-To: header for mailing list's messages ( default 1 ).
 
+	[MaxMessageSize]
+	Set the maximum message size ( in Kb ) that the user will be able to send through the server.
+	Overrides the SERVER.TAB variable.
 	
 
 
@@ -1670,6 +1675,7 @@ Part 17			SMTP commands
 	VRFY
 	ETRN
 	NOOP
+	HELP
 	QUIT
 
 
@@ -2350,6 +2356,20 @@ Part 20			XMail admin protocol
 
 	The result will be a RESSTRING.
 
+
+	*) Listing files
+	
+	"filelist"[TAB]"relative-dir-path"[TAB]"match-string"<CR><LF>
+	
+	where :
+	
+	relative-dir-path	= path relative to MAIL_ROOT path
+	match-string		= wildcard match string for file list selection
+
+	The result will be a RESSTRING.
+	In success case ( 00100 ) the directory is listed line by line, until a line
+	containing a single dot ( <CR><LF>.<CR><LF> ).
+	
 
 	*) Getting configuration file
 

@@ -204,8 +204,8 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                         char const * pszAuthParam);
 static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                         char const * pszAuthParam);
-static char    *SMTPGetAuthFilePath(char *pszFilePath);
-static char    *SMTPGetExtAuthFilePath(char *pszFilePath);
+static char    *SMTPGetAuthFilePath(char *pszFilePath, int iMaxPath);
+static char    *SMTPGetExtAuthFilePath(char *pszFilePath, int iMaxPath);
 static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsername,
                         char const * pszPassword);
 static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
@@ -224,6 +224,8 @@ static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FIL
 static int      SMTPHandleCmd_RSET(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPHandleCmd_NOOP(const char *pszCommand, BSOCK_HANDLE hBSock,
+                        SMTPSession & SMTPS);
+static int      SMTPHandleCmd_HELP(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPHandleCmd_QUIT(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
@@ -290,8 +292,8 @@ static int      SMTPCheckPeerIP(SYS_SOCKET SockFD)
 
     char            szIPMapFile[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szIPMapFile);
-    strcat(szIPMapFile, SMTP_IPMAP_FILE);
+    CfgGetRootPath(szIPMapFile, sizeof(szIPMapFile));
+    StrNCat(szIPMapFile, SMTP_IPMAP_FILE, sizeof(szIPMapFile));
 
     if (SysExistFile(szIPMapFile))
     {
@@ -674,7 +676,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     char            szIP[128] = "???.???.???.???";
 
     if (MscGetSockHost(BSckGetAttachedSocket(hBSock), SMTPS.szSvrFQDN) < 0)
-        strcpy(SMTPS.szSvrFQDN, SysInetNToA(SMTPS.SockInfo, szIP));
+        StrSNCpy(SMTPS.szSvrFQDN, SysInetNToA(SMTPS.SockInfo, szIP));
     else
     {
 ///////////////////////////////////////////////////////////////////////////////
@@ -696,7 +698,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
             return (ERR_NO_DOMAIN);
         }
 
-        strcpy(SMTPS.szSvrDomain, pszDefDomain);
+        StrSNCpy(SMTPS.szSvrDomain, pszDefDomain);
 
         SysFree(pszDefDomain);
     }
@@ -1056,6 +1058,8 @@ static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
         iCmdResult = SMTPHandleCmd_ETRN(pszCommand, hBSock, SMTPS);
     else if (StrCmdMatch(pszCommand, "NOOP"))
         iCmdResult = SMTPHandleCmd_NOOP(pszCommand, hBSock, SMTPS);
+    else if (StrCmdMatch(pszCommand, "HELP"))
+        iCmdResult = SMTPHandleCmd_HELP(pszCommand, hBSock, SMTPS);
     else if (StrCmdMatch(pszCommand, "QUIT"))
         iCmdResult = SMTPHandleCmd_QUIT(pszCommand, hBSock, SMTPS);
     else
@@ -1776,7 +1780,9 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 //  Write data
 ///////////////////////////////////////////////////////////////////////////////
     int             iErrorCode = 0,
-                    iLineLength;
+                    iLineLength,
+                    iGotNL,
+                    iGotNLPrev = 1;
     unsigned long   ulMessageSize = 0,
                     ulMaxMsgSize = SMTPS.ulMaxMsgSize;
     char const     *pszSmtpError = NULL;
@@ -1785,7 +1791,7 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
     for (;;)
     {
         if (BSckGetString(hBSock, szBuffer, sizeof(szBuffer) - 3, SMTPS.pSMTPCfg->iTimeout,
-                &iLineLength) == NULL)
+                &iLineLength, &iGotNL) == NULL)
         {
             ErrorPush();
             SMTPResetSession(SMTPS);
@@ -1795,15 +1801,14 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Check end of data condition
 ///////////////////////////////////////////////////////////////////////////////
-        if (strcmp(szBuffer, ".") == 0)
+        if (iGotNL && iGotNLPrev && (strcmp(szBuffer, ".") == 0))
             break;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Correctly terminate the line
 ///////////////////////////////////////////////////////////////////////////////
-        memcpy(szBuffer + iLineLength, "\r\n", 3);
-
-        iLineLength += 2;
+        if (iGotNL)
+            memcpy(szBuffer + iLineLength, "\r\n", 3), iLineLength += 2;
 
 
         if (iErrorCode == 0)
@@ -1841,6 +1846,8 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
             ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
             return (ERR_SERVER_SHUTDOWN);
         }
+
+        iGotNLPrev = iGotNL;
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2342,7 +2349,7 @@ static int      SMTPListExtAuths(FILE * pRespFile, SMTPSession & SMTPS)
 
     char            szExtAuthFilePath[SYS_MAX_PATH] = "";
 
-    SMTPGetExtAuthFilePath(szExtAuthFilePath);
+    SMTPGetExtAuthFilePath(szExtAuthFilePath, sizeof(szExtAuthFilePath));
 
 
     FILE           *pExtAuthFile = fopen(szExtAuthFilePath, "rt");
@@ -2425,7 +2432,7 @@ static int      SMTPCreateSecretsFile(char const * pszSecretsFile)
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
 
-    SMTPGetAuthFilePath(szAuthFilePath);
+    SMTPGetAuthFilePath(szAuthFilePath, sizeof(szAuthFilePath));
 
 
     FILE           *pAuthFile = fopen(szAuthFilePath, "rt");
@@ -2637,7 +2644,7 @@ static int      SMTPDoAuthExternal(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
     char            szExtAuthFilePath[SYS_MAX_PATH] = "";
 
-    SMTPGetExtAuthFilePath(szExtAuthFilePath);
+    SMTPGetExtAuthFilePath(szExtAuthFilePath, sizeof(szExtAuthFilePath));
 
 
     FILE           *pExtAuthFile = fopen(szExtAuthFilePath, "rt");
@@ -2844,12 +2851,12 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
 
 
-static char    *SMTPGetAuthFilePath(char *pszFilePath)
+static char    *SMTPGetAuthFilePath(char *pszFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszFilePath);
+    CfgGetRootPath(pszFilePath, iMaxPath);
 
-    strcat(pszFilePath, SVR_SMTP_AUTH_FILE);
+    StrNCat(pszFilePath, SVR_SMTP_AUTH_FILE, iMaxPath);
 
     return (pszFilePath);
 
@@ -2857,12 +2864,12 @@ static char    *SMTPGetAuthFilePath(char *pszFilePath)
 
 
 
-static char    *SMTPGetExtAuthFilePath(char *pszFilePath)
+static char    *SMTPGetExtAuthFilePath(char *pszFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszFilePath);
+    CfgGetRootPath(pszFilePath, iMaxPath);
 
-    strcat(pszFilePath, SVR_SMTP_EXTAUTH_FILE);
+    StrNCat(pszFilePath, SVR_SMTP_EXTAUTH_FILE, iMaxPath);
 
     return (pszFilePath);
 
@@ -3021,11 +3028,12 @@ static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUser
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
 
-    SMTPGetAuthFilePath(szAuthFilePath);
+    SMTPGetAuthFilePath(szAuthFilePath, sizeof(szAuthFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAuthFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAuthFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -3087,7 +3095,7 @@ static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChalle
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
 
-    SMTPGetAuthFilePath(szAuthFilePath);
+    SMTPGetAuthFilePath(szAuthFilePath, sizeof(szAuthFilePath));
 
 
     FILE           *pAuthFile = fopen(szAuthFilePath, "rt");
@@ -3357,7 +3365,7 @@ static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FIL
             if (BSckSendString(hBSock, szPrevLine, iTimeout) < 0)
                 return (ErrGetErrorCode());
 
-            strcpy(szPrevLine, szCurrLine);
+            StrSNCpy(szPrevLine, szCurrLine);
         }
 
         if (BSckSendString(hBSock, szPrevLine, iTimeout) < 0)
@@ -3389,6 +3397,21 @@ static int      SMTPHandleCmd_NOOP(const char *pszCommand, BSOCK_HANDLE hBSock,
 {
 
     BSckSendString(hBSock, "250 OK", SMTPS.pSMTPCfg->iTimeout);
+
+    return (0);
+
+}
+
+
+
+static int      SMTPHandleCmd_HELP(const char *pszCommand, BSOCK_HANDLE hBSock,
+                        SMTPSession & SMTPS)
+{
+
+    BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
+            "250-HELO EHLO MAIL RCPT DATA AUTH\r\n"
+            "250-RSET VRFY ETRN NOOP HELP QUIT\r\n"
+            "250 For more informations please visit : %s", APP_URL);
 
     return (0);
 

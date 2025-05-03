@@ -177,7 +177,7 @@ QUEUE_HANDLE    QueOpen(char const * pszRootPath, int iMaxRetry, int iRetryTimeo
 ///////////////////////////////////////////////////////////////////////////////
     char            szRootPath[SYS_MAX_PATH] = "";
 
-    strcpy(szRootPath, pszRootPath);
+    StrSNCpy(szRootPath, pszRootPath);
     AppendSlash(szRootPath);
 
     pMQ->pszRootPath = SysStrDup(szRootPath);
@@ -290,71 +290,71 @@ static int      QueCreateStruct(char const * pszRootPath)
 ///////////////////////////////////////////////////////////////////////////////
     char            szDirPath[SYS_MAX_PATH] = "";
 
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_MESS_DIR);
+    StrSNCat(szDirPath, QUEUE_MESS_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create message resend dir ( resend messages queue )
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_RSND_DIR);
+    StrSNCat(szDirPath, QUEUE_RSND_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create info dir
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_INFO_DIR);
+    StrSNCat(szDirPath, QUEUE_INFO_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create temp dir
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_TEMP_DIR);
+    StrSNCat(szDirPath, QUEUE_TEMP_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create send log dir
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_SLOG_DIR);
+    StrSNCat(szDirPath, QUEUE_SLOG_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create custom message processing dir
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_CUST_DIR);
+    StrSNCat(szDirPath, QUEUE_CUST_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create frozen dir
 ///////////////////////////////////////////////////////////////////////////////
-    strcpy(szDirPath, pszRootPath);
+    StrSNCpy(szDirPath, pszRootPath);
     AppendSlash(szDirPath);
-    strcat(szDirPath, QUEUE_FROZ_DIR);
+    StrSNCat(szDirPath, QUEUE_FROZ_DIR);
 
-    if (!SysExistFile(szDirPath) && (SysMakeDir(szDirPath) < 0))
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
         return (ErrGetErrorCode());
 
 
@@ -373,7 +373,7 @@ static int      QueLoad(MessageQueue * pMQ)
     {
         sprintf(szCurrPath, "%s%d", pMQ->pszRootPath, ii);
 
-        if (!SysExistFile(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
+        if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
             return (ErrGetErrorCode());
 
 
@@ -381,7 +381,7 @@ static int      QueLoad(MessageQueue * pMQ)
         {
             sprintf(szCurrPath, "%s%d%s%d", pMQ->pszRootPath, ii, SYS_SLASH_STR, jj);
 
-            if (!SysExistFile(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
+            if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
                 return (ErrGetErrorCode());
 
 
@@ -566,6 +566,82 @@ static int      QueFreeMessList(SysListHead * pHead)
     }
 
     return (0);
+
+}
+
+
+
+char           *QueLoadLastLogEntry(char const * pszLogFilePath)
+{
+
+    FILE           *pLogFile = fopen(pszLogFilePath, "rb");
+
+    if (pLogFile == NULL)
+    {
+        ErrSetErrorCode(ERR_FILE_OPEN, pszLogFilePath);
+        return (NULL);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Walk log entries
+///////////////////////////////////////////////////////////////////////////////
+    unsigned long   ulCurrOffset = 0,
+                    ulBaseOffset = (unsigned long) -1,
+                    ulEndOffset,
+                    ulPeekTime;
+    char            szLogLine[1024] = "";
+
+    for (;;)
+    {
+        ulCurrOffset = (unsigned long) ftell(pLogFile);
+
+        if (MscFGets(szLogLine, sizeof(szLogLine) - 1, pLogFile) == NULL)
+            break;
+
+        if (sscanf(szLogLine, "[PeekTime] %lu", &ulPeekTime) == 1)
+            ulBaseOffset = ulCurrOffset;
+    }
+
+    if (ulBaseOffset == (unsigned long) -1)
+    {
+        fclose(pLogFile);
+        ErrSetErrorCode(ERR_EMPTY_LOG, pszLogFilePath);
+        return (NULL);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get end offset ( end of file )
+///////////////////////////////////////////////////////////////////////////////
+    fseek(pLogFile, 0, SEEK_END);
+    ulEndOffset = (unsigned long) ftell(pLogFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Load last entry
+///////////////////////////////////////////////////////////////////////////////
+    unsigned int    uEntrySize = (unsigned int) (ulEndOffset - ulBaseOffset);
+    char           *pszEntry = (char *) SysAlloc(uEntrySize + 1);
+
+    if (pszEntry == NULL)
+    {
+        fclose(pLogFile);
+        return (NULL);
+    }
+
+    fseek(pLogFile, ulBaseOffset, SEEK_SET);
+
+    if (!fread(pszEntry, uEntrySize, 1, pLogFile))
+    {
+        SysFree(pszEntry);
+        fclose(pLogFile);
+        ErrSetErrorCode(ERR_FILE_READ, pszLogFilePath);
+        return (NULL);
+    }
+
+    pszEntry[uEntrySize] = '\0';
+
+    fclose(pLogFile);
+
+    return (pszEntry);
 
 }
 

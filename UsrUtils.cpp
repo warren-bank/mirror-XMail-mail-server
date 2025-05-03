@@ -127,8 +127,8 @@ static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const *
                         SYS_UINT32 * puHashVal, bool bCaseSens);
 static int      UsrRebuildUsersIndexes(char const * pszUsrFilePath);
 static int      UsrRebuildAliasesIndexes(char const * pszAlsFilePath);
-static char    *UsrGetTableFilePath(char *pszUsrFilePath);
-static char    *UsrGetAliasFilePath(char *pszAlsFilePath);
+static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath);
+static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath);
 static UserInfo *UsrGetUserFromStrings(char **ppszStrings);
 static UserInfoVar *UsrAllocVar(const char *pszName, const char *pszValue);
 static void     UsrFreeVar(UserInfoVar * pUIV);
@@ -136,7 +136,7 @@ static void     UsrFreeInfoList(HSLIST & InfoList);
 static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName);
 static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile);
 static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
-static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile);
+static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile, int iMaxPath);
 static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain = NULL);
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
                         const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
@@ -151,7 +151,7 @@ static int      UsrDropUserEnv(UserInfo * pUI);
 static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile);
 static int      UsrCreateMailbox(char const * pszUsrUserPath);
 static int      UsrPrepareUserEnv(UserInfo * pUI);
-static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath);
+static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath);
 
 
 
@@ -214,7 +214,7 @@ int             UsrCheckUsersIndexes(void)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align Domain-Name index
@@ -235,7 +235,7 @@ int             UsrCheckAliasesIndexes(void)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Align Domain-Alias index
@@ -283,12 +283,12 @@ static int      UsrRebuildAliasesIndexes(char const * pszAlsFilePath)
 
 
 
-static char    *UsrGetTableFilePath(char *pszUsrFilePath)
+static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszUsrFilePath);
+    CfgGetRootPath(pszUsrFilePath, iMaxPath);
 
-    strcat(pszUsrFilePath, SVR_TABLE_FILE);
+    StrNCat(pszUsrFilePath, SVR_TABLE_FILE, iMaxPath);
 
     return (pszUsrFilePath);
 
@@ -296,12 +296,12 @@ static char    *UsrGetTableFilePath(char *pszUsrFilePath)
 
 
 
-static char    *UsrGetAliasFilePath(char *pszAlsFilePath)
+static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszAlsFilePath);
+    CfgGetRootPath(pszAlsFilePath, iMaxPath);
 
-    strcat(pszAlsFilePath, SVR_ALIAS_FILE);
+    StrNCat(pszAlsFilePath, SVR_ALIAS_FILE, iMaxPath);
 
     return (pszAlsFilePath);
 
@@ -309,12 +309,12 @@ static char    *UsrGetAliasFilePath(char *pszAlsFilePath)
 
 
 
-char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath)
+char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int iMaxPath)
 {
 
-    UsrGetUserPath(pUI, pszMLTablePath);
+    UsrGetUserPath(pUI, pszMLTablePath, iMaxPath, 1);
 
-    strcat(pszMLTablePath, MLUSERS_TABLE_FILE);
+    StrNCat(pszMLTablePath, MLUSERS_TABLE_FILE, iMaxPath);
 
     return (pszMLTablePath);
 
@@ -405,9 +405,9 @@ static UserInfo *UsrGetUserFromStrings(char **ppszStrings)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrFilePath);
+    UsrGetUserPath(pUI, szUsrFilePath, sizeof(szUsrFilePath), 1);
 
-    strcat(szUsrFilePath, USER_PROFILE_FILE);
+    StrNCat(szUsrFilePath, USER_PROFILE_FILE, sizeof(szUsrFilePath));
 
     UsrLoadUserInfo(pUI->InfoList, pUI->uUserID, szUsrFilePath);
 
@@ -645,7 +645,8 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 {
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -695,7 +696,7 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 
 
 
-static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile)
+static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile, int iMaxPath)
 {
 
     if (pszDomain != NULL)
@@ -703,9 +704,9 @@ static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to lookup domain specific configuration
 ///////////////////////////////////////////////////////////////////////////////
-        MDomGetDomainPath(pszDomain, pszInfoFile, 1);
+        MDomGetDomainPath(pszDomain, pszInfoFile, iMaxPath, 1);
 
-        strcat(pszInfoFile, DEFAULT_USER_PROFILE_FILE);
+        StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
 
 
         if (SysExistFile(pszInfoFile))
@@ -716,9 +717,9 @@ static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to lookup global configuration
 ///////////////////////////////////////////////////////////////////////////////
-    CfgGetRootPath(pszInfoFile);
+    CfgGetRootPath(pszInfoFile, iMaxPath);
 
-    strcat(pszInfoFile, DEFAULT_USER_PROFILE_FILE);
+    StrNCat(pszInfoFile, DEFAULT_USER_PROFILE_FILE, iMaxPath);
 
     if (!SysExistFile(pszInfoFile))
     {
@@ -738,12 +739,13 @@ static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain
 
     char            szUserDefFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetDefaultInfoFile(pszDomain, szUserDefFilePath) < 0)
+    if (UsrGetDefaultInfoFile(pszDomain, szUserDefFilePath, sizeof(szUserDefFilePath)) < 0)
         return (ErrGetErrorCode());
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUserDefFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUserDefFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -874,11 +876,12 @@ int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (0);
@@ -987,11 +990,12 @@ int             UsrAddAlias(AliasInfo * pAI)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -1067,7 +1071,7 @@ int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1075,7 +1079,8 @@ int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1187,7 +1192,7 @@ int             UsrRemoveDomainAliases(const char *pszDomain)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1195,7 +1200,8 @@ int             UsrRemoveDomainAliases(const char *pszDomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1309,7 +1315,7 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1317,7 +1323,8 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -1459,11 +1466,12 @@ UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -1527,11 +1535,12 @@ static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -1579,7 +1588,7 @@ int             UsrRemoveUser(const char *pszDomain, const char *pszName,
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1587,7 +1596,8 @@ int             UsrRemoveUser(const char *pszDomain, const char *pszName,
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1726,7 +1736,7 @@ int             UsrModifyUser(UserInfo * pUI)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1734,7 +1744,8 @@ int             UsrModifyUser(UserInfo * pUI)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1878,7 +1889,7 @@ int             UsrRemoveDomainUsers(const char *pszDomain)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
     char            szTmpFile[SYS_MAX_PATH] = "";
 
@@ -1886,7 +1897,8 @@ int             UsrRemoveDomainUsers(const char *pszDomain)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -2003,7 +2015,7 @@ static int      UsrDropUserEnv(UserInfo * pUI)
 ///////////////////////////////////////////////////////////////////////////////
     char            szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, 0);
+    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
     if (MscClearDirectory(szUsrUserPath) < 0)
         return (ErrGetErrorCode());
@@ -2114,11 +2126,12 @@ int             UsrAddUser(UserInfo * pUI)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2229,10 +2242,10 @@ static int      UsrCreateMailbox(char const * pszUsrUserPath)
 ///////////////////////////////////////////////////////////////////////////////
     char            szUsrMailboxPath[SYS_MAX_PATH] = "";
 
-    strcpy(szUsrMailboxPath, pszUsrUserPath);
+    StrSNCpy(szUsrMailboxPath, pszUsrUserPath);
 
     AppendSlash(szUsrMailboxPath);
-    strcat(szUsrMailboxPath, USER_MAILBOX_DIR);
+    StrSNCat(szUsrMailboxPath, USER_MAILBOX_DIR);
 
     if (SysMakeDir(szUsrMailboxPath) < 0)
         return (ErrGetErrorCode());
@@ -2250,7 +2263,7 @@ static int      UsrPrepareUserEnv(UserInfo * pUI)
 
     char            szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, 0);
+    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create main directory
@@ -2278,10 +2291,10 @@ static int      UsrPrepareUserEnv(UserInfo * pUI)
 ///////////////////////////////////////////////////////////////////////////////
         char            szMLUsersFilePath[SYS_MAX_PATH] = "";
 
-        strcpy(szMLUsersFilePath, szUsrUserPath);
+        StrSNCpy(szMLUsersFilePath, szUsrUserPath);
 
         AppendSlash(szMLUsersFilePath);
-        strcat(szMLUsersFilePath, MLUSERS_TABLE_FILE);
+        StrSNCat(szMLUsersFilePath, MLUSERS_TABLE_FILE);
 
         if (MscCreateEmptyFile(szMLUsersFilePath) < 0)
         {
@@ -2297,10 +2310,10 @@ static int      UsrPrepareUserEnv(UserInfo * pUI)
 ///////////////////////////////////////////////////////////////////////////////
     char            szUsrProfileFilePath[SYS_MAX_PATH] = "";
 
-    strcpy(szUsrProfileFilePath, szUsrUserPath);
+    StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
 
     AppendSlash(szUsrProfileFilePath);
-    strcat(szUsrProfileFilePath, USER_PROFILE_FILE);
+    StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
 
     FILE           *pProfileFile = fopen(szUsrProfileFilePath, "wt");
 
@@ -2330,21 +2343,22 @@ int             UsrFlushUserVars(UserInfo * pUI)
 
     char            szUsrUserPath[SYS_MAX_PATH] = "";
 
-    UsrGetUserPath(pUI, szUsrUserPath, 0);
+    UsrGetUserPath(pUI, szUsrUserPath, sizeof(szUsrUserPath), 0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Build profile file path
 ///////////////////////////////////////////////////////////////////////////////
     char            szUsrProfileFilePath[SYS_MAX_PATH] = "";
 
-    strcpy(szUsrProfileFilePath, szUsrUserPath);
+    StrSNCpy(szUsrProfileFilePath, szUsrUserPath);
 
     AppendSlash(szUsrProfileFilePath);
-    strcat(szUsrProfileFilePath, USER_PROFILE_FILE);
+    StrSNCat(szUsrProfileFilePath, USER_PROFILE_FILE);
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrProfileFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrProfileFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2379,11 +2393,12 @@ int             UsrGetDBFileSnapShot(const char *pszFileName)
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetTableFilePath(szUsrFilePath);
+    UsrGetTableFilePath(szUsrFilePath, sizeof(szUsrFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2512,19 +2527,19 @@ UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB)
 
 
 
-static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath)
+static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszPop3LockPath);
+    CfgGetRootPath(pszPop3LockPath, iMaxPath);
 
-    strcat(pszPop3LockPath, POP3_LOCKS_DIR);
+    StrNCat(pszPop3LockPath, POP3_LOCKS_DIR, iMaxPath);
     AppendSlash(pszPop3LockPath);
 
     char            szUserAddress[MAX_ADDR_NAME] = "";
 
     UsrGetAddress(pUI, szUserAddress);
 
-    strcat(pszPop3LockPath, szUserAddress);
+    StrNCat(pszPop3LockPath, szUserAddress, iMaxPath);
 
     return (pszPop3LockPath);
 
@@ -2537,7 +2552,7 @@ int             UsrPOP3Lock(UserInfo * pUI)
 
     char            szLockPath[SYS_MAX_PATH] = "";
 
-    UsrGetPop3LocksPath(pUI, szLockPath);
+    UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
 
     if (SysLockFile(szLockPath) < 0)
         return (ErrGetErrorCode());
@@ -2553,7 +2568,7 @@ void            UsrPOP3Unlock(UserInfo * pUI)
 
     char            szLockPath[SYS_MAX_PATH] = "";
 
-    UsrGetPop3LocksPath(pUI, szLockPath);
+    UsrGetPop3LocksPath(pUI, szLockPath, sizeof(szLockPath));
 
     SysUnlockFile(szLockPath);
 
@@ -2566,9 +2581,9 @@ int             UsrClearPop3LocksDir(void)
 
     char            szLocksDir[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szLocksDir);
+    CfgGetRootPath(szLocksDir, sizeof(szLocksDir));
 
-    strcat(szLocksDir, POP3_LOCKS_DIR);
+    StrNCat(szLocksDir, POP3_LOCKS_DIR, sizeof(szLocksDir));
 
     return (MscClearDirectory(szLocksDir));
 
@@ -2576,12 +2591,12 @@ int             UsrClearPop3LocksDir(void)
 
 
 
-char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iFinalSlash)
+char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, int iFinalSlash)
 {
 
-    MDomGetDomainPath(pUI->pszDomain, pszUserPath);
+    MDomGetDomainPath(pUI->pszDomain, pszUserPath, iMaxPath, 1);
 
-    strcat(pszUserPath, pUI->pszPath);
+    StrNCat(pszUserPath, pUI->pszPath, iMaxPath);
 
     if (iFinalSlash)
         AppendSlash(pszUserPath);
@@ -2592,12 +2607,12 @@ char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iFinalSlas
 
 
 
-char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iFinalSlash)
+char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash)
 {
 
-    UsrGetUserPath(pUI, pszMBPath);
+    UsrGetUserPath(pUI, pszMBPath, iMaxPath, 1);
 
-    strcat(pszMBPath, USER_MAILBOX_DIR);
+    StrNCat(pszMBPath, USER_MAILBOX_DIR, iMaxPath);
     if (iFinalSlash)
         AppendSlash(pszMBPath);
 
@@ -2617,11 +2632,12 @@ int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
 ///////////////////////////////////////////////////////////////////////////////
     char            szMBPath[SYS_MAX_PATH] = "";
 
-    UsrGetMailboxPath(pUI, szMBPath, 0);
+    UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2645,13 +2661,14 @@ int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
     char            szMBPath[SYS_MAX_PATH] = "",
                     szMBFile[SYS_MAX_PATH] = "";
 
-    UsrGetMailboxPath(pUI, szMBPath, 0);
+    UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
     sprintf(szMBFile, "%s" SYS_SLASH_STR "%s", szMBPath, pszMessageID);
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2678,10 +2695,10 @@ int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath)
 
     char            szMPFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetUserPath(pUI, szMPFilePath) == NULL)
+    if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
         return (ErrGetErrorCode());
 
-    strcat(szMPFilePath, MAILPROCESS_FILE);
+    StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
 
     if (!SysExistFile(szMPFilePath))
     {
@@ -2691,7 +2708,8 @@ int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2719,14 +2737,15 @@ int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
 
     char            szMPFilePath[SYS_MAX_PATH] = "";
 
-    if (UsrGetUserPath(pUI, szMPFilePath) == NULL)
+    if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
         return (ErrGetErrorCode());
 
-    strcat(szMPFilePath, MAILPROCESS_FILE);
+    StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMPFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMPFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2769,11 +2788,12 @@ int             UsrGetAliasDBFileSnapShot(char const * pszFileName)
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
 
-    UsrGetAliasFilePath(szAlsFilePath);
+    UsrGetAliasFilePath(szAlsFilePath, sizeof(szAlsFilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

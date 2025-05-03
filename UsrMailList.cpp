@@ -244,11 +244,12 @@ int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI)
 
     char            szMLTablePath[SYS_MAX_PATH] = "";
 
-    UsrGetMLTableFilePath(pUI, szMLTablePath);
+    UsrGetMLTableFilePath(pUI, szMLTablePath, sizeof(szMLTablePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -322,7 +323,7 @@ int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 
     char            szMLTablePath[SYS_MAX_PATH] = "";
 
-    UsrGetMLTableFilePath(pUI, szMLTablePath);
+    UsrGetMLTableFilePath(pUI, szMLTablePath, sizeof(szMLTablePath));
 
 
     char            szTmpFile[SYS_MAX_PATH] = "";
@@ -331,7 +332,8 @@ int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -427,11 +429,12 @@ int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileNam
 
     char            szMLTablePath[SYS_MAX_PATH] = "";
 
-    UsrGetMLTableFilePath(pUI, szMLTablePath);
+    UsrGetMLTableFilePath(pUI, szMLTablePath, sizeof(szMLTablePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMLTablePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMLTablePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

@@ -50,6 +50,7 @@
 #define StrNComp(s, t)          strncmp(s, t, strlen(t))
 #define StrNCpy(t, s, n)        do { strncpy(t, s, n); (t)[(n) - 1] = '\0'; } while (0)
 #define StrSNCpy(t, s)          StrNCpy(t, s, sizeof(t))
+#define StrSNCat(t, s)          StrNCat(t, s, sizeof(t))
 #define StrAppend(s)            ((char *) (s) + strlen(s))
 #define CheckRemoveFile(fp)     ((SysExistFile(fp)) ? SysRemove(fp) : 0)
 #define ErrorPush()             int iPushedError = ErrGetErrorCode();
@@ -71,6 +72,19 @@
 //  Inline functions
 ///////////////////////////////////////////////////////////////////////////////
 
+inline char    *StrNCat(char *pszDest, char const *pszSrc, int iMaxSize)
+{
+
+    int             iDestLength = strlen(pszDest);
+
+    if (iDestLength < iMaxSize)
+        StrNCpy(pszDest + iDestLength, pszSrc, iMaxSize - iDestLength);
+
+    return (pszDest);
+
+}
+
+
 inline int      StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
 {
 
@@ -81,32 +95,49 @@ inline int      StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCm
 }
 
 
+inline char    *AppendChar(char *pszString, int iChar)
+{
+
+    int             iStrLength = strlen(pszString);
+
+    if ((iStrLength == 0) || (pszString[iStrLength - 1] != iChar))
+    {
+        pszString[iStrLength] = iChar;
+        pszString[iStrLength + 1] = '\0';
+    }
+
+    return (pszString);
+
+}
+
+
 inline char    *AppendSlash(char *pszPath)
 {
 
-    int             iPathLength = strlen(pszPath);
+    return (AppendChar(pszPath, SYS_SLASH_CHAR));
 
-    if ((iPathLength == 0) || (pszPath[iPathLength - 1] != SYS_SLASH_CHAR))
-        strcat(pszPath, SYS_SLASH_STR);
+}
 
-    return (pszPath);
 
-};
+inline char    *DelFinalChar(char *pszString, int iChar)
+{
 
+    int             iStrLength = strlen(pszString);
+
+    if ((iStrLength > 0) && (pszString[iStrLength - 1] == iChar))
+        pszString[iStrLength - 1] = '\0';
+
+    return (pszString);
+
+}
 
 
 inline char    *DelFinalSlash(char *pszPath)
 {
 
-    int             iPathLength = strlen(pszPath);
+    return (DelFinalChar(pszPath, SYS_SLASH_CHAR));
 
-    if ((iPathLength > 0) && (pszPath[iPathLength - 1] == SYS_SLASH_CHAR))
-        pszPath[iPathLength - 1] = '\0';
-
-    return (pszPath);
-
-};
-
+}
 
 
 inline int      ToUpper(int iChar)
@@ -114,8 +145,7 @@ inline int      ToUpper(int iChar)
 
     return (((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')): iChar);
 
-};
-
+}
 
 
 inline int      ToLower(int iChar)
@@ -123,8 +153,7 @@ inline int      ToLower(int iChar)
 
     return (((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')): iChar);
 
-};
-
+}
 
 
 inline int      IsPrimeNumber(int iNumber)
@@ -146,7 +175,7 @@ inline int      IsPrimeNumber(int iNumber)
 
     return (1);
 
-};
+}
 
 
 

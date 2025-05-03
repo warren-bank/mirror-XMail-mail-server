@@ -93,8 +93,8 @@ static int      FINGCheckPeerIP(SYS_SOCKET SockFD)
 
     char            szIPMapFile[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szIPMapFile);
-    strcat(szIPMapFile, FING_IPMAP_FILE);
+    CfgGetRootPath(szIPMapFile, sizeof(szIPMapFile));
+    StrNCat(szIPMapFile, FING_IPMAP_FILE, sizeof(szIPMapFile));
 
     if (SysExistFile(szIPMapFile))
     {
@@ -542,7 +542,7 @@ static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
                 }
             }
             else
-                strcpy(szDomain, pszSockDomain);
+                StrSNCpy(szDomain, pszSockDomain);
         }
     }
 

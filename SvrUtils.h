@@ -54,8 +54,8 @@ int             SvrGetConfigInt(char const * pszName, int iDefault,
                         SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int             SysFlushConfig(SVRCFG_HANDLE hSvrConfig);
 int             SvrGetMessageID(SYS_UINT64 * pullMessageID);
-char           *SvrGetLogsDir(char *pszLogsPath);
-char           *SvrGetSpoolDir(char *pszSpoolPath);
+char           *SvrGetLogsDir(char *pszLogsPath, int iMaxPath);
+char           *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath);
 int             SvrConfigVar(char const * pszVarName, char *pszVarValue, int iMaxVarValue,
                         SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, char const * pszDefault = NULL);
 int             SvrCheckDiskSpace(unsigned long ulMinSpace);

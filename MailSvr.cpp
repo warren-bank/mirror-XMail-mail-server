@@ -741,7 +741,7 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
     char            szSpoolDir[SYS_MAX_PATH] = "";
 
-    SvrGetSpoolDir(szSpoolDir);
+    SvrGetSpoolDir(szSpoolDir, sizeof(szSpoolDir));
 
     if ((hSpoolQueue = QueOpen(szSpoolDir, iMaxRetry, iRetryTimeout, iRetryIncrRatio,
                             iQueueSplitLevel)) == INVALID_QUEUE_HANDLE)
@@ -1019,7 +1019,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
     if (pszValue != NULL)
     {
-        strcpy(szMailPath, pszValue);
+        StrSNCpy(szMailPath, pszValue);
         DelFinalSlash(szMailPath);
 
         SysFree(pszValue);
@@ -1042,7 +1042,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
             case ('s'):
                 if (++ii < iArgCount)
                 {
-                    strcpy(szMailPath, pszArgs[ii]);
+                    StrSNCpy(szMailPath, pszArgs[ii]);
                     DelFinalSlash(szMailPath);
                 }
                 break;
@@ -1085,7 +1085,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
         }
     }
 
-    if ((strlen(szMailPath) == 0) || !SysExistFile(szMailPath))
+    if ((strlen(szMailPath) == 0) || !SysExistDir(szMailPath))
     {
         ErrSetErrorCode(ERR_CONF_PATH);
         return (ERR_CONF_PATH);

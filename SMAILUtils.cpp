@@ -141,10 +141,13 @@ static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessa
                         char const * pszMedium, char const * pszParam);
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
                         int iMaxAddress);
-static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
+static char const  *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
                         char *pszAddress, int iMaxAddress);
+static char const  *USmlAddSingleAddress(char const * pszCurr, char const * pszBase,
+                            DynString * pAddrDS, char const * const * ppszMatchDomains,
+                            int * piAdded);
 static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
-                        char const * const * ppszMatchDomains = NULL);
+                        char const * const * ppszMatchDomains);
 static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains,
                         char const * const * ppszAddrTags);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMaxAddress);
@@ -1701,6 +1704,21 @@ static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
 
             ppszCmdTokens[ii] = pszNewValue;
         }
+        else if (strcmp(ppszCmdTokens[ii], "@@RRCPT") == 0)
+        {
+            char            szUserAddress[MAX_ADDR_NAME] = "";
+
+            UsrGetAddress(pUI, szUserAddress);
+
+            char           *pszNewValue = SysStrDup(szUserAddress);
+
+            if (pszNewValue == NULL)
+                return (ErrGetErrorCode());
+
+            SysFree(ppszCmdTokens[ii]);
+
+            ppszCmdTokens[ii] = pszNewValue;
+        }
         else if (strcmp(ppszCmdTokens[ii], "@@FILE") == 0)
         {
             char           *pszNewValue = SysStrDup(FS.szFilePath);
@@ -2008,12 +2026,12 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
 
 
 
-int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash)
+int             USmlGetDomainCustomDir(char *pszCustomDir, int iMaxPath, int iFinalSlash)
 {
 
-    CfgGetRootPath(pszCustomDir);
+    CfgGetRootPath(pszCustomDir, iMaxPath);
 
-    strcat(pszCustomDir, SMAIL_DOMAIN_PROC_DIR);
+    StrNCat(pszCustomDir, SMAIL_DOMAIN_PROC_DIR, iMaxPath);
     if (iFinalSlash)
         AppendSlash(pszCustomDir);
 
@@ -2024,12 +2042,12 @@ int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash)
 
 
 
-int             USmlGetCmdAliasDir(char *pszAliasDir, int iFinalSlash)
+int             USmlGetCmdAliasDir(char *pszAliasDir, int iMaxPath, int iFinalSlash)
 {
 
-    CfgGetRootPath(pszAliasDir);
+    CfgGetRootPath(pszAliasDir, iMaxPath);
 
-    strcat(pszAliasDir, SMAIL_CMDALIAS_DIR);
+    StrNCat(pszAliasDir, SMAIL_CMDALIAS_DIR, iMaxPath);
     if (iFinalSlash)
         AppendSlash(pszAliasDir);
 
@@ -2046,7 +2064,7 @@ int             USmlGetCmdAliasFile(char const *pszDomain, char const *pszUser,
 
     char            szAliasDir[SYS_MAX_PATH] = "";
 
-    USmlGetCmdAliasDir(szAliasDir, 1);
+    USmlGetCmdAliasDir(szAliasDir, sizeof(szAliasDir), 1);
 
     SysSNPrintf(pszAliasFile, SYS_MAX_PATH - 1, "%s%s%s%s.tab",
             szAliasDir, pszDomain, SYS_SLASH_STR, pszUser);
@@ -2091,7 +2109,7 @@ int             USmlCreateCmdAliasDomainDir(char const *pszDomain)
     char            szAliasDir[SYS_MAX_PATH] = "",
                     szDomainAliasDir[SYS_MAX_PATH] = "";
 
-    USmlGetCmdAliasDir(szAliasDir, 1);
+    USmlGetCmdAliasDir(szAliasDir, sizeof(szAliasDir), 1);
 
     SysSNPrintf(szDomainAliasDir, sizeof(szDomainAliasDir) - 1, "%s%s",
             szAliasDir, pszDomain);
@@ -2115,7 +2133,7 @@ int             USmlDeleteCmdAliasDomainDir(char const *pszDomain)
     char            szAliasDir[SYS_MAX_PATH] = "",
                     szDomainAliasDir[SYS_MAX_PATH] = "";
 
-    USmlGetCmdAliasDir(szAliasDir, 1);
+    USmlGetCmdAliasDir(szAliasDir, sizeof(szAliasDir), 1);
 
     SysSNPrintf(szDomainAliasDir, sizeof(szDomainAliasDir) - 1, "%s%s",
             szAliasDir, pszDomain);
@@ -2210,7 +2228,7 @@ int             USmlDomainCustomFileName(char const * pszDestDomain, char *pszCu
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustomDir[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomDir(szCustomDir);
+    USmlGetDomainCustomDir(szCustomDir, sizeof(szCustomDir), 1);
 
 
     sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, szDestDomain);
@@ -2236,7 +2254,7 @@ int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCus
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustomDir[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomDir(szCustomDir);
+    USmlGetDomainCustomDir(szCustomDir, sizeof(szCustomDir), 1);
 
     for (char const * pszSubDom = szDestDomain; pszSubDom != NULL;
             pszSubDom = strchr(pszSubDom + 1, '.'))
@@ -2332,7 +2350,8 @@ int             USmlGetCustomDomainFile(char const * pszDestDomain, char const *
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szCustDomainFile, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szCustDomainFile, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2368,7 +2387,8 @@ int             USmlSetCustomDomainFile(char const * pszDestDomain, char const *
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szCustDomainFile, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szCustDomainFile, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2404,7 +2424,7 @@ int             USmlGetMessageFilterFile(char const * pszDomain, char const * ps
 
     char            szMailRootPath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szMailRootPath);
+    CfgGetRootPath(szMailRootPath, sizeof(szMailRootPath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Get lower case user and domain
@@ -2622,7 +2642,7 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
 
 
 
-static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
+static char const  *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
                         char *pszAddress, int iMaxAddress)
 {
 
@@ -2647,38 +2667,58 @@ static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase
 
 
 
+static char const  *USmlAddSingleAddress(char const * pszCurr, char const * pszBase,
+                            DynString * pAddrDS, char const * const * ppszMatchDomains,
+                            int * piAdded)
+{
+
+    *piAdded = 0;
+
+    char const     *pszAt = strchr(pszCurr, '@');
+
+    if (pszAt == NULL)
+        return (NULL);
+
+
+    char            szAddress[MAX_SMTP_ADDRESS] = "",
+                    szDomain[MAX_ADDR_NAME] = "";
+
+    if (((pszCurr = USmlAddressFromAtPtr(pszAt, pszBase, szAddress,
+            sizeof(szAddress) - 1)) != NULL) &&
+            (USmtpSplitEmailAddr(szAddress, NULL, szDomain) == 0) &&
+            ((ppszMatchDomains == NULL) || StrStringsIMatch(ppszMatchDomains, szDomain)) &&
+            (StrIStr(StrDynGet(pAddrDS), szAddress) == NULL))
+    {
+        if (StrDynSize(pAddrDS) > 0)
+            StrDynAdd(pAddrDS, ADDRESS_TOKENIZER);
+
+        StrDynAdd(pAddrDS, szAddress);
+
+        ++(*piAdded);
+    }
+
+    return (pszCurr);
+
+}
+
+
 static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
                         char const * const * ppszMatchDomains)
 {
 
+    int             iAddrAdded = 0,
+                    iAdded;
     char const     *pszCurr = pszAddrList;
 
     for (; (pszCurr != NULL) && (*pszCurr != '\0');)
     {
-        char const     *pszAt = strchr(pszCurr, '@');
+        pszCurr = USmlAddSingleAddress(pszCurr, pszAddrList, pAddrDS, ppszMatchDomains, &iAdded);
 
-        if (pszAt == NULL)
-            break;
-
-
-        char            szAddress[MAX_SMTP_ADDRESS] = "",
-                        szDomain[MAX_ADDR_NAME] = "";
-
-        if (((pszCurr = USmlAddressFromAtPtr(pszAt, pszAddrList, szAddress,
-                                sizeof(szAddress) - 1)) != NULL) &&
-                (USmtpSplitEmailAddr(szAddress, NULL, szDomain) == 0) &&
-                ((ppszMatchDomains == NULL) || StrStringsIMatch(ppszMatchDomains, szDomain)) &&
-                (StrIStr(StrDynGet(pAddrDS), szAddress) == NULL))
-        {
-            if (StrDynSize(pAddrDS) > 0)
-                StrDynAdd(pAddrDS, ADDRESS_TOKENIZER);
-
-            StrDynAdd(pAddrDS, szAddress);
-        }
-
+        if (iAdded)
+            ++iAddrAdded;
     }
 
-    return (0);
+    return (iAddrAdded);
 
 }
 
@@ -2699,17 +2739,23 @@ static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszM
         TAG_POSITION    TagPosition = TAG_POSITION_INIT;
         MessageTagData *pMTD = USmlFindTag(hTagList, pszHdrTag, TagPosition);
 
-        if (pMTD != NULL)
+        for (; pMTD != NULL; pMTD = USmlFindTag(hTagList, pszHdrTag, TagPosition))
         {
-            USmlAddAddresses(pMTD->pszTagData, &AddrDS, ppszMatchDomains);
+            int             iAddrAdded = USmlAddAddresses(pMTD->pszTagData, &AddrDS,
+                                    ppszMatchDomains);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Exclusive tag detected, stop the scan
 ///////////////////////////////////////////////////////////////////////////////
-            if ((StrDynSize(&AddrDS) > 0) && (ppszAddrTags[ii][0] == '+'))
-                break;
+            if ((iAddrAdded > 0) && (ppszAddrTags[ii][0] == '+'))
+                goto BuildAddrList;
         }
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Yes, i know, goto's might be bad. Not in this case though ...
+///////////////////////////////////////////////////////////////////////////////
+BuildAddrList:
 
 
     char          **ppszAddresses = StrTokenize(StrDynGet(&AddrDS), ADDRESS_TOKENIZER);

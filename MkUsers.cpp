@@ -129,6 +129,8 @@ char const     *SysErrStr(void)
 
 
 #define MAX_MB_SIZE             10000
+#define StrNCpy(t, s, n)        do { strncpy(t, s, n); (t)[(n) - 1] = '\0'; } while (0)
+#define StrSNCpy(t, s)          StrNCpy(t, s, sizeof(t))
 
 
 
@@ -345,22 +347,22 @@ int             main(int argc, char *argv[])
 
             case ('d'):
                 if (++ii < argc)
-                    strcpy(szAutoDomain, argv[ii]);
+                    StrSNCpy(szAutoDomain, argv[ii]);
                 break;
 
             case ('f'):
                 if (++ii < argc)
-                    strcpy(szInputFile, argv[ii]);
+                    StrSNCpy(szInputFile, argv[ii]);
                 break;
 
             case ('u'):
                 if (++ii < argc)
-                    strcpy(szAutoUsr, argv[ii]);
+                    StrSNCpy(szAutoUsr, argv[ii]);
                 break;
 
             case ('r'):
                 if (++ii < argc)
-                    strcpy(szRootDir, argv[ii]);
+                    StrSNCpy(szRootDir, argv[ii]);
                 break;
 
             case ('s'):

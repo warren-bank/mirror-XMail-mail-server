@@ -21,34 +21,16 @@
  */
 
 
-#ifndef _LMAILSVR_H
-#define _LMAILSVR_H
+#ifndef _SYSCPUPPC_H
+#define _SYSCPUPPC_H
 
 
 
 
-#define LMAILF_STOP_SERVER          (1 << 0)
-#define LMAILF_LOG_ENABLED          (1 << 1)
-
-
-
-
-struct LMAILConfig
-{
-    unsigned long   ulFlags;
-    long            lNumThreads;
-    int             iSleepTimeout;
-    long            lThreadCount;
-
-};
-
-
-
-
-
-char           *LMAILGetSpoolDir(char *pszSpoolPath, int iMaxPath);
-unsigned int    LMAILThreadProc(void *pThreadData);
-
+#define SYS_CPU_PORT                "PPC"
+#define BIG_ENDIAN_CPU
+#define BIG_ENDIAN_BITFIELD
+#define CPU_NEED_ALIGNMENT
 
 
 

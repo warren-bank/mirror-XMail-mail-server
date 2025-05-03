@@ -274,6 +274,9 @@ static ErrorStrings Errors[] =
     {ERR_GETSOCKOPT, "Error in function {getsockopt}"},
     {ERR_NO_HDR_FETCH_TAGS, "No fetch headers tags string supplied"},
     {ERR_SET_FILE_TIME, "Error setting file times"},
+    {ERR_LISTDIR_NOT_FOUND, "Listing directory not found"},
+    {ERR_DUPLICATE_HANDLE, "Error in function {DuplicateHandle}"},
+    {ERR_EMPTY_LOG, "Log file is empty"},
 
 };
 

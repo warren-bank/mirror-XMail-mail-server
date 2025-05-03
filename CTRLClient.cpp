@@ -57,10 +57,10 @@ int             iLogRotateHours = 24;
 
 
 
-char           *SvrGetLogsDir(char *pszLogsDir)
+char           *SvrGetLogsDir(char *pszLogsDir, int iMaxPath)
 {
 
-    sprintf(pszLogsDir, ".");
+    SysSNPrintf(pszLogsDir, iMaxPath - 1, ".");
 
     return (pszLogsDir);
 
@@ -440,7 +440,7 @@ int             CClnExec(int iArgCount, char *pszArgs[])
         {
             case ('s'):
                 if (++ii < iArgCount)
-                    strcpy(szServer, pszArgs[ii]);
+                    StrSNCpy(szServer, pszArgs[ii]);
                 break;
 
             case ('n'):
@@ -450,12 +450,12 @@ int             CClnExec(int iArgCount, char *pszArgs[])
 
             case ('u'):
                 if (++ii < iArgCount)
-                    strcpy(szUsername, pszArgs[ii]);
+                    StrSNCpy(szUsername, pszArgs[ii]);
                 break;
 
             case ('p'):
                 if (++ii < iArgCount)
-                    strcpy(szPassword, pszArgs[ii]);
+                    StrSNCpy(szPassword, pszArgs[ii]);
                 break;
 
             case ('t'):
@@ -465,7 +465,7 @@ int             CClnExec(int iArgCount, char *pszArgs[])
 
             case ('f'):
                 if (++ii < iArgCount)
-                    strcpy(szIOFile, pszArgs[ii]);
+                    StrSNCpy(szIOFile, pszArgs[ii]);
                 break;
 
             case ('c'):

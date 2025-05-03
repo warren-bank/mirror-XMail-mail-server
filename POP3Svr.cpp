@@ -225,8 +225,8 @@ static int      POP3CheckPeerIP(SYS_SOCKET SockFD)
 
     char            szIPMapFile[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szIPMapFile);
-    strcat(szIPMapFile, POP3_IPMAP_FILE);
+    CfgGetRootPath(szIPMapFile, sizeof(szIPMapFile));
+    StrNCat(szIPMapFile, POP3_IPMAP_FILE, sizeof(szIPMapFile));
 
     if (SysExistFile(szIPMapFile))
     {
@@ -453,7 +453,7 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
     char            szIP[128] = "???.???.???.???";
 
     if (MscGetSockHost(BSckGetAttachedSocket(hBSock), POP3S.szSvrFQDN) < 0)
-        strcpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo, szIP));
+        StrSNCpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo, szIP));
     else
     {
 ///////////////////////////////////////////////////////////////////////////////
@@ -473,7 +473,7 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
 
     if (pszDefDomain != NULL)
     {
-        strcpy(POP3S.szSvrDomain, pszDefDomain);
+        StrSNCpy(POP3S.szSvrDomain, pszDefDomain);
 
         SysFree(pszDefDomain);
     }
@@ -492,7 +492,7 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
             return (ERR_NO_DOMAIN);
         }
 
-        strcpy(POP3S.szSvrDomain, pszRootDomain);
+        StrSNCpy(POP3S.szSvrDomain, pszRootDomain);
 
         SysFree(pszRootDomain);
     }

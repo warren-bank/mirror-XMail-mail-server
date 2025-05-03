@@ -80,7 +80,7 @@ struct ServerConfigData
 
 
 
-static char    *SvrGetProfileFilePath(char *pszFilePath);
+static char    *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath);
 static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue);
 static void     SvrFreeVar(ServerInfoVar * pSIV);
 static void     SvrFreeInfoList(HSLIST & hConfigList);
@@ -97,12 +97,12 @@ static int      SvrLoadServerConfig(HSLIST & hConfigList, const char *pszFilePat
 
 
 
-static char    *SvrGetProfileFilePath(char *pszFilePath)
+static char    *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszFilePath);
+    CfgGetRootPath(pszFilePath, iMaxPath);
 
-    strcat(pszFilePath, SVR_PROFILE_FILE);
+    StrNCat(pszFilePath, SVR_PROFILE_FILE, iMaxPath);
 
     return (pszFilePath);
 
@@ -115,7 +115,7 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
 
     char            szProfilePath[SYS_MAX_PATH] = "";
 
-    SvrGetProfileFilePath(szProfilePath);
+    SvrGetProfileFilePath(szProfilePath, sizeof(szProfilePath));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lock the profile resource
@@ -126,14 +126,16 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
     if (iWriteLock)
     {
 
-        if ((hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock))) == INVALID_RLCK_HANDLE)
+        if ((hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
+                sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
             return (INVALID_SVRCFG_HANDLE);
 
     }
     else
     {
 
-        if ((hResLock = RLckLockSH(CfgGetBasedPath(szProfilePath, szResLock))) == INVALID_RLCK_HANDLE)
+        if ((hResLock = RLckLockSH(CfgGetBasedPath(szProfilePath, szResLock,
+                sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
             return (INVALID_SVRCFG_HANDLE);
 
     }
@@ -252,11 +254,12 @@ int             SysFlushConfig(SVRCFG_HANDLE hSvrConfig)
 
     char            szProfilePath[SYS_MAX_PATH] = "";
 
-    SvrGetProfileFilePath(szProfilePath);
+    SvrGetProfileFilePath(szProfilePath, sizeof(szProfilePath));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -386,7 +389,8 @@ static int      SvrLoadServerConfig(HSLIST & hConfigList, const char *pszFilePat
 {
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -439,12 +443,13 @@ int             SvrGetMessageID(SYS_UINT64 * pullMessageID)
 
     char            szMsgIDFile[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szMsgIDFile);
-    strcat(szMsgIDFile, MESSAGEID_FILE);
+    CfgGetRootPath(szMsgIDFile, sizeof(szMsgIDFile));
+    StrNCat(szMsgIDFile, MESSAGEID_FILE, sizeof(szMsgIDFile));
 
 
     char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMsgIDFile, szResLock));
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMsgIDFile, szResLock,
+                            sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -497,11 +502,11 @@ int             SvrGetMessageID(SYS_UINT64 * pullMessageID)
 
 
 
-char           *SvrGetLogsDir(char *pszLogsPath)
+char           *SvrGetLogsDir(char *pszLogsPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszLogsPath);
-    strcat(pszLogsPath, SVR_LOGS_DIR);
+    CfgGetRootPath(pszLogsPath, iMaxPath);
+    StrNCat(pszLogsPath, SVR_LOGS_DIR, iMaxPath);
 
     return (pszLogsPath);
 
@@ -509,11 +514,11 @@ char           *SvrGetLogsDir(char *pszLogsPath)
 
 
 
-char           *SvrGetSpoolDir(char *pszSpoolPath)
+char           *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 {
 
-    CfgGetRootPath(pszSpoolPath);
-    strcat(pszSpoolPath, SMTP_SPOOL_DIR);
+    CfgGetRootPath(pszSpoolPath, iMaxPath);
+    StrNCat(pszSpoolPath, SMTP_SPOOL_DIR, iMaxPath);
 
     return (pszSpoolPath);
 
@@ -576,7 +581,7 @@ int             SvrCheckDiskSpace(unsigned long ulMinSpace)
 
         tLastCheck = tNow;
 
-        CfgGetRootPath(szRootDir);
+        CfgGetRootPath(szRootDir, sizeof(szRootDir));
 
 
         if (SysGetDiskSpace(szRootDir, &TotalSpace, &FreeSpace) < 0)
