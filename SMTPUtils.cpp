@@ -1149,7 +1149,7 @@ static int      USmtpDoCramMD5Auth(BSOCK_HANDLE hBSock, char const * pszServer,
                         char const * const * ppszAuthTokens, SMTPError * pSMTPE)
 {
 
-    if (StrStringsCount(ppszAuthTokens) < 2)
+    if (StrStringsCount(ppszAuthTokens) < 3)
     {
         ErrSetErrorCode(ERR_BAD_SMTP_AUTH_CONFIG);
         return (ERR_BAD_SMTP_AUTH_CONFIG);
@@ -1197,15 +1197,18 @@ static int      USmtpDoCramMD5Auth(BSOCK_HANDLE hBSock, char const * pszServer,
 ///////////////////////////////////////////////////////////////////////////////
 //  Compute MD5 response ( secret , challenge , digest )
 ///////////////////////////////////////////////////////////////////////////////
-    if (MscCramMD5(ppszAuthTokens[1], szChallenge, szChallenge) < 0)
+    if (MscCramMD5(ppszAuthTokens[2], szChallenge, szChallenge) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send response
 ///////////////////////////////////////////////////////////////////////////////
     unsigned int    uEnc64Length = 0;
+    char            szResponse[1024] = "";
 
-    encode64(szChallenge, strlen(szChallenge), szAuthBuffer,
+    sprintf(szResponse, "%s %s", ppszAuthTokens[1], szChallenge);
+
+    encode64(szResponse, strlen(szResponse), szAuthBuffer,
             sizeof(szAuthBuffer), &uEnc64Length);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,

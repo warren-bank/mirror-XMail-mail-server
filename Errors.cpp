@@ -262,6 +262,7 @@ static ErrorStrings Errors[] =
     {ERR_INVALID_MAIL_DOMAIN, "Remote domain has no DNS/MX entries"},
     {ERR_BAD_CMDSTR_CHARS, "Bad characters in command line"},
     {ERR_FETCHMSG_UNDELIVERED, "POP3 fetched message failed delivery"},
+    {ERR_USER_VAR_NOT_FOUND, "User configuration variable not found"},
 
 };
 

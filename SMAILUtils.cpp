@@ -376,6 +376,7 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
                     return (ErrorPop());
                 }
 
+                SetEmptyString(szTagName);
                 StrDynTruncate(&TagDS);
 
                 ulFilePos = (unsigned long) ftell(pSpoolFile);
@@ -386,7 +387,7 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
 
         if ((szSpoolLine[0] == ' ') || (szSpoolLine[0] == '\t'))
         {
-            if (StrDynSize(&TagDS) == 0)
+            if (IsEmptyString(szTagName))
             {
                 StrDynFree(&TagDS);
                 fseek(pSpoolFile, ulFilePos, SEEK_SET);
@@ -416,6 +417,7 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
                     return (ErrorPop());
                 }
 
+                SetEmptyString(szTagName);
                 StrDynTruncate(&TagDS);
 
                 ulFilePos = (unsigned long) ftell(pSpoolFile);

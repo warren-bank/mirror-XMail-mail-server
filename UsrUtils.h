@@ -82,6 +82,7 @@ UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszNam
 void            UsrFreeUserInfo(UserInfo * pUI);
 char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
                         const char *pszDefault = NULL);
+int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName);
 int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
                         const char *pszValue);
 char          **UsrGetProfileVars(UserInfo * pUI);

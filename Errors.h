@@ -227,6 +227,7 @@
 #define ERR_INVALID_MAIL_DOMAIN     (-202)
 #define ERR_BAD_CMDSTR_CHARS        (-203)
 #define ERR_FETCHMSG_UNDELIVERED    (-204)
+#define ERR_USER_VAR_NOT_FOUND      (-205)
 
 
 

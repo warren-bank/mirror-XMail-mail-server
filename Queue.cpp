@@ -46,7 +46,7 @@
 
 
 #define MAX_ACTIVE_QUEUES           32
-#define QUEUE_TMPFILE_INFO_EXT      ".#info#"
+#define QUEUE_FILE_INFO_EXT         ".#info#"
 #define QUEUE_FROZEN_SLOG_EXT       ".#slog#"
 #define QUEUE_LOCKFILE_EXT          ""
 #define MAX_QUEUE_LOCK_TIME         (18 * 60 * 60)
@@ -768,6 +768,9 @@ int             QueGetFrozenList(char const * pszRootPath, char const * pszListF
 
                     MscSplitPath(szFrozFileName, NULL, NULL, szFrozFileExt);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Skip slog files
+///////////////////////////////////////////////////////////////////////////////
                     if (strcmp(szFrozFileExt, QUEUE_FROZEN_SLOG_EXT) == 0)
                         continue;
 
@@ -821,7 +824,7 @@ int             QueCommitTempMessage(char const * pszFilePath)
 ///////////////////////////////////////////////////////////////////////////////
 //  Move info file
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(szSourceFile, "%s%s", pszFilePath, QUEUE_TMPFILE_INFO_EXT);
+    sprintf(szSourceFile, "%s%s", pszFilePath, QUEUE_FILE_INFO_EXT);
 
     sprintf(szTargetFile, "%s%s%s%s%s", szBasePath, SYS_SLASH_STR, QUEUE_INFO_DIR,
             SYS_SLASH_STR, pszFileName);
@@ -1337,7 +1340,7 @@ NQS_HANDLE      QueCreateNewStream(char const * pszRootPath, int iNumDirsLevel)
 
     char            szInfoFile[SYS_MAX_PATH] = "";
 
-    sprintf(szInfoFile, "%s%s", szMessFile, QUEUE_TMPFILE_INFO_EXT);
+    sprintf(szInfoFile, "%s%s", szMessFile, QUEUE_FILE_INFO_EXT);
 
     FILE           *pInfoFile = fopen(szInfoFile, "w+b");
 

@@ -448,6 +448,27 @@ char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
 
 
 
+int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName)
+{
+
+    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+
+    if (pUIV == NULL)
+    {
+        ErrSetErrorCode(ERR_USER_VAR_NOT_FOUND);
+        return (ERR_USER_VAR_NOT_FOUND);
+    }
+
+    ListRemovePtr(pUI->InfoList, (PLISTLINK) pUIV);
+
+    UsrFreeVar(pUIV);
+
+    return (0);
+
+}
+
+
+
 int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
                         const char *pszValue)
 {
@@ -613,8 +634,8 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 
     if (pProfileFile == NULL)
     {
-        ErrSetErrorCode(ERR_NO_USER_PRFILE);
         RLckUnlockSH(hResLock);
+        ErrSetErrorCode(ERR_NO_USER_PRFILE);
         return (ERR_NO_USER_PRFILE);
     }
 

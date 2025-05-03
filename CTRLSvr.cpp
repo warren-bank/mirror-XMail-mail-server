@@ -65,6 +65,7 @@
 #define CTRL_QUIT_CMD_EXIT      1
 #define CTRL_LISTFOLLOW_RESULT  100
 #define CTRL_WAITDATA_RESULT    101
+#define CTRL_VAR_DROP_VALUE     ".|rm"
 #define CTRL_SERVER_NAME        "[" APP_NAME_VERSION_OS_STR " CTRL Server]"
 
 
@@ -1366,12 +1367,23 @@ static int      CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     for (int ii = 3; ii < (iTokensCount - 1); ii += 2)
     {
-        if (UsrSetUserInfoVar(pUI, ppszTokens[ii], ppszTokens[ii + 1]) < 0)
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the variable deletion is requested
+///////////////////////////////////////////////////////////////////////////////
+        if (strcmp(ppszTokens[ii + 1], CTRL_VAR_DROP_VALUE) == 0)
+            UsrDelUserInfoVar(pUI, ppszTokens[ii]);
+        else
         {
-            ErrorPush();
-            UsrFreeUserInfo(pUI);
-            CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
-            return (ErrorPop());
+///////////////////////////////////////////////////////////////////////////////
+//  Set user variable
+///////////////////////////////////////////////////////////////////////////////
+            if (UsrSetUserInfoVar(pUI, ppszTokens[ii], ppszTokens[ii + 1]) < 0)
+            {
+                ErrorPush();
+                UsrFreeUserInfo(pUI);
+                CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+                return (ErrorPop());
+            }
         }
     }
 

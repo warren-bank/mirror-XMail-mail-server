@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.68
+Version      : 0.69
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 05-02-2001
+Date         : 22-02-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -440,7 +440,17 @@ Date 05-02-2001	 0.68
 	in the first "To:" address, while now all addresses contained in "To:", "Cc:" and "Bcc:" are
 	checked. There is also a new SERVER.TAB variable "Pop3SyncErrorAccount" whose use is
 	catch all emails that has been fetched but has had delivery errors.
+Date 22-02-2001	 0.69
+	Fixed a bug that made XMail to grant Read permissions to mailing lists users.
+	Fixed a bug that made XMail to delete SMTP rights granted during authentication when sending
+	multiple messages.
+	Fixed a bug in SMTP CRAM-MD5 authentication.
+	Fixed a bug that caused XMail to break the header when an headers tag is made by "tag-name:[CR][LF]tag-string".
+	Added the delete functionality to the CTRL command "uservarsset" by giving the string value
+	".|rm" the delete capability.
 	
+
+
 	
 
 
@@ -909,16 +919,16 @@ Part 7			Configuration
 
 	Ex :
 
-	"maticad"	"davidel"	"dlibenzi"
+	"home.bogus"	"davidel"	"dlibenzi"
 
-	define "davidel" as alias for "dlibenzi" in "maticad" domain.
+	define "davidel" as alias for "dlibenzi" in "home.bogus" domain.
 
-	"maticad"	"foo*bog"	"homer@internal-domain.org"
+	"home.bogus"	"foo*bog"	"homer@internal-domain.org"
 
 	define an alias for all users whose name start with  foo  and end with  bog
 	that point to the locally handled account  homer@internal-domain.org.
 
-	"maticad"	"??trips"	"travels"
+	"home.bogus"	"??trips"	"travels"
 
 	define an alias for all users whose name start with any two chars and end with trips.
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
@@ -945,19 +955,19 @@ Part 7			Configuration
 
 	Ex :
 
-	"maticad.it"	"dlibenzi"	"maticad"	"dlibenzi"
+	"xmailserver.org"	"dlibenzi"	"home.bogus"	"dlibenzi"
 
 	This file is used in configutaions in which the server run not directly on internet
 	( like my case ) but act as internal mail exchanger and external mail gateway.
 	This file define "Return-Path: <...>" mapping for internal mail delivery.
 	If You are using a Mail client like Outlook, Eudora, KMail ... You have configured
-	Your email address with the external account say "dlibenzi@maticad.it".
-	When You post an inernal message to "foo@maticad" the mail client put Your external
-	email address ( "dlibenzi@maticad.it" ) in the "MAIL FROM: <...>" SMTP request.
+	Your email address with the external account say "dlibenzi@xmailserver.org".
+	When You post an inernal message to "foo@home.bogus" the mail client put Your external
+	email address ( "dlibenzi@xmailserver.org" ) in the "MAIL FROM: <...>" SMTP request.
 	Now if the user "foo" reply to this message, it'll reply to "dlibenzimaticad.it"
 	then it'll be sent to the external mail server.
 	With the entry above in EXTALIASES.TAB file the "Return-Path: <...>" field is filled
-	with "dlibenzi@maticad" that lead to an internal mail reply.
+	with "dlibenzi@home.bogus" that lead to an internal mail reply.
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
 
 
@@ -967,10 +977,10 @@ Part 7			Configuration
 
 	Ex :
 
-	"maticad"	"dlibenzi"	"XYZ..."	1	"dlibenzi"	"U"
+	"home.bogus"	"dlibenzi"	"XYZ..."	1	"dlibenzi"	"U"
 
-	define an account "dlibenzi" in domain "maticad" with the encrypted password "XYZ...", 
-	user id "1" and mail directory "dlibenzi" inside $MAIL_ROOT/domains/maticad.
+	define an account "dlibenzi" in domain "home.bogus" with the encrypted password "XYZ...",
+	user id "1" and mail directory "dlibenzi" inside $MAIL_ROOT/domains/home.bogus.
 	To allow multiple domains handling the POP3 client must use the entire email address
 	for the POP3 user account, ex. if a user has email user@domain it must supply :
 
@@ -990,7 +1000,7 @@ Part 7			Configuration
 	file _must_ contain an entry for each user handled by XMail.
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
 
-	
+
 	MESSAGE.ID :
 
 	Is a file storing a sequential message number.
@@ -1005,38 +1015,38 @@ Part 7			Configuration
 
 	Ex :
 
-	"maticad"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"APOP"
+	"home.bogus"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"APOP"
 
-	This entry is used to syncronize the external account "dlibenzi@maticad.it" with encrypted
-	password "XYZ..." with the local account "dlibenzi@maticad" using  APOP  authentication.
-	It connect with the "maticad.it" POP3 server and download all messages for "dlibenzi@maticad.it" into
-	the local account "dlibenzi@maticad".
+	This entry is used to syncronize the external account "dlibenzi@xmailserver.org" with encrypted
+	password "XYZ..." with the local account "dlibenzi@home.bogus" using  APOP  authentication.
+	It connect with the "xmailserver.org" POP3 server and download all messages for "dlibenzi@xmailserver.org" into
+	the local account "dlibenzi@home.bogus".
 	The remote server must support  APOP  authentication to specify APOP as authtype.
 	Even if using APOP authentication is more secure coz clear usernames and password does not
 	travel on the network, if You're not sure about it, specify  CLR  as authtype.
 	For non local POP3 sync You've to specify a line like this one ( @ as the first domain char ) :
 
-	"@maticad.com"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+	"@home.bogus.com"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
-	This entry is used to syncronize the external account "dlibenzi@maticad.com" with encrypted
-	password "XYZ..." with the account "dlibenzi@maticad.com" using  CLR  authentication.
-	The message will be pushed into the spool having as destination  dlibenzi@maticad.com  ,
+	This entry is used to syncronize the external account "dlibenzi@home.bogus.com" with encrypted
+	password "XYZ..." with the account "dlibenzi@home.bogus.com" using  CLR  authentication.
+	The message will be pushed into the spool having as destination  dlibenzi@home.bogus.com  ,
 	so You've to have some kind of processing for that user or domain in Your XMail configuration
 	( for example custom domain processing ).
 	You can also have the option to setup a line like this one :
 
-	"?maticad.com"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+	"?home.bogus.com"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
 	and the fetched messages will be pushed into the spool using, as name part the name contained
 	into the "To:" tag of the incoming message, and domain part the string after the  ?  character
 	( masquerade domain ).
 	So if a message having as To: address  graycat@felins.net  is fetched by the previous line a
-	message is pushed into the spool with address  graycat@maticad.com.
-	You've to be sure that the masquerade domain ( maticad.com ) is handled locally in a way or another.
+	message is pushed into the spool with address  graycat@home.bogus.com.
+	You've to be sure that the masquerade domain ( home.bogus.com ) is handled locally in a way or another.
 	Particular attention is to be taken about at not creating mail loops.
 	Another otion is :
 
-	"&.local"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+	"&.local"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
 	where a fetched message whose To: address is graycat@felins.net will be replaced with
 	graycat@felins.net.local.
@@ -1055,20 +1065,20 @@ Part 7			Configuration
 
 	Ex :
 
-	"foo.example.com"	"@maticad.it"
+	"foo.example.com"	"@xmailserver.org"
 
-	will send all mail for "foo.example.com" through the "maticad.it" SMTP server,
+	will send all mail for "foo.example.com" through the "xmailserver.org" SMTP server,
 	while :
 
-	"*.dummy.net"	"@relay.maticad.it"
+	"*.dummy.net"	"@relay.xmailserver.org"
 
-	will send all mail for  "*.dummy.net"  through  "relay.maticad.it".
+	will send all mail for  "*.dummy.net"  through  "relay.xmailserver.org".
 	The  smtp-gateway  can be a complex routing also, ex :
 
-	"*.dummy.net"	"@relay.maticad.it,@mail.nowhere.org"
+	"*.dummy.net"	"@relay.xmailserver.org,@mail.nowhere.org"
 
-	will send all mail for  "*.dummy.net"  through  "@relay.maticad.it,@mail.nowhere.org",
-	in this way  relay.maticad.it --> mail.nowhere.org --> @DESTINATION
+	will send all mail for  "*.dummy.net"  through  "@relay.xmailserver.org,@mail.nowhere.org",
+	in this way  relay.xmailserver.org --> mail.nowhere.org --> @DESTINATION
 
 
 	SMTPFWD.TAB :
@@ -1077,18 +1087,18 @@ Part 7			Configuration
 
 	Ex :
 
-	"foo.example.com"	"mail.maticad.it:7001,192.168.1.1:6123,mx.maticad.it"
+	"foo.example.com"	"mail.xmailserver.org:7001,192.168.1.1:6123,mx.xmailserver.org"
 
 	will send all mail for "foo.example.com" using the provided list of mail exchangers,
 	while :
 
-	"*.dummy.net"	"mail.maticad.it,192.168.1.1,mx.maticad.it:6423"
+	"*.dummy.net"	"mail.xmailserver.org,192.168.1.1,mx.xmailserver.org:6423"
 
 	will send all mail for  "*.dummy.net"  through the provided list of mail exchangers.
 	If the port ( :nn ) is not specified the default SMTP port ( 25 ) is assumed.
 	You can also enable XMail to random-select the order of the gateway list by specifying :
 
-	"*.dummy.net"	"#mail.maticad.it,192.168.1.1,mx.maticad.it:6423"
+	"*.dummy.net"	"#mail.xmailserver.org,192.168.1.1,mx.xmailserver.org:6423"
 
 	using the character  #  as the first char of the gateway list.
 
@@ -1110,9 +1120,6 @@ Part 7			Configuration
 
 	is used to permit SMTP clients authentication with protocols PLAIN, LOGIN, CRAM-MD5
 	and custom.
-	With CRAM-MD5 method all the entries of this file is tested to validate the client
-	response ( username + ':' + password  is used as secret string to compute CRAM-MD5
-	checksum with the server challenge ).
 	With custom authentication a file containing all secrets ( username + ':' + password )
 	is passed as parameter to the custom authentication program which will test all secrets
 	to find the one matching ( if exist ).
@@ -1123,7 +1130,7 @@ Part 7			Configuration
 	R	= open relay features ( bypass all other relay blocking traps )
 	V	= VRFY command enabler ( bypass SERVER.TAB variable )
 
-	When PLAIN or LOGIN authentication mode are used a first lookup in MAILUSERS.TAB
+	When PLAIN, LOGIN or CRAM-MD5 authentication mode are used a first lookup in MAILUSERS.TAB
 	accounts is performed to avoid duplicating informations with SMTPAUTH.TAB.
 	So using these authentication modes a user must use as username the full email address
 	( the : separator is permitted instead @ ) and as password his POP3 password.
@@ -1205,7 +1212,7 @@ Part 7			Configuration
 
 	"212.131.173.0"[TAB]"255.255.255.0"[NEWLINE]
 
-	register all hosts of the class "C" network "212.131.173.XXX" as spammers, 
+	register all hosts of the class "C" network "212.131.173.XXX" as spammers,
 	and block them the use of XMail SMTP server.
 
 
@@ -1234,7 +1241,7 @@ Part 7			Configuration
 	"0.0.0.0"[TAB]"0.0.0.0"[TAB]"DENY"[TAB]"1"[NEWLINE]
 	"212.131.173.0"[TAB]"255.255.255.0"[TAB]"ALLOW"[TAB]"2"[NEWLINE]
 
-	This configuration deny access to all IPs except the ones of the 
+	This configuration deny access to all IPs except the ones of the
 	class "C" network "212.131.173.XXX".
 	Higher precedences win over lower ones.
 
@@ -1249,7 +1256,7 @@ Part 7			Configuration
 	"0.0.0.0"[TAB]"0.0.0.0"[TAB]"DENY"[TAB]"1"[NEWLINE]
 	"212.131.173.0"[TAB]"255.255.255.0"[TAB]"ALLOW"[TAB]"2"[NEWLINE]
 
-	This configuration deny access to all IPs except the ones of the 
+	This configuration deny access to all IPs except the ones of the
 	class "C" network "212.131.173.XXX".
 	Higher precedences win over lower ones.
 
@@ -1264,11 +1271,11 @@ Part 7			Configuration
 	"0.0.0.0"[TAB]"0.0.0.0"[TAB]"DENY"[TAB]"1"[NEWLINE]
 	"212.131.173.0"[TAB]"255.255.255.0"[TAB]"ALLOW"[TAB]"2"[NEWLINE]
 
-	This configuration deny access to all IPs except the ones of the 
+	This configuration deny access to all IPs except the ones of the
 	class "C" network "212.131.173.XXX".
 	Higher precedences win over lower ones.
-	
-	
+
+
 	FINGER.IPMAP.TAB :
 
 	"ipaddr"[TAB]"netmask"[TAB]"permission"[TAB]"precedence"[NEWLINE]
@@ -1279,7 +1286,7 @@ Part 7			Configuration
 	"0.0.0.0"[TAB]"0.0.0.0"[TAB]"DENY"[TAB]"1"[NEWLINE]
 	"212.131.173.0"[TAB]"255.255.255.0"[TAB]"ALLOW"[TAB]"2"[NEWLINE]
 
-	This configuration deny access to all IPs except the ones of the 
+	This configuration deny access to all IPs except the ones of the
 	class "C" network "212.131.173.XXX".
 	Higher precedences win over lower ones.
 
@@ -1365,7 +1372,7 @@ Part 7			Configuration
 	[LREDIRECT]
 	"lredirect"[TAB]"address"[TAB]...[NEWLINE]
 
-	Redirect message to internal or external addresses impersonating local domain 
+	Redirect message to internal or external addresses impersonating local domain
 	during messages delivery.
 
 	[WAIT]
@@ -1394,7 +1401,7 @@ Part 8			External Authentication
 	of using XMail  mailusers.tab  lookups.
 	Inside  userauth  directory You'll find one directory for each service whose
 	authentication can be handled externally ( for now only POP3 ).
-	Suppose We must authenticate  USERNAME  inside  DOMAIN , XMail first try 
+	Suppose We must authenticate  USERNAME  inside  DOMAIN , XMail first try
 	to lookup ( inside  userauth/pop3  ) a file named :
 
 	DOMAIN.tab
@@ -1428,10 +1435,10 @@ Part 8			External Authentication
 
 	command arg0 ... argN
 
-	that in success case must return zero. Any other exit code will be interpreted as 
+	that in success case must return zero. Any other exit code will be interpreted as
 	authentication operation failure, that in  userauth  case means that such user will be
 	not authenticated.
-	If the execution of the  command  will fail for system reasons ( command not found, 
+	If the execution of the  command  will fail for system reasons ( command not found,
 	access denied, etc ... ) then the user will be not authenticated.
 	If noone of this files id found then usual authentication is performed ( mailusers.tab ).
 	The use of external authentication does not avoid the presence of the user entry in
@@ -1491,7 +1498,7 @@ Part 9			SMTP Client Authentication
 
 	or
 
-	"cram-md5"	"md5-secret"
+	"cram-md5"	"username"	"password"
 
 	or
 
@@ -1665,20 +1672,20 @@ Part 11			SERVER.TAB variables
 	[DefaultSMTPGateways]
 	A comma separated list of SMTP servers XMail _must_ use to send its mails.
 	This has the precedence over MX records.
-	
+
 	[HeloUseRootDomain]
 	Make XMail to use the root domain as helo domain.
 
 	[RemoveSpoolErrors]
 	Indicate if mail has to be removed or stored in  froz  directory after a failure in
 	delivery or filtering.
-	
+
 	[AllowNullSender]
 	Enable null sender ( "MAIL FROM:<>" ) messages to be accepted by XMail.
-	
+
 	[AllowSmtpVRFY]
 	Enable the use of VRFY SMTP command. This flags may be forced by SMTP authentication.
-	
+
 	[Pop3SyncErrorAccount]
 	This defines the email account ( MUST be handled locally ) that will receive all
 	fetched email that XMail has not been able to deliver.
@@ -1700,7 +1707,7 @@ Part 11			SERVER.TAB variables
 	The format is :
 
 	dns.home.bogus.net:tcp,192.168.1.1:udp,...
-	
+
 	[DynDnsSetup]
 	Give the possibility to handle dynamic IP domain registration to dynamic IP servers.
 	One of these service providers is "www.dyndns.org" whose site You can watch for
@@ -1758,7 +1765,7 @@ Part 12			Domain message filters
 	execute external programs, such as scripts or real executables, that examines
 	( modify or both ) the message and gives its response with its return value.
 	This feature offer the ability to inspect and modify messages, giving a way
-	to reject messages based on its content, alter messages ( address rewriting ) 
+	to reject messages based on its content, alter messages ( address rewriting )
 	and so on.
 	If this filters returns  99  means that the message is rejected and must be stopped
 	in its travel.
@@ -1785,16 +1792,21 @@ Part 12			Domain message filters
 
 	@@FROM		will be substituted with the sender of the message
 	@@RCPT		will be substituted with the target of the message
-	@@FILE		will be substituted with the message file path ( the external command _must_ only read the file )
+	@@FILE		will be substituted with the message file path ( the external command may modify
+				the file if it's going to return 100 as command exit value )
 	@@MSGID		will be substituted with the ( XMail unique ) message id
 	@@MSGREF	will be substituted with the reference SMTP message id
-	@@TMPFILE	will create a copy of the message file to a temporary one. 
+	@@TMPFILE	will create a copy of the message file to a temporary one.
 			It's external program responsibility to delete the temporary file.
 
 	Here  "command"  is the name of an external program that must process the message and
-	return its processing result. If it return  99  the message is rejected and pushed 
+	return its processing result. If it return  99  the message is rejected and pushed
 	into  froz  subdirectory.
 	If all filters return values different from 99 the message can continue its trip.
+	The filter command may also modify the file and return 100, having in this way the ability
+	to change the file content ( AV scanning, content filter, message rewriting, etc ).
+	If the filter will change the message file it MUST keep the message structure and
+	it MUST terminate all line with <CR><LF>.
 	The spool files has this structure :
 
 	SmtpDomain		[ 1st line ]
@@ -1869,10 +1881,10 @@ Part 14			Mail Routing Through Addresses
 
 	A full implementation of SMTP protocol comprise the ability to perform mail routing
 	bypassing DNS MX records by means of setting in a ruled way the "RCPT TO: <>" request.
-	A mail from  xuser@hostz  directed to  @hosta,@hostb:foouser@hostc  is received 
-	by  @hosta  then this will be sent to  @hostb  using  "MAIL FROM: <@hosta:xuser@hostz>"  
+	A mail from  xuser@hostz  directed to  @hosta,@hostb:foouser@hostc  is received
+	by  @hosta  then this will be sent to  @hostb  using  "MAIL FROM: <@hosta:xuser@hostz>"
 	and  "RCPT TO: <@hostb:foouser@hostc>".
-	Then will be sent to  @hostc  using  "MAIL FROM: <@hostb,@hosta:xuser@hostz>"  
+	Then will be sent to  @hostc  using  "MAIL FROM: <@hostb,@hosta:xuser@hostz>"
 	and  "RCPT TO: <foouser@hostc>".
 
 
@@ -2190,7 +2202,7 @@ Part 19			XMail admin protocol
 
 	The result will be a RESSTRING.
 
-	
+
 	*) Authenticate user
 
 	"userauth"[TAB]"domain"[TAB]"username"[TAB]"password"<CR><LF>
@@ -2202,7 +2214,7 @@ Part 19			XMail admin protocol
 	password	= password
 
 	The result will be a RESSTRING.
-	
+
 
 	*) Adding an alias
 
@@ -2288,6 +2300,7 @@ Part 19			XMail admin protocol
 	varvalue	= variable value
 
 	There can be multiple variable assignments with a single call.
+	If  varvalue  is the string ".|rm" the variable  varname  is deleted.
 	The result will be a RESSTRING.
 
 
@@ -2732,9 +2745,9 @@ Part 21			CtrlClnt ( XMail administration )
 
 	with the command and parameters that follow adhering to the command syntax, ie :
 
-	CtrlClnt  -s mail.foo.org -u davide.libenzi -p ciao   useradd maticad foouser foopasswd U
+	CtrlClnt  -s mail.foo.org -u davide.libenzi -p ciao   useradd home.bogus foouser foopasswd U
 
-	will execute the command  useradd  with parameters  "maticad foouser foopasswd U".
+	will execute the command  useradd  with parameters  "home.bogus foouser foopasswd U".
 	CtrlClnt  will return 0 if the command is successful and != 0 if not.
 	If the command is a query one, then the result will be printed to  stdout.
 
@@ -2993,7 +3006,7 @@ Part 26			Thanks
 	My mother Adelisa, to give me the light.
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
-	My company, myCIO.com, to give me my wage.
+	My company, NAI.com, to give me my wage.
 
 
 

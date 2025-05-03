@@ -516,43 +516,46 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 
     for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
+        if (strchr(pMLUI->pszPerms, 'R') != NULL)
+        {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get unique spool/tmp file path
 ///////////////////////////////////////////////////////////////////////////////
-        char            szSpoolTmpFile[SYS_MAX_PATH] = "";
+            char            szSpoolTmpFile[SYS_MAX_PATH] = "";
 
-        if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
-        {
-            ErrorPush();
-            SysFreeCheck(pszMLSender);
-            UsrMLFreeUser(pMLUI);
-            UsrMLCloseDB(hUsersDB);
-            return (ErrorPop());
-        }
+            if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
+            {
+                ErrorPush();
+                SysFreeCheck(pszMLSender);
+                UsrMLFreeUser(pMLUI);
+                UsrMLCloseDB(hUsersDB);
+                return (ErrorPop());
+            }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Create spool file. If "pszMLSender" is NULL the original sender is kept
 ///////////////////////////////////////////////////////////////////////////////
-        if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szSpoolTmpFile) < 0)
-        {
-            ErrorPush();
-            SysFreeCheck(pszMLSender);
-            UsrMLFreeUser(pMLUI);
-            UsrMLCloseDB(hUsersDB);
-            return (ErrorPop());
-        }
+            if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szSpoolTmpFile) < 0)
+            {
+                ErrorPush();
+                SysFreeCheck(pszMLSender);
+                UsrMLFreeUser(pMLUI);
+                UsrMLCloseDB(hUsersDB);
+                return (ErrorPop());
+            }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
-        {
-            ErrorPush();
-            SysRemove(szSpoolTmpFile);
-            SysFreeCheck(pszMLSender);
-            UsrMLFreeUser(pMLUI);
-            UsrMLCloseDB(hUsersDB);
-            return (ErrorPop());
+            if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+            {
+                ErrorPush();
+                SysRemove(szSpoolTmpFile);
+                SysFreeCheck(pszMLSender);
+                UsrMLFreeUser(pMLUI);
+                UsrMLCloseDB(hUsersDB);
+                return (ErrorPop());
+            }
         }
 
         UsrMLFreeUser(pMLUI);
