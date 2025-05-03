@@ -25,7 +25,7 @@ CPP = cpp
 CC = c++
 LD = gcc
 
-CFLAGS = -O2 -I. -D__SOLARIS__ -DXMAIL_SPARC -D_THREAD_SAFE=1 -D_REENTRANT=1
+CFLAGS = -O2 -I. -D__UNIX__ -D__SOLARIS__ -DXMAIL_SPARC -D_THREAD_SAFE=1 -D_REENTRANT=1
 
 # LDFLAGS = -ldl -lsocket -lpthread -lrt
 LDFLAGS = -ldl -lsocket -lnsl -lpthread -lrt

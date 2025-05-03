@@ -391,7 +391,10 @@ int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize,
     }
 
 
-    int             iRecvBytes = recv((int) SockFD, pszBuffer, iBufferSize, 0);
+    int             iRecvBytes;
+
+    while (((iRecvBytes = recv((int) SockFD, pszBuffer, iBufferSize, 0)) == -1) &&
+           (errno == EINTR));
 
 
     if (iRecvBytes == -1)
@@ -456,7 +459,11 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 
 
     socklen_t       SockALen = (socklen_t) iFromlen;
-    int             iRecvBytes = recvfrom((int) SockFD, pszBuffer, iBufferSize, 0, pFrom, &SockALen);
+    int             iRecvBytes;
+
+    while (((iRecvBytes = recvfrom((int) SockFD, pszBuffer, iBufferSize, 0,
+                                   pFrom, &SockALen)) == -1) &&
+           (errno == EINTR));
 
 
     if (iRecvBytes == -1)
@@ -497,7 +504,10 @@ int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBuff
     }
 
 
-    int             iSendBytes = send((int) SockFD, pszBuffer, iBufferSize, 0);
+    int             iSendBytes;
+
+    while (((iSendBytes = send((int) SockFD, pszBuffer, iBufferSize, 0)) == -1) &&
+           (errno == EINTR));
 
 
     if (iSendBytes == -1)
@@ -561,7 +571,10 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
     }
 
 
-    int             iSendBytes = sendto((int) SockFD, pszBuffer, iBufferSize, 0, pTo, iToLen);
+    int             iSendBytes;
+
+    while (((iSendBytes = sendto((int) SockFD, pszBuffer, iBufferSize, 0, pTo, iToLen)) == -1) &&
+           (errno == EINTR));
 
 
     if (iSendBytes == -1)

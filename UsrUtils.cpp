@@ -59,12 +59,7 @@
 #define USR_ALIAS_LINE_MAX          512
 #define USER_PROFILE_FILE           "user.tab"
 #define DEFAULT_USER_PROFILE_FILE   "userdef.tab"
-
-#ifdef CONFIG_MAILDIR
-#define USER_MAILBOX_DIR            MAILDIR_DIRECTORY
-#else           // #ifdef CONFIG_MAILDIR
-#define USER_MAILBOX_DIR            "mailbox"
-#endif          // #ifdef CONFIG_MAILDIR
+#define MAILBOX_DIRECTORY           "mailbox"
 
 #define POP3_LOCKS_DIR              "pop3locks"
 #define MLUSERS_TABLE_FILE          "mlusers.tab"
@@ -124,7 +119,7 @@ struct AliasDBScanData
 
 
 static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                        SYS_UINT32 * puHashVal, bool bCaseSens);
+                                 SYS_UINT32 * puHashVal, bool bCaseSens);
 static int      UsrRebuildUsersIndexes(char const * pszUsrFilePath);
 static int      UsrRebuildAliasesIndexes(char const * pszAlsFilePath);
 static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath);
@@ -139,16 +134,17 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const c
 static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile, int iMaxPath);
 static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain = NULL);
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                        const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
+                                     const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
 static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI);
 static bool     UsrIsWildAlias(char const * pszAlias);
 static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName);
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
-                        const char *pszName);
+                                    const char *pszName);
 static UserInfo *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
-                        char *pszRealAddr);
+                                            char *pszRealAddr);
 static int      UsrDropUserEnv(UserInfo * pUI);
 static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile);
+static char const *UsrGetMailboxDir(void);
 static int      UsrCreateMailbox(char const * pszUsrUserPath);
 static int      UsrPrepareUserEnv(UserInfo * pUI);
 static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath);
@@ -187,7 +183,7 @@ static int      iIdxAlias_Domain_Alias[] =
 
 
 static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                        SYS_UINT32 * puHashVal, bool bCaseSens)
+                                 SYS_UINT32 * puHashVal, bool bCaseSens)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  This will group wild alias ( * ? )
@@ -195,7 +191,7 @@ static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const *
     int             iFieldsCount = StrStringsCount(ppszTabTokens);
 
     if ((iFieldsCount > alsAlias) &&
-            (UsrIsWildAlias(ppszTabTokens[alsAlias]) || UsrIsWildAlias(ppszTabTokens[alsDomain])))
+        (UsrIsWildAlias(ppszTabTokens[alsAlias]) || UsrIsWildAlias(ppszTabTokens[alsDomain])))
     {
         *puHashVal = WILD_ALIASES_HASH;
 
@@ -330,11 +326,11 @@ UserType        UsrGetUserType(UserInfo * pUI)
 
     switch (ToUpper(pUI->pszType[0]))
     {
-        case ('U'):
-            return (usrTypeUser);
+    case ('U'):
+        return (usrTypeUser);
 
-        case ('M'):
-            return (usrTypeML);
+    case ('M'):
+        return (usrTypeML);
     }
 
     return (usrTypeError);
@@ -344,7 +340,7 @@ UserType        UsrGetUserType(UserInfo * pUI)
 
 
 UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszName,
-                        char const * pszPassword, UserType TypeUser)
+                                     char const * pszPassword, UserType TypeUser)
 {
 
     UserInfo       *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
@@ -444,7 +440,7 @@ void            UsrFreeUserInfo(UserInfo * pUI)
 
 
 char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
-                        const char *pszDefault)
+                                  const char *pszDefault)
 {
 
     UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
@@ -491,7 +487,7 @@ int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName)
 
 
 int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
-                        const char *pszValue)
+                                  const char *pszValue)
 {
 
     UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
@@ -532,7 +528,7 @@ char          **UsrGetProfileVars(UserInfo * pUI)
     UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(pUI->InfoList);
 
     for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-            ListNext(pUI->InfoList, (PLISTLINK) pUIV))
+             ListNext(pUI->InfoList, (PLISTLINK) pUIV))
         ppszVars[iCurrVar++] = SysStrDup(pUIV->pszName);
 
     ppszVars[iCurrVar] = NULL;
@@ -591,7 +587,7 @@ static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName)
     UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(InfoList);
 
     for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-            ListNext(InfoList, (PLISTLINK) pUIV))
+             ListNext(InfoList, (PLISTLINK) pUIV))
         if (strcmp(pUIV->pszName, pszName) == 0)
             return (pUIV);
 
@@ -607,7 +603,7 @@ static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile)
     UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(InfoList);
 
     for (; pUIV != INVALID_SLIST_PTR; pUIV = (UserInfoVar *)
-            ListNext(InfoList, (PLISTLINK) pUIV))
+             ListNext(InfoList, (PLISTLINK) pUIV))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Write variabile name
@@ -641,12 +637,12 @@ static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile)
 
 
 static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
-                        const char *pszFilePath)
+                                const char *pszFilePath)
 {
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -745,7 +741,7 @@ static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUserDefFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -796,15 +792,15 @@ static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain
 
 
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                        const char *pszAlias, char *pszName, bool bWildMatch)
+                                     const char *pszAlias, char *pszName, bool bWildMatch)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index ( lookup precise aliases )
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszTabTokens = TbixLookup(pszAlsFilePath, iIdxAlias_Domain_Alias, false,
-            pszDomain,
-            pszAlias,
-            NULL);
+                                               pszDomain,
+                                               pszAlias,
+                                               NULL);
 
     if (ppszTabTokens != NULL)
     {
@@ -828,7 +824,7 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
 //  under WILD_ALIASES_HASH hash key )
 ///////////////////////////////////////////////////////////////////////////////
     INDEX_HANDLE    hIndexLookup = TbixOpenHandle(pszAlsFilePath, iIdxAlias_Domain_Alias,
-            WILD_ALIASES_HASH);
+                                                  WILD_ALIASES_HASH);
 
     if (hIndexLookup != INVALID_INDEX_HANDLE)
     {
@@ -845,8 +841,8 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
             int             iFieldsCount = StrStringsCount(ppszTabTokens);
 
             if ((iFieldsCount >= alsMax) &&
-                    StrIWildMatch(pszDomain, ppszTabTokens[alsDomain]) &&
-                    StrIWildMatch(pszAlias, ppszTabTokens[alsAlias]))
+                StrIWildMatch(pszDomain, ppszTabTokens[alsDomain]) &&
+                StrIWildMatch(pszAlias, ppszTabTokens[alsAlias]))
             {
                 if (pszName != NULL)
                     strcpy(pszName, ppszTabTokens[alsName]);
@@ -871,7 +867,7 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
 
 
 int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
-                        char *pszName, bool bWildMatch)
+                                   char *pszName, bool bWildMatch)
 {
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
@@ -881,14 +877,14 @@ int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (0);
 
 
     int             iLookupResult = UsrAliasLookupNameLK(szAlsFilePath, pszDomain,
-            pszAlias, pszName, bWildMatch);
+                                                         pszAlias, pszName, bWildMatch);
 
 
     RLckUnlockSH(hResLock);
@@ -945,7 +941,7 @@ static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI)
 
 
 AliasInfo      *UsrAllocAlias(const char *pszDomain, const char *pszAlias,
-                        const char *pszName)
+                              const char *pszName)
 {
 
     AliasInfo      *pAI = (AliasInfo *) SysAlloc(sizeof(AliasInfo));
@@ -995,7 +991,7 @@ int             UsrAddAlias(AliasInfo * pAI)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -1022,7 +1018,7 @@ int             UsrAddAlias(AliasInfo * pAI)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= alsMax) && (stricmp(pAI->pszDomain, ppszStrings[alsDomain]) == 0) &&
-                (stricmp(pAI->pszAlias, ppszStrings[alsAlias]) == 0))
+            (stricmp(pAI->pszAlias, ppszStrings[alsAlias]) == 0))
         {
             StrFreeStrings(ppszStrings);
             fclose(pAlsFile);
@@ -1080,7 +1076,7 @@ int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1126,7 +1122,7 @@ int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= alsMax) && (stricmp(pszDomain, ppszStrings[alsDomain]) == 0) &&
-                (stricmp(pszAlias, ppszStrings[alsAlias]) == 0))
+            (stricmp(pszAlias, ppszStrings[alsAlias]) == 0))
         {
 
             ++iAliasFound;
@@ -1201,7 +1197,7 @@ int             UsrRemoveDomainAliases(const char *pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1324,7 +1320,7 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -1370,9 +1366,9 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= alsMax) &&
-                (((stricmp(pszName, ppszStrings[alsName]) == 0) &&
-                    (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) ||
-                (stricmp(szUserAddress, ppszStrings[alsName]) == 0)))
+            (((stricmp(pszName, ppszStrings[alsName]) == 0) &&
+              (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) ||
+             (stricmp(szUserAddress, ppszStrings[alsName]) == 0)))
         {
 
             ++iAliasFound;
@@ -1432,15 +1428,15 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
 
 
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
-                        const char *pszName)
+                                    const char *pszName)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszTabTokens = TbixLookup(pszUsrFilePath, iIdxUser_Domain_Name, false,
-            pszDomain,
-            pszName,
-            NULL);
+                                               pszDomain,
+                                               pszName,
+                                               NULL);
 
     if (ppszTabTokens == NULL)
     {
@@ -1471,7 +1467,7 @@ UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -1509,14 +1505,14 @@ UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
 
 
 static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
-                        char *pszRealAddr)
+                                               char *pszRealAddr)
 {
 
     char const     *pszAliasedUser = NULL,
-                   *pszAliasedDomain = NULL;
+        *pszAliasedDomain = NULL;
     char            szAliasedAccount[MAX_ADDR_NAME] = "",
-                    szAliasedName[MAX_ADDR_NAME] = "",
-                    szAliasedDomain[MAX_ADDR_NAME] = "";
+        szAliasedName[MAX_ADDR_NAME] = "",
+        szAliasedDomain[MAX_ADDR_NAME] = "";
 
     if (UsrAliasLookupName(pszDomain, pszName, szAliasedAccount))
     {
@@ -1540,7 +1536,7 @@ static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -1564,7 +1560,7 @@ static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char
 
 
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
-                        char *pszRealAddr)
+                                        char *pszRealAddr)
 {
 
     UserInfo       *pUI = UsrGetUserByNameOrAliasNDA(pszDomain, pszName, pszRealAddr);
@@ -1583,7 +1579,7 @@ UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszNa
 
 
 int             UsrRemoveUser(const char *pszDomain, const char *pszName,
-                        unsigned int uUserID)
+                              unsigned int uUserID)
 {
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
@@ -1597,7 +1593,7 @@ int             UsrRemoveUser(const char *pszDomain, const char *pszName,
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1644,8 +1640,8 @@ int             UsrRemoveUser(const char *pszDomain, const char *pszName,
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0) &&
-                (((uUserID != 0) && (uUserID == (unsigned int) atol(ppszStrings[usrID]))) ||
-                        ((pszName != NULL) && (stricmp(pszName, ppszStrings[usrName]) == 0))))
+            (((uUserID != 0) && (uUserID == (unsigned int) atol(ppszStrings[usrID]))) ||
+             ((pszName != NULL) && (stricmp(pszName, ppszStrings[usrName]) == 0))))
         {
             if (pUI != NULL)
                 UsrFreeUserInfo(pUI);
@@ -1745,7 +1741,7 @@ int             UsrModifyUser(UserInfo * pUI)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -1792,12 +1788,12 @@ int             UsrModifyUser(UserInfo * pUI)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= usrMax) && (pFoundUI == NULL) &&
-                (pUI->uUserID == (unsigned int) atol(ppszStrings[usrID])) &&
-                (stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
-                (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
+            (pUI->uUserID == (unsigned int) atol(ppszStrings[usrID])) &&
+            (stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
+            (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
         {
             if ((UsrWriteUser(pUI, pTmpFile) < 0) ||
-                    ((pFoundUI = UsrGetUserFromStrings(ppszStrings)) == NULL))
+                ((pFoundUI = UsrGetUserFromStrings(ppszStrings)) == NULL))
             {
                 ErrorPush();
                 fclose(pUsrFile);
@@ -1898,7 +1894,7 @@ int             UsrRemoveDomainUsers(const char *pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -2131,7 +2127,7 @@ int             UsrAddUser(UserInfo * pUI)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2163,7 +2159,7 @@ int             UsrAddUser(UserInfo * pUI)
         if (iFieldsCount >= usrMax)
         {
             if ((stricmp(pUI->pszDomain, ppszStrings[usrDomain]) == 0) &&
-                    (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
+                (stricmp(pUI->pszName, ppszStrings[usrName]) == 0))
             {
                 StrFreeStrings(ppszStrings);
                 fclose(pUsrFile);
@@ -2229,31 +2225,39 @@ int             UsrAddUser(UserInfo * pUI)
 
 
 
+static char const *UsrGetMailboxDir(void)
+{
+
+
+    return ((iMailboxType == XMAIL_MAILBOX) ? MAILBOX_DIRECTORY: MAILDIR_DIRECTORY);
+
+}
+
+
+
 static int      UsrCreateMailbox(char const * pszUsrUserPath)
 {
-#ifdef CONFIG_MAILDIR
 
-    return (MdirCreateStructure(pszUsrUserPath));
-
-#else           // #ifdef CONFIG_MAILDIR
-
+    if (iMailboxType == XMAIL_MAILBOX)
+    {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create mailbox directory
 ///////////////////////////////////////////////////////////////////////////////
-    char            szUsrMailboxPath[SYS_MAX_PATH] = "";
+        char            szUsrMailboxPath[SYS_MAX_PATH] = "";
 
-    StrSNCpy(szUsrMailboxPath, pszUsrUserPath);
+        StrSNCpy(szUsrMailboxPath, pszUsrUserPath);
 
-    AppendSlash(szUsrMailboxPath);
-    StrSNCat(szUsrMailboxPath, USER_MAILBOX_DIR);
+        AppendSlash(szUsrMailboxPath);
+        StrSNCat(szUsrMailboxPath, MAILBOX_DIRECTORY);
 
-    if (SysMakeDir(szUsrMailboxPath) < 0)
-        return (ErrGetErrorCode());
+        if (SysMakeDir(szUsrMailboxPath) < 0)
+            return (ErrGetErrorCode());
 
+        return (0);
+    }
 
-    return (0);
+    return (MdirCreateStructure(pszUsrUserPath));
 
-#endif          // #ifdef CONFIG_MAILDIR
 }
 
 
@@ -2358,7 +2362,7 @@ int             UsrFlushUserVars(UserInfo * pUI)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szUsrProfileFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2398,7 +2402,7 @@ int             UsrGetDBFileSnapShot(const char *pszFileName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szUsrFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2475,7 +2479,7 @@ UserInfo       *UsrGetFirstUser(USRF_HANDLE hUsersDB)
     char            szUsrLine[USR_TABLE_LINE_MAX] = "";
 
     while ((pUI == NULL) &&
-            (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
+           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
@@ -2506,7 +2510,7 @@ UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB)
     char            szUsrLine[USR_TABLE_LINE_MAX] = "";
 
     while ((pUI == NULL) &&
-            (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
+           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pUDBSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
@@ -2612,7 +2616,7 @@ char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath,
 
     UsrGetUserPath(pUI, pszMBPath, iMaxPath, 1);
 
-    StrNCat(pszMBPath, USER_MAILBOX_DIR, iMaxPath);
+    StrNCat(pszMBPath, UsrGetMailboxDir(), iMaxPath);
     if (iFinalSlash)
         AppendSlash(pszMBPath);
 
@@ -2623,68 +2627,67 @@ char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath,
 
 
 int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
-                        char const * pszMessageID)
+                                 char const * pszMessageID)
 {
-#ifdef CONFIG_MAILDIR
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get user Maildir path
-///////////////////////////////////////////////////////////////////////////////
-    char            szMBPath[SYS_MAX_PATH] = "";
-
-    UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
-
-
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
-                            sizeof(szResLock)));
-
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
-
-    if (MdirMoveMessage(szMBPath, pszFileName, pszMessageID) < 0)
+    if (iMailboxType == XMAIL_MAILBOX)
     {
-        ErrorPush();
-        RLckUnlockEX(hResLock);
-        return (ErrorPop());
-    }
-
-    RLckUnlockEX(hResLock);
-
-    return (0);
-
-#else           // #ifdef CONFIG_MAILDIR
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup full mailbox file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szMBPath[SYS_MAX_PATH] = "",
-                    szMBFile[SYS_MAX_PATH] = "";
+        char            szMBPath[SYS_MAX_PATH] = "",
+            szMBFile[SYS_MAX_PATH] = "";
 
-    UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
+        UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
-    sprintf(szMBFile, "%s" SYS_SLASH_STR "%s", szMBPath, pszMessageID);
+        sprintf(szMBFile, "%s" SYS_SLASH_STR "%s", szMBPath, pszMessageID);
 
 
-    char            szResLock[SYS_MAX_PATH] = "";
-    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
-                            sizeof(szResLock)));
+        char            szResLock[SYS_MAX_PATH] = "";
+        RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+                                                              sizeof(szResLock)));
 
-    if (hResLock == INVALID_RLCK_HANDLE)
-        return (ErrGetErrorCode());
+        if (hResLock == INVALID_RLCK_HANDLE)
+            return (ErrGetErrorCode());
 
-    if (MscMoveFile(pszFileName, szMBFile) < 0)
-    {
-        ErrorPush();
+        if (MscMoveFile(pszFileName, szMBFile) < 0)
+        {
+            ErrorPush();
+            RLckUnlockEX(hResLock);
+            return (ErrorPop());
+        }
+
         RLckUnlockEX(hResLock);
-        return (ErrorPop());
     }
+    else
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Get user Maildir path
+///////////////////////////////////////////////////////////////////////////////
+        char            szMBPath[SYS_MAX_PATH] = "";
 
-    RLckUnlockEX(hResLock);
+        UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
+
+
+        char            szResLock[SYS_MAX_PATH] = "";
+        RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMBPath, szResLock,
+                                                              sizeof(szResLock)));
+
+        if (hResLock == INVALID_RLCK_HANDLE)
+            return (ErrGetErrorCode());
+
+        if (MdirMoveMessage(szMBPath, pszFileName, pszMessageID) < 0)
+        {
+            ErrorPush();
+            RLckUnlockEX(hResLock);
+            return (ErrorPop());
+        }
+
+        RLckUnlockEX(hResLock);
+    }
 
     return (0);
 
-#endif          // #ifdef CONFIG_MAILDIR
 }
 
 
@@ -2709,7 +2712,7 @@ int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2745,7 +2748,7 @@ int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMPFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2793,7 +2796,7 @@ int             UsrGetAliasDBFileSnapShot(char const * pszFileName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAlsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2870,7 +2873,7 @@ AliasInfo      *UsrAliasGetFirst(ALSF_HANDLE hAliasDB)
     char            szUsrLine[USR_ALIAS_LINE_MAX] = "";
 
     while ((pAI == NULL) &&
-            (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
+           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
 
@@ -2901,7 +2904,7 @@ AliasInfo      *UsrAliasGetNext(ALSF_HANDLE hAliasDB)
     char            szUsrLine[USR_ALIAS_LINE_MAX] = "";
 
     while ((pAI == NULL) &&
-            (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
+           (MscFGets(szUsrLine, sizeof(szUsrLine) - 1, pADBSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szUsrLine);
 

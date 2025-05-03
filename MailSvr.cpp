@@ -125,18 +125,23 @@ static char   **SvrMergeArgs(int iArgs, char *pszArgs[], int &iArgsCount);
 //  External visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
 SHB_HANDLE      hShbFING,
-                hShbCTRL,
-                hShbPOP3,
-                hShbSMTP,
-                hShbSMAIL,
-                hShbPSYNC,
-                hShbLMAIL;
+    hShbCTRL,
+    hShbPOP3,
+    hShbSMTP,
+    hShbSMAIL,
+    hShbPSYNC,
+    hShbLMAIL;
 char            szMailPath[SYS_MAX_PATH];
 QUEUE_HANDLE    hSpoolQueue;
 SYS_SEMAPHORE   hSyncSem;
 bool            bServerDebug;
 int             iLogRotateHours = LOG_ROTATE_HOURS;
 int             iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
+#ifdef __UNIX__
+int             iMailboxType = XMAIL_MAILDIR;
+#else
+int             iMailboxType = XMAIL_MAILBOX;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Local visible variabiles
@@ -146,12 +151,12 @@ static bool     bServerShutdown = false;
 static int      iNumSMAILThreads;
 static int      iNumLMAILThreads;
 static SYS_THREAD hCTRLThread,
-                hFINGThread,
-                hPOP3Thread,
-                hSMTPThread,
-                hSMAILThreads[MAX_SMAIL_THREADS],
-                hLMAILThreads[MAX_LMAIL_THREADS],
-                hPSYNCThread;
+    hFINGThread,
+    hPOP3Thread,
+    hSMTPThread,
+    hSMAILThreads[MAX_SMAIL_THREADS],
+    hLMAILThreads[MAX_LMAIL_THREADS],
+    hPSYNCThread;
 
 
 
@@ -210,8 +215,8 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_CTRL_PORT,
-                    iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT,
-                    iNumAddr = 0;
+        iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT,
+        iNumAddr = 0;
     long            lMaxThreads = MAX_CTRL_THREADS;
     unsigned long   ulFlags = 0;
     ServerNetPath   SvrPath[MAX_CTRL_ACCEPT_ADDRESSES];
@@ -223,30 +228,30 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('p'):
-                if (++ii < iArgCount)
-                    iPort = atoi(pszArgs[ii]);
-                break;
+        case ('p'):
+            if (++ii < iArgCount)
+                iPort = atoi(pszArgs[ii]);
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iSessionTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iSessionTimeout = atoi(pszArgs[ii]);
+            break;
 
-            case ('l'):
-                ulFlags |= CTRLF_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= CTRLF_LOG_ENABLED;
+            break;
 
-            case ('I'):
-                if ((++ii < iArgCount) &&
-                        (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
-                    ++iNumAddr;
-                break;
+        case ('I'):
+            if ((++ii < iArgCount) &&
+                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                ++iNumAddr;
+            break;
 
-            case ('X'):
-                if (++ii < iArgCount)
-                    lMaxThreads = atol(pszArgs[ii]);
-                break;
+        case ('X'):
+            if (++ii < iArgCount)
+                lMaxThreads = atol(pszArgs[ii]);
+            break;
         }
     }
 
@@ -324,7 +329,7 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_FINGER_PORT,
-                    iNumAddr = 0;
+        iNumAddr = 0;
     unsigned long   ulFlags = 0;
     ServerNetPath   SvrPath[MAX_FING_ACCEPT_ADDRESSES];
 
@@ -335,20 +340,20 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('p'):
-                if (++ii < iArgCount)
-                    iPort = atoi(pszArgs[ii]);
-                break;
+        case ('p'):
+            if (++ii < iArgCount)
+                iPort = atoi(pszArgs[ii]);
+            break;
 
-            case ('l'):
-                ulFlags |= FINGF_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= FINGF_LOG_ENABLED;
+            break;
 
-            case ('I'):
-                if ((++ii < iArgCount) &&
-                        (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
-                    ++iNumAddr;
-                break;
+        case ('I'):
+            if ((++ii < iArgCount) &&
+                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                ++iNumAddr;
+            break;
         }
     }
 
@@ -422,9 +427,9 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_POP3_PORT,
-                    iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
-                    iBadLoginWait = STD_POP3_BADLOGIN_WAIT,
-                    iNumAddr = 0;
+        iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
+        iBadLoginWait = STD_POP3_BADLOGIN_WAIT,
+        iNumAddr = 0;
     long            lMaxThreads = MAX_POP3_THREADS;
     unsigned long   ulFlags = 0;
     ServerNetPath   SvrPath[MAX_POP3_ACCEPT_ADDRESSES];
@@ -437,39 +442,39 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('p'):
-                if (++ii < iArgCount)
-                    iPort = atoi(pszArgs[ii]);
-                break;
+        case ('p'):
+            if (++ii < iArgCount)
+                iPort = atoi(pszArgs[ii]);
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iSessionTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iSessionTimeout = atoi(pszArgs[ii]);
+            break;
 
-            case ('w'):
-                if (++ii < iArgCount)
-                    iBadLoginWait = atoi(pszArgs[ii]);
-                break;
+        case ('w'):
+            if (++ii < iArgCount)
+                iBadLoginWait = atoi(pszArgs[ii]);
+            break;
 
-            case ('l'):
-                ulFlags |= POP3F_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= POP3F_LOG_ENABLED;
+            break;
 
-            case ('h'):
-                ulFlags |= POP3F_HANG_ON_BADLOGIN;
-                break;
+        case ('h'):
+            ulFlags |= POP3F_HANG_ON_BADLOGIN;
+            break;
 
-            case ('I'):
-                if ((++ii < iArgCount) &&
-                        (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
-                    ++iNumAddr;
-                break;
+        case ('I'):
+            if ((++ii < iArgCount) &&
+                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                ++iNumAddr;
+            break;
 
-            case ('X'):
-                if (++ii < iArgCount)
-                    lMaxThreads = atol(pszArgs[ii]);
-                break;
+        case ('X'):
+            if (++ii < iArgCount)
+                lMaxThreads = atol(pszArgs[ii]);
+            break;
         }
     }
 
@@ -550,9 +555,9 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_SMTP_PORT,
-                    iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
-                    iMaxRcpts = STD_SMTP_MAX_RCPTS,
-                    iNumAddr = 0;
+        iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
+        iMaxRcpts = STD_SMTP_MAX_RCPTS,
+        iNumAddr = 0;
     unsigned int    uPopAuthExpireTime = STD_POP3AUTH_EXPIRE_TIME;
     long            lMaxThreads = MAX_SMTP_THREADS;
     unsigned long   ulFlags = 0;
@@ -565,40 +570,40 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('p'):
-                if (++ii < iArgCount)
-                    iPort = atoi(pszArgs[ii]);
-                break;
+        case ('p'):
+            if (++ii < iArgCount)
+                iPort = atoi(pszArgs[ii]);
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iSessionTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iSessionTimeout = atoi(pszArgs[ii]);
+            break;
 
-            case ('l'):
-                ulFlags |= SMTPF_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= SMTPF_LOG_ENABLED;
+            break;
 
-            case ('I'):
-                if ((++ii < iArgCount) &&
-                        (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
-                    ++iNumAddr;
-                break;
+        case ('I'):
+            if ((++ii < iArgCount) &&
+                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                ++iNumAddr;
+            break;
 
-            case ('X'):
-                if (++ii < iArgCount)
-                    lMaxThreads = atol(pszArgs[ii]);
-                break;
+        case ('X'):
+            if (++ii < iArgCount)
+                lMaxThreads = atol(pszArgs[ii]);
+            break;
 
-            case ('r'):
-                if (++ii < iArgCount)
-                    iMaxRcpts = atoi(pszArgs[ii]);
-                break;
+        case ('r'):
+            if (++ii < iArgCount)
+                iMaxRcpts = atoi(pszArgs[ii]);
+            break;
 
-            case ('e'):
-                if (++ii < iArgCount)
-                    uPopAuthExpireTime = (unsigned int) atol(pszArgs[ii]);
-                break;
+        case ('e'):
+            if (++ii < iArgCount)
+                uPopAuthExpireTime = (unsigned int) atol(pszArgs[ii]);
+            break;
 
         }
     }
@@ -675,9 +680,9 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 {
 
     int             ii,
-                    iRetryTimeout = STD_SMAIL_RETRY_TIMEOUT,
-                    iRetryIncrRatio = STD_SMAIL_RETRY_INCR_RATIO,
-                    iMaxRetry = STD_SMAIL_MAX_RETRY;
+        iRetryTimeout = STD_SMAIL_RETRY_TIMEOUT,
+        iRetryIncrRatio = STD_SMAIL_RETRY_INCR_RATIO,
+        iMaxRetry = STD_SMAIL_MAX_RETRY;
     unsigned long   ulFlags = 0;
 
     iNumSMAILThreads = STD_SMAIL_THREADS;
@@ -689,31 +694,31 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('n'):
-                if (++ii < iArgCount)
-                    iNumSMAILThreads = atoi(pszArgs[ii]);
+        case ('n'):
+            if (++ii < iArgCount)
+                iNumSMAILThreads = atoi(pszArgs[ii]);
 
-                iNumSMAILThreads = Min(MAX_SMAIL_THREADS, Max(1, iNumSMAILThreads));
-                break;
+            iNumSMAILThreads = Min(MAX_SMAIL_THREADS, Max(1, iNumSMAILThreads));
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iRetryTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iRetryTimeout = atoi(pszArgs[ii]);
+            break;
 
-            case ('i'):
-                if (++ii < iArgCount)
-                    iRetryIncrRatio = atoi(pszArgs[ii]);
-                break;
+        case ('i'):
+            if (++ii < iArgCount)
+                iRetryIncrRatio = atoi(pszArgs[ii]);
+            break;
 
-            case ('r'):
-                if (++ii < iArgCount)
-                    iMaxRetry = atoi(pszArgs[ii]);
-                break;
+        case ('r'):
+            if (++ii < iArgCount)
+                iMaxRetry = atoi(pszArgs[ii]);
+            break;
 
-            case ('l'):
-                ulFlags |= SMAILF_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= SMAILF_LOG_ENABLED;
+            break;
         }
     }
 
@@ -744,7 +749,7 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
     SvrGetSpoolDir(szSpoolDir, sizeof(szSpoolDir));
 
     if ((hSpoolQueue = QueOpen(szSpoolDir, iMaxRetry, iRetryTimeout, iRetryIncrRatio,
-                            iQueueSplitLevel)) == INVALID_QUEUE_HANDLE)
+                               iQueueSplitLevel)) == INVALID_QUEUE_HANDLE)
     {
         ErrorPush();
         ShbCloseBlock(hShbSMAIL);
@@ -806,7 +811,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
 {
 
     int             iSyncInterval = STD_PSYNC_INTERVAL,
-                    iNumSyncThreads = STD_PSYNC_NUM_THREADS;
+        iNumSyncThreads = STD_PSYNC_NUM_THREADS;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -815,17 +820,17 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('i'):
-                if (++ii < iArgCount)
-                    iSyncInterval = atoi(pszArgs[ii]);
-                break;
+        case ('i'):
+            if (++ii < iArgCount)
+                iSyncInterval = atoi(pszArgs[ii]);
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iNumSyncThreads = atoi(pszArgs[ii]);
+        case ('t'):
+            if (++ii < iArgCount)
+                iNumSyncThreads = atoi(pszArgs[ii]);
 
-                iNumSyncThreads = Min(MAX_PSYNC_NUM_THREADS, Max(1, iNumSyncThreads));
-                break;
+            iNumSyncThreads = Min(MAX_PSYNC_NUM_THREADS, Max(1, iNumSyncThreads));
+            break;
         }
     }
 
@@ -914,7 +919,7 @@ static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
 {
 
     int             ii,
-                    iSleepTimeout = STD_LMAILTHREAD_SLEEP_TIME;
+        iSleepTimeout = STD_LMAILTHREAD_SLEEP_TIME;
     unsigned long   ulFlags = 0;
 
     iNumLMAILThreads = STD_LMAIL_THREADS;
@@ -926,21 +931,21 @@ static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('n'):
-                if (++ii < iArgCount)
-                    iNumLMAILThreads = atoi(pszArgs[ii]);
+        case ('n'):
+            if (++ii < iArgCount)
+                iNumLMAILThreads = atoi(pszArgs[ii]);
 
-                iNumLMAILThreads = Min(MAX_LMAIL_THREADS, Max(1, iNumLMAILThreads));
-                break;
+            iNumLMAILThreads = Min(MAX_LMAIL_THREADS, Max(1, iNumLMAILThreads));
+            break;
 
-            case ('l'):
-                ulFlags |= LMAILF_LOG_ENABLED;
-                break;
+        case ('l'):
+            ulFlags |= LMAILF_LOG_ENABLED;
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iSleepTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iSleepTimeout = atoi(pszArgs[ii]);
+            break;
         }
     }
 
@@ -1030,7 +1035,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
 
     int             iSndBufSize = -1,
-                    iRcvBufSize = -1;
+        iRcvBufSize = -1;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -1039,48 +1044,56 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][2])
         {
-            case ('s'):
-                if (++ii < iArgCount)
-                {
-                    StrSNCpy(szMailPath, pszArgs[ii]);
-                    DelFinalSlash(szMailPath);
-                }
-                break;
+        case ('s'):
+            if (++ii < iArgCount)
+            {
+                StrSNCpy(szMailPath, pszArgs[ii]);
+                DelFinalSlash(szMailPath);
+            }
+            break;
 
-            case ('d'):
-                bServerDebug = true;
-                break;
+        case ('d'):
+            bServerDebug = true;
+            break;
 
-            case ('r'):
-                if (++ii < iArgCount)
-                    iLogRotateHours = atoi(pszArgs[ii]);
-                break;
+        case ('r'):
+            if (++ii < iArgCount)
+                iLogRotateHours = atoi(pszArgs[ii]);
+            break;
 
-            case ('x'):
-                if (++ii < iArgCount)
-                {
-                    iQueueSplitLevel = atoi(pszArgs[ii]);
+        case ('x'):
+            if (++ii < iArgCount)
+            {
+                iQueueSplitLevel = atoi(pszArgs[ii]);
 
-                    while (!IsPrimeNumber(iQueueSplitLevel))
-                        ++iQueueSplitLevel;
-                }
-                break;
+                while (!IsPrimeNumber(iQueueSplitLevel))
+                    ++iQueueSplitLevel;
+            }
+            break;
 
-            case ('R'):
-                if (++ii < iArgCount)
-                {
-                    iRcvBufSize = atoi(pszArgs[ii]);
-                    iRcvBufSize = NbrCeil(iRcvBufSize, 1024);
-                }
-                break;
+        case ('R'):
+            if (++ii < iArgCount)
+            {
+                iRcvBufSize = atoi(pszArgs[ii]);
+                iRcvBufSize = NbrCeil(iRcvBufSize, 1024);
+            }
+            break;
 
-            case ('S'):
-                if (++ii < iArgCount)
-                {
-                    iSndBufSize = atoi(pszArgs[ii]);
-                    iSndBufSize = NbrCeil(iSndBufSize, 1024);
-                }
-                break;
+        case ('S'):
+            if (++ii < iArgCount)
+            {
+                iSndBufSize = atoi(pszArgs[ii]);
+                iSndBufSize = NbrCeil(iSndBufSize, 1024);
+            }
+            break;
+
+        case ('M'):
+            iMailboxType = XMAIL_MAILDIR;
+            break;
+
+        case ('m'):
+            iMailboxType = XMAIL_MAILBOX;
+            break;
 
         }
     }
@@ -1097,7 +1110,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 //  Setup library socket buffers
 ///////////////////////////////////////////////////////////////////////////////
     SysSetupSocketBuffers((iSndBufSize > 0) ? &iSndBufSize: NULL,
-            (iRcvBufSize > 0) ? &iRcvBufSize: NULL);
+                          (iRcvBufSize > 0) ? &iRcvBufSize: NULL);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup shutdown file name ( must be called before any shutdown function )
@@ -1130,10 +1143,10 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 //  Align table indexes
 ///////////////////////////////////////////////////////////////////////////////
     if ((UsrCheckUsersIndexes() < 0) ||
-            (UsrCheckAliasesIndexes() < 0) ||
-            (ExAlCheckAliasIndexes() < 0) ||
-            (MDomCheckDomainsIndexes() < 0) ||
-            (ADomCheckDomainsIndexes() < 0))
+        (UsrCheckAliasesIndexes() < 0) ||
+        (ExAlCheckAliasIndexes() < 0) ||
+        (MDomCheckDomainsIndexes() < 0) ||
+        (ADomCheckDomainsIndexes() < 0))
     {
         ErrorPush();
         RLckCleanupLockers();

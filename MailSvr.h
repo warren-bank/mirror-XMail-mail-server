@@ -26,6 +26,9 @@
 
 
 
+#define XMAIL_MAILDIR    1
+#define XMAIL_MAILBOX    2
+
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,7 +47,7 @@ extern QUEUE_HANDLE hSpoolQueue;
 extern SYS_SEMAPHORE hSyncSem;
 extern int      iLogRotateHours;
 extern int      iQueueSplitLevel;
-
+extern int      iMailboxType;
 
 
 

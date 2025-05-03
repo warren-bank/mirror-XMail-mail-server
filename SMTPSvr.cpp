@@ -77,11 +77,12 @@
 #define SMTPF_VRFY_ENABLED      (1 << 4)
 #define SMTPF_BLOCKED_IP        (1 << 5)
 #define SMTPF_ETRN_ENABLED      (1 << 6)
+#define SMTPF_NOEMIT_AUTH       (1 << 7)
 
 #define SMTPF_STATIC_MASK       SMTPF_BLOCKED_IP
 #define SMTPF_AUTH_MASK         (SMTPF_RELAY_ENABLED | SMTPF_MAIL_UNLOCKED | SMTPF_AUTHENTICATED | \
                                         SMTPF_VRFY_ENABLED | SMTPF_ETRN_ENABLED)
-#define SMTPF_RESET_MASK        (SMTPF_AUTH_MASK | SMTPF_STATIC_MASK)
+#define SMTPF_RESET_MASK        (SMTPF_AUTH_MASK | SMTPF_STATIC_MASK | SMTPF_NOEMIT_AUTH)
 
 
 
@@ -128,6 +129,7 @@ struct SMTPSession
     char            szTimeStamp[256];
     unsigned long   ulSetupFlags;
     unsigned long   ulFlags;
+    char           *pszCustMsg;
 
 };
 
@@ -164,6 +166,7 @@ static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI);
 static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
                                char const * pszRecipient, char const * pszStatus,
                                unsigned long ulMsgSize);
+static int      SMTPSendError(BSOCK_HANDLE hBSock, SMTPSession & SMTPS, char const *pszFormat, ...);
 static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock);
 static void     SMTPClearSession(SMTPSession & SMTPS);
 static void     SMTPResetSession(SMTPSession & SMTPS);
@@ -603,6 +606,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     SetEmptyString(SMTPS.szLogonUser);
     SMTPS.ulFlags = 0;
     SMTPS.ulSetupFlags = 0;
+    SMTPS.pszCustMsg = NULL;
 
     SysGetTmpFile(SMTPS.szMsgFile);
 
@@ -624,6 +628,10 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     if (USmtpSpammerCheck(SMTPS.PeerInfo) < 0)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, "", "", "SNDRIP=EIPSPAM", 0);
+
         SvrReleaseConfigHandle(SMTPS.hSvrConfig);
         return (ErrorPop());
     }
@@ -642,6 +650,10 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
             if (iMapCode == 1)
             {
                 ErrorPush();
+
+                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                    SMTPLogSession(SMTPS, "", "", "SNDRIP=EIPMAP", 0);
+
                 SysFree(pszMapsList);
                 SvrReleaseConfigHandle(SMTPS.hSvrConfig);
                 return (ErrorPop());
@@ -723,6 +735,12 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                                                                 0, SMTPS.hSvrConfig);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Check if the emission of "X-Auth-User:" is diabled
+///////////////////////////////////////////////////////////////////////////////
+    if (SvrGetConfigInt("DisableEmitAuthUser", 0, SMTPS.hSvrConfig))
+        SMTPS.ulFlags |= SMTPF_NOEMIT_AUTH;
+
+///////////////////////////////////////////////////////////////////////////////
 //  Try to load specific configuration
 ///////////////////////////////////////////////////////////////////////////////
     char            szConfigName[128] = "";
@@ -740,6 +758,12 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     }
 
     SMTPS.ulFlags |= SMTPS.ulSetupFlags;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get custom message to append to the SMTP response
+///////////////////////////////////////////////////////////////////////////////
+    SMTPS.pszCustMsg = SvrGetConfigVar(SMTPS.hSvrConfig, "CustomSMTPMessage");
+
 
     return (0);
 
@@ -839,6 +863,19 @@ static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI)
         SysFree(pszValue);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the emission of "X-Auth-User:" is diabled
+///////////////////////////////////////////////////////////////////////////////
+    if ((pszValue = UsrGetUserInfoVar(pUI, "DisableEmitAuthUser")) != NULL)
+    {
+        if (atoi(pszValue))
+            SMTPS.ulFlags |= SMTPF_NOEMIT_AUTH;
+        else
+            SMTPS.ulFlags &= ~SMTPF_NOEMIT_AUTH;
+
+        SysFree(pszValue);
+    }
+
 
     return (0);
 
@@ -888,6 +925,50 @@ static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
 
 
 
+static int      SMTPSendError(BSOCK_HANDLE hBSock, SMTPSession & SMTPS, char const *pszFormat, ...)
+{
+
+    va_list         Args;
+
+    va_start(Args, pszFormat);
+
+
+    char           *pszBuffer = StrVSprint(pszFormat, Args);
+
+
+    va_end(Args);
+
+    if (pszBuffer == NULL)
+        return (ErrGetErrorCode());
+
+    if (SMTPS.pszCustMsg == NULL)
+    {
+        if (BSckSendString(hBSock, pszBuffer, SMTPS.pSMTPCfg->iTimeout) < 0)
+        {
+            ErrorPush();
+            SysFree(pszBuffer);
+            return (ErrorPop());
+        }
+    }
+    else
+    {
+        if (BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
+                            "%s - %s", pszBuffer, SMTPS.pszCustMsg) < 0)
+        {
+            ErrorPush();
+            SysFree(pszBuffer);
+            return (ErrorPop());
+        }
+    }
+
+    SysFree(pszBuffer);
+
+    return (0);
+
+}
+
+
+
 static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 {
 
@@ -898,10 +979,12 @@ static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 
     if (SMTPInitSession(hShbSMTP, hBSock, SMTPS) < 0)
     {
+        ErrorPush();
         BSckVSendString(hBSock, STD_SMTP_TIMEOUT,
-                        "421 %s service not available, closing transmission channel", SMTP_SERVER_NAME);
+                        "421 %s service not available (%d), closing transmission channel",
+                        SMTP_SERVER_NAME, ErrorFetch());
 
-        return (ErrGetErrorCode());
+        return (ErrorPop());
     }
 
 
@@ -987,6 +1070,9 @@ static void     SMTPClearSession(SMTPSession & SMTPS)
     if (SMTPS.pszSendRcpt != NULL)
         SysFree(SMTPS.pszSendRcpt), SMTPS.pszSendRcpt = NULL;
 
+    if (SMTPS.pszCustMsg != NULL)
+        SysFree(SMTPS.pszCustMsg), SMTPS.pszCustMsg = NULL;
+
 }
 
 
@@ -1063,7 +1149,7 @@ static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
     else if (StrCmdMatch(pszCommand, "QUIT"))
         iCmdResult = SMTPHandleCmd_QUIT(pszCommand, hBSock, SMTPS);
     else
-        BSckSendString(hBSock, "500 Syntax error, command unrecognized", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "500 Syntax error, command unrecognized");
 
     return (iCmdResult);
 
@@ -1271,7 +1357,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -1287,8 +1373,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1303,7 +1389,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         StrFreeStrings(ppszRetDomains);
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, pszSMTPError, SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "%s", pszSMTPError);
         SysFree(pszSMTPError);
         return (ErrorPop());
     }
@@ -1317,7 +1403,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "551 Server access forbidden by your IP", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "551 Server access forbidden by your IP");
 
         ErrSetErrorCode(ERR_SMTP_USE_FORBIDDEN);
         return (ERR_SMTP_USE_FORBIDDEN);
@@ -1330,7 +1416,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "551 Server use forbidden", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "551 Server use forbidden");
 
         ErrSetErrorCode(ERR_SMTP_USE_FORBIDDEN);
         return (ERR_SMTP_USE_FORBIDDEN);
@@ -1343,8 +1429,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ERR_FILE_CREATE);
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ERR_FILE_CREATE);
 
         ErrSetErrorCode(ERR_FILE_CREATE, SMTPS.szMsgFile);
         return (ERR_FILE_CREATE);
@@ -1358,8 +1444,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1371,8 +1457,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1384,8 +1470,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1396,8 +1482,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1409,8 +1495,8 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1671,7 +1757,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -1685,7 +1771,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, SMTPS.pszFrom, "", "RCPT=ENBR", 0);
 
-        BSckSendString(hBSock, "552 Too many recipients", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "552 Too many recipients");
 
         ErrSetErrorCode(ERR_SMTP_TOO_MANY_RECIPIENTS);
         return (ERR_SMTP_TOO_MANY_RECIPIENTS);
@@ -1702,8 +1788,8 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
 
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 ///////////////////////////////////////////////////////////////////////////////
@@ -1716,7 +1802,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         StrFreeStrings(ppszFwdDomains);
 
-        BSckSendString(hBSock, pszSMTPError, SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "%s", pszSMTPError);
         SysFree(pszSMTPError);
         return (ErrorPop());
     }
@@ -1755,7 +1841,7 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -1769,8 +1855,8 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         SMTPResetSession(SMTPS);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
         return (ErrorPop());
     }
 
@@ -1865,8 +1951,8 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 //  Transfer spool file
 ///////////////////////////////////////////////////////////////////////////////
         if (SMTPSubmitPackedFile(SMTPS, SMTPS.szMsgFile) < 0)
-            BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                            "451 Requested action aborted: (%d) local error in processing", ErrGetErrorCode());
+            SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                          ErrGetErrorCode());
         else
         {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1888,11 +1974,10 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 //  Notify the client the error condition
 ///////////////////////////////////////////////////////////////////////////////
         if (pszSmtpError == NULL)
-            BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                            "451 Requested action aborted: (%d) local error in processing",
-                            ErrGetErrorCode());
+            SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                          ErrGetErrorCode());
         else
-            BSckSendString(hBSock, pszSmtpError, SMTPS.pSMTPCfg->iTimeout);
+            SMTPSendError(hBSock, SMTPS, "%s", pszSmtpError);
 
     }
 
@@ -2087,7 +2172,7 @@ static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "X-AuthUser:" tag
 ///////////////////////////////////////////////////////////////////////////////
-        if (!IsEmptyString(SMTPS.szLogonUser))
+        if (!IsEmptyString(SMTPS.szLogonUser) && !(SMTPS.ulFlags & SMTPF_NOEMIT_AUTH))
             fprintf(pSpoolFile, "X-AuthUser: %s\r\n", SMTPS.szLogonUser);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2166,7 +2251,7 @@ static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -2180,7 +2265,7 @@ static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (ppszTokens != NULL)
             StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (-1);
     }
 
@@ -2195,8 +2280,8 @@ static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     if (pszDomain == NULL)
     {
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ERR_NO_ROOT_DOMAIN_VAR);
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ERR_NO_ROOT_DOMAIN_VAR);
 
         ErrSetErrorCode(ERR_NO_ROOT_DOMAIN_VAR);
         return (ERR_NO_ROOT_DOMAIN_VAR);
@@ -2224,7 +2309,7 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -2238,7 +2323,7 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (ppszTokens != NULL)
             StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (-1);
     }
 
@@ -2262,8 +2347,8 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         CheckRemoveFile(szRespFile);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ERR_FILE_CREATE);
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ERR_FILE_CREATE);
 
         ErrSetErrorCode(ERR_FILE_CREATE);
         return (ERR_FILE_CREATE);
@@ -2279,8 +2364,8 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
         fclose(pRespFile);
         SysRemove(szRespFile);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ERR_NO_ROOT_DOMAIN_VAR);
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ERR_NO_ROOT_DOMAIN_VAR);
 
         ErrSetErrorCode(ERR_NO_ROOT_DOMAIN_VAR);
         return (ERR_NO_ROOT_DOMAIN_VAR);
@@ -2328,8 +2413,8 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
         fclose(pRespFile);
         SysRemove(szRespFile);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
 
         return (ErrorPop());
     }
@@ -2507,8 +2592,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 
     if (decode64(szChallenge, strlen(szChallenge), szDigest, &uDec64Length) != 0)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -2547,8 +2631,8 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
         ErrorPush();
         SysRemove(szSecretsFile);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
 
         return (ErrorPop());
     }
@@ -2557,7 +2641,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
     {
         SysRemove(szSecretsFile);
 
-        BSckSendString(hBSock, "503 Authentication failed", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Authentication failed");
 
         ErrSetErrorCode(ERR_BAD_EXTRNPRG_EXITCODE);
         return (ERR_BAD_EXTRNPRG_EXITCODE);
@@ -2575,8 +2659,8 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
     {
         ErrorPush();
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing", ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
 
         return (ErrorPop());
     }
@@ -2598,9 +2682,8 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
     {
         StrFreeStrings(ppszTokens);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing",
-                        ERR_BAD_SMTP_EXTAUTH_RESPONSE_FILE);
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ERR_BAD_SMTP_EXTAUTH_RESPONSE_FILE);
 
         ErrSetErrorCode(ERR_BAD_SMTP_EXTAUTH_RESPONSE_FILE);
         return (ERR_BAD_SMTP_EXTAUTH_RESPONSE_FILE);
@@ -2614,7 +2697,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
         ErrorPush();
         StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "503 Authentication failed", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Authentication failed");
 
         return (ErrorPop());
     }
@@ -2686,7 +2769,7 @@ static int      SMTPDoAuthExternal(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     fclose(pExtAuthFile);
 
 
-    BSckSendString(hBSock, "504 Unknown authentication", SMTPS.pSMTPCfg->iTimeout);
+    SMTPSendError(hBSock, SMTPS, "504 Unknown authentication");
 
     ErrSetErrorCode(ERR_UNKNOWN_SMTP_AUTH, pszAuthType);
     return (ERR_UNKNOWN_SMTP_AUTH);
@@ -2703,8 +2786,7 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
     if ((pszAuthParam == NULL) || (strlen(pszAuthParam) == 0))
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -2720,8 +2802,7 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
     if (decode64(pszAuthParam, strlen(pszAuthParam), szClientAuth, &uDec64Length) != 0)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -2741,7 +2822,7 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     {
         ErrorPush();
 
-        BSckSendString(hBSock, "503 Authentication failed", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Authentication failed");
 
         return (ErrorPop());
     }
@@ -2799,8 +2880,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
     if (decode64(szUsername, strlen(szUsername), szDecodeBuffer, &uDec64Length) != 0)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -2813,8 +2893,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
     if (decode64(szPassword, strlen(szPassword), szDecodeBuffer, &uDec64Length) != 0)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -2830,7 +2909,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     {
         ErrorPush();
 
-        BSckSendString(hBSock, "503 Authentication failed", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Authentication failed");
 
         return (ErrorPop());
     }
@@ -3185,8 +3264,7 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
     if (decode64(szChallenge, strlen(szChallenge), szClientResp, &uDec64Length) != 0)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -3200,8 +3278,7 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
     if (pszDigest == NULL)
     {
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments",
-                       SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
 
         ErrSetErrorCode(ERR_BAD_SMTP_CMD_SYNTAX);
         return (ERR_BAD_SMTP_CMD_SYNTAX);
@@ -3218,7 +3295,7 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     {
         ErrorPush();
 
-        BSckSendString(hBSock, "503 Authentication failed", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Authentication failed");
 
         return (ErrorPop());
     }
@@ -3248,7 +3325,7 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         SMTPResetSession(SMTPS);
 
-        BSckSendString(hBSock, "503 Bad sequence of commands", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "503 Bad sequence of commands");
 
         ErrSetErrorCode(ERR_SMTP_BAD_CMD_SEQUENCE);
         return (ERR_SMTP_BAD_CMD_SEQUENCE);
@@ -3263,7 +3340,7 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (ppszTokens != NULL)
             StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (-1);
     }
 
@@ -3450,7 +3527,7 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, "", "", "VRFY=EACCESS", 0);
 
-        BSckSendString(hBSock, "501 Command not accepted", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Command not accepted");
         return (-1);
     }
 
@@ -3462,7 +3539,7 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (ppszTokens != NULL)
             StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (-1);
     }
 
@@ -3475,7 +3552,7 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (ErrorPop());
     }
 
@@ -3501,7 +3578,7 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
     {
         if (USmlIsCmdAliasAccount(szVrfyDomain, szVrfyUser) < 0)
         {
-            BSckSendString(hBSock, "550 String does not match anything", SMTPS.pSMTPCfg->iTimeout);
+            SMTPSendError(hBSock, SMTPS, "550 String does not match anything");
 
             ErrSetErrorCode(ERR_USER_NOT_LOCAL);
             return (ERR_USER_NOT_LOCAL);
@@ -3532,7 +3609,7 @@ static int      SMTPHandleCmd_ETRN(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
             SMTPLogSession(SMTPS, "", "", "ETRN=EACCESS", 0);
 
-        BSckSendString(hBSock, "501 Command not accepted", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Command not accepted");
         return (-1);
     }
 
@@ -3544,7 +3621,7 @@ static int      SMTPHandleCmd_ETRN(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (ppszTokens != NULL)
             StrFreeStrings(ppszTokens);
 
-        BSckSendString(hBSock, "501 Syntax error in parameters or arguments", SMTPS.pSMTPCfg->iTimeout);
+        SMTPSendError(hBSock, SMTPS, "501 Syntax error in parameters or arguments");
         return (-1);
     }
 
@@ -3556,9 +3633,8 @@ static int      SMTPHandleCmd_ETRN(const char *pszCommand, BSOCK_HANDLE hBSock,
         ErrorPush();
         StrFreeStrings(ppszTokens);
 
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                        "451 Requested action aborted: (%d) local error in processing",
-                        ErrorFetch());
+        SMTPSendError(hBSock, SMTPS, "451 Requested action aborted: (%d) local error in processing",
+                      ErrorFetch());
 
         return (ErrorPop());
     }

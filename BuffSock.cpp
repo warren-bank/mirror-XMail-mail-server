@@ -49,14 +49,13 @@ struct BuffSocketData
     char           *pszBuffer;
     int             iBytesInBuffer;
     int             iReadIndex;
-    int             iBufferIndex;
 };
 
 
 
 
 
-static int      BSckReadData(BuffSocketData * pBSD, int iTimeout);
+static int      BSckFetchData(BuffSocketData * pBSD, int iTimeout);
 
 
 
@@ -84,7 +83,6 @@ BSOCK_HANDLE    BSckAttach(SYS_SOCKET SockFD, int iBufferSize)
     pBSD->pszBuffer = pszBuffer;
     pBSD->iBytesInBuffer = 0;
     pBSD->iReadIndex = 0;
-    pBSD->iBufferIndex = 0;
 
     return ((BSOCK_HANDLE) pBSD);
 
@@ -114,42 +112,21 @@ SYS_SOCKET      BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket)
 
 
 
-static int      BSckReadData(BuffSocketData * pBSD, int iTimeout)
+static int      BSckFetchData(BuffSocketData * pBSD, int iTimeout)
 {
 
-    int             iMaxRead = pBSD->iBufferSize - pBSD->iBytesInBuffer;
-    char           *pszBuffer = (char *) SysAlloc(iMaxRead + 1);
+    int             iReadedBytes;
 
-    if (pszBuffer == NULL)
-        return (ErrGetErrorCode());
+    pBSD->iReadIndex = 0;
 
-    int             iReadedBytes = SysRecvData(pBSD->SockFD, pszBuffer, iMaxRead, iTimeout);
-
-    if (iReadedBytes > 0)
+    if ((iReadedBytes = SysRecvData(pBSD->SockFD, pBSD->pszBuffer,
+                                    pBSD->iBufferSize, iTimeout)) <= 0)
     {
-        int             iHeadSize = Min(pBSD->iBufferSize - pBSD->iBufferIndex, iReadedBytes);
-
-        if (iHeadSize > 0)
-            memcpy(pBSD->pszBuffer + pBSD->iBufferIndex, pszBuffer, iHeadSize);
-
-        pBSD->iBufferIndex += iHeadSize;
-
-        if (pBSD->iBufferIndex == pBSD->iBufferSize)
-            pBSD->iBufferIndex = 0;
-
-        int             iBackSize = iReadedBytes - iHeadSize;
-
-        if (iBackSize > 0)
-            memcpy(pBSD->pszBuffer + pBSD->iBufferIndex, pszBuffer + iHeadSize, iBackSize);
-
-        pBSD->iBufferIndex += iBackSize;
-
-        pBSD->iBytesInBuffer += iReadedBytes;
-    }
-    else if (iReadedBytes == 0)
         ErrSetErrorCode(ERR_SOCK_NOMORE_DATA);
+        return (iReadedBytes);
+    }
 
-    SysFree(pszBuffer);
+    pBSD->iBytesInBuffer = iReadedBytes;
 
     return (iReadedBytes);
 
@@ -163,7 +140,7 @@ int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
     BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
     if ((pBSD->iBytesInBuffer == 0) &&
-            (BSckReadData(pBSD, iTimeout) <= 0))
+        (BSckFetchData(pBSD, iTimeout) <= 0))
         return (BSOCK_EOF);
 
     int             iChar = (int) pBSD->pszBuffer[pBSD->iReadIndex];
@@ -179,7 +156,7 @@ int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
 
 
 char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                        int *pLineLength, int *piGotNL)
+                                int *pLineLength, int *piGotNL)
 {
 
     int             ii;
@@ -229,7 +206,7 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
 
 
 char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
-                        int *pLineLength, int *piGotNL)
+                              int *pLineLength, int *piGotNL)
 {
 
     BuffSocketData     *pBSD = (BuffSocketData *) hBSock;
@@ -241,61 +218,52 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
 ///////////////////////////////////////////////////////////////////////////////
 //  Verify to have something to read
 ///////////////////////////////////////////////////////////////////////////////
-        if ((pBSD->iBytesInBuffer == 0) && (BSckReadData(pBSD, iTimeout) <= 0))
+        if ((pBSD->iBytesInBuffer == 0) && (BSckFetchData(pBSD, iTimeout) <= 0))
             return (NULL);
 
 
-        for (int jj = 0; jj < 2; jj++)
+        int             iBytesLookup = Min(pBSD->iBytesInBuffer, iMaxChars - ii);
+
+        if (iBytesLookup > 0)
         {
-            int             iBytesLookup = Min(Min(pBSD->iBytesInBuffer,
-                                    pBSD->iBufferSize - pBSD->iReadIndex), iMaxChars - ii);
+            char           *pszNL = (char *) memchr(pBSD->pszBuffer + pBSD->iReadIndex, '\n',
+                                                    iBytesLookup);
 
-            if (iBytesLookup > 0)
+            if (pszNL != NULL)
             {
-                char           *pszNL = (char *) memchr(pBSD->pszBuffer + pBSD->iReadIndex, '\n', iBytesLookup);
+                int             iCopySize = (int) (pszNL - (pBSD->pszBuffer + pBSD->iReadIndex));
 
-                if (pszNL != NULL)
-                {
-                    int             iCopySize = (int) (pszNL - (pBSD->pszBuffer + pBSD->iReadIndex));
+                memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iCopySize);
+                ii += iCopySize;
 
-                    memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iCopySize);
-                    ii += iCopySize;
+                pBSD->iReadIndex += iCopySize + 1;
 
-                    pBSD->iReadIndex += iCopySize + 1;
-
-                    if (pBSD->iReadIndex == pBSD->iBufferSize)
-                        pBSD->iReadIndex = 0;
-
-                    pBSD->iBytesInBuffer -= iCopySize + 1;
+                pBSD->iBytesInBuffer -= iCopySize + 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Line cleanup
 ///////////////////////////////////////////////////////////////////////////////
-                    for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
+                for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
 
-                    pszBuffer[ii] = '\0';
+                pszBuffer[ii] = '\0';
 
 
-                    if (pLineLength != NULL)
-                        *pLineLength = ii;
+                if (pLineLength != NULL)
+                    *pLineLength = ii;
 
-                    if (piGotNL != NULL)
-                        *piGotNL = 1;
+                if (piGotNL != NULL)
+                    *piGotNL = 1;
 
-                    return (pszBuffer);
-                }
-                else
-                {
-                    memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iBytesLookup);
-                    ii += iBytesLookup;
+                return (pszBuffer);
+            }
+            else
+            {
+                memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iBytesLookup);
+                ii += iBytesLookup;
 
-                    pBSD->iReadIndex += iBytesLookup;
+                pBSD->iReadIndex += iBytesLookup;
 
-                    if (pBSD->iReadIndex == pBSD->iBufferSize)
-                        pBSD->iReadIndex = 0;
-
-                    pBSD->iBytesInBuffer -= iBytesLookup;
-                }
+                pBSD->iBytesInBuffer -= iBytesLookup;
             }
         }
     }
@@ -357,6 +325,8 @@ int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * 
 
     va_end(Args);
 
+    if (pszBuffer == NULL)
+        return (ErrGetErrorCode());
 
     if (BSckSendString(hBSock, pszBuffer, iTimeout) < 0)
     {
@@ -392,36 +362,23 @@ int             BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, in
 
     BuffSocketData *pBSD = (BuffSocketData *) hBSock;
     int             iReadedBytes = 0,
-                    iReadFromBuffer = Min(iSize, pBSD->iBytesInBuffer);
+        iReadFromBuffer = Min(iSize, pBSD->iBytesInBuffer);
 
     if (iReadFromBuffer > 0)
     {
-        int             iHeadSize = Min(pBSD->iBufferSize - pBSD->iReadIndex, iReadFromBuffer);
+        memcpy(pszBuffer, pBSD->pszBuffer + pBSD->iReadIndex, iReadFromBuffer);
 
-        if (iHeadSize > 0)
-            memcpy(pszBuffer, pBSD->pszBuffer + pBSD->iReadIndex, iHeadSize);
-
-        pBSD->iReadIndex += iHeadSize;
-
-        if (pBSD->iReadIndex == pBSD->iBufferSize)
-            pBSD->iReadIndex = 0;
-
-        int             iBackSize = iReadFromBuffer - iHeadSize;
-
-        if (iBackSize > 0)
-            memcpy(pszBuffer + iHeadSize, pBSD->pszBuffer + pBSD->iReadIndex, iBackSize);
-
-        pBSD->iReadIndex += iBackSize;
+        pBSD->iReadIndex += iReadFromBuffer;
 
         pBSD->iBytesInBuffer -= iReadFromBuffer;
-
 
         iReadedBytes = iReadFromBuffer;
     }
 
 
     if ((iReadedBytes < iSize) &&
-            (SysRecv(pBSD->SockFD, pszBuffer + iReadedBytes, iSize - iReadedBytes, iTimeout) != (iSize - iReadedBytes)))
+        (SysRecv(pBSD->SockFD, pszBuffer + iReadedBytes, iSize - iReadedBytes,
+                 iTimeout) != (iSize - iReadedBytes)))
         return (ErrGetErrorCode());
 
 

@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.9
+Version: 1.10
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -126,6 +126,19 @@ fi
 
 
 %changelog
+
+* Sat Jul 27 2002 Davide Libenzi <davidel@xmailserver.org>
+    Added a variable "CustomSMTPMessage" inside the server's configuration file SERVER.TAB to enable
+    the postmaster to set a custom message that will be appended to the standard XMail error
+    response.
+    Added log entries in case of relay lists mapped IPs.
+    Fixed a build error on FreeBSD.
+    Added a new SERVER.TAB variable "DisableEmitAuthUser" to block the emission the the header
+    "X-Auth-User:" for authenticated user.
+    Added a new USER.TAB variable "DisableEmitAuthUser" to block the emission the the header
+    "X-Auth-User:" for authenticated users ( this variable overrides the SERVER.TAB one ).
+    Added command line driven mailbox delivery mode ( -MM = Maildir , -Mm = mailbox ).
+    Added  sysv_inst.sh  shell script to help creating SysV boot scripts for XMail.
 
 * Sat Jun 15 2002 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug in HOSTNAME:PORT handing code inside the PSYNC server.

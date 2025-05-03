@@ -41,7 +41,7 @@
 
 
 #define RUNNING_PIDS_DIR            "/var/run"
-
+#define DEVNULL                     "/dev/null"
 #if !defined(NOFILE)
 #define NOFILE                      64
 #endif          // #if !defined(NOFILE)
