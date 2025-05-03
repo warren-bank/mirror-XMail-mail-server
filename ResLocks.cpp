@@ -157,7 +157,7 @@ int             RLckCleanupLockers(void)
     {
         SysListHead    *pLLink;
 
-        SYS_LIST_FOR_EACH(pLLink, &RLGates[ii].ResList)
+        while ((pLLink = SYS_LIST_FIRST(&RLGates[ii].ResList)) != NULL)
         {
             ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 

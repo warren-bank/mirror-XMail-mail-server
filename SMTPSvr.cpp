@@ -899,6 +899,7 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
         return (0);
     }
 
+
     char            szMailerUser[MAX_ADDR_NAME] = "",
                     szMailerDomain[MAX_ADDR_NAME] = "";
 
@@ -907,6 +908,19 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
         ErrorPush();
 
         pszSMTPError = SysStrDup("501 Syntax error in return path");
+
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check mailer domain for DNS/MX entries
+///////////////////////////////////////////////////////////////////////////////
+    if (SvrTestConfigFlag("CheckMailerDomain", false, SMTPS.hSvrConfig) &&
+            (USmtpCheckMailDomain(SMTPS.hSvrConfig, szMailerDomain) < 0))
+    {
+        ErrorPush();
+
+        pszSMTPError = SysStrDup("505 Your domain has not DNS/MX entries");
 
         return (ErrorPop());
     }

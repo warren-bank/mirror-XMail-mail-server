@@ -42,6 +42,7 @@
 
 
 #define SVR_LINKS_FILE              "pop3links.tab"
+#define SVR_LINKS_ENABLE_DIR        "pop3links"
 #define SVR_POP3LOCKS_DIR           "pop3linklocks"
 #define LINKS_TABLE_LINE_MAX        2048
 
@@ -77,11 +78,13 @@ struct GwLkDBScanData
 
 
 static char    *GwLkGetTableFilePath(char *pszLnkFilePath);
+static char    *GwLkEnableDir(char *pszEnableDir);
 static char    *GwLkGetLocksDir(char *pszLocksDir);
 static POP3Link *GwLkGetLinkFromStrings(char **ppszStrings);
 static int      GwLkWriteLink(FILE * pLnkFile, POP3Link * pPopLnk);
 static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile);
 static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnableFile);
+
 
 
 
@@ -99,6 +102,19 @@ static char    *GwLkGetTableFilePath(char *pszLnkFilePath)
     strcat(pszLnkFilePath, SVR_LINKS_FILE);
 
     return (pszLnkFilePath);
+
+}
+
+
+
+static char    *GwLkEnableDir(char *pszEnableDir)
+{
+
+    CfgGetRootPath(pszEnableDir);
+
+    strcat(pszEnableDir, SVR_LINKS_ENABLE_DIR);
+
+    return (pszEnableDir);
 
 }
 
@@ -463,6 +479,21 @@ int             GwLkRemoveLink(POP3Link * pPopLnk)
     }
 
     SysRemove(szTmpLnkFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Remove the disable file if exist
+///////////////////////////////////////////////////////////////////////////////
+    char            szEnableFile[SYS_MAX_PATH] = "";
+
+    if (GwLkGetDisableFilePath(pPopLnk, szEnableFile) < 0)
+    {
+        ErrorPush();
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+    CheckRemoveFile(szEnableFile);
+
 
     RLckUnlockEX(hResLock);
 
@@ -926,24 +957,35 @@ int             GwLkMasqueradeDomain(POP3Link const * pPopLnk)
 static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnableFile)
 {
 
-    UserInfo       *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
-
-    if (pUI == NULL)
-        return (ErrGetErrorCode());
-
-    char            szUserPath[SYS_MAX_PATH] = "";
-
-    if (UsrGetUserPath(pUI, szUserPath) == NULL)
+    if (GwLkLocalDomain(pPopLnk))
     {
-        ErrorPush();
+        UserInfo       *pUI = UsrGetUserByName(pPopLnk->pszDomain, pPopLnk->pszName);
+
+        if (pUI == NULL)
+            return (ErrGetErrorCode());
+
+        char            szUserPath[SYS_MAX_PATH] = "";
+
+        if (UsrGetUserPath(pUI, szUserPath) == NULL)
+        {
+            ErrorPush();
+            UsrFreeUserInfo(pUI);
+            return (ErrorPop());
+        }
+
         UsrFreeUserInfo(pUI);
-        return (ErrorPop());
+
+        sprintf(pszEnableFile, "%s%s@%s.disabled", szUserPath, pPopLnk->pszRmtName, pPopLnk->pszRmtDomain);
     }
+    else
+    {
+        char            szEnableDir[SYS_MAX_PATH] = "";
 
-    UsrFreeUserInfo(pUI);
+        GwLkEnableDir(szEnableDir);
 
-
-    sprintf(pszEnableFile, "%s%s@%s.disabled", szUserPath, pPopLnk->pszRmtName, pPopLnk->pszRmtDomain);
+        sprintf(pszEnableFile, "%s%s%s@%s.disabled", szEnableDir, SYS_SLASH_STR,
+                pPopLnk->pszRmtName, pPopLnk->pszRmtDomain);
+    }
 
     return (0);
 
@@ -1036,7 +1078,7 @@ int             GwLkEnable(char const * pszDomain, char const * pszName,
         if ((stricmp(pPopLnk->pszDomain, pszDomain) == 0) &&
                 (stricmp(pPopLnk->pszName, pszName) == 0) &&
                 ((pszRmtDomain == NULL) || (stricmp(pPopLnk->pszRmtDomain, pszRmtDomain) == 0)) &&
-                ((pszRmtName == NULL) || (stricmp(pPopLnk->pszRmtDomain, pszRmtName) == 0)))
+                ((pszRmtName == NULL) || (stricmp(pPopLnk->pszRmtName, pszRmtName) == 0)))
         {
             GwLkEnable(pPopLnk, bEnable);
 

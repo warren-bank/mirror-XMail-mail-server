@@ -39,6 +39,7 @@ struct SMAILConfig
     int             iRetryTimeout;
     int             iRetryIncrRatio;
     int             iMaxRetry;
+    int             iSleepTimeout;
 
 };
 

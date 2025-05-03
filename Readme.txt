@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.66 ( Beta-20 )
+Version      : 0.67 ( Beta-21 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 08-12-2000
+Date         : 04-01-2001
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -409,6 +409,23 @@ Date 08-12-2000		0.66
 	have a bad behaviour or fail. This bug was introduced in 0.65 version.
 	Fixed a bug in the Windows version that results in a failure to resolve MX queries.
 	This bug was introduced in 0.65.
+Date 04-01-2001	 0.67
+	Fixed a bug in "poplnkenable" CTRL server command.
+	Changed the report of "poplnklist" CTRL server command to include the authentication mode and
+	the enabled status.
+	Fixed a bug in "poplnkdel" that left around the .disable file.
+	A new directory "pop3links" has to be added to store POP3 links disable files for non-local links.
+	This will fix also a bug in multi-account and masquerading POP3 sync.
+	A new way to retrieve the POP3 domain has been coded by doing a reverse DNS lookup from
+	the server IP. If the result of the lookup will be  xxxx.yyyy.zzzz  then XMail will
+	test if  xxxx.yyyy.zzzz  is handled, then  yyyy.zzzz  and then  zzzz.
+	The first of these domains that is handled by XMail will be the POP3 domain.
+	Added a new  SERVER.TAB  variable "CheckMailerDomain" that, if on ( "1" ), force XMail
+	to validate the sender domain ( "MAIL FROM:<...@xxx>" ) by looking up DNS/MX entries.
+	Fixed the bug that made XMail to not accept users to add if a wildcard alias were defined.
+
+
+
 
 
 
@@ -799,6 +816,7 @@ Part 7			Configuration
 		logs		<dir>
 		pop3locks	<dir>
 		pop3linklocks	<dir>
+		pop3links	<dir>
 		spool		<dir>
 			local		<dir>
 			temp		<dir>
@@ -1601,6 +1619,9 @@ Part 11			SERVER.TAB variables
 	[RemoveSpoolErrors]
 	Indicate if mail has to be removed or stored in  froz  directory after a failure in
 	delivery or filtering.
+	
+	[AllowNullSender]
+	Enable null sender ( "MAIL FROM:<>" ) messages to be accepted by XMail.
 
 	[SMTP-RDNSCheck]
 	Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
@@ -2455,7 +2476,7 @@ Part 19			XMail admin protocol
 	containing a single dot ( <CR><LF>.<CR><LF> ).
 	The format of the listing is :
 
-	"loc-domain"[TAB]"loc-username"[TAB]"extrn-domain"[TAB]"extrn-username"[TAB]"extrn-password"<CR><LF>
+	"loc-domain"[TAB]"loc-username"[TAB]"extrn-domain"[TAB]"extrn-username"[TAB]"extrn-password"[TAB]"authtype"[TAB]"on-off"<CR><LF>
 
 
 	*) Enabling a POP3 external link
@@ -2800,18 +2821,10 @@ Part 24			Miscellaneous
 
 	[1]
 	To handle multiple POP3 domains the server makes a reverse lookup of the IP address
-	upon which it receives the connection and XMail strip out the host portion of
-	the FQDN it gets, ie. :
-
-	mail.foodomain.net	==> foodomain.net
-
-	So to correctly handle foodomain.net it needs that the reverse lookup of the connection
-	IP address to be :
-
-	somehost.foodomain.net
-
-	In fact if the RDNS give foodomain.net it'll strip away foodomain trying to lookup
-	users in a net domain.
+	upon which it receives the connection.
+	Suppose the reverse lookup will result in  xxxx.yyyy.zzzz  then XMail will check if
+	xxxx.yyyy.zzzz  is handled, then it'll check  yyyy.zzzz  and then  zzzz.
+	The first ( in the given order ) that will result handled will be the POP3 domain.
 	To avoid the above behaviour it's sufficient that the POP3 client supply the entire
 	email address as POP3 login username :
 
@@ -2919,6 +2932,10 @@ Part 26			Thanks
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
 	My company, myCIO.com, to give me my wage.
+
+
+
+
 
 
 

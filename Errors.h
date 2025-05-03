@@ -223,6 +223,8 @@
 #define ERR_THREADCREATE            (-198)
 #define ERR_CREATEMUTEX             (-199)
 #define ERR_NO_LOCAL_SPOOL_FILES    (-200)
+#define ERR_NO_POP3_DOMAIN          (-201)
+#define ERR_INVALID_MAIL_DOMAIN     (-202)
 
 
 

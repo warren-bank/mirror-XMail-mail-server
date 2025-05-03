@@ -2360,6 +2360,7 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
             if (((pszDomain == NULL) || (stricmp(pPopLnk->pszDomain, pszDomain) == 0)) &&
                     ((pszName == NULL) || (stricmp(pPopLnk->pszName, pszName) == 0)))
             {
+                char const     *pszEnable = (GwLkCheckEnabled(pPopLnk) == 0) ? "ON": "OFF";
                 char            szLinkLine[2048] = "";
 
                 sprintf(szLinkLine,
@@ -2367,9 +2368,12 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         "\"%s\"\t"
                         "\"%s\"\t"
                         "\"%s\"\t"
+                        "\"%s\"\t"
+                        "\"%s\"\t"
                         "\"%s\"",
                         pPopLnk->pszDomain, pPopLnk->pszName, pPopLnk->pszRmtDomain,
-                        pPopLnk->pszRmtName, pPopLnk->pszRmtPassword);
+                        pPopLnk->pszRmtName, pPopLnk->pszRmtPassword, pPopLnk->pszAuthType,
+                        pszEnable);
 
                 if (BSckSendString(hBSock, szLinkLine, pCTRLCfg->iTimeout) < 0)
                 {

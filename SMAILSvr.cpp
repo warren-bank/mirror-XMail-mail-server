@@ -57,7 +57,6 @@
 #define FILTER_OUT_EXITCODE         99
 #define MODIFY_EXITCODE             100
 #define MAX_PEEK_FILES              32
-#define STD_SMAILTHREAD_SLEEP_TIME  4
 
 
 
@@ -197,6 +196,7 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
 //  Get thread id
 ///////////////////////////////////////////////////////////////////////////////
+    int             iSleepTimeout = pSMAILCfg->iSleepTimeout;
     long            lThreadId = pSMAILCfg->lThreadCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ unsigned int    SMAILThreadProc(void *pThreadData)
         int             iProcessResult = SMAILTryProcessSpool(hShbSMAIL);
 
         if (iProcessResult == ERR_NO_SMTP_SPOOL_FILES)
-            SysSleep(STD_SMAILTHREAD_SLEEP_TIME);
+            SysSleep(iSleepTimeout);
 
     }
 

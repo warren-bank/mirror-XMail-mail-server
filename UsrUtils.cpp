@@ -134,7 +134,7 @@ static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile);
 static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
 static int      UsrLoadUserDefaultInfo(HSLIST & InfoList);
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                        const char *pszAlias, char *pszName = NULL);
+                        const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
 static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI);
 static bool     UsrIsWildAlias(char const * pszAlias);
 static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName);
@@ -715,7 +715,7 @@ static int      UsrLoadUserDefaultInfo(HSLIST & InfoList)
 
 
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
-                        const char *pszAlias, char *pszName)
+                        const char *pszAlias, char *pszName, bool bWildMatch)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index ( lookup precise aliases )
@@ -736,6 +736,11 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
         return (1);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  We can stop here if wild alias matching is not required
+///////////////////////////////////////////////////////////////////////////////
+    if (!bWildMatch)
+        return (0);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup record using the specified index ( lookup wild aliases grouped
@@ -784,7 +789,7 @@ static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *psz
 
 
 int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
-                        char *pszName)
+                        char *pszName, bool bWildMatch)
 {
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
@@ -799,7 +804,8 @@ int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
         return (0);
 
 
-    int             iLookupResult = UsrAliasLookupNameLK(szAlsFilePath, pszDomain, pszAlias, pszName);
+    int             iLookupResult = UsrAliasLookupNameLK(szAlsFilePath, pszDomain,
+            pszAlias, pszName, bWildMatch);
 
 
     RLckUnlockSH(hResLock);
@@ -1977,8 +1983,10 @@ static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile)
 
 int             UsrAddUser(UserInfo * pUI)
 {
-
-    if (UsrAliasLookupName(pUI->pszDomain, pUI->pszName))
+///////////////////////////////////////////////////////////////////////////////
+//  Search for overlapping alias ( wildcard alias not checked here )
+///////////////////////////////////////////////////////////////////////////////
+    if (UsrAliasLookupName(pUI->pszDomain, pUI->pszName, NULL, false))
     {
         ErrSetErrorCode(ERR_ALIAS_EXIST);
         return (ERR_ALIAS_EXIST);

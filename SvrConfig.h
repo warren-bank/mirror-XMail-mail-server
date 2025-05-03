@@ -29,11 +29,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Setup for the use of Maildir mailbox delivery
 ///////////////////////////////////////////////////////////////////////////////
-#ifdef CONFIG_MAILDIR
-// #undef CONFIG_MAILDIR
-#else           // #ifdef CONFIG_MAILDIR
+#if defined(__LINUX__) || defined(__SOLARIS__)
 #define CONFIG_MAILDIR
-#endif          // #ifdef CONFIG_MAILDIR
+#endif          // #if defined(__LINUX__) || defined(__SOLARIS__)
 
 
 

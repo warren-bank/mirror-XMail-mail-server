@@ -84,6 +84,7 @@ int             USmtpSendMail(const char *pszServer, const char *pszDomain,
                         SMTPError * pSMTPE = NULL);
 char           *USmtpBuildRcptPath(char const * const * ppszRcptTo, SVRCFG_HANDLE hSvrConfig);
 char          **USmtpGetMailExchangers(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
+int             USmtpCheckMailDomain(SVRCFG_HANDLE hSvrConfig, char const * pszDomain);
 MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
                         char *pszMXHost);
 int             USmtpGetMXNext(MXS_HANDLE hMXSHandle, char *pszMXHost);

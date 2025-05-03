@@ -36,6 +36,7 @@
 #include "UsrAuth.h"
 #include "POP3Svr.h"
 #include "POP3Utils.h"
+#include "MailDomains.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
@@ -97,6 +98,8 @@ static int      POP3ThreadCountAdd(long lCount, SHB_HANDLE hShbPOP3,
 static int      POP3LogEnabled(SHB_HANDLE hShbPOP3, POP3Config * pPOP3Cfg = NULL);
 static int      POP3CheckPeerIP(SYS_SOCKET SockFD);
 static unsigned int POP3ClientThread(void *pThreadData);
+static int      POP3GetClientDomain(char const * pszFQDN, char * pszClientDomain,
+                        int iMaxDomain);
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock,
                         POP3Session & POP3S);
 static int      POP3LogSession(POP3Session & POP3S);
@@ -407,6 +410,30 @@ unsigned int    POP3ThreadProc(void *pThreadData)
 
 
 
+static int      POP3GetClientDomain(char const * pszFQDN, char * pszClientDomain,
+                        int iMaxDomain)
+{
+
+    for (; pszFQDN != NULL;)
+    {
+        if (MDomIsHandledDomain(pszFQDN) == 0)
+        {
+            StrNCpy(pszClientDomain, pszFQDN, iMaxDomain);
+
+            return (0);
+        }
+
+        if ((pszFQDN = strchr(pszFQDN, '.')) != NULL)
+            ++pszFQDN;
+    }
+
+    ErrSetErrorCode(ERR_NO_POP3_DOMAIN);
+    return (ERR_NO_POP3_DOMAIN);
+
+}
+
+
+
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Session & POP3S)
 {
 
@@ -432,7 +459,14 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
     if (MscGetSockHost(BSckGetAttachedSocket(hBSock), POP3S.szSvrFQDN) < 0)
         strcpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo));
     else
-        MscSplitFQDN(POP3S.szSvrFQDN, NULL, POP3S.szSvrDomain);
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Try to get a valid domain from the FQDN
+///////////////////////////////////////////////////////////////////////////////
+        if (POP3GetClientDomain(POP3S.szSvrFQDN, POP3S.szSvrDomain,
+                sizeof(POP3S.szSvrDomain) - 1) < 0)
+            StrSNCpy(POP3S.szSvrDomain, POP3S.szSvrFQDN);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  If "POP3Domain" is defined, it's taken as default POP3 domain that means

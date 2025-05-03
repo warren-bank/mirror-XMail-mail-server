@@ -265,12 +265,7 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
     Ling.l_onoff = 0;
     Ling.l_linger = 0;
 
-    if (setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling,
-                    sizeof(Ling)) != 0)
-    {
-        ErrSetErrorCode(ERR_SETSOCKOPT);
-        return (ERR_SETSOCKOPT);
-    }
+    setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling, sizeof(Ling));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set KEEPALIVE if supported
@@ -1729,7 +1724,7 @@ static int      SysWaitPID(pid_t PID, int * piExitCode, int iTimeout)
     SysSpinRelease(&WaitPIDSpin);
 
 
-    if (iTimeout <= 0)
+    if (PWD.PID != 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);

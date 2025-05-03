@@ -713,6 +713,7 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
     pSMAILCfg->iRetryTimeout = iRetryTimeout;
     pSMAILCfg->iRetryIncrRatio = iRetryIncrRatio;
     pSMAILCfg->iMaxRetry = iMaxRetry;
+    pSMAILCfg->iSleepTimeout = Max(iNumSMAILThreads, 4);
 
 
     ShbUnlock(hShbSMAIL);

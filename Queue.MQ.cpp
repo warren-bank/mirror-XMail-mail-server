@@ -480,7 +480,7 @@ static int      QueStructCleanup(MessageQueue & MQ)
 ///////////////////////////////////////////////////////////////////////////////
     SysListHead    *pLLink;
 
-    SYS_LIST_FOR_EACH(pLLink, &MQ.MessQueue)
+    while ((pLLink = SYS_LIST_FIRST(&MQ.MessQueue)) != NULL)
     {
         QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
 
@@ -492,7 +492,7 @@ static int      QueStructCleanup(MessageQueue & MQ)
 ///////////////////////////////////////////////////////////////////////////////
 //  Clear "rsnd" queue
 ///////////////////////////////////////////////////////////////////////////////
-    SYS_LIST_FOR_EACH(pLLink, &MQ.RsndQueue)
+    while ((pLLink = SYS_LIST_FIRST(&MQ.RsndQueue)) != NULL)
     {
         QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
 

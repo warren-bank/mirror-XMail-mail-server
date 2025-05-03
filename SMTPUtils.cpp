@@ -1844,6 +1844,31 @@ static int      USmtpGetDomainMX(SVRCFG_HANDLE hSvrConfig, const char *pszDomain
 
 
 
+int             USmtpCheckMailDomain(SVRCFG_HANDLE hSvrConfig, char const * pszDomain)
+{
+
+    NET_ADDRESS     NetAddr = SysGetHostByName(pszDomain);
+
+    if (NetAddr == SYS_INVALID_NET_ADDRESS)
+    {
+        char           *pszMXDomains = NULL;
+
+        if (USmtpGetDomainMX(hSvrConfig, pszDomain, pszMXDomains) < 0)
+        {
+            ErrSetErrorCode(ERR_INVALID_MAIL_DOMAIN);
+            return (ERR_INVALID_MAIL_DOMAIN);
+        }
+
+        SysFree(pszMXDomains);
+    }
+
+    return (0);
+
+}
+
+
+
+
 MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
                         char *pszMXHost)
 {

@@ -86,7 +86,7 @@ int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
                         const char *pszValue);
 char          **UsrGetProfileVars(UserInfo * pUI);
 int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
-                        char *pszName = NULL);
+                        char *pszName = NULL, bool bWildMatch = true);
 AliasInfo      *UsrAllocAlias(const char *pszDomain, const char *pszAlias,
                         const char *pszName);
 void            UsrFreeAlias(AliasInfo * pAI);

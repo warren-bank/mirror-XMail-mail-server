@@ -258,6 +258,8 @@ static ErrorStrings Errors[] =
     {ERR_THREADCREATE, "Error in function {pthread_create}"},
     {ERR_CREATEMUTEX, "Error in function {CreateMutex}"},
     {ERR_NO_LOCAL_SPOOL_FILES, "Local spool empty"},
+    {ERR_NO_POP3_DOMAIN, "Unable to retrieve a valid POP3 domain from peer IP"},
+    {ERR_INVALID_MAIL_DOMAIN, "Remote domain has no DNS/MX entries"},
 
 };
 
