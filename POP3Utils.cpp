@@ -75,6 +75,8 @@ struct POP3SessionData
     SYS_INET_ADDR   PeerInfo;
     UserInfo       *pUI;
     HSLIST          hMessageList;
+    POP3MsgData   **ppMsgArray;
+    int             iMsgListed;
     int             iMsgCount;
     unsigned long   ulMBSize;
     int             iLastAccessed;
@@ -93,9 +95,8 @@ static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
                         int *piMsgCount = NULL, unsigned long *pulMBSize = NULL);
 static void     UPopFreeMsgData(POP3MsgData * pPOPMD);
 static void     UPopFreeMessageList(HSLIST & hMessageList);
-static int      UPopCountMessages(HSLIST & hMessageList);
 static unsigned long UPopMessagesSize(HSLIST & hMessageList);
-static POP3MsgData *UPopMessageFromIndex(HSLIST & hMessageList, int iMsgIndex);
+static POP3MsgData *UPopMessageFromIndex(POP3SessionData *pPOPSD, int iMsgIndex);
 static int      UPopCheckPeerIP(UserInfo * pUI, SYS_INET_ADDR const & PeerInfo);
 static int      UPopUpdateMailbox(POP3SessionData * pPOPSD);
 static int      UPopCheckResponse(const char *pszResponse, char *pszMessage = NULL);
@@ -365,22 +366,6 @@ static void     UPopFreeMessageList(HSLIST & hMessageList)
 
 
 
-static int      UPopCountMessages(HSLIST & hMessageList)
-{
-
-    int             iMsgCount = 0;
-    POP3MsgData    *pPOPMD = (POP3MsgData *) ListFirst(hMessageList);
-
-    for (; pPOPMD != INVALID_SLIST_PTR; pPOPMD = (POP3MsgData *)
-            ListNext(hMessageList, (PLISTLINK) pPOPMD))
-        ++iMsgCount;
-
-    return (iMsgCount);
-
-}
-
-
-
 static unsigned long UPopMessagesSize(HSLIST & hMessageList)
 {
 
@@ -397,21 +382,11 @@ static unsigned long UPopMessagesSize(HSLIST & hMessageList)
 
 
 
-static POP3MsgData *UPopMessageFromIndex(HSLIST & hMessageList, int iMsgIndex)
+static POP3MsgData *UPopMessageFromIndex(POP3SessionData *pPOPSD, int iMsgIndex)
 {
 
-    POP3MsgData    *pPOPMD = (POP3MsgData *) ListFirst(hMessageList);
-
-    for (; pPOPMD != INVALID_SLIST_PTR; pPOPMD = (POP3MsgData *)
-            ListNext(hMessageList, (PLISTLINK) pPOPMD))
-    {
-        if (iMsgIndex == 0)
-            return (pPOPMD);
-
-        --iMsgIndex;
-    }
-
-    return (NULL);
+    return (((iMsgIndex >= 0) && (iMsgIndex < pPOPSD->iMsgListed)) ?
+            pPOPSD->ppMsgArray[iMsgIndex]: NULL);
 
 }
 
@@ -523,6 +498,26 @@ POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
         return (INVALID_POP3_HANDLE);
     }
 
+    pPOPSD->iMsgListed = pPOPSD->iMsgCount;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build lookup array
+///////////////////////////////////////////////////////////////////////////////
+    if ((pPOPSD->ppMsgArray = (POP3MsgData   **) SysAlloc((pPOPSD->iMsgCount + 1) *
+                            sizeof(POP3MsgData *))) == NULL)
+    {
+        UPopFreeMessageList(pPOPSD->hMessageList);
+        SysFree(pPOPSD);
+        UsrPOP3Unlock(pUI);
+        UsrFreeUserInfo(pUI);
+        return (INVALID_POP3_HANDLE);
+    }
+
+    POP3MsgData    *pPOPMD = (POP3MsgData *) ListFirst(pPOPSD->hMessageList);
+
+    for (int ii = 0; (ii < pPOPSD->iMsgCount) && (pPOPMD != INVALID_SLIST_PTR);
+            pPOPMD = (POP3MsgData *) ListNext(pPOPSD->hMessageList, (PLISTLINK) pPOPMD), ii++)
+        pPOPSD->ppMsgArray[ii] = pPOPMD;
 
     return ((POP3_HANDLE) pPOPSD);
 
@@ -543,6 +538,8 @@ void            UPopReleaseSession(POP3_HANDLE hPOPSession, int iUpdate)
     UsrFreeUserInfo(pPOPSD->pUI);
 
     UPopFreeMessageList(pPOPSD->hMessageList);
+
+    SysFree(pPOPSD->ppMsgArray);
 
     SysFree(pPOPSD);
 
@@ -601,7 +598,7 @@ static int      UPopUpdateMailbox(POP3SessionData * pPOPSD)
 
 
 
-int             UPopGetSessionMsgCount(POP3_HANDLE hPOPSession)
+int             UPopGetSessionMsgCurrent(POP3_HANDLE hPOPSession)
 {
 
     POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
@@ -609,6 +606,18 @@ int             UPopGetSessionMsgCount(POP3_HANDLE hPOPSession)
     return (pPOPSD->iMsgCount);
 
 }
+
+
+
+int             UPopGetSessionMsgTotal(POP3_HANDLE hPOPSession)
+{
+
+    POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
+
+    return (pPOPSD->iMsgListed);
+
+}
+
 
 
 unsigned long   UPopGetSessionMBSize(POP3_HANDLE hPOPSession)
@@ -641,7 +650,7 @@ int             UPopGetMessageSize(POP3_HANDLE hPOPSession, int iMsgIndex,
 
     ulMessageSize = 0;
 
-    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD->hMessageList, iMsgIndex - 1);
+    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD, iMsgIndex - 1);
 
     if (pPOPMD == NULL)
     {
@@ -669,7 +678,7 @@ int             UPopGetMessageUIDL(POP3_HANDLE hPOPSession, int iMsgIndex,
 
     POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
 
-    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD->hMessageList, iMsgIndex - 1);
+    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD, iMsgIndex - 1);
 
     if (pPOPMD == NULL)
     {
@@ -702,7 +711,7 @@ int             UPopDeleteMessage(POP3_HANDLE hPOPSession, int iMsgIndex)
 
     POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
 
-    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD->hMessageList, iMsgIndex - 1);
+    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD, iMsgIndex - 1);
 
     if (pPOPMD == NULL)
     {
@@ -788,7 +797,7 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
 
     POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
 
-    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD->hMessageList, iMsgIndex - 1);
+    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD, iMsgIndex - 1);
 
     if (pPOPMD == NULL)
     {
@@ -845,7 +854,7 @@ int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iN
 
     POP3SessionData *pPOPSD = (POP3SessionData *) hPOPSession;
 
-    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD->hMessageList, iMsgIndex - 1);
+    POP3MsgData    *pPOPMD = UPopMessageFromIndex(pPOPSD, iMsgIndex - 1);
 
     if (pPOPMD == NULL)
     {

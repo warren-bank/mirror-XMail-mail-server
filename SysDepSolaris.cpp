@@ -48,7 +48,7 @@
 #define MAX_SWAP_NAME_SIZE          256
 
 #define MAX_STACK_SHIFT             2048
-#define STACK_ALIGN_BYTES           16
+#define STACK_ALIGN_BYTES           8
 
 
 
@@ -136,6 +136,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 
 
+static unsigned int uSRandBase;
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
 static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
@@ -177,6 +178,7 @@ int             SysInitLibrary(void)
 {
 
     tzset();
+    uSRandBase = (unsigned int) time(NULL);
 
     thr_setconcurrency(MAX_THREAD_CONCURRENCY);
 
@@ -2811,7 +2813,7 @@ static int      SysGetSwapInfo(SYS_INT64 * pSwapTotal, SYS_INT64 * pSwapFree)
 static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 {
 
-    srand(getpid() * (unsigned int) time(NULL));
+    srand(getpid() * (unsigned int) time(NULL) * uSRandBase);
 
 
     unsigned int    uResult,

@@ -56,7 +56,8 @@ POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
 void            UPopReleaseSession(POP3_HANDLE hPOPSession, int iUpdate = 1);
 char           *UPopGetUserInfoVar(POP3_HANDLE hPOPSession, const char *pszName,
                         const char *pszDefault = NULL);
-int             UPopGetSessionMsgCount(POP3_HANDLE hPOPSession);
+int             UPopGetSessionMsgCurrent(POP3_HANDLE hPOPSession);
+int             UPopGetSessionMsgTotal(POP3_HANDLE hPOPSession);
 unsigned long   UPopGetSessionMBSize(POP3_HANDLE hPOPSession);
 int             UPopGetSessionLastAccessed(POP3_HANDLE hPOPSession);
 int             UPopGetMessageSize(POP3_HANDLE hPOPSession, int iMsgIndex,

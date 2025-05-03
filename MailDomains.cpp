@@ -467,6 +467,9 @@ int             MDomRemoveDomain(char const * pszDomain)
     if (GwLkRemoveDomainLinks(pszDomain) < 0)
         return (ErrGetErrorCode());
 
+    if (ADomRemoveLinkedDomains(pszDomain) < 0)
+        return (ErrGetErrorCode());
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Try ( if defined ) to drop external auth domain
 ///////////////////////////////////////////////////////////////////////////////

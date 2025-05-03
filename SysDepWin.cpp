@@ -123,6 +123,7 @@ static          __declspec(thread)
 static time_t   tSysStart;
 static SYS_INT64 PCFreq,
                 PCSysStart;
+static unsigned int uSRandBase;
 static int      iSndBufSize = -1, iRcvBufSize = -1;
 static CRITICAL_SECTION csLog;
 static void     (*SysBreakHandler) (void) = NULL;
@@ -229,6 +230,7 @@ int             SysInitLibrary(void)
 
     _tzset();
     time(&tSysStart);
+    uSRandBase = (unsigned int) tSysStart;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup sockets
@@ -2576,7 +2578,7 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 {
 
-    srand(GetCurrentThreadId() * (unsigned int) time(NULL));
+    srand(GetCurrentThreadId() * (unsigned int) time(NULL) * uSRandBase);
 
 
     unsigned int    uResult,

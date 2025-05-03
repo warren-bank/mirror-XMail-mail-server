@@ -1485,13 +1485,16 @@ UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for alias domain
 ///////////////////////////////////////////////////////////////////////////////
+    UserInfo       *pUI = UsrLookupUser(pszDomain, pszName);
     char            szADomain[MAX_HOST_NAME] = "";
 
-    if (ADomLookupDomain(pszDomain, szADomain, true))
-        pszDomain = szADomain;
+///////////////////////////////////////////////////////////////////////////////
+//  Check for alias domain if first lookup failed
+///////////////////////////////////////////////////////////////////////////////
+    if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
+        pUI = UsrLookupUser(szADomain, pszName);
 
-
-    return (UsrLookupUser(pszDomain, pszName));
+    return (pUI);
 
 }
 

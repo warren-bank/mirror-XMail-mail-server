@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.6
+Version: 1.7
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,13 @@ fi
 
 
 %changelog
+
+* Mon Apr 01 2002 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a bug inside the POP3 server that caused bad responses to UIDL and LIST commands
+    in case of certain command patterns.
+    Added support for HOSTNAME:PORT ( or IP:PORT ) for the DefaultSMTPGateways SERVER.TAB variable.
+    Added domain aliases cleanup upon main domain removal.
+    Added "MaxMessageSize" inside USER.TAB files to override the global ( SERVER.TAB ) one.
 
 * Sun Mar 03 2002 Davide Libenzi <davidel@xmailserver.org>
     Added a new USER.TAB variable "UseReplyTo" ( default 1 ) to make it possible to disable the emission

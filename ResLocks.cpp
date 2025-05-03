@@ -72,8 +72,6 @@ struct ResLockEntry
 
 
 
-static char    *RLckGetResourceName(unsigned int uUserID, unsigned int uResID,
-                        char *pszResourceName);
 static int      RLckGetWaitGate(char const * pszResourceName);
 static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName);
 static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE);
@@ -177,18 +175,6 @@ int             RLckCleanupLockers(void)
     SysCloseMutex(hRLMutex);
 
     return (0);
-
-}
-
-
-
-static char    *RLckGetResourceName(unsigned int uUserID, unsigned int uResID,
-                        char *pszResourceName)
-{
-
-    sprintf(pszResourceName, "$>usr%u.res%u", uUserID, uResID);
-
-    return (pszResourceName);
 
 }
 
@@ -518,19 +504,6 @@ RLCK_HANDLE     RLckLockEX(char const * pszResourceName)
 
 
 
-RLCK_HANDLE     RLckLockEX(unsigned int uUserID, unsigned int uResID)
-{
-
-    char            szResourceName[256] = "";
-
-    RLckGetResourceName(uUserID, uResID, szResourceName);
-
-    return (RLckLockEX(szResourceName));
-
-}
-
-
-
 int             RLckUnlockEX(RLCK_HANDLE hLock)
 {
 
@@ -544,19 +517,6 @@ RLCK_HANDLE     RLckLockSH(char const * pszResourceName)
 {
 
     return (RLckLock(pszResourceName, RLckTryLockSH));
-
-}
-
-
-
-RLCK_HANDLE     RLckLockSH(unsigned int uUserID, unsigned int uResID)
-{
-
-    char            szResourceName[256] = "";
-
-    RLckGetResourceName(uUserID, uResID, szResourceName);
-
-    return (RLckLockSH(szResourceName));
 
 }
 

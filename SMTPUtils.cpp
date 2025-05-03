@@ -1977,7 +1977,7 @@ char          **USmtpGetMailExchangers(SVRCFG_HANDLE hSvrConfig, const char *psz
         return (NULL);
     }
 
-    char          **ppszMXGWs = StrTokenize(pszDefaultGws, ",;: \t\r\n");
+    char          **ppszMXGWs = StrTokenize(pszDefaultGws, ",; \t\r\n");
 
 
     SysFree(pszDefaultGws);

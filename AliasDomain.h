@@ -56,6 +56,7 @@ int             ADomCheckDomainsIndexes(void);
 int             ADomLookupDomain(const char *pszADomain, char *pszDomain, bool bWildMatch);
 int             ADomAddADomain(char const * pszADomain, char const * pszDomain);
 int             ADomRemoveADomain(char const * pszADomain);
+int             ADomRemoveLinkedDomains(char const * pszDomain);
 int             ADomGetADomainFileSnapShot(const char *pszFileName);
 ADOMAIN_HANDLE  ADomOpenDB(void);
 void            ADomCloseDB(ADOMAIN_HANDLE hDomainsDB);

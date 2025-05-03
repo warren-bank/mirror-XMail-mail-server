@@ -136,6 +136,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 
 
+static unsigned int uSRandBase;
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
 static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
@@ -178,6 +179,7 @@ int             SysInitLibrary(void)
 {
 
     tzset();
+    uSRandBase = (unsigned int) time(NULL);
 
     if (SysThreadSetup(NULL) < 0)
         return (ErrGetErrorCode());
@@ -2803,7 +2805,7 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 {
 
-    srand(getpid() * (unsigned int) time(NULL));
+    srand(getpid() * (unsigned int) time(NULL) * uSRandBase);
 
 
     unsigned int    uResult,

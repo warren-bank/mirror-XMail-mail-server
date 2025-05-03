@@ -1364,6 +1364,9 @@ Part 12			SERVER.TAB variables
 	[EnableAuthSMTP-POP3]
 	Enable SMTP after POP3 authentication ( default on ).
 	
+	[MaxMessageSize]
+	Set the maximum message size in Kb that is possible to send through the server.
+	
 	[DefaultSmtpPerms]
 	This list SMTP permissions assigned to users looked up inside MAILUSERS.TAB during SMTP authentication.
 	It also defines the permissions for users authenticated with SMTP after POP3.

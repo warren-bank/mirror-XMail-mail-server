@@ -491,6 +491,125 @@ int             ADomRemoveADomain(char const * pszADomain)
 
 
 
+int             ADomRemoveLinkedDomains(char const * pszDomain)
+{
+
+    char            szADomainFilePath[SYS_MAX_PATH] = "";
+
+    ADomGetADomainFilePath(szADomainFilePath);
+
+
+    char            szTmpFile[SYS_MAX_PATH] = "";
+
+    SysGetTmpFile(szTmpFile);
+
+
+    char            szResLock[SYS_MAX_PATH] = "";
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szADomainFilePath, szResLock));
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+    {
+        ErrorPush();
+        CheckRemoveFile(szTmpFile);
+        return (ErrorPop());
+    }
+
+
+    FILE           *pDomainsFile = fopen(szADomainFilePath, "rt");
+
+    if (pDomainsFile == NULL)
+    {
+        RLckUnlockEX(hResLock);
+        CheckRemoveFile(szTmpFile);
+
+        ErrSetErrorCode(ERR_ADOMAIN_FILE_NOT_FOUND);
+        return (ERR_ADOMAIN_FILE_NOT_FOUND);
+    }
+
+    FILE           *pTmpFile = fopen(szTmpFile, "wt");
+
+    if (pTmpFile == NULL)
+    {
+        fclose(pDomainsFile);
+        RLckUnlockEX(hResLock);
+        CheckRemoveFile(szTmpFile);
+
+        ErrSetErrorCode(ERR_FILE_CREATE, szTmpFile);
+        return (ERR_FILE_CREATE);
+    }
+
+    int             iDomainFound = 0;
+    char            szADomainLine[ADOMAIN_LINE_MAX] = "";
+
+    while (MscFGets(szADomainLine, sizeof(szADomainLine) - 1, pDomainsFile) != NULL)
+    {
+        char          **ppszStrings = StrGetTabLineStrings(szADomainLine);
+
+        if (ppszStrings == NULL)
+            continue;
+
+        int             iFieldsCount = StrStringsCount(ppszStrings);
+
+        if ((iFieldsCount >= adomMax) && (stricmp(pszDomain, ppszStrings[adomDomain]) == 0))
+        {
+
+            ++iDomainFound;
+
+        }
+        else
+            fprintf(pTmpFile, "%s\n", szADomainLine);
+
+        StrFreeStrings(ppszStrings);
+    }
+
+    fclose(pDomainsFile);
+    fclose(pTmpFile);
+
+    if (iDomainFound == 0)
+    {
+        SysRemove(szTmpFile);
+        RLckUnlockEX(hResLock);
+        return (0);
+    }
+
+    char            szTmpADomainFilePath[SYS_MAX_PATH] = "";
+
+    sprintf(szTmpADomainFilePath, "%s.tmp", szADomainFilePath);
+
+    if (MscMoveFile(szADomainFilePath, szTmpADomainFilePath) < 0)
+    {
+        ErrorPush();
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+    if (MscMoveFile(szTmpFile, szADomainFilePath) < 0)
+    {
+        ErrorPush();
+        MscMoveFile(szTmpADomainFilePath, szADomainFilePath);
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+    SysRemove(szTmpADomainFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Rebuild indexes
+///////////////////////////////////////////////////////////////////////////////
+    if (ADomRebuildADomainIndexes(szADomainFilePath) < 0)
+    {
+        ErrorPush();
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+    RLckUnlockEX(hResLock);
+
+    return (0);
+
+}
+
+
 
 int             ADomGetADomainFileSnapShot(const char *pszFileName)
 {

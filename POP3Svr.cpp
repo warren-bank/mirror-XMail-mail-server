@@ -654,31 +654,31 @@ static int      POP3HandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     int             iCmdResult = -1;
 
-    if (StrINComp(pszCommand, "USER") == 0)
+    if (StrCmdMatch(pszCommand, "USER"))
         iCmdResult = POP3HandleCmd_USER(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "PASS") == 0)
+    else if (StrCmdMatch(pszCommand, "PASS"))
         iCmdResult = POP3HandleCmd_PASS(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "APOP") == 0)
+    else if (StrCmdMatch(pszCommand, "APOP"))
         iCmdResult = POP3HandleCmd_APOP(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "STAT") == 0)
+    else if (StrCmdMatch(pszCommand, "STAT"))
         iCmdResult = POP3HandleCmd_STAT(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "LIST") == 0)
+    else if (StrCmdMatch(pszCommand, "LIST"))
         iCmdResult = POP3HandleCmd_LIST(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "UIDL") == 0)
+    else if (StrCmdMatch(pszCommand, "UIDL"))
         iCmdResult = POP3HandleCmd_UIDL(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "QUIT") == 0)
+    else if (StrCmdMatch(pszCommand, "QUIT"))
         iCmdResult = POP3HandleCmd_QUIT(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "RETR") == 0)
+    else if (StrCmdMatch(pszCommand, "RETR"))
         iCmdResult = POP3HandleCmd_RETR(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "TOP") == 0)
+    else if (StrCmdMatch(pszCommand, "TOP"))
         iCmdResult = POP3HandleCmd_TOP(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "DELE") == 0)
+    else if (StrCmdMatch(pszCommand, "DELE"))
         iCmdResult = POP3HandleCmd_DELE(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "NOOP") == 0)
+    else if (StrCmdMatch(pszCommand, "NOOP"))
         iCmdResult = POP3HandleCmd_NOOP(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "LAST") == 0)
+    else if (StrCmdMatch(pszCommand, "LAST"))
         iCmdResult = POP3HandleCmd_LAST(pszCommand, hBSock, POP3S);
-    else if (StrINComp(pszCommand, "RSET") == 0)
+    else if (StrCmdMatch(pszCommand, "RSET"))
         iCmdResult = POP3HandleCmd_RSET(pszCommand, hBSock, POP3S);
     else
         BSckSendString(hBSock, "-ERR Invalid command", POP3S.pPOP3Cfg->iTimeout);
@@ -858,7 +858,7 @@ static int      POP3HandleCmd_PASS(const char *pszCommand, BSOCK_HANDLE hBSock,
     POP3S.iPOP3State = stateLogged;
 
 
-    int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+    int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
     unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
     BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
@@ -983,7 +983,7 @@ static int      POP3HandleCmd_APOP(const char *pszCommand, BSOCK_HANDLE hBSock,
     POP3S.iPOP3State = stateLogged;
 
 
-    int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+    int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
     unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
     BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
@@ -1006,7 +1006,7 @@ static int      POP3HandleCmd_STAT(const char *pszCommand, BSOCK_HANDLE hBSock,
     }
 
 
-    int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+    int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
     unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
     BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout, "+OK %d %lu", iMsgCount, ulMBSize);
@@ -1027,20 +1027,19 @@ static int      POP3HandleCmd_LIST(const char *pszCommand, BSOCK_HANDLE hBSock,
         return (-1);
     }
 
-    int             iMsgIndex = -1;
-    char            szCmd[32] = "";
+    int             iMsgIndex = -1,
+                    iNumArgs = sscanf(pszCommand, "%*s %d", &iMsgIndex);
 
-    int             iNumArgs = sscanf(pszCommand, "%s %d", szCmd, &iMsgIndex);
-
-    if (iNumArgs == 1)
+    if (iNumArgs < 1)
     {
-        int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+        int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession),
+                        iMsgTotal = UPopGetSessionMsgTotal(POP3S.hPOPSession);
         unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
         BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
                 "+OK %d %lu", iMsgCount, ulMBSize);
 
-        for (int ii = 0; ii < iMsgCount; ii++)
+        for (int ii = 0; ii < iMsgTotal; ii++)
         {
             unsigned long   ulMessageSize = 0;
 
@@ -1087,18 +1086,17 @@ static int      POP3HandleCmd_UIDL(const char *pszCommand, BSOCK_HANDLE hBSock,
         return (-1);
     }
 
-    int             iMsgIndex = -1;
-    char            szCmd[32] = "";
+    int             iMsgIndex = -1,
+                    iNumArgs = sscanf(pszCommand, "%*s %d", &iMsgIndex);
 
-    int             iNumArgs = sscanf(pszCommand, "%s %d", szCmd, &iMsgIndex);
-
-    if (iNumArgs == 1)
+    if (iNumArgs < 1)
     {
-        int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+        int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession),
+                        iMsgTotal = UPopGetSessionMsgTotal(POP3S.hPOPSession);
 
         BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout, "+OK %d", iMsgCount);
 
-        for (int ii = 0; ii < iMsgCount; ii++)
+        for (int ii = 0; ii < iMsgTotal; ii++)
         {
             char            szMessageUIDL[256] = "";
 
@@ -1162,9 +1160,8 @@ static int      POP3HandleCmd_RETR(const char *pszCommand, BSOCK_HANDLE hBSock,
     }
 
     int             iMsgIndex = -1;
-    char            szCmd[32] = "";
 
-    if (sscanf(pszCommand, "%s %d", szCmd, &iMsgIndex) != 2)
+    if (sscanf(pszCommand, "%*s %d", &iMsgIndex) < 1)
     {
         BSckSendString(hBSock, "-ERR Invalid syntax", POP3S.pPOP3Cfg->iTimeout);
         return (-1);
@@ -1188,9 +1185,8 @@ static int      POP3HandleCmd_TOP(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     int             iMsgIndex = -1,
                     iNumLines = 0;
-    char            szCmd[32] = "";
 
-    if (sscanf(pszCommand, "%s %d %d", szCmd, &iMsgIndex, &iNumLines) != 3)
+    if (sscanf(pszCommand, "%*s %d %d", &iMsgIndex, &iNumLines) < 2)
     {
         BSckSendString(hBSock, "-ERR Invalid syntax", POP3S.pPOP3Cfg->iTimeout);
         return (-1);
@@ -1213,9 +1209,8 @@ static int      POP3HandleCmd_DELE(const char *pszCommand, BSOCK_HANDLE hBSock,
     }
 
     int             iMsgIndex = -1;
-    char            szCmd[32] = "";
 
-    if (sscanf(pszCommand, "%s %d", szCmd, &iMsgIndex) != 2)
+    if (sscanf(pszCommand, "%*s %d", &iMsgIndex) < 1)
     {
         BSckSendString(hBSock, "-ERR Invalid syntax", POP3S.pPOP3Cfg->iTimeout);
         return (-1);
@@ -1247,7 +1242,7 @@ static int      POP3HandleCmd_NOOP(const char *pszCommand, BSOCK_HANDLE hBSock,
     }
 
 
-    int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+    int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
     unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
     BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
@@ -1292,7 +1287,7 @@ static int      POP3HandleCmd_RSET(const char *pszCommand, BSOCK_HANDLE hBSock,
     UPopResetSession(POP3S.hPOPSession);
 
 
-    int             iMsgCount = UPopGetSessionMsgCount(POP3S.hPOPSession);
+    int             iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
     unsigned long   ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
 
     BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,

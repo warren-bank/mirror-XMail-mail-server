@@ -43,6 +43,7 @@
 #define SetEmptyString(s)       (s)[0] = '\0'
 #define IsEmptyString(s)        (*(s) == '\0')
 #define CStringSize(s)          (sizeof(s) - 1)
+#define StrCmdMatch(s, c)       StrNCmdMatch(s, c, CStringSize(c))
 #define StrSkipSpaces(p)        for (; (*(p) == ' ') || (*(p) == '\t'); (p)++)
 #define CharISame(a, b)         (tolower(a) == tolower(b))
 #define StrINComp(s, t)         strnicmp(s, t, strlen(t))
@@ -69,6 +70,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 //  Inline functions
 ///////////////////////////////////////////////////////////////////////////////
+
+inline int      StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
+{
+
+    return (((strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0) &&
+            ((pszCmdLine[iCmdLength] == '\0') || (pszCmdLine[iCmdLength] == ' ') ||
+            (pszCmdLine[iCmdLength] == '\t'))) ? 1: 0);
+
+}
+
 
 inline char    *AppendSlash(char *pszPath)
 {
@@ -116,7 +127,7 @@ inline int      ToLower(int iChar)
 
 
 
-inline bool     IsPrimeNumber(int iNumber)
+inline int      IsPrimeNumber(int iNumber)
 {
 
     if (iNumber > 3)
@@ -127,13 +138,13 @@ inline bool     IsPrimeNumber(int iNumber)
 
             for (int ii = 3; ii < iHalfNumber; ii += 2)
                 if ((iNumber % ii) == 0)
-                    return (false);
+                    return (0);
         }
         else
-            return (false);
+            return (0);
     }
 
-    return (true);
+    return (1);
 
 };
 

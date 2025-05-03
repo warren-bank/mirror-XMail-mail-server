@@ -489,15 +489,8 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
-    char const     *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
-    char const     *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
-    char const     *pszSpoolFile = USmlGetSpoolFile(hFSpool);
-    char const     *pszMailFrom = USmlMailFrom(hFSpool);
-    char const     *const * ppszFrom = USmlGetMailFrom(hFSpool);
     char const     *const * ppszRcpt = USmlGetRcptTo(hFSpool);
-
-    int             iFromDomains = StrStringsCount(ppszFrom),
-                    iRcptDomains = StrStringsCount(ppszRcpt);
+    int             iRcptDomains = StrStringsCount(ppszRcpt);
 
     char            szDestUser[MAX_ADDR_NAME] = "",
                     szDestDomain[MAX_ADDR_NAME] = "",
@@ -517,7 +510,7 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
         if (pUI != NULL)
         {
             SysLogMessage(LOG_LEV_MESSAGE, "SMAIL local SMTP = \"%s\" From = <%s> To = <%s>\n",
-                    pszSMTPDomain, pszMailFrom, ppszRcpt[0]);
+                    USmlGetSMTPDomain(hFSpool), USmlMailFrom(hFSpool), ppszRcpt[0]);
 
             if (UsrGetUserType(pUI) == usrTypeUser)
             {

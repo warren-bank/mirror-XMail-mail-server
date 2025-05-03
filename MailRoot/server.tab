@@ -33,5 +33,5 @@
 #"DynDnsSetup"	"members.dyndns.org,80,/nic/dyndns?action=edit&started=1&hostname=YES&host_id=yourhost.ourdomain.ext&myip=%s&wildcard=OFF&mx=mail.exchanger.ext&backmx=NO,foouser,foopasswd"
 #"SmtpConfig"	"mail-auth"
 #"SmtpConfig-192.168.0.1"	"mail-auth"
-"DefaultSmtpPerms"	"MRV"
+"DefaultSmtpPerms"	"MRVZ"
 

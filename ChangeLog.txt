@@ -584,6 +584,12 @@ Date 03-03-2002	1.6
 	 Added a new SERVER.TAB variable  NotifyTryPattern  to specify at which delivery attempt failure
 	 the system has to send the notification message.
 	 Fixed a bug that caused alias domains to have higher priority lookup compared to standard domains.
+Date 03-03-2002	1.7
+	 Fixed a bug inside the POP3 server that caused bad responses to UIDL and LIST commands in case of
+	 certain command patterns.
+	 Added support for HOSTNAME:PORT ( or IP:PORT ) for the DefaultSMTPGateways SERVER.TAB variable.
+	 Added domain aliases cleanup upon main domain removal.
+	 Added "MaxMessageSize" inside USER.TAB files to override the global ( SERVER.TAB ) one.
 
 	 
 

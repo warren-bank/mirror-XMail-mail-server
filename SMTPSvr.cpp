@@ -160,6 +160,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
 static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms);
+static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI);
 static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
                         char const * pszRecipient, char const * pszStatus,
                         unsigned long ulMsgSize);
@@ -205,15 +206,16 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                         char const * pszAuthParam);
 static char    *SMTPGetAuthFilePath(char *pszFilePath);
 static char    *SMTPGetExtAuthFilePath(char *pszFilePath);
-static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char * pszPerms);
-static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms);
-static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const * pszChallenge,
-                        char const * pszUsername, char const * pszDigest, char *pszPerms);
-static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char *pszPerms);
-static int      SMTPCheckCramMD5Auth(char const * pszChallenge, char const * pszUsername,
-                        char const * pszDigest, char *pszPerms);
+static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsername,
+                        char const * pszPassword);
+static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
+                        int iMaxPerms);
+static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
+                        char const * pszUsername, char const * pszDigest);
+static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUsername,
+                        char const * pszPassword);
+static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
+                        char const * pszUsername, char const * pszDigest);
 static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                         char const * pszAuthParam);
 static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
@@ -812,6 +814,36 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
 
 
 
+static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Retrieve and apply permissions
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszValue = NULL;
+    char            szPerms[128] = "";
+
+    if (SMTPGetUserSmtpPerms(pUI, SMTPS.hSvrConfig, szPerms, sizeof(szPerms) - 1) < 0)
+        return (ErrGetErrorCode());
+
+    SMTPApplyPerms(SMTPS, szPerms);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check "MaxMessageSize" override
+///////////////////////////////////////////////////////////////////////////////
+    if ((pszValue = UsrGetUserInfoVar(pUI, "MaxMessageSize")) != NULL)
+    {
+        SMTPS.ulMaxMsgSize = 1024 * (unsigned long) atol(pszValue);
+
+        SysFree(pszValue);
+    }
+
+
+    return (0);
+
+}
+
+
+
 static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
                         char const * pszRecipient, char const * pszStatus, unsigned long ulMsgSize)
 {
@@ -1008,23 +1040,23 @@ static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
         iCmdResult = SMTPHandleCmd_MAIL(pszCommand, hBSock, SMTPS);
     else if (StrINComp(pszCommand, RCPT_TO_STR) == 0)
         iCmdResult = SMTPHandleCmd_RCPT(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "DATA") == 0)
+    else if (StrCmdMatch(pszCommand, "DATA"))
         iCmdResult = SMTPHandleCmd_DATA(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "HELO") == 0)
+    else if (StrCmdMatch(pszCommand, "HELO"))
         iCmdResult = SMTPHandleCmd_HELO(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "EHLO") == 0)
+    else if (StrCmdMatch(pszCommand, "EHLO"))
         iCmdResult = SMTPHandleCmd_EHLO(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "AUTH") == 0)
+    else if (StrCmdMatch(pszCommand, "AUTH"))
         iCmdResult = SMTPHandleCmd_AUTH(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "RSET") == 0)
+    else if (StrCmdMatch(pszCommand, "RSET"))
         iCmdResult = SMTPHandleCmd_RSET(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "VRFY") == 0)
+    else if (StrCmdMatch(pszCommand, "VRFY"))
         iCmdResult = SMTPHandleCmd_VRFY(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "ETRN") == 0)
+    else if (StrCmdMatch(pszCommand, "ETRN"))
         iCmdResult = SMTPHandleCmd_ETRN(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "NOOP") == 0)
+    else if (StrCmdMatch(pszCommand, "NOOP"))
         iCmdResult = SMTPHandleCmd_NOOP(pszCommand, hBSock, SMTPS);
-    else if (StrINComp(pszCommand, "QUIT") == 0)
+    else if (StrCmdMatch(pszCommand, "QUIT"))
         iCmdResult = SMTPHandleCmd_QUIT(pszCommand, hBSock, SMTPS);
     else
         BSckSendString(hBSock, "500 Syntax error, command unrecognized", SMTPS.pSMTPCfg->iTimeout);
@@ -1049,34 +1081,24 @@ static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const * pszUser,
 ///////////////////////////////////////////////////////////////////////////////
 //  Perform IP file checking
 ///////////////////////////////////////////////////////////////////////////////
-    int             iCheckResult = UPopUserIpCheck(pUI, &SMTPS.PeerInfo,
-            SMTPS.pSMTPCfg->uPopAuthExpireTime);
-
-
-    UsrFreeUserInfo(pUI);
-
-    if (iCheckResult < 0)
-        return (iCheckResult);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Load user perms ( default with this implementation )
-///////////////////////////////////////////////////////////////////////////////
-    char            szPerms[128] = "";
-
-    char           *pszDefultPerms = SvrGetConfigVar(SMTPS.hSvrConfig, "DefaultSmtpPerms", "MR");
-
-    if (pszDefultPerms != NULL)
+    if (UPopUserIpCheck(pUI, &SMTPS.PeerInfo, SMTPS.pSMTPCfg->uPopAuthExpireTime) < 0)
     {
-        strcpy(szPerms, pszDefultPerms);
-
-        SysFree(pszDefultPerms);
+        ErrorPush();
+        UsrFreeUserInfo(pUI);
+        return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Apply user perms
+//  Apply user configuration
 ///////////////////////////////////////////////////////////////////////////////
-    SMTPApplyPerms(SMTPS, szPerms);
+    if (SMTPApplyUserConfig(SMTPS, pUI) < 0)
+    {
+        ErrorPush();
+        UsrFreeUserInfo(pUI);
+        return (ErrorPop());
+    }
 
+    UsrFreeUserInfo(pUI);
 
     return (0);
 
@@ -1766,7 +1788,6 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                 &iLineLength) == NULL)
         {
             ErrorPush();
-            fclose(SMTPS.pMsgFile), SMTPS.pMsgFile = NULL;
             SMTPResetSession(SMTPS);
             return (ErrorPop());
         }
@@ -1815,7 +1836,6 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
         if (SvrInShutdown())
         {
-            fclose(SMTPS.pMsgFile), SMTPS.pMsgFile = NULL;
             SMTPResetSession(SMTPS);
 
             ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
@@ -2581,9 +2601,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup smtp auth file
 ///////////////////////////////////////////////////////////////////////////////
-    char            szPerms[128] = "";
-
-    if (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, ppszTokens[0], ppszTokens[1], szPerms) < 0)
+    if (SMTPTryApplyUsrPwdAuth(SMTPS, ppszTokens[0], ppszTokens[1]) < 0)
     {
         ErrorPush();
         StrFreeStrings(ppszTokens);
@@ -2592,11 +2610,6 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 
         return (ErrorPop());
     }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Apply user perms to SMTP config
-///////////////////////////////////////////////////////////////////////////////
-    SMTPApplyPerms(SMTPS, szPerms);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set the logon user
@@ -2715,10 +2728,8 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
 //  Validate client response
 ///////////////////////////////////////////////////////////////////////////////
-    char            szPerms[128] = "";
-
-    if ((SMTPCheckLocalAuth(SMTPS.hSvrConfig, pszUsername, pszPassword, szPerms) < 0) &&
-            (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, pszUsername, pszPassword, szPerms) < 0))
+    if ((SMTPTryApplyLocalAuth(SMTPS, pszUsername, pszPassword) < 0) &&
+            (SMTPTryApplyUsrPwdAuth(SMTPS, pszUsername, pszPassword) < 0))
     {
         ErrorPush();
 
@@ -2726,11 +2737,6 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
         return (ErrorPop());
     }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Apply user perms to SMTP config
-///////////////////////////////////////////////////////////////////////////////
-    SMTPApplyPerms(SMTPS, szPerms);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set the logon user
@@ -2792,7 +2798,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
         return (ERR_BAD_SMTP_CMD_SYNTAX);
     }
 
-    strcpy(szUsername, szDecodeBuffer);
+    StrSNCpy(szUsername, szDecodeBuffer);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Decode ( base64 ) password
@@ -2806,15 +2812,13 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
         return (ERR_BAD_SMTP_CMD_SYNTAX);
     }
 
-    strcpy(szPassword, szDecodeBuffer);
+    StrSNCpy(szPassword, szDecodeBuffer);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Validate client response
 ///////////////////////////////////////////////////////////////////////////////
-    char            szPerms[128] = "";
-
-    if ((SMTPCheckLocalAuth(SMTPS.hSvrConfig, szUsername, szPassword, szPerms) < 0) &&
-            (SMTPCheckUsrPwdAuth(SMTPS.hSvrConfig, szUsername, szPassword, szPerms) < 0))
+    if ((SMTPTryApplyLocalAuth(SMTPS, szUsername, szPassword) < 0) &&
+            (SMTPTryApplyUsrPwdAuth(SMTPS, szUsername, szPassword) < 0))
     {
         ErrorPush();
 
@@ -2824,9 +2828,9 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Apply user perms to SMTP config
+//  Set the logon user
 ///////////////////////////////////////////////////////////////////////////////
-    SMTPApplyPerms(SMTPS, szPerms);
+    StrSNCpy(SMTPS.szLogonUser, szUsername);
 
 
     SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
@@ -2866,8 +2870,8 @@ static char    *SMTPGetExtAuthFilePath(char *pszFilePath)
 
 
 
-static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char * pszPerms)
+static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsername,
+                        char const * pszPassword)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  First try to lookup  mailusers.tab
@@ -2886,7 +2890,10 @@ static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUse
     {
         if (strcmp(pUI->pszPassword, pszPassword) == 0)
         {
-            if (SMTPGetUserSmtpPerms(pUI, hSvrConfig, pszPerms) < 0)
+///////////////////////////////////////////////////////////////////////////////
+//  Apply user configuration
+///////////////////////////////////////////////////////////////////////////////
+            if (SMTPApplyUserConfig(SMTPS, pUI) < 0)
             {
                 ErrorPush();
                 UsrFreeUserInfo(pUI);
@@ -2911,14 +2918,15 @@ static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUse
 
 
 
-static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms)
+static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
+                        int iMaxPerms)
 {
 
     char           *pszUserPerms = UsrGetUserInfoVar(pUI, "SmtpPerms");
 
     if (pszUserPerms != NULL)
     {
-        strcpy(pszPerms, pszUserPerms);
+        StrNCpy(pszPerms, pszUserPerms, iMaxPerms);
 
         SysFree(pszUserPerms);
     }
@@ -2932,7 +2940,7 @@ static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, c
 
         if (pszDefultPerms != NULL)
         {
-            strcpy(pszPerms, pszDefultPerms);
+            StrNCpy(pszPerms, pszDefultPerms, iMaxPerms);
 
             SysFree(pszDefultPerms);
         }
@@ -2948,8 +2956,8 @@ static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, c
 
 
 
-static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const * pszChallenge,
-                        char const * pszUsername, char const * pszDigest, char *pszPerms)
+static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
+                        char const * pszUsername, char const * pszDigest)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  First try to lookup  mailusers.tab
@@ -2979,7 +2987,10 @@ static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const *
 
         if (stricmp(szCurrDigest, pszDigest) == 0)
         {
-            if (SMTPGetUserSmtpPerms(pUI, hSvrConfig, pszPerms) < 0)
+///////////////////////////////////////////////////////////////////////////////
+//  Apply user configuration
+///////////////////////////////////////////////////////////////////////////////
+            if (SMTPApplyUserConfig(SMTPS, pUI) < 0)
             {
                 ErrorPush();
                 UsrFreeUserInfo(pUI);
@@ -3004,8 +3015,8 @@ static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const *
 
 
 
-static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char *pszPerms)
+static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUsername,
+                        char const * pszPassword)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
@@ -3044,8 +3055,10 @@ static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUs
                 (strcmp(ppszStrings[smtpaUsername], pszUsername) == 0) &&
                 (strcmp(ppszStrings[smtpaPassword], pszPassword) == 0))
         {
-            if (pszPerms != NULL)
-                strcpy(pszPerms, ppszStrings[smtpaPerms]);
+///////////////////////////////////////////////////////////////////////////////
+//  Apply user perms to SMTP config
+///////////////////////////////////////////////////////////////////////////////
+            SMTPApplyPerms(SMTPS, ppszStrings[smtpaPerms]);
 
             StrFreeStrings(ppszStrings);
             fclose(pAuthFile);
@@ -3068,8 +3081,8 @@ static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUs
 
 
 
-static int      SMTPCheckCramMD5Auth(char const * pszChallenge, char const * pszUsername,
-                        char const * pszDigest, char *pszPerms)
+static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
+                        char const * pszUsername, char const * pszDigest)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
@@ -3114,8 +3127,10 @@ static int      SMTPCheckCramMD5Auth(char const * pszChallenge, char const * psz
 
             if (stricmp(szCurrDigest, pszDigest) == 0)
             {
-                if (pszPerms != NULL)
-                    strcpy(pszPerms, ppszStrings[smtpaPerms]);
+///////////////////////////////////////////////////////////////////////////////
+//  Apply user perms to SMTP config
+///////////////////////////////////////////////////////////////////////////////
+                SMTPApplyPerms(SMTPS, ppszStrings[smtpaPerms]);
 
                 StrFreeStrings(ppszStrings);
                 fclose(pAuthFile);
@@ -3188,11 +3203,9 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
 //  Validate client response
 ///////////////////////////////////////////////////////////////////////////////
-    char            szPerms[128] = "";
-
-    if ((SMTPCheckLocalCramMD5Auth(SMTPS.hSvrConfig, SMTPS.szTimeStamp, pszUsername,
-                            pszDigest, szPerms) < 0) &&
-            (SMTPCheckCramMD5Auth(SMTPS.szTimeStamp, pszUsername, pszDigest, szPerms) < 0))
+    if ((SMTPTryApplyLocalCMD5Auth(SMTPS, SMTPS.szTimeStamp, pszUsername,
+                            pszDigest) < 0) &&
+            (SMTPTryApplyCMD5Auth(SMTPS, SMTPS.szTimeStamp, pszUsername, pszDigest) < 0))
     {
         ErrorPush();
 
@@ -3200,11 +3213,6 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
         return (ErrorPop());
     }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Apply user perms to SMTP config
-///////////////////////////////////////////////////////////////////////////////
-    SMTPApplyPerms(SMTPS, szPerms);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set the logon user

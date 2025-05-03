@@ -113,6 +113,8 @@ static void     USmlFreeTagsList(HSLIST & hTagList);
 static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList);
 static int      USmlDumpHeaders(FILE * pMsgFile, HSLIST & hTagList);
 static void     USmlFreeData(SpoolFileData * pSFD);
+static SpoolFileData   *USmlAllocEmptyHandle(void);
+static int      USmlLoadHandle(SpoolFileData  *pSFD, const char *pszMessFilePath);
 static int      USmlFlushMessageFile(SpoolFileData * pSFD);
 static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool,
                         QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char const * pszMPFile,
@@ -650,33 +652,13 @@ char           *USmlBuildSendRcptTo(char const * const * ppszFrom, char const * 
 
 
 
-
-SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
+static int      USmlLoadHandle(SpoolFileData  *pSFD, const char *pszMessFilePath)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Structure allocation and initialization
-///////////////////////////////////////////////////////////////////////////////
-    SpoolFileData  *pSFD = (SpoolFileData *) SysAlloc(sizeof(SpoolFileData));
-
-    if (pSFD == NULL)
-        return (INVALID_SPLF_HANDLE);
-
-    pSFD->ppszFrom = NULL;
-    pSFD->pszMailFrom = NULL;
-    pSFD->pszSendMailFrom = NULL;
-    pSFD->ppszRcpt = NULL;
-    pSFD->pszRcptTo = NULL;
-    pSFD->pszSendRcptTo = NULL;
-    pSFD->pszRelayDomain = NULL;
-    SetEmptyString(pSFD->szSMTPDomain);
-    pSFD->ulFlags = 0;
-    ListInit(pSFD->hTagList);
-
-    StrSNCpy(pSFD->szMessFilePath, pszMessFilePath);
-
 
     char            szFName[SYS_MAX_PATH] = "",
                     szExt[SYS_MAX_PATH] = "";
+
+    StrSNCpy(pSFD->szMessFilePath, pszMessFilePath);
 
     MscSplitPath(pszMessFilePath, NULL, szFName, szExt);
 
@@ -687,9 +669,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
 
     if (pSpoolFile == NULL)
     {
-        SysFree(pSFD);
         ErrSetErrorCode(ERR_SPOOL_FILE_NOT_FOUND);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_SPOOL_FILE_NOT_FOUND);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -698,9 +679,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
     if (MscGetString(pSpoolFile, pSFD->szSMTPDomain, sizeof(pSFD->szSMTPDomain) - 1) == NULL)
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -709,9 +689,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
     if (MscGetString(pSpoolFile, pSFD->szMessageID, sizeof(pSFD->szMessageID) - 1) == NULL)
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
     char            szSpoolLine[MAX_SPOOL_LINE] = "";
@@ -723,17 +702,15 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
             (StrINComp(szSpoolLine, MAIL_FROM_STR) != 0))
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
     if ((pSFD->ppszFrom = USmtpGetPathStrings(szSpoolLine)) == NULL)
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -743,17 +720,15 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
             (StrINComp(szSpoolLine, RCPT_TO_STR) != 0))
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
     if ((pSFD->ppszRcpt = USmtpGetPathStrings(szSpoolLine)) == NULL)
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -763,9 +738,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
             (strncmp(szSpoolLine, SPOOL_FILE_DATA_START, strlen(SPOOL_FILE_DATA_START)) != 0))
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -782,9 +756,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
             ((pSFD->pszSendRcptTo = USmlBuildSendRcptTo(pSFD->ppszFrom, pSFD->ppszRcpt)) == NULL))
     {
         fclose(pSpoolFile);
-        USmlFreeData(pSFD);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-        return (INVALID_SPLF_HANDLE);
+        return (ERR_INVALID_SPOOL_FILE);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -797,9 +770,8 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
         if (USmtpSplitEmailAddr(pSFD->ppszRcpt[0], NULL, szRelayDomain) < 0)
         {
             fclose(pSpoolFile);
-            USmlFreeData(pSFD);
             ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
-            return (INVALID_SPLF_HANDLE);
+            return (ERR_INVALID_SPOOL_FILE);
         }
 
         pSFD->pszRelayDomain = SysStrDup(szRelayDomain);
@@ -819,6 +791,55 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
 
     fclose(pSpoolFile);
 
+    return (0);
+
+}
+
+
+
+static SpoolFileData   *USmlAllocEmptyHandle(void)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Structure allocation and initialization
+///////////////////////////////////////////////////////////////////////////////
+    SpoolFileData  *pSFD = (SpoolFileData *) SysAlloc(sizeof(SpoolFileData));
+
+    if (pSFD != NULL)
+    {
+        pSFD->ppszFrom = NULL;
+        pSFD->pszMailFrom = NULL;
+        pSFD->pszSendMailFrom = NULL;
+        pSFD->ppszRcpt = NULL;
+        pSFD->pszRcptTo = NULL;
+        pSFD->pszSendRcptTo = NULL;
+        pSFD->pszRelayDomain = NULL;
+        SetEmptyString(pSFD->szSMTPDomain);
+        pSFD->ulFlags = 0;
+        ListInit(pSFD->hTagList);
+    }
+
+    return (pSFD);
+
+}
+
+
+
+SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Structure allocation and initialization
+///////////////////////////////////////////////////////////////////////////////
+    SpoolFileData  *pSFD = USmlAllocEmptyHandle();
+
+    if (pSFD == NULL)
+        return (INVALID_SPLF_HANDLE);
+
+    if (USmlLoadHandle(pSFD, pszMessFilePath) < 0)
+    {
+        USmlFreeData(pSFD);
+        return (INVALID_SPLF_HANDLE);
+    }
+
     return ((SPLF_HANDLE) pSFD);
 
 }
@@ -829,7 +850,6 @@ void            USmlCloseHandle(SPLF_HANDLE hFSpool)
 {
 
     SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
-
 
     USmlFreeData(pSFD);
 
@@ -1985,7 +2005,6 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
     return (0);
 
 }
-
 
 
 
