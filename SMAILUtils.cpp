@@ -280,11 +280,11 @@ static MessageTagData *USmlFindTag(HSLIST & hTagList, char const *pszTagName,
 {
 
 	MessageTagData *pMTD = (TagPosition == TAG_POSITION_INIT) ?
-	    (MessageTagData *) ListFirst(hTagList) : (MessageTagData *) TagPosition;
+		(MessageTagData *) ListFirst(hTagList) : (MessageTagData *) TagPosition;
 
 	for (; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
-	     ListNext(hTagList, (PLISTLINK) pMTD)) {
-		if (stricmp(pMTD->pszTagName, pszTagName) == 0) {
+		     ListNext(hTagList, (PLISTLINK) pMTD)) {
+		if ((pszTagName == NULL) || (stricmp(pMTD->pszTagName, pszTagName) == 0)) {
 			TagPosition = (TAG_POSITION) ListNext(hTagList, (PLISTLINK) pMTD);
 			return (pMTD);
 		}
@@ -1635,7 +1635,7 @@ static int USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI, SPLF_HA
 	for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++) {
 		if (strcmp(ppszCmdTokens[ii], "@@FROM") == 0) {
 			char *pszNewValue =
-			    SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
+				SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());
@@ -1645,7 +1645,7 @@ static int USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI, SPLF_HA
 			ppszCmdTokens[ii] = pszNewValue;
 		} else if (strcmp(ppszCmdTokens[ii], "@@RCPT") == 0) {
 			char *pszNewValue =
-			    SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
+				SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());
@@ -1705,6 +1705,19 @@ static int USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI, SPLF_HA
 			}
 
 			char *pszNewValue = SysStrDup(szTmpFile);
+
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
+
+			SysFree(ppszCmdTokens[ii]);
+
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@USERAUTH") == 0) {
+			char szAuthName[MAX_ADDR_NAME] = "-";
+
+			USmlMessageAuth(hFSpool, szAuthName, sizeof(szAuthName) - 1);
+
+			char *pszNewValue = SysStrDup(szAuthName);
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());
@@ -2274,11 +2287,13 @@ int USmlDeleteCmdAliasDomainDir(char const *pszDomain)
 
 	StrLower(szDomainAliasDir + strlen(szAliasDir));
 
-	if (MscClearDirectory(szDomainAliasDir) < 0)
-		return (ErrGetErrorCode());
+	if (SysExistDir(szDomainAliasDir)) {
+		if (MscClearDirectory(szDomainAliasDir) < 0)
+			return (ErrGetErrorCode());
 
-	if (SysRemoveDir(szDomainAliasDir) < 0)
-		return (ErrGetErrorCode());
+		if (SysRemoveDir(szDomainAliasDir) < 0)
+			return (ErrGetErrorCode());
+	}
 
 	return (0);
 
@@ -3039,7 +3054,8 @@ static int USmlCreateSpoolFile(FILE * pMailFile, char const *const *ppszInfo,
 
 		MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
-		USmtpWriteInfoLine(pSpoolFile, LOCAL_ADDRESS ":0", LOCAL_ADDRESS ":0", szTime);
+		USmtpWriteInfoLine(pSpoolFile, LOCAL_ADDRESS_SQB ":0",
+				   LOCAL_ADDRESS_SQB ":0", szTime);
 	}
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3130,3 +3146,33 @@ int USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig)
 	return (0);
 
 }
+
+int USmlMessageAuth(SPLF_HANDLE hFSpool, char *pszAuthName, int iSize)
+{
+
+	SpoolFileData *pSFD = (SpoolFileData *) hFSpool;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Looks for the "X-AuthUser" tag, that has to happen *before* the first
+//  "Received" tag (to prevent forging)
+///////////////////////////////////////////////////////////////////////////////
+	MessageTagData *pMTD = (MessageTagData *) ListFirst(pSFD->hTagList);
+
+	for (; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
+		     ListNext(pSFD->hTagList, (PLISTLINK) pMTD)) {
+		if (stricmp(pMTD->pszTagName, "Received") == 0)
+			break;
+		if (stricmp(pMTD->pszTagName, "X-AuthUser") == 0) {
+			if (pszAuthName != NULL) {
+				StrNCpy(pszAuthName, pMTD->pszTagData, iSize);
+				StrTrim(pszAuthName, " \t\r\n");
+			}
+			return (0);
+		}
+	}
+
+	ErrSetErrorCode(ERR_NO_MESSAGE_AUTH);
+	return (ERR_NO_MESSAGE_AUTH);
+
+}
+

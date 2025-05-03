@@ -156,7 +156,7 @@ int UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace)
 	if (pszMaxMBSize != NULL) {
 		unsigned long ulMaxMBSize = (unsigned long) atol(pszMaxMBSize) * 1024;
 
-		if (ulMBSize >= ulMaxMBSize) {
+		if (ulMaxMBSize && (ulMBSize >= ulMaxMBSize)) {
 			SysFree(pszMaxMBSize);
 
 			ErrSetErrorCode(ERR_MAILBOX_SIZE);
@@ -164,7 +164,8 @@ int UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace)
 		}
 
 		if (pulAvailSpace != NULL)
-			*pulAvailSpace = ulMaxMBSize - ulMBSize;
+			*pulAvailSpace = (ulMaxMBSize ? ulMaxMBSize - ulMBSize:
+					  (unsigned long) -1);
 
 		SysFree(pszMaxMBSize);
 	} else if (pulAvailSpace != NULL)
@@ -1320,12 +1321,17 @@ int UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const *pPeerInfo, unsigned int
 
 }
 
-int UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress)
+int UPopGetLastLoginInfo(UserInfo *pUI, PopLastLoginInfo *pInfo)
 {
 
+	SYS_FILE_INFO FI;
 	char szIpFilePath[SYS_MAX_PATH] = "";
 
 	UPopGetIpLogFilePath(pUI, szIpFilePath, sizeof(szIpFilePath));
+	if (SysGetFileInfo(szIpFilePath, FI) < 0)
+		return (ErrGetErrorCode());
+
+	pInfo->LTime = FI.tMod;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load IP from file
@@ -1348,6 +1354,7 @@ int UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress)
 	if (SysInetAddr(szIP, NetAddr) < 0)
 		return (ErrGetErrorCode());
 
-	return (SysSetupAddress(*pAddress, AF_INET, NetAddr, 0));
+	return (SysSetupAddress(pInfo->Address, AF_INET, NetAddr, 0));
 
 }
+

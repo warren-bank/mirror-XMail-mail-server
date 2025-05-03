@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail Change Log v 1.20</title>
+<title>XMail Change Log v 1.21</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <link rev="made" href="mailto:root@localhost" />
 </head>
@@ -17,6 +17,7 @@
 	<li><a href="#change_log">CHANGE LOG</a></li>
 	<ul>
 
+		<li><a href="#jan_9__2005_v_1_21">Jan 9, 2005 v 1.21</a></li>
 		<li><a href="#may_30__2004_v_1_20">May 30, 2004 v 1.20</a></li>
 		<li><a href="#may_29__2004_v_1_19">May 29, 2004 v 1.19</a></li>
 		<li><a href="#mar_27__2004_v_1_18">Mar 27, 2004 v 1.18</a></li>
@@ -107,12 +108,82 @@
 <p>
 </p>
 <h1><a name="name">NAME</a></h1>
-<p>XMail Change Log as of Version 1.20</p>
+<p>XMail Change Log as of Version 1.21</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <hr />
 <h1><a name="change_log">CHANGE LOG</a></h1>
+<p>
+</p>
+<h2><a name="jan_9__2005_v_1_21">Jan 9, 2005 v 1.21</a></h2>
+<ul>
+<li></li>
+Added a fix for 64 bits porting compatibility.
+<p></p>
+<li></li>
+Added the ability to exclude filters from execution in case of authenticated user.
+By pre-pending the filter command token with a token containing ``!aex'', the filters
+won't be run if the user authenticated himself.
+<p></p>
+<li></li>
+Added @@USERAUTH macro even to standard in/out filters (before it was only defined
+for SMTP ones).
+<p></p>
+<li></li>
+Added a new ``NoSenderBounce'' variable inside the SERVER.TAB file, to enable
+XMail generated bounce messages to have the empty SMTP sender ('MAIL FROM:&lt;&gt;').
+<p></p>
+<li></li>
+Added a new ``SMTP-MaxErrors'' variable inside the SERVER.TAB file to set the maximum
+errors allowed in a single SMTP session (default zero, unlimited).
+<p></p>
+<li></li>
+Added a ``LastLoginTimeDate'' variable to the ``userstat'' CTRL command.
+<p></p>
+<li></li>
+Added external aliases support in the CTRL protocol.
+<p></p>
+<li></li>
+The MESSAGE.ID file is now automatically created, if missing.
+<p></p>
+<li></li>
+Changed the logic used to treat domain and user MAILPROC.TAB files. Before, a user's
+MAILPROC.TAB was overriding the domain one, while now the rules are merged together,
+with domain's ones first, followed by user's ones.
+<p></p>
+<li></li>
+The maximum mailbox size of zero is now interpreted as unlimited.
+<p></p>
+<li></li>
+Fixed XMail's sendmail to detect non-RFC822 data and handle it correctly.
+<p></p>
+<li></li>
+The IP:PORT addresses emission in spool files (and Received: lines) has been changed
+to the form [IP]:PORT.
+<p></p>
+<li></li>
+Added filter logging, that is enabled with the new -Qg command line option.
+<p></p>
+<li></li>
+Fixed an error message in the SMTP server, that was triggered by the remote client
+not using the proper syntax for the ``MAIL FROM:'' and ``RCPT TO:'' commands.
+<p></p>
+<li></li>
+Fixed explicit routing through SMTPGW.TAB file.
+<p></p>
+<li></li>
+Fixed a possible problem with file locking that might be triggered from CTRL commands
+cfgfileget/cfgfileset.
+<p></p>
+<li></li>
+Added a check to avoid the CTRL server to give an error when a domain created with
+older versions of XMail does not have the domain directory inside cmdaliases.
+<p></p>
+<li></li>
+The SMTP server FQDN variable should be set to the value of ``SmtpServerDomain'', when
+this is used inside the SERVER.TAB file.
+<p></p></ul>
 <p>
 </p>
 <h2><a name="may_30__2004_v_1_20">May 30, 2004 v 1.20</a></h2>

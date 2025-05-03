@@ -263,7 +263,16 @@ static ErrorStrings Errors[] = {
 	{ERR_MESSAGE_DELETED, "Message marked for deletion"},
 	{ERR_PIPE, "Pipe creation error"},
 	{ERR_WAITPID, "Error in function {waitpid}"},
+	{ERR_MUNMAP, "Error in function {munmap}"},
+	{ERR_INVALID_MMAP_OFFSET, "Invalid memory map offset"},
+	{ERR_UNMAPFILEVIEW, "File view unmap failed"},
+	{ERR_INVALID_IMAP_LINE, "Invalid IMAP syntax"},
+	{ERR_IMAP_RESP_NO, "IMAP response NO"},
+	{ERR_IMAP_RESP_BAD, "IMAP response BAD"},
+	{ERR_IMAP_RESP_BYE, "IMAP response BYE"},
+	{ERR_IMAP_UNKNOWN_AUTH, "Unknown IMAP authentication method"},
 	{ERR_DNS_IS_CNAME, "CNAME DNS record detected"},
+	{ERR_NO_MESSAGE_AUTH, "Message authentication not found"},
 
 };
 

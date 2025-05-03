@@ -41,6 +41,7 @@
 #include "SMTPUtils.h"
 #include "MailDomains.h"
 #include "POP3Utils.h"
+#include "Filter.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
@@ -120,6 +121,8 @@ struct SMTPSession {
 	char *pszRcpt;
 	char *pszSendRcpt;
 	int iRcptCount;
+	int iErrorsCount;
+	int iErrorsMax;
 	SYS_UINT64 ullMessageID;
 	char szMessageID[128];
 	char szTimeStamp[256];
@@ -174,7 +177,11 @@ static int SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock, SMTPS
 static int SMTPGetFilterFile(const char *pszFiltID, char *pszFileName, int iMaxName);
 static int SMTPFilterMacroSubstitutes(char **ppszCmdTokens, SMTPSession & SMTPS);
 static char *SMTPGetFilterRejMessage(char const *pszMsgFilePath);
-static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char *&pszError);
+static int SMTPLogFilter(SMTPSession & SMTPS, char const * const *ppszExec, int iExecResult,
+			 int iExitCode, char const *pszType, char const *pszInfo);
+static int SMTPPreFilterExec(SMTPSession & SMTPS, FilterTokens *pToks, char **ppszPEError);
+static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char const *pszType,
+			  char *&pszError);
 static int SMTPFilterMessage(SMTPSession & SMTPS, const char *pszFiltID, char *&pszError);
 static int SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock, SMTPSession & SMTPS);
 static int SMTPAddReceived(int iType, char const *pszAuth, char const *const *ppszMsgInfo,
@@ -309,7 +316,7 @@ static int SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP, SMTPConfig * pSM
 static unsigned int SMTPClientThread(void *pThreadData)
 {
 
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
+	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer
@@ -668,6 +675,8 @@ static int SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 	SMTPS.pszRcpt = NULL;
 	SMTPS.pszSendRcpt = NULL;
 	SMTPS.iRcptCount = 0;
+	SMTPS.iErrorsCount = 0;
+	SMTPS.iErrorsMax = 0;
 	SMTPS.iCmdDelay = 0;
 	SMTPS.ulMaxMsgSize = 0;
 	SetEmptyString(SMTPS.szMessageID);
@@ -702,6 +711,12 @@ static int SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 		SvrReleaseConfigHandle(SMTPS.hSvrConfig);
 		return (ErrorPop());
 	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get maximum errors count allowed in an SMTP session
+///////////////////////////////////////////////////////////////////////////////
+	SMTPS.iErrorsMax = SvrGetConfigInt("SMTP-MaxErrors", 0, SMTPS.hSvrConfig);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup SMTP domain
 ///////////////////////////////////////////////////////////////////////////////
@@ -710,6 +725,7 @@ static int SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 
 	if (pszSvrDomain != NULL) {
 		StrSNCpy(SMTPS.szSvrDomain, pszSvrDomain);
+		StrSNCpy(SMTPS.szSvrFQDN, pszSvrDomain);
 
 		SysFree(pszSvrDomain);
 	} else {
@@ -955,6 +971,26 @@ static int SMTPSendError(BSOCK_HANDLE hBSock, SMTPSession & SMTPS, char const *p
 	}
 
 	SysFree(pszBuffer);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Increase the number of errors we encountered in this session. If the
+//  maximum number of allowed errors is not zero, and the current number of
+//  errors exceed the maximum number, we set the state to 'exit' so that the
+//  SMTP connection will be dropped
+///////////////////////////////////////////////////////////////////////////////
+	SMTPS.iErrorsCount++;
+	if ((SMTPS.iErrorsMax > 0) && (SMTPS.iErrorsCount >= SMTPS.iErrorsMax)) {
+		char szIP[128] = "";
+
+		if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+			SMTPLogSession(SMTPS, SMTPS.pszFrom != NULL ? SMTPS.pszFrom: "",
+				       "", "SMTP=EERRS", 0);
+
+		SysLogMessage(LOG_LEV_MESSAGE, "SMTP forced exit (too many errors: %d) [%s]\n",
+			      SMTPS.iErrorsCount, SysInetNToA(SMTPS.PeerInfo, szIP));
+
+		SMTPS.iSMTPState = stateExit;
+	}
 
 	return (0);
 
@@ -1334,7 +1370,7 @@ static int SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock, SMTPS
 		SMTPResetSession(SMTPS);
 
 		SMTPSendError(hBSock, SMTPS,
-			      "451 Requested action aborted: (%d) local error in processing",
+			      "501 Syntax error in parameters or arguments: (%d)",
 			      ErrorFetch());
 		return (ErrorPop());
 	}
@@ -1762,7 +1798,7 @@ static int SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock, SMTPS
 		SMTPResetSession(SMTPS);
 
 		SMTPSendError(hBSock, SMTPS,
-			      "451 Requested action aborted: (%d) local error in processing",
+			      "501 Syntax error in parameters or arguments: (%d)",
 			      ErrorFetch());
 		return (ErrorPop());
 	}
@@ -1890,7 +1926,40 @@ static char *SMTPGetFilterRejMessage(char const *pszMsgFilePath)
 
 }
 
-static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char *&pszError)
+static int SMTPLogFilter(SMTPSession & SMTPS, char const * const *ppszExec, int iExecResult,
+			 int iExitCode, char const *pszType, char const *pszInfo)
+{
+
+	FilterLogInfo FLI;
+
+	FLI.pszSender = SMTPS.pszFrom != NULL ? SMTPS.pszFrom: "";
+	FLI.pszRecipient = SMTPS.pszRcpt != NULL ? (SMTPS.iRcptCount == 1 ? SMTPS.pszRcpt: "*"): "";
+	FLI.LocalAddr = SMTPS.SockInfo;
+	FLI.RemoteAddr = SMTPS.PeerInfo;
+	FLI.ppszExec = ppszExec;
+	FLI.iExecResult = iExecResult;
+	FLI.iExitCode = iExitCode;
+	FLI.pszType = pszType;
+	FLI.pszInfo = pszInfo != NULL ? pszInfo: "";
+
+	return (FilLogFilter(&FLI));
+
+}
+
+static int SMTPPreFilterExec(SMTPSession & SMTPS, FilterTokens *pToks, char **ppszPEError)
+{
+
+	FilterExecCtx FCtx;
+
+	FCtx.pToks = pToks;
+	FCtx.pszAuthName = SMTPS.szLogonUser;
+
+	return (FilExecPreParse(&FCtx, ppszPEError));
+
+}
+
+static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char const *pszType,
+			  char *&pszError)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock the filter file
@@ -1929,16 +1998,46 @@ static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char *
 			continue;
 		}
 
-		SMTPFilterMacroSubstitutes(ppszCmdTokens, SMTPS);
+///////////////////////////////////////////////////////////////////////////////
+//  Perform pre-exec filtering (like exec exclude if authenticated, ...)
+///////////////////////////////////////////////////////////////////////////////
+		char *pszPEError = NULL;
+		FilterTokens Toks;
 
-		iExitCode = iExitFlags = 0;
-		iExecResult = SysExec(ppszCmdTokens[0], &ppszCmdTokens[0],
+		Toks.ppszCmdTokens = ppszCmdTokens;
+		Toks.iTokenCount = iFieldsCount;
+
+		if (SMTPPreFilterExec(SMTPS, &Toks, &pszPEError) < 0) {
+			if (bFilterLogEnabled)
+				SMTPLogFilter(SMTPS, Toks.ppszCmdTokens, -1,
+					      -1, pszType, pszPEError);
+			if (pszPEError != NULL)
+				SysFree(pszPEError);
+			StrFreeStrings(ppszCmdTokens);
+			continue;
+		}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Do filter line macro substitution
+///////////////////////////////////////////////////////////////////////////////
+		SMTPFilterMacroSubstitutes(Toks.ppszCmdTokens, SMTPS);
+
+		iExitCode = -1;
+		iExitFlags = 0;
+		iExecResult = SysExec(Toks.ppszCmdTokens[0], &Toks.ppszCmdTokens[0],
 				      iFilterTimeout, SYS_PRIORITY_NORMAL, &iExitCode);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Log filter execution, if enabled
+///////////////////////////////////////////////////////////////////////////////
+		if (bFilterLogEnabled)
+			SMTPLogFilter(SMTPS, Toks.ppszCmdTokens, iExecResult,
+				      iExitCode, pszType, NULL);
 
 		if (iExecResult == 0) {
 			SysLogMessage(LOG_LEV_MESSAGE,
 				      "SMTP filter run: Filter = \"%s\" Retcode = %d\n",
-				      ppszCmdTokens[0], iExitCode);
+				      Toks.ppszCmdTokens[0], iExitCode);
 
 			iExitFlags = iExitCode & SMTP_FILTER_FL_MASK;
 			iExitCode &= ~SMTP_FILTER_FL_MASK;
@@ -1960,7 +2059,7 @@ static int SMTPRunFilters(SMTPSession & SMTPS, char const *pszFilterPath, char *
 		} else {
 			SysLogMessage(LOG_LEV_ERROR,
 				      "SMTP filter error (%d): Filter = \"%s\"\n",
-				      iExecResult, ppszCmdTokens[0]);
+				      iExecResult, Toks.ppszCmdTokens[0]);
 		}
 
 		StrFreeStrings(ppszCmdTokens);
@@ -1998,7 +2097,7 @@ static int SMTPFilterMessage(SMTPSession & SMTPS, const char *pszFiltID, char *&
 		iReOpen++;
 	}
 
-	if (SMTPRunFilters(SMTPS, szFilterFile, pszError) < 0)
+	if (SMTPRunFilters(SMTPS, szFilterFile, pszFiltID, pszError) < 0)
 		return (ErrGetErrorCode());
 
 	if (iReOpen) {

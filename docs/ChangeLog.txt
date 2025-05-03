@@ -1,10 +1,68 @@
 NAME
 
-    XMail Change Log as of Version 1.20
+    XMail Change Log as of Version 1.21
 
     [top]
 
 CHANGE LOG
+
+  Jan 9, 2005 v 1.21
+
+    *   Added a fix for 64 bits porting compatibility.
+
+    *   Added the ability to exclude filters from execution in case of
+        authenticated user. By pre-pending the filter command token with a
+        token containing "!aex", the filters won't be run if the user
+        authenticated himself.
+
+    *   Added @@USERAUTH macro even to standard in/out filters (before it
+        was only defined for SMTP ones).
+
+    *   Added a new "NoSenderBounce" variable inside the SERVER.TAB file, to
+        enable XMail generated bounce messages to have the empty SMTP sender
+        ('MAIL FROM:<>').
+
+    *   Added a new "SMTP-MaxErrors" variable inside the SERVER.TAB file to
+        set the maximum errors allowed in a single SMTP session (default
+        zero, unlimited).
+
+    *   Added a "LastLoginTimeDate" variable to the "userstat" CTRL command.
+
+    *   Added external aliases support in the CTRL protocol.
+
+    *   The MESSAGE.ID file is now automatically created, if missing.
+
+    *   Changed the logic used to treat domain and user MAILPROC.TAB files.
+        Before, a user's MAILPROC.TAB was overriding the domain one, while
+        now the rules are merged together, with domain's ones first,
+        followed by user's ones.
+
+    *   The maximum mailbox size of zero is now interpreted as unlimited.
+
+    *   Fixed XMail's sendmail to detect non-RFC822 data and handle it
+        correctly.
+
+    *   The IP:PORT addresses emission in spool files (and Received: lines)
+        has been changed to the form [IP]:PORT.
+
+    *   Added filter logging, that is enabled with the new -Qg command line
+        option.
+
+    *   Fixed an error message in the SMTP server, that was triggered by the
+        remote client not using the proper syntax for the "MAIL FROM:" and
+        "RCPT TO:" commands.
+
+    *   Fixed explicit routing through SMTPGW.TAB file.
+
+    *   Fixed a possible problem with file locking that might be triggered
+        from CTRL commands cfgfileget/cfgfileset.
+
+    *   Added a check to avoid the CTRL server to give an error when a
+        domain created with older versions of XMail does not have the domain
+        directory inside cmdaliases.
+
+    *   The SMTP server FQDN variable should be set to the value of
+        "SmtpServerDomain", when this is used inside the SERVER.TAB file.
 
   May 30, 2004 v 1.20
 

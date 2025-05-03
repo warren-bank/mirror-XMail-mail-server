@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.20
+    1.21
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    05-30-2004
+    Jan 9, 2005
 
   project by
 
@@ -1202,7 +1202,11 @@ CONFIGURATION
         used with 'external' command but in this case it's external program
         responsibility to delete the temporary file. Do not use it with
         'filter' commands since the filter will have no way to modify the
-        real spool file.
+        real spool file
+
+    @@USERAUTH
+        name of the SMTP authenticated user, or "-" if no authentication has
+        been supplied
 
     Supported commands:
 
@@ -1558,7 +1562,11 @@ CUSTOM DOMAIN MAIL PROCESSING
     @@TMPFILE
         creates a copy of the message file to a temporary one. It can be
         used with 'external' command but in this case it's external
-        program's responsibility to delete the temporary file.
+        program's responsibility to delete the temporary file
+
+    @@USERAUTH
+        name of the SMTP authenticated user, or "-" if no authentication has
+        been supplied
 
     Supported commands:
 
@@ -1773,6 +1781,12 @@ SERVER.TAB VARIABLES
         Enable null sender ('MAIL FROM:<>') messages to be accepted by
         XMail.
 
+    [NoSenderBounce]
+        When building bounce messages, use the null SMTP sender ('MAIL
+        FROM:<>') instead of the 'PostMaster' address. This will affect only
+        the SMTP sender, while the message RFC822 headers will still contain
+        the correct From: header.
+
     [MaxMTAOps]
         Set the maximum number of MTA relay steps before to declare the
         message as looped (default 16).
@@ -1807,6 +1821,13 @@ SERVER.TAB VARIABLES
 
         The string "+X-Deliver-To,To,Cc" is the default if nothing is
         specified.
+
+    [SMTP-MaxErrors]
+        Set the maximum number of errors allowed in a single SMTP session.
+        When the maximum number of allowed errors is exceeded, the
+        connection will be automatically dropped. If such variable is not
+        set, or it is set to zero, the maximum number of errors will be
+        unlimited.
 
     [SmtpMsgIPBanSpammers]
         Used to set the message that is sent to the SMTP client when the
@@ -1902,7 +1923,7 @@ SERVER.TAB VARIABLES
          dns.home.bogus.net:tcp,192.168.1.1:udp,...
 
     [DisableEmitAuthUser]
-        Enable/disable the emission the the 'X-Auth-User:' mail header for
+        Enable/disable the emission the the 'X-AuthUser:' mail header for
         authenticated users. Valid values are "0" or '1', default is "0"
         (emission enabled).
 
@@ -2017,10 +2038,20 @@ MESSAGE FILTERS
 
      "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
+    or:
+
+     "!flags"[TAB]"command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
+
     Each file may contain multiple commands, that will be executed in
     strictly sequential order. The first command that will trigger a
-    rejection code will make the filtering process to end. Each argument can
-    be a macro also:
+    rejection code will make the filtering process to end. The 'flags'
+    parameter is a comma-separated list of flags that drives the filter
+    execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
+    supported flags are:
+
+    aex exclude filter execution in case of authenticated sender
+
+    Each argument can be a macro also:
 
     @@FROM
         the sender of the message
@@ -2051,6 +2082,10 @@ MESSAGE FILTERS
 
     @@MSGREF
         the reference SMTP message id
+
+    @@USERAUTH
+        name of the SMTP authenticated user, or "-" if no authentication has
+        been supplied
 
     Here 'command' is the name of an external program that processes the
     message and returns its processing result. If it returns '6' the message
@@ -2114,17 +2149,27 @@ SMTP MESSAGE FILTERS
 
      "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
+    or:
+
+     "!flags"[TAB]"command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
+
     Each file may contain multiple commands, that will be executed in
     strictly sequential order. The first command that will trigger a
-    rejection code will make the filtering process to end. Each argument can
-    be a macro also:
+    rejection code will make the filtering process to end. The 'flags'
+    parameter is a comma-separated list of flags that drives the filter
+    execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
+    supported flags are:
+
+    aex exclude filter execution in case of authenticated sender
+
+    Each argument can be a macro also:
 
     @@FILE
         message file path
 
     @@USERAUTH
-        name of the SMTP authenticated user, or "-" if not authentication
-        has been granted
+        name of the SMTP authenticated user, or "-" if no authentication has
+        been supplied
 
     @@REMOTEADDR
         remote IP address and port of the sender
@@ -2248,7 +2293,7 @@ USER.TAB VARIABLES
         through the server. Overrides the SERVER.TAB variable.
 
     [DisableEmitAuthUser]
-        Enable/disable the emission the the 'X-Auth-User:' mail header for
+        Enable/disable the emission the the 'X-AuthUser:' mail header for
         authenticated users. Valid values are '0' or '1', default is '0'
         (emission enabled). This variable overrides the SERVER.TAB one when
         present.
@@ -2458,6 +2503,8 @@ COMMAND LINE
 
         -QT timeout
                 Timeout value for filters commands in seconds. Default 90.
+
+        -Qg     Enable filter logging.
 
     [PSYNC]
 
@@ -2744,6 +2791,9 @@ XMAIL ADMIN PROTOCOL
     LastLoginIP
         last user login IP address.
 
+    LastLoginTimeDate
+        time of the last login.
+
     [admin protocol] [top]
 
   Adding an alias
@@ -2820,6 +2870,75 @@ XMAIL ADMIN PROTOCOL
     dot (<CR><LF>.<CR><LF>). This is the format of the listing:
 
      "domain"[TAB]"alias"[TAB]"username"<CR><LF>
+
+    [admin protocol] [top]
+
+  Adding an external alias
+
+     "exaliasadd"[TAB]"local-address"[TAB]"remote-address"<CR><LF>
+
+    where:
+
+    local-address
+        local email address.
+
+    remote-address
+        remote email address.
+
+    For example, the following command string:
+
+     "exaliasadd"[TAB]"dlibenzi@home.bogus"[TAB]"dlibenzi@xmailserver.org"<CR><LF>
+
+    will link the external email address 'dlibenzi@xmailserver.org' with the
+    local email address 'dlibenzi@home.bogus'. The result is a RESSTRING.
+
+    [admin protocol] [top]
+
+  Deleting an external alias
+
+     "exaliasdel"[TAB]"remote-address"<CR><LF>
+
+    where:
+
+    remote-address
+        remote email address.
+
+    The result is a RESSTRING.
+
+    [admin protocol] [top]
+
+  Listing external aliases
+
+     "exaliaslist"[TAB]"local-address"[TAB]"remote-address"<CR><LF>
+
+    or
+
+     "exaliaslist"[TAB]"local-address"<CR><LF>
+
+    or
+
+     "exaliaslist"<CR><LF>
+
+    where:
+
+    local-address
+        local email address. This can contain wildcard characters.
+
+    remote-address
+        remote email address. This can contain wildcard characters.
+
+    Example:
+
+     "exaliaslist"[TAB]"*@home.bogus"<CR><LF>
+
+    lists all the external aliases linked to local accounts in domain
+    'home.bogus'.
+
+    The result is a RESSTRING. In successful cases (00100) a formatted
+    matching users list follows, terminated by a line containing a single
+    dot (<CR><LF>.<CR><LF>). This is the format of the listing:
+
+     "rmt-domain"[TAB]"rmt-name"[TAB]"loc-domain"[TAB]"loc-name"<CR><LF>
 
     [admin protocol] [top]
 

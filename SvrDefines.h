@@ -37,5 +37,6 @@
 #define LOG_ROTATE_HOURS            24
 #define STD_SERVER_TIMEOUT          90
 #define LOCAL_ADDRESS               "127.0.0.1"
+#define LOCAL_ADDRESS_SQB           "[" LOCAL_ADDRESS "]"
 
 #endif

@@ -253,8 +253,6 @@ int ExAlAddAlias(ExtAlias * pExtAlias)
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
 		if ((iFieldsCount >= ealMax) &&
-		    (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-		    (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
 		    (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
 		    (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0)) {
 			StrFreeStrings(ppszStrings);
@@ -383,8 +381,6 @@ int ExAlRemoveAlias(ExtAlias * pExtAlias)
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
 		if ((iFieldsCount >= ealMax) &&
-		    (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-		    (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
 		    (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
 		    (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0)) {
 

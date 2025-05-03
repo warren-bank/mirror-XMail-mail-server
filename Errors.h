@@ -246,7 +246,16 @@
 #define ERR_MESSAGE_DELETED         (-233)
 #define ERR_PIPE                    (-234)
 #define ERR_WAITPID                 (-235)
-#define ERR_DNS_IS_CNAME            (-236)
+#define ERR_MUNMAP                  (-236)
+#define ERR_INVALID_MMAP_OFFSET     (-237)
+#define ERR_UNMAPFILEVIEW           (-238)
+#define ERR_INVALID_IMAP_LINE       (-239)
+#define ERR_IMAP_RESP_NO            (-240)
+#define ERR_IMAP_RESP_BAD           (-241)
+#define ERR_IMAP_RESP_BYE           (-242)
+#define ERR_IMAP_UNKNOWN_AUTH       (-243)
+#define ERR_DNS_IS_CNAME            (-244)
+#define ERR_NO_MESSAGE_AUTH         (-245)
 
 int ErrGetErrorCode(void);
 int ErrSetErrorCode(int iError, char const *pszInfo = NULL);

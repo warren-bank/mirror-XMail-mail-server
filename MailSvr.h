@@ -33,6 +33,7 @@ extern SHB_HANDLE hShbFING, hShbCTRL, hShbPOP3, hShbSMTP, hShbSMAIL, hShbPSYNC, 
 extern char szMailPath[SYS_MAX_PATH];
 extern bool bServerDebug;
 extern int iFilterTimeout;
+extern bool bFilterLogEnabled;
 extern QUEUE_HANDLE hSpoolQueue;
 extern SYS_SEMAPHORE hSyncSem;
 extern int iLogRotateHours;

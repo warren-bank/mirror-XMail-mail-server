@@ -127,7 +127,7 @@ static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
 static unsigned int FINGClientThread(void *pThreadData)
 {
 
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
+	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check peer IP address serivce access permissions

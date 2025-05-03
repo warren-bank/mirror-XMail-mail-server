@@ -58,6 +58,7 @@ int MscGetFileList(char const *pszPath, const char *pszListFile, int iListDirs =
 int MscCreateEmptyFile(const char *pszFileName);
 int MscClearDirectory(const char *pszPath, int iRecurseSubs = 1);
 int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom);
+int MscAppendFile(const char *pszCopyTo, const char *pszCopyFrom);
 int MscCopyFile(FILE * pFileOut, FILE * pFileIn, unsigned long ulBaseOffset,
 		unsigned long ulCopySize);
 int MscMoveFile(char const *pszOldName, char const *pszNewName);

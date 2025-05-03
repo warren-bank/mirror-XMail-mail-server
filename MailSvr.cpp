@@ -116,6 +116,7 @@ QUEUE_HANDLE hSpoolQueue;
 SYS_SEMAPHORE hSyncSem;
 bool bServerDebug;
 int iFilterTimeout = FILTER_TIMEOUT;
+bool bFilterLogEnabled = false;
 int iLogRotateHours = LOG_ROTATE_HOURS;
 int iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
 
@@ -640,6 +641,10 @@ static int SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 		case ('T'):
 			if (++ii < iArgCount)
 				iFilterTimeout = atoi(pszArgs[ii]);
+			break;
+
+		case ('g'):
+			bFilterLogEnabled = true;
 			break;
 		}
 	}

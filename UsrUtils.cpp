@@ -2329,37 +2329,60 @@ int UsrMoveToMailBox(UserInfo * pUI, char const *pszFileName, char const *pszMes
 int UsrGetMailProcessFile(UserInfo * pUI, char const *pszMPPath)
 {
 
+	int iAppendFiles = 0;
 	char szMPFilePath[SYS_MAX_PATH] = "";
+
+	if (MDomGetDomainPath(pUI->pszDomain, szMPFilePath, sizeof(szMPFilePath) - 1,
+			      1) == NULL)
+		return (ErrGetErrorCode());
+	StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath) - 1);
+
+	if (SysExistFile(szMPFilePath)) {
+		char szResLock[SYS_MAX_PATH] = "";
+		RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
+								  sizeof(szResLock)));
+
+		if (hResLock == INVALID_RLCK_HANDLE)
+			return (ErrGetErrorCode());
+
+		if (MscAppendFile(pszMPPath, szMPFilePath) < 0) {
+			ErrorPush();
+			CheckRemoveFile(pszMPPath);
+			RLckUnlockSH(hResLock);
+			return (ErrorPop());
+		}
+
+		RLckUnlockSH(hResLock);
+		iAppendFiles++;
+	}
 
 	if (UsrGetUserPath(pUI, szMPFilePath, sizeof(szMPFilePath), 1) == NULL)
 		return (ErrGetErrorCode());
-
 	StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath));
 
-	if (!SysExistFile(szMPFilePath)) {
-		MDomGetDomainPath(pUI->pszDomain, szMPFilePath, sizeof(szMPFilePath) - 1, 1);
-		StrNCat(szMPFilePath, MAILPROCESS_FILE, sizeof(szMPFilePath) - 1);
-		if (!SysExistFile(szMPFilePath)) {
-			ErrSetErrorCode(ERR_NO_MAILPROC_FILE);
-			return (ERR_NO_MAILPROC_FILE);
+	if (SysExistFile(szMPFilePath)) {
+		char szResLock[SYS_MAX_PATH] = "";
+		RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
+								  sizeof(szResLock)));
+
+		if (hResLock == INVALID_RLCK_HANDLE)
+			return (ErrGetErrorCode());
+
+		if (MscAppendFile(pszMPPath, szMPFilePath) < 0) {
+			ErrorPush();
+			CheckRemoveFile(pszMPPath);
+			RLckUnlockSH(hResLock);
+			return (ErrorPop());
 		}
-	}
 
-	char szResLock[SYS_MAX_PATH] = "";
-	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(szMPFilePath, szResLock,
-							  sizeof(szResLock)));
-
-	if (hResLock == INVALID_RLCK_HANDLE)
-		return (ErrGetErrorCode());
-
-	if (MscCopyFile(pszMPPath, szMPFilePath) < 0) {
-		ErrorPush();
-		CheckRemoveFile(pszMPPath);
 		RLckUnlockSH(hResLock);
-		return (ErrorPop());
+		iAppendFiles++;
 	}
 
-	RLckUnlockSH(hResLock);
+	if (!iAppendFiles) {
+		ErrSetErrorCode(ERR_NO_MAILPROC_FILE);
+		return (ERR_NO_MAILPROC_FILE);
+	}
 
 	return (0);
 

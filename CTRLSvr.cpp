@@ -41,6 +41,7 @@
 #include "POP3GwLink.h"
 #include "MailDomains.h"
 #include "AliasDomain.h"
+#include "ExtAliases.h"
 #include "SMTPUtils.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
@@ -104,6 +105,12 @@ static int CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 			   char const *const *ppszTokens, int iTokensCount);
 static int CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 			    char const *const *ppszTokens, int iTokensCount);
+static int CTRLDo_exaliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			     char const *const *ppszTokens, int iTokensCount);
+static int CTRLDo_exaliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			     char const *const *ppszTokens, int iTokensCount);
+static int CTRLDo_exaliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			      char const *const *ppszTokens, int iTokensCount);
 static int CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 			   char const *const *ppszTokens, int iTokensCount);
 static int CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
@@ -381,7 +388,7 @@ unsigned int CTRLThreadProc(void *pThreadData)
 static unsigned int CTRLClientThread(void *pThreadData)
 {
 
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
+	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer
@@ -783,6 +790,12 @@ static int CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, char c
 		iCmdResult = CTRLDo_aliasdel(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
 	else if (stricmp(ppszTokens[0], "aliaslist") == 0)
 		iCmdResult = CTRLDo_aliaslist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+	else if (stricmp(ppszTokens[0], "exaliasadd") == 0)
+		iCmdResult = CTRLDo_exaliasadd(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+	else if (stricmp(ppszTokens[0], "exaliasdel") == 0)
+		iCmdResult = CTRLDo_exaliasdel(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+	else if (stricmp(ppszTokens[0], "exaliaslist") == 0)
+		iCmdResult = CTRLDo_exaliaslist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
 	else if (stricmp(ppszTokens[0], "mluseradd") == 0)
 		iCmdResult = CTRLDo_mluseradd(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
 	else if (stricmp(ppszTokens[0], "mluserdel") == 0)
@@ -1115,6 +1128,199 @@ static int CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 	BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
 
 	UsrAliasCloseDB(hAliasDB);
+
+	return (0);
+
+}
+
+static int CTRLDo_exaliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			     char const *const *ppszTokens, int iTokensCount)
+{
+
+	if (iTokensCount != 3) {
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+		ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+		return (ERR_BAD_CTRL_COMMAND);
+	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Split local and remote accounts addresses
+///////////////////////////////////////////////////////////////////////////////
+	char szLocName[MAX_ADDR_NAME] = "";
+	char szLocDomain[MAX_ADDR_NAME] = "";
+	char szRmtName[MAX_ADDR_NAME] = "";
+	char szRmtDomain[MAX_ADDR_NAME] = "";
+
+	if ((USmtpSplitEmailAddr(ppszTokens[1], szLocName, szLocDomain) < 0) ||
+	    (USmtpSplitEmailAddr(ppszTokens[2], szRmtName, szRmtDomain) < 0)) {
+		ErrorPush();
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+		return (ErrorPop());
+	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build the external alias structure
+///////////////////////////////////////////////////////////////////////////////
+	ExtAlias *pEA = ExAlAllocAlias();
+
+	if (pEA == NULL) {
+		ErrorPush();
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+		return (ErrorPop());
+	}
+
+	pEA->pszRmtDomain = SysStrDup(szRmtDomain);
+	pEA->pszRmtName = SysStrDup(szRmtName);
+	pEA->pszDomain = SysStrDup(szLocDomain);
+	pEA->pszName = SysStrDup(szLocName);
+
+	if (ExAlAddAlias(pEA) < 0) {
+		ErrorPush();
+		ExAlFreeAlias(pEA);
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+		return (ErrorPop());
+	}
+	ExAlFreeAlias(pEA);
+
+	CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+	return (0);
+
+}
+
+static int CTRLDo_exaliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			     char const *const *ppszTokens, int iTokensCount)
+{
+
+	if (iTokensCount != 2) {
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+		ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+		return (ERR_BAD_CTRL_COMMAND);
+	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Split local and remote accounts addresses
+///////////////////////////////////////////////////////////////////////////////
+	char szRmtName[MAX_ADDR_NAME] = "";
+	char szRmtDomain[MAX_ADDR_NAME] = "";
+
+	if (USmtpSplitEmailAddr(ppszTokens[1], szRmtName, szRmtDomain) < 0) {
+		ErrorPush();
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+		return (ErrorPop());
+	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build the external alias structure
+///////////////////////////////////////////////////////////////////////////////
+	ExtAlias *pEA = ExAlAllocAlias();
+
+	if (pEA == NULL) {
+		ErrorPush();
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+		return (ErrorPop());
+	}
+
+	pEA->pszRmtDomain = SysStrDup(szRmtDomain);
+	pEA->pszRmtName = SysStrDup(szRmtName);
+
+	if (ExAlRemoveAlias(pEA) < 0) {
+		ErrorPush();
+		ExAlFreeAlias(pEA);
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+		return (ErrorPop());
+	}
+	ExAlFreeAlias(pEA);
+
+	CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+	return (0);
+
+}
+
+static int CTRLDo_exaliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+			      char const *const *ppszTokens, int iTokensCount)
+{
+
+	if (iTokensCount > 3) {
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+		ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+		return (ERR_BAD_CTRL_COMMAND);
+	}
+
+///////////////////////////////////////////////////////////////////////////////
+//  Split local and remote accounts addresses
+///////////////////////////////////////////////////////////////////////////////
+	char const *pszLocNameMatch = "*";
+	char const *pszLocDomainMatch = "*";
+	char const *pszRmtNameMatch = "*";
+	char const *pszRmtDomainMatch = "*";
+	char szLocName[MAX_ADDR_NAME] = "";
+	char szLocDomain[MAX_ADDR_NAME] = "";
+	char szRmtName[MAX_ADDR_NAME] = "";
+	char szRmtDomain[MAX_ADDR_NAME] = "";
+
+	if (iTokensCount > 1) {
+		if (USmtpSplitEmailAddr(ppszTokens[1], szLocName, szLocDomain) < 0) {
+			ErrorPush();
+			CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+			return (ErrorPop());
+		}
+		pszLocNameMatch = szLocName;
+		pszLocDomainMatch = szLocDomain;
+
+		if (iTokensCount > 2) {
+			if (USmtpSplitEmailAddr(ppszTokens[2], szRmtName, szRmtDomain) < 0) {
+				ErrorPush();
+				CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+				return (ErrorPop());
+			}
+			pszRmtNameMatch = szRmtName;
+			pszRmtDomainMatch = szRmtDomain;
+		}
+	}
+
+	EXAL_HANDLE hLinksDB = ExAlOpenDB();
+
+	if (hLinksDB == INVALID_EXAL_HANDLE) {
+		ErrorPush();
+		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+		return (ErrorPop());
+	}
+
+	CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+	ExtAlias *pEA;
+
+	for (pEA = ExAlGetFirstAlias(hLinksDB); pEA != NULL;
+	     pEA = ExAlGetNextAlias(hLinksDB)) {
+		if (StrIWildMatch(pEA->pszRmtDomain, pszRmtDomainMatch) &&
+		    StrIWildMatch(pEA->pszRmtName, pszRmtNameMatch) &&
+		    StrIWildMatch(pEA->pszDomain, pszLocDomainMatch) &&
+		    StrIWildMatch(pEA->pszName, pszLocNameMatch)) {
+			char szAliasLine[1024] = "";
+
+			sprintf(szAliasLine,
+				"\"%s\"\t"
+				"\"%s\"\t"
+				"\"%s\"\t"
+				"\"%s\"", pEA->pszRmtDomain, pEA->pszRmtName,
+				pEA->pszDomain, pEA->pszName);
+
+			if (BSckSendString(hBSock, szAliasLine, pCTRLCfg->iTimeout) < 0) {
+				ErrorPush();
+				ExAlFreeAlias(pEA);
+				ExAlCloseDB(hLinksDB);
+				return (ErrorPop());
+			}
+		}
+
+		ExAlFreeAlias(pEA);
+	}
+
+	BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
+
+	ExAlCloseDB(hLinksDB);
 
 	return (0);
 
@@ -1509,11 +1715,16 @@ static int CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 		return (ErrorPop());
 	}
 
-	SYS_INET_ADDR LastLoginAddr;
+	time_t LTime = time(NULL);
+	PopLastLoginInfo LoginInfo;
 	char szIPAddr[128] = "0.0.0.0";
+	char szLoginTime[128] = "";
 
-	if (UPopGetLastLoginAddress(pUI, &LastLoginAddr) == 0)
-		SysInetNToA(LastLoginAddr, szIPAddr);
+	if (UPopGetLastLoginInfo(pUI, &LoginInfo) == 0) {
+		SysInetNToA(LoginInfo.Address, szIPAddr);
+		LTime = LoginInfo.LTime;
+	}
+	MscGetTimeStr(szLoginTime, sizeof(szLoginTime) - 1, LTime);
 
 	CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
 
@@ -1523,6 +1734,8 @@ static int CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 			     ulMBSize) < 0) ||
 	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
 			     ulNumMessages) < 0) ||
+	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginTimeDate\"\t\"%s\"",
+			     szLoginTime) < 0) ||
 	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
 			     szIPAddr) < 0)) {
 		ErrorPush();
@@ -2785,8 +2998,8 @@ static int CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 	for (; ppszStrings != NULL; ppszStrings = ADomGetNextDomain(hADomainDB)) {
 		if ((iTokensCount < 2) ||
-		    ((iTokensCount < 3) && StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomDomain])) ||
-		    (StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomDomain]) &&
+		    ((iTokensCount == 2) && StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomDomain])) ||
+		    ((iTokensCount == 3) && StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomDomain]) &&
 		     StrStringsRIWMatch(&ppszTokens[2], ppszStrings[adomADomain]))) {
 			if (BSckVSendString
 			    (hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",

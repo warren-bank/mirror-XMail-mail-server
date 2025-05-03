@@ -28,6 +28,7 @@
 #include <direct.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include "AppDefines.h"
 
@@ -146,6 +147,29 @@ char *SysGetEnv(const char *pszVarName)
 
 }
 
+char *SysGetUserAddress(char *pszUser, int iSize, char const *pszEnvDomain)
+{
+
+	DWORD dwSize;
+	char const *pszDomain;
+	char szUser[256] = "";
+	char szDomain[256] = "";
+
+	dwSize = sizeof(szUser);
+	GetUserName(szUser, &dwSize);
+
+	if ((pszDomain = SysGetEnv(pszEnvDomain)) == NULL) {
+		dwSize = sizeof(szDomain);
+		GetComputerName(szDomain, &dwSize);
+		pszDomain = szDomain;
+	}
+
+	SysSNPrintf(pszUser, iSize, "%s@%s", szUser, pszDomain);
+
+	return (pszUser);
+
+}
+
 #else				// #if defined(WIN32)
 #if defined(__LINUX__) || defined(__SOLARIS__) || defined(__BSD__)
 
@@ -252,6 +276,30 @@ char *SysGetEnv(const char *pszVarName)
 	return ((pszValue != NULL) ? strdup(pszValue) : NULL);
 
 }
+
+char *SysGetUserAddress(char *pszUser, int iSize, char const *pszEnvDomain)
+{
+
+	char const *pszEnv;
+	char szUser[256] = "mail";
+	char szDomain[256] = "localhost";
+
+	if ((pszEnv = SysGetEnv("USER")) != NULL) {
+		strncpy(szUser, pszEnv, sizeof(szUser) - 1);
+		szUser[sizeof(szUser) - 1] = '\0';
+	}
+	if (((pszEnv = SysGetEnv(pszEnvDomain)) != NULL) ||
+	    ((pszEnv = SysGetEnv("HOSTNAME")) != NULL)) {
+		strncpy(szDomain, pszEnv, sizeof(szDomain) - 1);
+		szDomain[sizeof(szDomain) - 1] = '\0';
+	}
+
+	SysSNPrintf(pszUser, iSize, "%s@%s", szUser, szDomain);
+
+	return (pszUser);
+
+}
+
 
 #else				// #if defined(__LINUX__) || defined(__SOLARIS__)
 
@@ -424,6 +472,22 @@ static char *CopyAddress(char *pszDest, char const *pszAddr, int iSize)
 
 }
 
+static bool IsRFC822HeaderLine(char const *pszLn)
+{
+
+	char const *pszColon;
+
+	if (!isalpha(*pszLn) || ((pszColon = strchr(pszLn, ':')) == NULL))
+		return (false);
+	for (pszLn++; pszLn < pszColon; pszLn++)
+		if (!(isalpha(*pszLn) || isdigit(*pszLn) ||
+		      strchr("_-", *pszLn) != NULL))
+			return (false);
+
+	return (true);
+
+}
+
 int main(int iArgCount, char *pszArgs[])
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -465,108 +529,81 @@ int main(int iArgCount, char *pszArgs[])
 	char szInputFile[SYS_MAX_PATH] = "";
 	char szRcptFile[SYS_MAX_PATH] = "";
 
-	for (ii = 1; ii < iArgCount; ii++) {
-		if (pszArgs[ii][0] != '-')
-			break;
+	SysGetUserAddress(szMailFrom, sizeof(szMailFrom) - 1, ENV_DEFAULT_DOMAIN);
 
+	for (ii = 1; ii < iArgCount; ii++) {
 		if (strcmp(pszArgs[ii], "--") == 0) {
 			++ii;
 			break;
 		}
 
-		if (pszArgs[ii][1] != '-') {
-			int iSkipParam = 0;
-			bool bEatAll = false;
+		if (strcmp(pszArgs[ii], "--rcpt-file") == 0) {
+			if (++ii < iArgCount)
+				StrSNCpy(szRcptFile, pszArgs[ii]);
+		} else if (strcmp(pszArgs[ii], "--xinput-file") == 0) {
+			if (++ii < iArgCount) {
+				StrSNCpy(szInputFile, pszArgs[ii]);
 
-			for (int jj = 1; !bEatAll && (pszArgs[ii][jj] != '\0'); jj++) {
-				switch (pszArgs[ii][jj]) {
-				case ('N'):
-				case ('O'):
-				case ('o'):
-				case ('R'):
-				case ('V'):
-				case ('X'):
-					iSkipParam = 1;
-					break;
-
-				case ('i'):
-					bDotMode = false;
-					break;
-
-				case ('t'):
-					bExtractRcpts = true;
-					break;
-
-				case ('f'):
-					{
-						if (pszArgs[ii][jj + 1] != '\0')
-							CopyAddress(szMailFrom,
-								    pszArgs[ii] + jj + 1,
-								    sizeof(szMailFrom) - 1);
-						else if ((ii + 1) < iArgCount) {
-							CopyAddress(szMailFrom, pszArgs[ii + 1],
-								    sizeof(szMailFrom) - 1);
-							iSkipParam = 1;
-						}
-
-						bEatAll = true;
-					}
-					break;
-
-				case ('F'):
-					{
-						if (pszArgs[ii][jj + 1] != '\0')
-							StrSNCpy(szExtMailFrom,
-								 pszArgs[ii] + jj + 1);
-						else if ((ii + 1) < iArgCount) {
-							StrSNCpy(szExtMailFrom, pszArgs[ii + 1]);
-							iSkipParam = 1;
-						}
-
-						char const *pszOpen = strchr(szExtMailFrom, '<');
-
-						if (pszOpen == NULL)
-							CopyAddress(szMailFrom, szExtMailFrom,
-								    sizeof(szMailFrom) - 1);
-						else {
-							char szTmpMailFrom[256] = "";
-
-							StrSNCpy(szTmpMailFrom, pszOpen + 1);
-
-							char *pszClose =
-							    (char *) strchr(szTmpMailFrom, '>');
-
-							if (pszClose != NULL)
-								*pszClose = '\0';
-
-							CopyAddress(szMailFrom, szTmpMailFrom,
-								    sizeof(szMailFrom) - 1);
-						}
-
-						bEatAll = true;
-					}
-					break;
-				}
+				bXMailFormat = true;
+			}
+		} else if (strcmp(pszArgs[ii], "--input-file") == 0) {
+			if (++ii < iArgCount)
+				StrSNCpy(szInputFile, pszArgs[ii]);
+		} else if ((strcmp(pszArgs[ii], "-i") == 0) ||
+			   (strcmp(pszArgs[ii], "-oi") == 0)){
+			bDotMode = false;
+		} else if (strcmp(pszArgs[ii], "-t") == 0) {
+			bExtractRcpts = true;
+		} else if (strncmp(pszArgs[ii], "-f", 2) == 0) {
+			if (pszArgs[ii][2] != '\0')
+				CopyAddress(szMailFrom, pszArgs[ii] + 2,
+					    sizeof(szMailFrom) - 1);
+			else if ((ii + 1) < iArgCount) {
+				CopyAddress(szMailFrom, pszArgs[ii + 1],
+					    sizeof(szMailFrom) - 1);
+				ii++;
+			}
+		} else if (strncmp(pszArgs[ii], "-F", 2) == 0) {
+			if (pszArgs[ii][2] != '\0')
+				StrSNCpy(szExtMailFrom, pszArgs[ii] + 2);
+			else if ((ii + 1) < iArgCount) {
+				StrSNCpy(szExtMailFrom, pszArgs[ii + 1]);
+				ii++;
 			}
 
-			if (iSkipParam)
-				++ii;
-		} else {
-			if (strcmp(pszArgs[ii], "--rcpt-file") == 0) {
-				if (++ii < iArgCount)
-					StrSNCpy(szRcptFile, pszArgs[ii]);
-			} else if (strcmp(pszArgs[ii], "--xinput-file") == 0) {
-				if (++ii < iArgCount) {
-					StrSNCpy(szInputFile, pszArgs[ii]);
+			char const *pszOpen = strchr(szExtMailFrom, '<');
 
-					bXMailFormat = true;
-				}
-			} else if (strcmp(pszArgs[ii], "--input-file") == 0) {
-				if (++ii < iArgCount)
-					StrSNCpy(szInputFile, pszArgs[ii]);
+			if (pszOpen == NULL)
+				CopyAddress(szMailFrom, szExtMailFrom,
+					    sizeof(szMailFrom) - 1);
+			else {
+				char szTmpMailFrom[256] = "";
+
+				StrSNCpy(szTmpMailFrom, pszOpen + 1);
+
+				char *pszClose =
+					(char *) strchr(szTmpMailFrom, '>');
+
+				if (pszClose != NULL)
+					*pszClose = '\0';
+
+				CopyAddress(szMailFrom, szTmpMailFrom,
+					    sizeof(szMailFrom) - 1);
 			}
-		}
+		} else if (strncmp(pszArgs[ii], "-o", 2) == 0) {
 
+		} else if ((strcmp(pszArgs[ii], "-L") == 0) ||
+			   (strcmp(pszArgs[ii], "-O") == 0) ||
+			   (strcmp(pszArgs[ii], "-R") == 0) ||
+			   (strcmp(pszArgs[ii], "-X") == 0) ||
+			   (strcmp(pszArgs[ii], "-V") == 0) ||
+			   (strcmp(pszArgs[ii], "-N") == 0) ||
+			   (strncmp(pszArgs[ii], "-qG", 3) == 0) ||
+			   (strncmp(pszArgs[ii], "-q!", 3) == 0)) {
+			if ((ii + 1) < iArgCount)
+				ii++;
+		} else
+			break;
 	}
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -646,6 +683,7 @@ int main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit message by reading from stdin
 ///////////////////////////////////////////////////////////////////////////////
+	int iLine;
 	bool bInHeaders = true;
 	bool bHasFrom = false;
 	bool bHasDate = false;
@@ -653,11 +691,11 @@ int main(int iArgCount, char *pszArgs[])
 	bool bNoEmit = false;
 	char szBuffer[1536] = "";
 
-	while (fgets(szBuffer, sizeof(szBuffer) - 1, pInFile) != NULL) {
+	for (iLine = 0; fgets(szBuffer, sizeof(szBuffer) - 1, pInFile) != NULL; iLine++) {
 		int iLineLength = strlen(szBuffer);
 
 		for (; (iLineLength > 0) &&
-		     ((szBuffer[iLineLength - 1] == '\r') || (szBuffer[iLineLength - 1] == '\n'));
+			     ((szBuffer[iLineLength - 1] == '\r') || (szBuffer[iLineLength - 1] == '\n'));
 		     iLineLength--);
 
 		szBuffer[iLineLength] = '\0';
@@ -681,7 +719,12 @@ int main(int iArgCount, char *pszArgs[])
 //  Extract mail from
 ///////////////////////////////////////////////////////////////////////////////
 		if (bInHeaders) {
-			if (iLineLength == 0) {
+			bool bStraightFile = false;
+
+			if ((iLine == 0) && !IsRFC822HeaderLine(szBuffer))
+				bStraightFile = true;
+
+			if (bStraightFile || (iLineLength == 0)) {
 				bInHeaders = false;
 				bNoEmit = false;
 
@@ -704,6 +747,9 @@ int main(int iArgCount, char *pszArgs[])
 
 					fprintf(pDataFile, "Date: %s\r\n", szDate);
 				}
+
+				if (bStraightFile)
+					fprintf(pDataFile, "\r\n");
 			}
 
 			if ((szBuffer[0] == ' ') || (szBuffer[0] == '\t')) {
@@ -713,11 +759,11 @@ int main(int iArgCount, char *pszArgs[])
 					if (iRcptCurr > 0)
 						iRcptCount += iRcptCurr;
 				}
-			} else {
+			} else if (iLineLength > 0) {
 				bNoEmit = (strnicmp(szBuffer, "Bcc:", 4) == 0);
 				bRcptSource = (strnicmp(szBuffer, "To:", 3) == 0) ||
-				    (strnicmp(szBuffer, "Cc:", 3) == 0) ||
-				    (strnicmp(szBuffer, "Bcc:", 4) == 0);
+					(strnicmp(szBuffer, "Cc:", 3) == 0) ||
+					(strnicmp(szBuffer, "Bcc:", 4) == 0);
 
 				if (bExtractRcpts && bRcptSource) {
 					int iRcptCurr = EmitRecipients(pMailFile, szBuffer);
@@ -764,8 +810,8 @@ int main(int iArgCount, char *pszArgs[])
 			int iLineLength = strlen(szBuffer);
 
 			for (; (iLineLength > 0) &&
-			     ((szBuffer[iLineLength - 1] == '\r') ||
-			      (szBuffer[iLineLength - 1] == '\n')); iLineLength--);
+				     ((szBuffer[iLineLength - 1] == '\r') ||
+				      (szBuffer[iLineLength - 1] == '\n')); iLineLength--);
 
 			szBuffer[iLineLength] = '\0';
 

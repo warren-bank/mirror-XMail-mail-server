@@ -2097,7 +2097,7 @@ int USmtpAddMessageInfo(FILE * pMsgFile, char const *pszClientDomain,
 //  Write message info. If You change the order ( or add new fields ) You must
 //  arrange fields into the SmtpMsgInfo union defined in SMTPUtils.h
 ///////////////////////////////////////////////////////////////////////////////
-	fprintf(pMsgFile, "%s;%s:%d;%s;%s:%d;%s;%s\r\n",
+	fprintf(pMsgFile, "%s;[%s]:%d;%s;[%s]:%d;%s;%s\r\n",
 		pszClientDomain, szPeerIP, SysGetAddrPort(PeerInfo),
 		pszServerDomain, szSockIP, SysGetAddrPort(SockInfo), szTime, pszSmtpServerLogo);
 

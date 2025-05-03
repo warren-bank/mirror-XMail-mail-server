@@ -428,8 +428,18 @@ static int SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 	char szDestDomain[MAX_ADDR_NAME] = "";
 	char szAliasFilePath[SYS_MAX_PATH] = "";
 
-	if ((iRcptDomains < 1) ||
-	    (USmtpSplitEmailAddr(ppszRcpt[0], szDestUser, szDestDomain) < 0))
+	if (iRcptDomains < 1) {
+		ErrSetErrorCode(ERR_BAD_EMAIL_ADDR);
+		return (ERR_BAD_EMAIL_ADDR);
+	}
+///////////////////////////////////////////////////////////////////////////////
+//  We can have two cases here. The recipient is a simple one, or it has an
+//  explicit routing (@dom1,@dom2:usr@dom).
+///////////////////////////////////////////////////////////////////////////////
+	if (iRcptDomains == 1) {
+		if (USmtpSplitEmailAddr(ppszRcpt[0], szDestUser, szDestDomain) < 0)
+			return (ErrGetErrorCode());
+	} else if (USmtpSplitEmailAddr(ppszRcpt[0], NULL, szDestDomain) < 0)
 		return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -465,7 +475,7 @@ static int SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 
 				ZeroData(LMPC);
 				LMPC.ulFlags =
-				    (SMAILLogEnabled(hShbSMAIL)) ? LMPCF_LOG_ENABLED : 0;
+					(SMAILLogEnabled(hShbSMAIL)) ? LMPCF_LOG_ENABLED : 0;
 
 				if (USmlProcessLocalUserMessage
 				    (hSvrConfig, pUI, hFSpool, hQueue, hMessage, LMPC) < 0) {
@@ -1133,7 +1143,7 @@ static int SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool)
 	for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++) {
 		if (strcmp(ppszCmdTokens[ii], "@@FROM") == 0) {
 			char *pszNewValue =
-			    SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
+				SysStrDup((iFromDomains > 0) ? ppszFrom[iFromDomains - 1] : "");
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());
@@ -1143,7 +1153,7 @@ static int SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool)
 			ppszCmdTokens[ii] = pszNewValue;
 		} else if (strcmp(ppszCmdTokens[ii], "@@RCPT") == 0) {
 			char *pszNewValue =
-			    SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
+				SysStrDup((iRcptDomains > 0) ? ppszRcpt[iRcptDomains - 1] : "");
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());
@@ -1190,6 +1200,19 @@ static int SMAILCmdMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool)
 			}
 
 			char *pszNewValue = SysStrDup(szTmpFile);
+
+			if (pszNewValue == NULL)
+				return (ErrGetErrorCode());
+
+			SysFree(ppszCmdTokens[ii]);
+
+			ppszCmdTokens[ii] = pszNewValue;
+		} else if (strcmp(ppszCmdTokens[ii], "@@USERAUTH") == 0) {
+			char szAuthName[MAX_ADDR_NAME] = "-";
+
+			USmlMessageAuth(hFSpool, szAuthName, sizeof(szAuthName) - 1);
+
+			char *pszNewValue = SysStrDup(szAuthName);
 
 			if (pszNewValue == NULL)
 				return (ErrGetErrorCode());

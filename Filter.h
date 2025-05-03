@@ -34,6 +34,28 @@
 #define FILTER_FLAGS_BREAK          (1 << 4)
 #define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
+struct FilterLogInfo {
+	char const *pszSender;
+	char const *pszRecipient;
+	SYS_INET_ADDR LocalAddr;
+	SYS_INET_ADDR RemoteAddr;
+	char const * const *ppszExec;
+	int iExecResult;
+	int iExitCode;
+	char const *pszType;
+	char const *pszInfo;
+};
+
+struct FilterTokens {
+	char **ppszCmdTokens;
+	int iTokenCount;
+};
+
+struct FilterExecCtx {
+	FilterTokens *pToks;
+	char const *pszAuthName;
+};
+
 enum FilterFields {
 	filSender = 0,
 	filRecipient,
@@ -44,7 +66,9 @@ enum FilterFields {
 	filMax
 };
 
+int FilLogFilter(FilterLogInfo const *pFLI);
 char *FilGetFilterRejMessage(char const *pszSpoolFile);
+int FilExecPreParse(FilterExecCtx *pCtx, char **ppszPEError);
 int FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
 		     QMSG_HANDLE hMessage, char const *pszMode);
 

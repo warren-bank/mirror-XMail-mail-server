@@ -59,7 +59,7 @@ static int QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const *pszReason,
 static int QueUtTXErrorExNotifyRoot(SPLF_HANDLE hFSpool, char const *pszMessFilePath,
 				    char const *pszReason, char const *pszLogFile);
 static int QueUtBuildErrorRespose(char const *pszSMTPDomain, SPLF_HANDLE hFSpool,
-				  char const *pszFrom, char const *pszTo,
+				  char const *pszFrom, char const *pszSmtpFrom, char const *pszTo,
 				  char const *pszResponseFile, char const *pszReason,
 				  char const *pszText, char const *pszServer, int iLinesExtra,
 				  char const *pszLogFile);
@@ -601,6 +601,7 @@ static int QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const *pszAdminAdd
 ///////////////////////////////////////////////////////////////////////////////
 	int iMsgLinesExtra = SvrGetConfigInt("NotifyMsgLinesExtra", 0, hSvrConfig);
 	bool bSenderLog = SvrTestConfigFlag("NotifySendLogToSender", false, hSvrConfig);
+	bool bNoSenderBounce = SvrTestConfigFlag("NoSenderBounce", false, hSvrConfig);
 	QMSG_HANDLE hMessage = QueCreateMessage(hSpoolQueue);
 
 	if (hMessage == INVALID_QMSG_HANDLE) {
@@ -617,7 +618,8 @@ static int QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const *pszAdminAdd
 ///////////////////////////////////////////////////////////////////////////////
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-	if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, pszReplyTo,
+	if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress,
+				   bNoSenderBounce ? "": szPMAddress, pszReplyTo,
 				   szQueueFilePath, pszReason, pszText, pszServer,
 				   iMsgLinesExtra, bSenderLog ? pszLogFile : NULL) < 0) {
 		ErrorPush();
@@ -662,9 +664,10 @@ static int QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const *pszAdminAdd
 ///////////////////////////////////////////////////////////////////////////////
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-		if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, szEHAdmin,
-					   szQueueFilePath, pszReason, pszText, pszServer,
-					   iMsgLinesExtra, pszLogFile) < 0) {
+		if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress,
+					   bNoSenderBounce ? "": szPMAddress, szEHAdmin,
+					   szQueueFilePath, pszReason, pszText,
+					   pszServer, iMsgLinesExtra, pszLogFile) < 0) {
 			ErrorPush();
 			QueCleanupMessage(hSpoolQueue, hMessage);
 			QueCloseMessage(hSpoolQueue, hMessage);
@@ -757,7 +760,7 @@ static int QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const *pszReason,
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
 	if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, szPMAddress,
-				   szQueueFilePath, pszReason, NULL, NULL,
+				   szPMAddress, szQueueFilePath, pszReason, NULL, NULL,
 				   iMsgLinesExtra, pszLogFile) < 0) {
 		ErrorPush();
 		QueCleanupMessage(hSpoolQueue, hMessage);
@@ -805,7 +808,7 @@ static int QueUtTXErrorExNotifyRoot(SPLF_HANDLE hFSpool, char const *pszMessFile
 }
 
 static int QueUtBuildErrorRespose(char const *pszSMTPDomain, SPLF_HANDLE hFSpool,
-				  char const *pszFrom, char const *pszTo,
+				  char const *pszFrom, char const *pszSmtpFrom, char const *pszTo,
 				  char const *pszResponseFile, char const *pszReason,
 				  char const *pszText, char const *pszServer, int iLinesExtra,
 				  char const *pszLogFile)
@@ -850,7 +853,8 @@ static int QueUtBuildErrorRespose(char const *pszSMTPDomain, SPLF_HANDLE hFSpool
 ///////////////////////////////////////////////////////////////////////////////
 //  Write info line
 ///////////////////////////////////////////////////////////////////////////////
-	USmtpWriteInfoLine(pRespFile, LOCAL_ADDRESS ":0", LOCAL_ADDRESS ":0", szTime);
+	USmtpWriteInfoLine(pRespFile, LOCAL_ADDRESS_SQB ":0",
+			   LOCAL_ADDRESS_SQB ":0", szTime);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write domain
@@ -865,7 +869,7 @@ static int QueUtBuildErrorRespose(char const *pszSMTPDomain, SPLF_HANDLE hFSpool
 ///////////////////////////////////////////////////////////////////////////////
 //  Write MAIL FROM
 ///////////////////////////////////////////////////////////////////////////////
-	fprintf(pRespFile, "MAIL FROM:<%s>\r\n", pszFrom);
+	fprintf(pRespFile, "MAIL FROM:<%s>\r\n", pszSmtpFrom);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write RCPT TO

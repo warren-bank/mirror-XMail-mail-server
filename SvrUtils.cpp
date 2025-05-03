@@ -381,29 +381,31 @@ int SvrGetMessageID(SYS_UINT64 * pullMessageID)
 	FILE *pMsgIDFile = fopen(szMsgIDFile, "r+b");
 
 	if (pMsgIDFile == NULL) {
-		RLckUnlockEX(hResLock);
+		if ((pMsgIDFile = fopen(szMsgIDFile, "wb")) == NULL) {
+			RLckUnlockEX(hResLock);
 
-		ErrSetErrorCode(ERR_FILE_OPEN, szMsgIDFile);
-		return (ERR_FILE_OPEN);
-	}
+			ErrSetErrorCode(ERR_FILE_CREATE, szMsgIDFile);
+			return (ERR_FILE_CREATE);
+		}
+		*pullMessageID = 1;
+	} else {
+		char szMessageID[128] = "";
 
-	char szMessageID[128] = "";
+		if ((MscGetString(pMsgIDFile, szMessageID, sizeof(szMessageID) - 1) == NULL) ||
+		    !isdigit(szMessageID[0])) {
+			fclose(pMsgIDFile);
+			RLckUnlockEX(hResLock);
 
-	if ((MscGetString(pMsgIDFile, szMessageID, sizeof(szMessageID) - 1) == NULL) ||
-	    !isdigit(szMessageID[0])) {
-		fclose(pMsgIDFile);
-		RLckUnlockEX(hResLock);
+			ErrSetErrorCode(ERR_INVALID_FILE, szMsgIDFile);
+			return (ERR_INVALID_FILE);
+		}
+		if (sscanf(szMessageID, SYS_LLU_FMT, pullMessageID) != 1) {
+			fclose(pMsgIDFile);
+			RLckUnlockEX(hResLock);
 
-		ErrSetErrorCode(ERR_INVALID_FILE, szMsgIDFile);
-		return (ERR_INVALID_FILE);
-	}
-
-	if (sscanf(szMessageID, SYS_LLU_FMT, pullMessageID) != 1) {
-		fclose(pMsgIDFile);
-		RLckUnlockEX(hResLock);
-
-		ErrSetErrorCode(ERR_INVALID_FILE, szMsgIDFile);
-		return (ERR_INVALID_FILE);
+			ErrSetErrorCode(ERR_INVALID_FILE, szMsgIDFile);
+			return (ERR_INVALID_FILE);
+		}
 	}
 
 	++*pullMessageID;

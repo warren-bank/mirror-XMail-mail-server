@@ -40,6 +40,11 @@ struct PopSyncReport {
 	unsigned long ulSizeErr;
 };
 
+struct PopLastLoginInfo {
+	SYS_INET_ADDR Address;
+	time_t LTime;
+};
+
 int UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize, unsigned long &ulNumMessages);
 int UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace = NULL);
 int UPopAuthenticateAPOP(const char *pszDomain, const char *pszUsrName,
@@ -68,6 +73,6 @@ int UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer,
 		       const char *pszAuthType = AUTH_TYPE_CLEAR,
 		       const char *pszErrorAccount = NULL);
 int UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const *pPeerInfo, unsigned int uExpireTime);
-int UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress);
+int UPopGetLastLoginInfo(UserInfo *pUI, PopLastLoginInfo *pInfo);
 
 #endif

@@ -52,6 +52,11 @@ struct FileScan {
 	FILE *pListFile;
 };
 
+
+static int MscCopyFileLL(const char *pszCopyTo, const char *pszCopyFrom,
+			 char const *pszMode);
+
+
 int MscUniqueFile(char const *pszDir, char *pszFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -527,7 +532,8 @@ int MscClearDirectory(const char *pszPath, int iRecurseSubs)
 
 }
 
-int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom)
+static int MscCopyFileLL(const char *pszCopyTo, const char *pszCopyFrom,
+			 char const *pszMode)
 {
 
 	FILE *pFileIn = fopen(pszCopyFrom, "rb");
@@ -537,7 +543,7 @@ int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom)
 		return (ERR_FILE_OPEN);
 	}
 
-	FILE *pFileOut = fopen(pszCopyTo, "wb");
+	FILE *pFileOut = fopen(pszCopyTo, pszMode);
 
 	if (pFileOut == NULL) {
 		fclose(pFileIn);
@@ -568,6 +574,20 @@ int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom)
 	fclose(pFileIn);
 
 	return (0);
+
+}
+
+int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom)
+{
+
+	return (MscCopyFileLL(pszCopyTo, pszCopyFrom, "wb"));
+
+}
+
+int MscAppendFile(const char *pszCopyTo, const char *pszCopyFrom)
+{
+
+	return (MscCopyFileLL(pszCopyTo, pszCopyFrom, "a+b"));
 
 }
 
@@ -693,25 +713,16 @@ int MscGetSockHost(SYS_SOCKET SockFD, char *pszFQDN)
 int MscGetServerAddress(char const *pszServer, SYS_INET_ADDR & SvrAddr, int iPortNo)
 {
 
-	char const *pszColon = strchr(pszServer, ':');
 	char szServer[MAX_HOST_NAME] = "";
 
 	ZeroData(SvrAddr);
 
-	if (pszColon != NULL) {
-		int iIPLen = Min((int) (pszColon - pszServer), sizeof(szServer) - 1);
-
-		strncpy(szServer, pszServer, iIPLen);
-		szServer[iIPLen] = '\0';
-
-		pszServer = szServer;
-
-		iPortNo = atoi(pszColon + 1);
-	}
+	if (MscSplitAddressPort(pszServer, szServer, iPortNo, iPortNo) < 0)
+		return (ErrGetErrorCode());
 
 	NET_ADDRESS NetAddr;
 
-	if ((SysInetAddr(pszServer, NetAddr) < 0) && (SysGetHostByName(pszServer, NetAddr) < 0))
+	if ((SysInetAddr(szServer, NetAddr) < 0) && (SysGetHostByName(szServer, NetAddr) < 0))
 		return (ErrGetErrorCode());
 
 	SysSetupAddress(SvrAddr, AF_INET, NetAddr, iPortNo);
@@ -1364,20 +1375,34 @@ SYS_UINT32 MscHashString(char const *pszBuffer, int iLength, SYS_UINT32 uHashIni
 int MscSplitAddressPort(char const *pszConnSpec, char *pszAddress, int &iPortNo, int iDefPortNo)
 {
 
-	char const *pszColon = strchr(pszConnSpec, ':');
+	char const *pszEnd = NULL, *pszPort;
 
-	if (pszColon != NULL) {
-		int iAddrLen = (int) (pszColon - pszConnSpec);
+	iPortNo = iDefPortNo;
+
+	if (*pszConnSpec == '[') {
+		pszConnSpec++;
+		if ((pszEnd = strchr(pszConnSpec, ']')) == NULL) {
+			ErrSetErrorCode(ERR_BAD_SERVER_ADDR);
+			return (ERR_BAD_SERVER_ADDR);
+		}
+		if ((pszPort = strrchr(pszEnd + 1, '|')) == NULL)
+			pszPort = strrchr(pszEnd + 1, ':');
+		if (pszPort != NULL)
+			iPortNo = atoi(pszPort + 1);
+	} else {
+		if ((pszPort = strrchr(pszConnSpec, '|')) == NULL)
+			pszPort = strrchr(pszConnSpec, ':');
+		if ((pszEnd = pszPort) != NULL)
+			iPortNo = atoi(pszPort + 1);
+	}
+
+	if (pszEnd != NULL) {
+		int iAddrLen = Min((int) (pszEnd - pszConnSpec), MAX_HOST_NAME - 1);
 
 		strncpy(pszAddress, pszConnSpec, iAddrLen);
 		pszAddress[iAddrLen] = '\0';
-
-		iPortNo = atoi(pszColon + 1);
-	} else {
-		strcpy(pszAddress, pszConnSpec);
-
-		iPortNo = iDefPortNo;
-	}
+	} else
+		strncpy(pszAddress, pszConnSpec, MAX_HOST_NAME - 1);
 
 	return (0);
 

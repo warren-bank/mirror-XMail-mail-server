@@ -193,7 +193,7 @@ static int POP3CheckPeerIP(SYS_SOCKET SockFD)
 static unsigned int POP3ClientThread(void *pThreadData)
 {
 
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
+	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer

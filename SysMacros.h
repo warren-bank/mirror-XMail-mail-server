@@ -117,6 +117,7 @@ inline char *DelFinalChar(char *pszString, int iChar)
 inline char *DelFinalSlash(char *pszPath)
 {
 
+
 	return (DelFinalChar(pszPath, SYS_SLASH_CHAR));
 
 }

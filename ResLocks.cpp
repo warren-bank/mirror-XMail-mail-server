@@ -33,6 +33,7 @@
 
 #define STD_WAIT_GATES              37
 #define STD_RES_HASH_SIZE           251
+#define STD_RLCK_HASH_INIT          9677
 
 struct ResWaitGate {
 	SYS_SEMAPHORE hSemaphore;
@@ -53,6 +54,7 @@ struct ResLocator {
 	int iResIdx;
 };
 
+static SYS_UINT32 RLckHashString(char const *pData, SYS_UINT32 uHashInit = STD_RLCK_HASH_INIT);
 static void RLckGetResLocator(char const *pszResourceName, ResLocator * pRL);
 static ResLockEntry *RLckGetEntry(ResLocator const *pRL, char const *pszResourceName);
 static int RLckRemoveEntry(ResLocator const *pRL, ResLockEntry * pRLE);
@@ -151,10 +153,25 @@ int RLckCleanupLockers(void)
 
 }
 
+static SYS_UINT32 RLckHashString(char const *pData, SYS_UINT32 uHashInit)
+{
+
+	SYS_UINT32 uHashVal = uHashInit;
+
+	while (*pData) {
+		uHashVal += (uHashVal << 5);
+		uHashVal ^= (SYS_UINT32) ToLower(*pData);
+		pData++;
+	}
+
+	return (uHashVal);
+
+}
+
 static void RLckGetResLocator(char const *pszResourceName, ResLocator * pRL)
 {
 
-	SYS_UINT32 uResHash = MscHashString(pszResourceName, strlen(pszResourceName));
+	SYS_UINT32 uResHash = RLckHashString(pszResourceName);
 
 	pRL->iWaitGate = (int) (uResHash % STD_WAIT_GATES);
 	pRL->iResIdx = (int) (uResHash % (SYS_UINT32) RLGates[pRL->iWaitGate].iHashSize);

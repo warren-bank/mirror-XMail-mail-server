@@ -117,5 +117,6 @@ int USmlParseAddress(char const *pszAddress, char *pszPreAddr,
 int USmlDeliverFetchedMsg(char const *pszSyncAddr, const char *pszFetchHdrTags,
 			  char const *pszMailFile);
 int USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig);
+int USmlMessageAuth(SPLF_HANDLE hFSpool, char *pszAuthName, int iSize);
 
 #endif

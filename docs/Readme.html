@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail mail server v 1.20</title>
+<title>XMail mail server v 1.21</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <link rev="made" href="mailto:root@localhost" />
 </head>
@@ -102,6 +102,9 @@
 		<li><a href="#adding_an_alias">Adding an alias</a></li>
 		<li><a href="#deleting_an_alias">Deleting an alias</a></li>
 		<li><a href="#listing_aliases">Listing aliases</a></li>
+		<li><a href="#adding_an_external_alias">Adding an external alias</a></li>
+		<li><a href="#deleting_an_external_alias">Deleting an external alias</a></li>
+		<li><a href="#listing_external_aliases">Listing external aliases</a></li>
 		<li><a href="#listing_user_vars">Listing user vars</a></li>
 		<li><a href="#setting_user_vars">Setting user vars</a></li>
 		<li><a href="#listing_users">Listing users</a></li>
@@ -214,7 +217,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="current">current</a></h2>
-<p>1.20</p>
+<p>1.21</p>
 <p>
 </p>
 <h2><a name="release_type">release type</a></h2>
@@ -222,7 +225,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</p>
 <p>
 </p>
 <h2><a name="release_date">release date</a></h2>
-<p>05-30-2004</p>
+<p>Jan 9, 2005</p>
 <p>
 </p>
 <h2><a name="project_by">project by</a></h2>
@@ -1385,7 +1388,13 @@ is substituted for the reference SMTP message id
 creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program
 responsibility to delete the temporary file. Do not use it with 'filter' commands
-since the filter will have no way to modify the real spool file.
+since the filter will have no way to modify the real spool file
+</dd>
+<p></p>
+<dt><strong><a name="item__40_40userauth">@@USERAUTH</a></strong><br />
+</dt>
+<dd>
+name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
 </dd>
 <p></p></dl>
 <p>Supported commands:</p>
@@ -1753,7 +1762,13 @@ the reference SMTP message id
 <dd>
 creates a copy of the message file to a temporary one. It can be
 used with 'external' command but in this case it's external program's
-responsibility to delete the temporary file.
+responsibility to delete the temporary file
+</dd>
+<p></p>
+<dt><strong>@@USERAUTH</strong><br />
+</dt>
+<dd>
+name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
 </dd>
 <p></p></dl>
 <p>Supported commands:</p>
@@ -2061,6 +2076,14 @@ The list is a comma separated list of numbers (with no extra spaces) as in:
 Enable null sender ('MAIL FROM:&lt;&gt;') messages to be accepted by XMail.
 </dd>
 <p></p>
+<dt><strong><a name="item__5bnosenderbounce_5d">[NoSenderBounce]</a></strong><br />
+</dt>
+<dd>
+When building bounce messages, use the null SMTP sender ('MAIL FROM:&lt;&gt;') instead
+of the '<strong>PostMaster</strong>' address. This will affect only the SMTP sender, while the
+message RFC822 headers will still contain the correct From: header.
+</dd>
+<p></p>
 <dt><strong><a name="item__5bmaxmtaops_5d">[MaxMTAOps]</a></strong><br />
 </dt>
 <dd>
@@ -2122,6 +2145,15 @@ This is a comma delimited list (no extra space or TABs must be included inside t
 </dd>
 <dd>
 <p>The string ``+X-Deliver-To,To,Cc'' is the default if nothing is specified.</p>
+</dd>
+<p></p>
+<dt><strong><a name="item__5bsmtp_2dmaxerrors_5d">[SMTP-MaxErrors]</a></strong><br />
+</dt>
+<dd>
+Set the maximum number of errors allowed in a single SMTP session. When the maximum
+number of allowed errors is exceeded, the connection will be automatically dropped.
+If such variable is not set, or it is set to zero, the maximum number of errors will
+be unlimited.
 </dd>
 <p></p>
 <dt><strong><a name="item__5bsmtpmsgipbanspammers_5d">[SmtpMsgIPBanSpammers]</a></strong><br />
@@ -2278,7 +2310,7 @@ The format is:
 <dt><strong><a name="item__5bdisableemitauthuser_5d">[DisableEmitAuthUser]</a></strong><br />
 </dt>
 <dd>
-Enable/disable the emission the the 'X-Auth-User:' mail header for authenticated users.
+Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
 Valid values are ``0'' or '1', default is ``0'' (emission enabled).
 </dd>
 <p></p>
@@ -2408,10 +2440,22 @@ in order ``filename'' to be evaluated.
 The syntax of the filter file is:</p>
 <pre>
  &quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
+<p>or:</p>
+<pre>
+ &quot;!flags&quot;[TAB]&quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
 <p>Each file may contain multiple commands, that will be executed in strictly sequential
 order. The first command that will trigger a rejection code will make the filtering
-process to end.
-Each argument can be a macro also:</p>
+process to end. The '<strong>flags</strong>' parameter is a comma-separated list of flags that drives
+the filter execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
+supported flags are:</p>
+<dl>
+<dt><strong><a name="item_aex">aex</a></strong><br />
+</dt>
+<dd>
+exclude filter execution in case of authenticated sender
+</dd>
+<p></p></dl>
+<p>Each argument can be a macro also:</p>
 <dl>
 <dt><strong>@@FROM</strong><br />
 </dt>
@@ -2467,6 +2511,12 @@ with the (XMail unique) message id
 <dd>
 the reference SMTP message id
 </dd>
+<p></p>
+<dt><strong>@@USERAUTH</strong><br />
+</dt>
+<dd>
+name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
+</dd>
 <p></p></dl>
 <p>Here '<strong>command</strong>' is the name of an external program that processes the message and
 returns its processing result. If it returns '<strong>6</strong>' the message is rejected and a notification
@@ -2519,9 +2569,22 @@ response to the DATA command (final messages ack). The files '<strong>FILTERS.PR
 and '<strong>FILTERS.POST-DATA.TAB</strong>' conatins zero or more lines with the following format:</p>
 <pre>
  &quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
+<p>or:</p>
+<pre>
+ &quot;!flags&quot;[TAB]&quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</pre>
 <p>Each file may contain multiple commands, that will be executed in strictly sequential
 order. The first command that will trigger a rejection code will make the filtering
-process to end. Each argument can be a macro also:</p>
+process to end. The '<strong>flags</strong>' parameter is a comma-separated list of flags that drives
+the filter execution. The syntax of each flag is either FLAG or FLAG=VAL. Currently
+supported flags are:</p>
+<dl>
+<dt><strong>aex</strong><br />
+</dt>
+<dd>
+exclude filter execution in case of authenticated sender
+</dd>
+<p></p></dl>
+<p>Each argument can be a macro also:</p>
 <dl>
 <dt><strong>@@FILE</strong><br />
 </dt>
@@ -2529,10 +2592,10 @@ process to end. Each argument can be a macro also:</p>
 message file path
 </dd>
 <p></p>
-<dt><strong><a name="item__40_40userauth">@@USERAUTH</a></strong><br />
+<dt><strong>@@USERAUTH</strong><br />
 </dt>
 <dd>
-name of the SMTP authenticated user, or ``-'' if not authentication has been granted
+name of the SMTP authenticated user, or ``-'' if no authentication has been supplied
 </dd>
 <p></p>
 <dt><strong>@@REMOTEADDR</strong><br />
@@ -2701,7 +2764,7 @@ Overrides the SERVER.TAB variable.
 <dt><strong>[DisableEmitAuthUser]</strong><br />
 </dt>
 <dd>
-Enable/disable the emission the the 'X-Auth-User:' mail header for authenticated users.
+Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
 Valid values are '0' or '1', default is '0' (emission enabled). This variable overrides
 the SERVER.TAB one when present.
 </dd>
@@ -3028,6 +3091,12 @@ Enable SMAIL logging.
 </dt>
 <dd>
 Timeout value for filters commands in seconds. Default 90.
+</dd>
+<p></p>
+<dt><strong><a name="item__2dqg">-Qg</a></strong><br />
+</dt>
+<dd>
+Enable filter logging.
 </dd>
 <p></p></dl>
 <dt><strong><a name="item__5bpsync_5d">[PSYNC]</a></strong><br />
@@ -3438,6 +3507,12 @@ total number of messages.
 <dd>
 last user login IP address.
 </dd>
+<p></p>
+<dt><strong><a name="item_lastlogintimedate">LastLoginTimeDate</a></strong><br />
+</dt>
+<dd>
+time of the last login.
+</dd>
 <p></p></dl>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
@@ -3533,6 +3608,82 @@ containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).
 This is the format of the listing:</p>
 <pre>
  &quot;domain&quot;[TAB]&quot;alias&quot;[TAB]&quot;username&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
+<p>
+</p>
+<h2><a name="adding_an_external_alias">Adding an external alias</a></h2>
+<pre>
+ &quot;exaliasadd&quot;[TAB]&quot;local-address&quot;[TAB]&quot;remote-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>where:</p>
+<dl>
+<dt><strong><a name="item_local_2daddress">local-address</a></strong><br />
+</dt>
+<dd>
+local email address.
+</dd>
+<p></p>
+<dt><strong><a name="item_remote_2daddress">remote-address</a></strong><br />
+</dt>
+<dd>
+remote email address.
+</dd>
+<p></p></dl>
+<p>For example, the following command string:</p>
+<pre>
+ &quot;exaliasadd&quot;[TAB]&quot;dlibenzi@home.bogus&quot;[TAB]&quot;dlibenzi@xmailserver.org&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>will link the external email address '<strong>dlibenzi&#64;xmailserver.org</strong>' with the
+local email address '<strong>dlibenzi&#64;home.bogus</strong>'. The result is a RESSTRING.</p>
+<p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
+<p>
+</p>
+<h2><a name="deleting_an_external_alias">Deleting an external alias</a></h2>
+<pre>
+ &quot;exaliasdel&quot;[TAB]&quot;remote-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>where:</p>
+<dl>
+<dt><strong>remote-address</strong><br />
+</dt>
+<dd>
+remote email address.
+</dd>
+<p></p></dl>
+<p>The result is a RESSTRING.</p>
+<p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
+<p>
+</p>
+<h2><a name="listing_external_aliases">Listing external aliases</a></h2>
+<pre>
+ &quot;exaliaslist&quot;[TAB]&quot;local-address&quot;[TAB]&quot;remote-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>or</p>
+<pre>
+ &quot;exaliaslist&quot;[TAB]&quot;local-address&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>or</p>
+<pre>
+ &quot;exaliaslist&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>where:</p>
+<dl>
+<dt><strong>local-address</strong><br />
+</dt>
+<dd>
+local email address. This can contain wildcard characters.
+</dd>
+<p></p>
+<dt><strong>remote-address</strong><br />
+</dt>
+<dd>
+remote email address. This can contain wildcard characters.
+</dd>
+<p></p></dl>
+<p>Example:</p>
+<pre>
+ &quot;exaliaslist&quot;[TAB]&quot;*@home.bogus&quot;&lt;CR&gt;&lt;LF&gt;</pre>
+<p>lists all the external aliases linked to local accounts in domain '<strong>home.bogus</strong>'.</p>
+<p>The result is a RESSTRING.
+In successful cases (00100) a formatted matching users list follows, terminated by a line
+containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).
+This is the format of the listing:</p>
+<pre>
+ &quot;rmt-domain&quot;[TAB]&quot;rmt-name&quot;[TAB]&quot;loc-domain&quot;[TAB]&quot;loc-name&quot;&lt;CR&gt;&lt;LF&gt;</pre>
 <p>[<a href="#xmail_admin_protocol">admin protocol</a>] [<a href="#__index__">top</a>]</p>
 <p>
 </p>
