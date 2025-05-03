@@ -18,24 +18,31 @@
 #
 #  Davide Libenzi <davidel@xmailserver.org>
 #
-O = o
-A = a
-CPP = cpp
+
 CC = g++
 LD = g++
-
-ifeq ($(XMAIL_DEBUG), 1)
-STRIP = touch
-CFLAGS = -g
-else
 STRIP = strip
-CFLAGS = -O2
+
+ifneq ("$(WITH_SSL_INCLUDE)", "")
+    CFLAGS := $(CFLAGS) -I$(WITH_SSL_INCLUDE)
 endif
+ifneq ("$(WITH_SSL_LIB)", "")
+    LDFLAGS := $(LDFLAGS) -L$(WITH_SSL_LIB)
+endif
+
+ifeq ("$(SSLLIBS)", "")
+    SSLLIBS = -lssl -lcrypto
+endif
+
+MAINSRC = MainBSD.cpp
+MAINOBJ = MainBSD.o
+SYSSRCS = SysDepBSD.cpp SysDepUnix.cpp
+SYSOBJS = SysDepBSD.o SysDepUnix.o
 
 ifeq ($(OSTYPE),OpenBSD)
 	SYSTYPE = openbsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__OPENBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -pthread
+	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -pthread
 else
 ifeq ($(OSTYPE),NetBSD)
 	SYSTYPE = netbsd
@@ -44,106 +51,25 @@ ifeq ($(OSTYPE),NetBSD)
 	      CFLAGS := $(CFLAGS) -DBSD_USE_STATVFS
 	endif
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__NETBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -pthread
+	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -pthread
 else
 ifeq ($(OSTYPE),Darwin)
 	SYSTYPE = darwin
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__DARWIN__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -lpthread
+	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -lpthread
 else
 	SYSTYPE = freebsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -lcrypt -pthread -lc_r
+	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -lcrypt -pthread -lc_r
 endif
 endif
 endif
+
+CFLAGS := $(CFLAGS) -D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_POSIX_PTHREAD_SEMANTICS
 
 ifeq ($(NEED_LCR),1)
-	LDFLAGS := -lc_r
+	LDFLAGS := $(LDFLAGS) -lc_r
 endif
 
-
-OUTDIR = bin
-MKMACHDEPINC = SysMachine.h
-MKMACHDEP = ${OUTDIR}/MkMachDep
-MAILSVR = ${OUTDIR}/XMail
-CRTLCLNT = ${OUTDIR}/CtrlClnt
-XMCRYPT = ${OUTDIR}/XMCrypt
-MKUSERS = ${OUTDIR}/MkUsers
-SENDMAIL = ${OUTDIR}/sendmail
-
-MKMACHDEPSRCS = MkMachDep.${CPP}
-MKMACHDEPOBJS = MkMachDep.${O}
-
-SVRSRCS = BuffSock.${CPP} CTRLSvr.${CPP} DynDNS.${CPP} DNS.${CPP} DNSCache.${CPP} Errors.${CPP} ExtAliases.${CPP} FINGSvr.${CPP} \
-	MailConfig.${CPP} MailSvr.${CPP} Maildir.${CPP} MailDomains.${CPP} MD5.${CPP} MiscUtils.${CPP} LMAILSvr.${CPP} \
-	AliasDomain.${CPP} POP3GwLink.${CPP} POP3Svr.${CPP} POP3Utils.${CPP} PSYNCSvr.${CPP} ResLocks.${CPP} SList.${CPP} SMAILSvr.${CPP} \
-	TabIndex.${CPP} SMAILUtils.${CPP} SMTPSvr.${CPP} SMTPUtils.${CPP} ShBlocks.${CPP} StrUtils.${CPP} MessQueue.${CPP} \
-	QueueUtils.${CPP} SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP} \
-	Filter.${CPP}
-
-SVROBJS = BuffSock.${O} CTRLSvr.${O} DynDNS.${O} DNS.${O} DNSCache.${O} Errors.${O} ExtAliases.${O} FINGSvr.${O} \
-	MailConfig.${O} MailSvr.${O} Maildir.${O} MailDomains.${O} MD5.${O} MiscUtils.${O} LMAILSvr.${O} \
-	AliasDomain.${O} POP3GwLink.${O} POP3Svr.${O} POP3Utils.${O} PSYNCSvr.${O} ResLocks.${O} SList.${O} SMAILSvr.${O} \
-	TabIndex.${O} SMAILUtils.${O} SMTPSvr.${O} SMTPUtils.${O} ShBlocks.${O} StrUtils.${O} MessQueue.${O} \
-	QueueUtils.${O} SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O} \
-	Filter.${O}
-
-CCLNSRCS = Base64Enc.${CPP} BuffSock.${CPP} SysDep.${CPP} StrUtils.${CPP} MD5.${CPP} MiscUtils.${CPP} CTRLClient.${CPP} Errors.${CPP}
-
-CCLNOBJS = Base64Enc.${O} BuffSock.${O} SysDep.${O} StrUtils.${O} MD5.${O} MiscUtils.${O} CTRLClient.${O} Errors.${O}
-
-XMCSRCS = XMCrypt.${CPP}
-
-XMCOBJS = XMCrypt.${O}
-
-MKUSRCS = MkUsers.${CPP}
-
-MKUOBJS = MkUsers.${O}
-
-SENDMAILSRC = SendMail.${CPP}
-
-SENDMAILOBJS = SendMail.${O}
-
-%.${O} : %.${CPP}
-	${CC} ${CPPFLAGS} ${CFLAGS} -c $*.${CPP}
-
-all: ${OUTDIR} ${MKMACHDEPINC} ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
-
-${OUTDIR}:
-	@mkdir ${OUTDIR}
-
-${MKMACHDEPINC}: ${MKMACHDEP}
-	./${MKMACHDEP} > ${MKMACHDEPINC}
-
-${MKMACHDEP}: ${MKMACHDEPOBJS}
-	${LD} -o ${MKMACHDEP} ${MKMACHDEPOBJS} ${LDFLAGS}
-	${STRIP} ${MKMACHDEP}
-
-${MAILSVR}: ${SVROBJS}
-	${LD} -o ${MAILSVR} ${SVROBJS} ${LDFLAGS}
-	${STRIP} ${MAILSVR}
-
-${CRTLCLNT}: ${CCLNOBJS}
-	${LD} -o ${CRTLCLNT} ${CCLNOBJS} ${LDFLAGS}
-	${STRIP} ${CRTLCLNT}
-
-${XMCRYPT}: ${XMCOBJS}
-	${LD} -o ${XMCRYPT} ${XMCOBJS} ${LDFLAGS}
-	${STRIP} ${XMCRYPT}
-
-${MKUSERS}: ${MKUOBJS}
-	${LD} -o ${MKUSERS} ${MKUOBJS} ${LDFLAGS}
-	${STRIP} ${MKUSERS}
-
-${SENDMAIL}: ${SENDMAILOBJS}
-	${LD} -o ${SENDMAIL} ${SENDMAILOBJS} ${LDFLAGS}
-	${STRIP} ${SENDMAIL}
-
-distclean: clean
-
-clean:
-	rm -f .depend a.out core ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
-	rm -f *.${O} *~ ${MKMACHDEPINC} ${MKMACHDEP}
-	rm -rf ${OUTDIR}
+include Makefile.common
 

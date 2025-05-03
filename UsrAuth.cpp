@@ -68,11 +68,8 @@ char *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath)
 	CfgGetRootPath(pszAuthPath, iMaxPath);
 
 	StrNCat(pszAuthPath, USER_AUTH_DIR, iMaxPath);
-
 	AppendSlash(pszAuthPath);
-
 	StrNCat(pszAuthPath, pszService, iMaxPath);
-
 	AppendSlash(pszAuthPath);
 
 	return pszAuthPath;
@@ -126,7 +123,7 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 
 		int iFieldsCount = StrStringsCount(ppszCmdTokens);
 
-		if ((iFieldsCount > 1) && (stricmp(ppszCmdTokens[0], pszAuthOp) == 0)) {
+		if (iFieldsCount > 1 && stricmp(ppszCmdTokens[0], pszAuthOp) == 0) {
 			/* Do auth line macro substitution */
 			UAthMacroSubstitutes(ppszCmdTokens, pszDomain, pszUsername, pszPassword,
 					     pUI);
@@ -142,7 +139,6 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 					ErrSetErrorCode(ERR_EXTERNAL_AUTH_FAILURE);
 					return ERR_EXTERNAL_AUTH_FAILURE;
 				}
-
 				StrFreeStrings(ppszCmdTokens);
 				fclose(pAuthFile);
 
@@ -159,7 +155,6 @@ static int UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
 				return ERR_EXTERNAL_AUTH_FAILURE;
 			}
 		}
-
 		StrFreeStrings(ppszCmdTokens);
 	}
 
@@ -174,28 +169,24 @@ int UAthAuthenticateUser(char const *pszService, char const *pszDomain,
 {
 	return (UAthExecAuthOp(pszService, AUTH_AUTHENTICATE_CONFIG, pszDomain, pszUsername,
 			       pszPassword, NULL));
-
 }
 
 int UAthAddUser(char const *pszService, UserInfo *pUI)
 {
 	return (UAthExecAuthOp(pszService, AUTH_ADD_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
-
 }
 
 int UAthModifyUser(char const *pszService, UserInfo *pUI)
 {
 	return (UAthExecAuthOp(pszService, AUTH_MODIFY_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
-
 }
 
 int UAthDelUser(char const *pszService, UserInfo *pUI)
 {
 	return (UAthExecAuthOp(pszService, AUTH_DEL_CONFIG, pUI->pszDomain, pUI->pszName,
 			       pUI->pszPassword, pUI));
-
 }
 
 int UAthDropDomain(char const *pszService, char const *pszDomain)

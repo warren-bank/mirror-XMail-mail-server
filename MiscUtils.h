@@ -23,55 +23,89 @@
 #ifndef _MISCUTILS_H
 #define _MISCUTILS_H
 
-#define LOCK_FILE_WAITSTEP          1
+#define LOCK_FILE_WAITSTEP     1
 
-#define INVALID_FSCAN_HANDLE        ((FSCAN_HANDLE) 0)
+#define INVALID_FSCAN_HANDLE   ((FSCAN_HANDLE) 0)
 
-#define HASH_INIT_VALUE             5381
+#define HASH_INIT_VALUE        5381
+#define MAX_ACCEPT_ADDRESSES   32
+
+#define THCF_USE_SSL           (1 << 0)
+#define THCF_SHUTDOWN          (1 << 1)
 
 typedef struct FSCAN_HANDLE_struct {
 } *FSCAN_HANDLE;
 
-struct AddressFilter {
-	SYS_UINT8 Addr[sizeof(NET_ADDRESS)];
-	SYS_UINT8 Mask[sizeof(NET_ADDRESS)];
+union AddrUnion {
+	NET_ADDRESS a;
+	SYS_UINT8 b[sizeof(NET_ADDRESS)];
 };
 
+struct AddressFilter {
+	AddrUnion Addr;
+	AddrUnion Mask;
+};
+
+struct ThreadConfig {
+	char const *pszName;
+	unsigned int (*pfThreadProc)(void *);
+	long (*pfThreadCnt)(ThreadConfig const *);
+	SHB_HANDLE hThShb;
+	unsigned long ulFlags;
+	int iNumAddr;
+	SYS_INET_ADDR SvrAddr[MAX_ACCEPT_ADDRESSES];
+	int iNumSockFDs;
+	SYS_SOCKET SockFDs[MAX_ACCEPT_ADDRESSES];
+};
+
+struct ThreadCreateCtx {
+	SYS_SOCKET SockFD;
+	ThreadConfig const *pThCfg;
+};
+
+
+void *MscMemDup(void const *pData, long lSize, long lExtra);
+int MscDatumAlloc(Datum *pDm, void const *pData, long lSize);
+LstDatum *MscLstDatumAlloc(void const *pData, long lSize);
+int MscLstDatumAddT(SysListHead *pHead, void const *pData, long lSize);
+void MscFreeDatumList(SysListHead *pHead);
 int MscUniqueFile(char const *pszDir, char *pszFilePath);
 int MscRecvTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout,
 		    int (*pStopProc) (void *) = NULL, void *pParam = NULL);
 int MscSendTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, int iTimeout,
 		    int (*pStopProc) (void *) = NULL, void *pParam = NULL);
 char *MscTranslatePath(char *pszPath);
-void *MscLoadFile(char const *pszFilePath, unsigned int &uFileSize);
+void *MscLoadFile(char const *pszFilePath, unsigned long *pulFileSize);
 int MscLockFile(const char *pszFileName, int iMaxWait, int iWaitStep = LOCK_FILE_WAITSTEP);
 int MscGetTimeNbrString(char *pszTimeStr, int iStringSize, time_t tTime = 0);
 int MscGetTime(struct tm &tmLocal, int &iDiffHours, int &iDiffMins, time_t tCurr = 0);
 char *MscStrftime(struct tm const *ptmTime, char *pszDateStr, int iSize);
 int MscGetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr = 0);
-int MscGetDirectorySize(char const *pszPath, bool bRecurse, unsigned long &ulDirSize,
+int MscGetDirectorySize(char const *pszPath, bool bRecurse, SYS_OFF_T &llDirSize,
 			unsigned long &ulNumFiles, int (*pFNValidate) (char const *) = NULL);
-FSCAN_HANDLE MscFirstFile(char const *pszPath, int iListDirs, char *pszFileName);
-int MscNextFile(FSCAN_HANDLE hFileScan, char *pszFileName);
+FSCAN_HANDLE MscFirstFile(char const *pszPath, int iListDirs, char *pszFileName, int iSize);
+int MscNextFile(FSCAN_HANDLE hFileScan, char *pszFileName, int iSize);
 void MscCloseFindFile(FSCAN_HANDLE hFileScan);
-int MscGetFileList(char const *pszPath, const char *pszListFile, int iListDirs = 1);
+int MscGetFileList(char const *pszPath, int iListDirs, SysListHead *pHead);
 int MscCreateEmptyFile(const char *pszFileName);
 int MscClearDirectory(const char *pszPath, int iRecurseSubs = 1);
 int MscCopyFile(const char *pszCopyTo, const char *pszCopyFrom);
 int MscAppendFile(const char *pszCopyTo, const char *pszCopyFrom);
-int MscCopyFile(FILE *pFileOut, FILE *pFileIn, unsigned long ulBaseOffset,
-		unsigned long ulCopySize);
+int MscCopyFile(FILE *pFileOut, FILE *pFileIn, SYS_OFF_T llBaseOffset,
+		SYS_OFF_T llCopySize);
 int MscMoveFile(char const *pszOldName, char const *pszNewName);
 char *MscGetString(FILE *pFile, char *pszBuffer, int iMaxChars);
 char *MscFGets(char *pszLine, int iLineSize, FILE *pFile);
 char *MscGetConfigLine(char *pszLine, int iLineSize, FILE *pFile, bool bSkipComments = true);
-int MscGetPeerHost(SYS_SOCKET SockFD, char *pszFQDN);
-int MscGetSockHost(SYS_SOCKET SockFD, char *pszFQDN);
+int MscGetPeerHost(SYS_SOCKET SockFD, char *pszFQDN, int iSize);
+int MscGetSockHost(SYS_SOCKET SockFD, char *pszFQDN, int iSize);
 int MscGetServerAddress(char const *pszServer, SYS_INET_ADDR &SvrAddr, int iPortNo = 0);
-int MscSplitFQDN(const char *pszFQDN, char *pszHost, char *pszDomain);
+int MscSplitFQDN(const char *pszFQDN, char *pszHost, int iHSize,
+		 char *pszDomain, int iDSize);
 char *MscLogFilePath(char const *pszLogFile, char *pszLogFilePath);
 int MscFileLog(char const *pszLogFile, char const *pszFormat, ...);
-int MscSplitPath(char const *pszFilePath, char *pszDir, char *pszFName, char *pszExt);
+int MscSplitPath(char const *pszFilePath, char *pszDir, int iDSize,
+		 char *pszFName, int iFSize, char *pszExt, int iESize);
 int MscGetFileName(char const *pszFilePath, char *pszFileName);
 int MscCreateClientSocket(char const *pszServer, int iPortNo, int iSockType,
 			  SYS_SOCKET *pSockFD, SYS_INET_ADDR *pSvrAddr,
@@ -84,14 +118,15 @@ int MscAcceptServerConnection(SYS_SOCKET const *pSockFDs, int iNumSockFDs,
 int MscLoadAddressFilter(char const *const *ppszFilter, int iNumTokens, AddressFilter &AF);
 bool MscAddressMatch(AddressFilter const &AF, NET_ADDRESS const &TestAddr);
 int MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR &PeerInfo, bool bDefault);
-char **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR &PeerInfo);
+char **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR *pPeerInfo);
+int MscHostSubMatch(char const *pszHostName, char const *pszHostMatch);
+char **MscGetHNProperties(char const *pszFileName, char const *pszHostName);
 int MscMD5Authenticate(const char *pszPassword, const char *pszTimeStamp, const char *pszDigest);
 char *MscExtractServerTimeStamp(char const *pszResponse, char *pszTimeStamp, int iMaxTimeStamp);
-int MscBase64FileEncode(char const *pszBoundary, char const *pszFilePath, FILE *pFileOut);
 int MscRootedName(char const *pszHostName);
 int MscCramMD5(char const *pszSecret, char const *pszChallenge, char *pszDigest);
-SYS_UINT32 MscHashString(char const *pszBuffer, int iLength,
-			 SYS_UINT32 uHashInit = HASH_INIT_VALUE);
+unsigned long MscHashString(char const *pszBuffer, int iLength,
+			    unsigned long ulHashInit = HASH_INIT_VALUE);
 int MscSplitAddressPort(char const *pszConnSpec, char *pszAddress, int &iPortNo, int iDefPortNo);
 SYS_UINT16 MscReadUint16(void const *pData);
 SYS_UINT32 MscReadUint32(void const *pData);
@@ -100,9 +135,16 @@ void *MscWriteUint16(void *pData, SYS_UINT16 uValue);
 void *MscWriteUint32(void *pData, SYS_UINT32 uValue);
 void *MscWriteUint64(void *pData, SYS_UINT64 uValue);
 int MscCmdStringCheck(char const *pszString);
-int MscGetSectionSize(FileSection const *pFS, unsigned long *pulSize);
+int MscGetSectionSize(FileSection const *pFS, SYS_OFF_T *pllSize);
+int MscIsIPDomain(char const *pszDomain, char *pszIP, int iIPSize);
 int MscReplaceTokens(char **ppszTokens, char *(*pLkupProc)(void *, char const *, int),
 		     void *pPriv);
 int MscGetAddrString(SYS_INET_ADDR const &AddrInfo, char *pszAStr, int iSize);
+unsigned int MscServiceThread(void *pThreadData);
+int MscSslEnvCB(void *pPrivate, int iID, void const *pData);
+int MscParseOptions(char const *pszOpts, int (*pfAssign)(void *, char const *, char const *),
+		    void *pPrivate);
+void MscSysFreeCB(void *pPrivate, void *pData);
 
 #endif
+

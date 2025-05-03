@@ -38,7 +38,6 @@ struct ErrorEnv {
 static void ErrFreeEnv(void *pData);
 static void ErrOnceSetup(void);
 static ErrorEnv *ErrSetupEnv(void);
-static int ErrGetErrorIndex(int iErrorCode);
 
 static SYS_THREAD_ONCE OnceSetup = SYS_THREAD_ONCE_INIT;
 static SYS_TLSKEY ErrTlsKey;
@@ -275,8 +274,31 @@ static ErrorStrings Errors[] = {
 	{ ERR_NO_MESSAGE_AUTH, "Message authentication not found" },
 	{ ERR_INVALID_PARAMETER, "Invalid parameter" },
 	{ ERR_ALREADY_EXIST, "Already exist" },
+	{ ERR_SSLCTX_CREATE, "Error creating SSL context" },
+	{ ERR_SSL_CREATE, "Error creating SSL session" },
+	{ ERR_SSL_CONNECT, "Error establishing SSL connection (connect)" },
+	{ ERR_SSL_SETCERT, "Error setting the SSL certificate file" },
+	{ ERR_SSL_SETKEY, "Error setting the SSL key file" },
+	{ ERR_SSL_READ, "SSL read error" },
+	{ ERR_SSL_WRITE, "SSL write error" },
+	{ ERR_SSL_CERT_VALIDATE, "SSL certificate validation failed" },
+	{ ERR_SSL_NOCERT, "SSL certificate missing" },
+	{ ERR_NO_REMOTE_SSL, "Remote server does not support TLS" },
+	{ ERR_SSL_ALREADY_ACTIVE, "TLS link already active" },
+	{ ERR_SSL_CHECKKEY, "SSL private key check failed" },
+	{ ERR_SSL_VERPATHS, "SSL verify-paths load failed" },
+	{ ERR_TLS_MODE_REQUIRED, "TLS required for this session" },
+	{ ERR_NOT_FOUND, "Not found" },
+	{ ERR_NOREMOTE_POP3_UIDL, "Remote POP3 server does not support UIDL" },
+	{ ERR_CORRUPTED, "Input data corrupted" },
+	{ ERR_SSL_DISABLED, "TLS service disabled" },
+	{ ERR_SSL_ACCEPT, "Error establishing SSL connection (accept)" },
+	{ ERR_BAD_SEQUENCE, "Wrong sequence of commands" },
+	{ ERR_EMPTY_ADDRESS, "Empty email address" },
 
 };
+static char const *pszErrors[ERROR_COUNT];
+
 
 static void ErrFreeEnv(void *pData)
 {
@@ -285,19 +307,23 @@ static void ErrFreeEnv(void *pData)
 	if (pEV != NULL) {
 		char **ppszInfo = pEV->pszInfo;
 
-		for (int ii = 0; ii < CountOf(Errors); ii++, ppszInfo++)
+		for (int i = 0; i < CountOf(Errors); i++, ppszInfo++)
 			if (*ppszInfo != NULL)
 				SysFree(*ppszInfo), *ppszInfo = NULL;
-
 		SysFree(pEV);
 	}
-
 }
 
 static void ErrOnceSetup(void)
 {
-	SysCreateTlsKey(ErrTlsKey, ErrFreeEnv);
+	int i, iIdx;
 
+	SysCreateTlsKey(ErrTlsKey, ErrFreeEnv);
+	for (i = 0; i < CountOf(Errors); i++) {
+		iIdx = -Errors[i].iErrorCode;
+		if (iIdx >= 0 && iIdx < ERROR_COUNT)
+			pszErrors[iIdx] = Errors[i].pszError;
+	}
 }
 
 static ErrorEnv *ErrSetupEnv(void)
@@ -308,14 +334,14 @@ static ErrorEnv *ErrSetupEnv(void)
 
 	if (pEV == NULL) {
 		if ((pEV = (ErrorEnv *) SysAlloc(sizeof(ErrorEnv) +
-						 CountOf(Errors) * sizeof(char *))) == NULL)
+						 ERROR_COUNT * sizeof(char *))) == NULL)
 			return NULL;
 
 		pEV->iErrorNo = ERR_SUCCESS;
 
 		char **ppszInfo = pEV->pszInfo;
 
-		for (int ii = 0; ii < CountOf(Errors); ii++, ppszInfo++)
+		for (int i = 0; i < ERROR_COUNT; i++, ppszInfo++)
 			*ppszInfo = NULL;
 
 		if (SysSetTlsKeyData(ErrTlsKey, pEV) < 0) {
@@ -325,15 +351,6 @@ static ErrorEnv *ErrSetupEnv(void)
 	}
 
 	return pEV;
-}
-
-static int ErrGetErrorIndex(int iErrorCode)
-{
-	for (int ii = 0; ii < CountOf(Errors); ii++)
-		if (Errors[ii].iErrorCode == iErrorCode)
-			return ii;
-
-	return -1;
 }
 
 int ErrGetErrorCode(void)
@@ -354,15 +371,12 @@ int ErrSetErrorCode(int iError, char const *pszInfo)
 		return ERR_ERRORINIT_FAILED;
 
 	pEV->iErrorNo = iError;
-
 	if (pszInfo != NULL) {
-		int iErrIndex = ErrGetErrorIndex(iError);
-
-		if (iErrIndex >= 0) {
-			if (pEV->pszInfo[iErrIndex] != NULL)
-				SysFree(pEV->pszInfo[iErrIndex]);
-
-			pEV->pszInfo[iErrIndex] = SysStrDup(pszInfo);
+		iError = -iError;
+		if (iError >= 0 && iError < ERROR_COUNT) {
+			if (pEV->pszInfo[iError] != NULL)
+				SysFree(pEV->pszInfo[iError]);
+			pEV->pszInfo[iError] = SysStrDup(pszInfo);
 		}
 	}
 
@@ -371,9 +385,10 @@ int ErrSetErrorCode(int iError, char const *pszInfo)
 
 const char *ErrGetErrorString(int iError)
 {
-	int iErrIndex = ErrGetErrorIndex(iError);
+	iError = -iError;
 
-	return (iErrIndex >= 0) ? Errors[iErrIndex].pszError : "Unknown error code";
+	return (iError >= 0 && iError < ERROR_COUNT && pszErrors[iError] != NULL) ?
+		pszErrors[iError]: "Unknown error code";
 }
 
 const char *ErrGetErrorString(void)
@@ -393,14 +408,14 @@ char *ErrGetErrorStringInfo(int iError)
 	if (pEV == NULL)
 		return SysStrDup(ErrGetErrorString(iError));
 
-	int iErrIndex = ErrGetErrorIndex(iError);
+	int iErrIndex = -iError;
 
-	if (iErrIndex < 0)
+	if (iErrIndex < 0 || iErrIndex >= ERROR_COUNT)
 		return SysStrDup("Unknown error code");
 
-	int iInfoLength = (pEV->pszInfo[iErrIndex] != NULL) ? strlen(pEV->pszInfo[iErrIndex]) : 0;
-	char *pszErrorInfo = (char *) SysAlloc(strlen(Errors[iErrIndex].pszError) +
-					       iInfoLength + 256);
+	int iInfoLength = (pEV->pszInfo[iErrIndex] != NULL) ? strlen(pEV->pszInfo[iErrIndex]): 0;
+	char const *pszError = pszErrors[iErrIndex] != NULL ? pszErrors[iErrIndex]: "Unknown error code";
+	char *pszErrorInfo = (char *) SysAlloc(strlen(pszError) + iInfoLength + 256);
 
 	if (pszErrorInfo == NULL)
 		return NULL;
@@ -409,11 +424,10 @@ char *ErrGetErrorStringInfo(int iError)
 		sprintf(pszErrorInfo,
 			"ErrCode   = %d\n"
 			"ErrString = %s\n"
-			"ErrInfo   = %s", iError, Errors[iErrIndex].pszError,
-			pEV->pszInfo[iErrIndex]);
+			"ErrInfo   = %s", iError, pszError, pEV->pszInfo[iErrIndex]);
 	else
 		sprintf(pszErrorInfo,
-			"ErrCode   = %d\n" "ErrString = %s", iError, Errors[iErrIndex].pszError);
+			"ErrCode   = %d\n" "ErrString = %s", iError, pszError);
 
 	return pszErrorInfo;
 }
@@ -428,7 +442,6 @@ int ErrLogMessage(int iLogLevel, char const *pszFormat, ...)
 	char *pszUserMessage = NULL;
 
 	StrVSprint(pszUserMessage, pszFormat, pszFormat);
-
 	if (pszUserMessage == NULL) {
 		SysFree(pszErrorInfo);
 		return ErrGetErrorCode();
@@ -465,3 +478,4 @@ int ErrFileLogString(char const *pszFileName, char const *pszMessage)
 
 	return 0;
 }
+

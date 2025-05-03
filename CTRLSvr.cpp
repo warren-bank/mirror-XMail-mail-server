@@ -26,6 +26,8 @@
 #include "ShBlocks.h"
 #include "SList.h"
 #include "BuffSock.h"
+#include "SSLBind.h"
+#include "SSLConfig.h"
 #include "ResLocks.h"
 #include "MiscUtils.h"
 #include "MD5.h"
@@ -50,10 +52,6 @@
 
 #define CTRL_ACCOUNTS_FILE      "ctrlaccounts.tab"
 #define CTRL_ACCOUNTS_LINE_MAX  512
-#define CTRLSRV_ACCEPT_TIMEOUT  4
-#define CTRL_LISTEN_SIZE        8
-#define CTRL_WAIT_SLEEP         2
-#define MAX_CLIENTS_WAIT        300
 #define STD_CTRL_TIMEOUT        45
 #define CTRL_IPMAP_FILE         "ctrl.ipmap.tab"
 #define CTRL_LOG_FILE           "ctrl"
@@ -62,7 +60,7 @@
 #define CTRL_LISTFOLLOW_RESULT  100
 #define CTRL_WAITDATA_RESULT    101
 #define CTRL_VAR_DROP_VALUE     ".|rm"
-#define CTRL_SERVER_NAME        "[" APP_NAME_VERSION_STR " CTRL Server]"
+#define CTRL_TLS_INIT_STR       "#!TLS"
 
 enum CtrlAccountsFileds {
 	accUsername = 0,
@@ -77,7 +75,6 @@ static int CTRLCheckPeerIP(SYS_SOCKET SockFD);
 static int CTRLLogSession(char const *pszUsername, char const *pszPassword,
 			  SYS_INET_ADDR const &PeerInfo, int iStatus);
 static int CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL, CTRLConfig *pCTRLCfg = NULL);
-static unsigned int CTRLClientThread(void *pThreadData);
 static int CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode);
 static int CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
 			     char const *pszMessage);
@@ -88,9 +85,10 @@ static int CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const *ps
 static char *CTRLGetAccountsFilePath(char *pszAccFilePath, int iMaxPath);
 static int CTRLAccountCheck(CTRLConfig *pCTRLCfg, char const *pszUsername,
 			    char const *pszPassword, char const *pszTimeStamp);
+static int CTRLSslEnvCB(void *pPrivate, int iID, void const *pData);
 static int CTRLLogin(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		     char const *pszTimeStamp, SYS_INET_ADDR const &PeerInfo);
-static int CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
+static int CTRLHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock,
 			     SYS_INET_ADDR const &PeerInfo);
 static int CTRLProcessCommand(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, char const *pszCommand);
 static int CTRLDo_useradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
@@ -205,7 +203,6 @@ static int CTRLLogEnabled(SHB_HANDLE hShbCTRL, CTRLConfig *pCTRLCfg)
 	if (pCTRLCfg == NULL) {
 		if ((pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL)) == NULL)
 			return ErrGetErrorCode();
-
 		++iDoUnlock;
 	}
 
@@ -274,7 +271,6 @@ static int CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL, CTRLConfig *pCTR
 
 		++iDoUnlock;
 	}
-
 	if ((pCTRLCfg->lThreadCount + lCount) > pCTRLCfg->lMaxThreads) {
 		if (iDoUnlock)
 			ShbUnlock(hShbCTRL);
@@ -282,136 +278,88 @@ static int CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL, CTRLConfig *pCTR
 		ErrSetErrorCode(ERR_SERVER_BUSY);
 		return ERR_SERVER_BUSY;
 	}
-
 	pCTRLCfg->lThreadCount += lCount;
-
 	if (iDoUnlock)
 		ShbUnlock(hShbCTRL);
 
 	return 0;
 }
 
-unsigned int CTRLThreadProc(void *pThreadData)
+unsigned int CTRLClientThread(void *pThreadData)
 {
-	CTRLConfig *pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL);
-
-	if (pCTRLCfg == NULL)
-		return ErrGetErrorCode();
-
-	int iNumSockFDs = 0;
-	SYS_SOCKET SockFDs[MAX_CTRL_ACCEPT_ADDRESSES];
-
-	if (MscCreateServerSockets(pCTRLCfg->iNumAddr, pCTRLCfg->SvrAddr, pCTRLCfg->iPort,
-				   CTRL_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0) {
-		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		ShbUnlock(hShbCTRL);
-		return ErrorPop();
-	}
-
-	ShbUnlock(hShbCTRL);
-
-	SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", CTRL_SERVER_NAME);
-
-	for (;;) {
-		int iNumConnSockFD = 0;
-		SYS_SOCKET ConnSockFD[MAX_CTRL_ACCEPT_ADDRESSES];
-
-		if (MscAcceptServerConnection(SockFDs, iNumSockFDs, ConnSockFD,
-					      iNumConnSockFD, CTRLSRV_ACCEPT_TIMEOUT) < 0) {
-			unsigned long ulFlags = CTRLF_STOP_SERVER;
-
-			pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL);
-
-			if (pCTRLCfg != NULL)
-				ulFlags = pCTRLCfg->ulFlags;
-
-			ShbUnlock(hShbCTRL);
-
-			if (ulFlags & CTRLF_STOP_SERVER)
-				break;
-			else
-				continue;
-		}
-
-		for (int ss = 0; ss < iNumConnSockFD; ss++) {
-			SYS_THREAD hClientThread =
-				SysCreateServiceThread(CTRLClientThread, ConnSockFD[ss]);
-
-			if (hClientThread != SYS_INVALID_THREAD)
-				SysCloseThread(hClientThread, 0);
-			else
-				SysCloseSocket(ConnSockFD[ss]);
-
-		}
-	}
-
-	for (int ss = 0; ss < iNumSockFDs; ss++)
-		SysCloseSocket(SockFDs[ss]);
-
-	/* Wait for client completion */
-	for (int iTotalWait = 0; (iTotalWait < MAX_CLIENTS_WAIT); iTotalWait += CTRL_WAIT_SLEEP) {
-		pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL);
-
-		if (pCTRLCfg == NULL)
-			break;
-
-		long lThreadCount = pCTRLCfg->lThreadCount;
-
-		ShbUnlock(hShbCTRL);
-
-		if (lThreadCount == 0)
-			break;
-
-		SysSleep(CTRL_WAIT_SLEEP);
-	}
-
-	SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", CTRL_SERVER_NAME);
-
-	return 0;
-}
-
-static unsigned int CTRLClientThread(void *pThreadData)
-{
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
+	ThreadCreateCtx *pThCtx = (ThreadCreateCtx *) pThreadData;
 
 	/* Link socket to the bufferer */
-	BSOCK_HANDLE hBSock = BSckAttach(SockFD);
+	BSOCK_HANDLE hBSock = BSckAttach(pThCtx->SockFD);
 
 	if (hBSock == INVALID_BSOCK_HANDLE) {
 		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		SysCloseSocket(SockFD);
+		SysCloseSocket(pThCtx->SockFD);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
+
+	/*
+	 * Do we need to switch to TLS?
+	 */
+	if (pThCtx->pThCfg->ulFlags & THCF_USE_SSL) {
+		int iError;
+		SslServerBind SSLB;
+		SslBindEnv SslE;
+
+		if (CSslBindSetup(&SSLB) < 0) {
+			ErrorPush();
+			SysCloseSocket(pThCtx->SockFD);
+			SysFree(pThCtx);
+			return ErrorPop();
+		}
+		ZeroData(SslE);
+
+		iError = BSslBindServer(hBSock, &SSLB, MscSslEnvCB, &SslE);
+
+		CSslBindCleanup(&SSLB);
+		if (iError < 0) {
+			ErrorPush();
+			SysCloseSocket(pThCtx->SockFD);
+			SysFree(pThCtx);
+			return ErrorPop();
+		}
+		/*
+		 * We may want to add verify code here ...
+		 */
+
+		SysFree(SslE.pszIssuer);
+		SysFree(SslE.pszSubject);
+	}
 	/* Check IP permission */
-	if (CTRLCheckPeerIP(SockFD) < 0) {
+	if (CTRLCheckPeerIP(pThCtx->SockFD) < 0) {
 		ErrorPush();
-
+		SysLogMessage(LOG_LEV_ERROR, "%s (CTRL check peer IP)\n",
+			      ErrGetErrorString(ErrorFetch()));
 		CTRLSendCmdResult(hBSock, ErrorFetch(), ErrGetErrorString(), STD_CTRL_TIMEOUT);
-
 		BSckDetach(hBSock, 1);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
 	/* Increase threads count */
-	if (CTRLThreadCountAdd(+1, hShbCTRL) < 0) {
+	if (CTRLThreadCountAdd(+1, pThCtx->pThCfg->hThShb) < 0) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s (CTRL thread count)\n",
 			      ErrGetErrorString(ErrorFetch()));
 		CTRLSendCmdResult(hBSock, ErrorFetch(), ErrGetErrorString(), STD_CTRL_TIMEOUT);
-
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
 		BSckDetach(hBSock, 1);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
 	/* Get client socket information */
 	SYS_INET_ADDR PeerInfo;
 
-	if (SysGetPeerInfo(SockFD, PeerInfo) < 0) {
+	if (SysGetPeerInfo(pThCtx->SockFD, PeerInfo) < 0) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
+		CTRLThreadCountAdd(-1, pThCtx->pThCfg->hThShb);
 		BSckDetach(hBSock, 1);
-		CTRLThreadCountAdd(-1, hShbCTRL);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
 
@@ -421,15 +369,16 @@ static unsigned int CTRLClientThread(void *pThreadData)
 		      SysInetNToA(PeerInfo, szIP));
 
 	/* Handle client session */
-	CTRLHandleSession(hShbCTRL, hBSock, PeerInfo);
+	CTRLHandleSession(pThCtx->pThCfg, hBSock, PeerInfo);
 
 	SysLogMessage(LOG_LEV_MESSAGE, "CTRL client exit [%s]\n", SysInetNToA(PeerInfo, szIP));
 
+	/* Decrease threads count */
+	CTRLThreadCountAdd(-1, pThCtx->pThCfg->hThShb);
+
 	/* Unlink socket from the bufferer and close it */
 	BSckDetach(hBSock, 1);
-
-	/* Decrease thread count */
-	CTRLThreadCountAdd(-1, hShbCTRL);
+	SysFree(pThCtx);
 
 	return 0;
 }
@@ -546,10 +495,8 @@ static int CTRLAccountCheck(CTRLConfig *pCTRLCfg, char const *pszUsername,
 
 			return 0;
 		}
-
 		StrFreeStrings(ppszStrings);
 	}
-
 	fclose(pAccountsFile);
 
 	RLckUnlockSH(hResLock);
@@ -558,14 +505,63 @@ static int CTRLAccountCheck(CTRLConfig *pCTRLCfg, char const *pszUsername,
 	return ERR_BAD_CTRL_LOGIN;
 }
 
+static int CTRLSslEnvCB(void *pPrivate, int iID, void const *pData)
+{
+	SslBindEnv *pSslE = (SslBindEnv *) pPrivate;
+
+	/*
+	 * Empty for now ...
+	 */
+
+
+	return 0;
+}
+
 static int CTRLLogin(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		     char const *pszTimeStamp, SYS_INET_ADDR const &PeerInfo)
 {
 	char szLogin[256] = "";
 
-	if ((BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1, pCTRLCfg->iTimeout) == NULL) ||
-	    (MscCmdStringCheck(szLogin) < 0))
+	if (BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1, pCTRLCfg->iTimeout) == NULL ||
+	    MscCmdStringCheck(szLogin) < 0)
 		return ErrGetErrorCode();
+
+	if (strcmp(szLogin, CTRL_TLS_INIT_STR) == 0) {
+		int iError;
+		SslServerBind SSLB;
+		SslBindEnv SslE;
+
+		if (strcmp(BSckBioName(hBSock), BSSL_BIO_NAME) == 0) {
+			CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_SSL_ALREADY_ACTIVE);
+			ErrSetErrorCode(ERR_SSL_ALREADY_ACTIVE);
+			return ERR_SSL_ALREADY_ACTIVE;
+		} else if (!SvrTestConfigFlag("EnableCTRL-TLS", true)) {
+			CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_SSL_DISABLED);
+			ErrSetErrorCode(ERR_SSL_DISABLED);
+			return ERR_SSL_DISABLED;
+		}
+		if (CSslBindSetup(&SSLB) < 0) {
+			ErrorPush();
+			CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+			return ErrorPop();
+		}
+		ZeroData(SslE);
+
+		CTRLSendCmdResult(pCTRLCfg, hBSock, 0, "Ready to start TLS mode");
+
+		iError = BSslBindServer(hBSock, &SSLB, CTRLSslEnvCB, &SslE);
+
+		CSslBindCleanup(&SSLB);
+		if (iError < 0)
+			return iError;
+
+		SysFree(SslE.pszIssuer);
+		SysFree(SslE.pszSubject);
+		if (BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1,
+				  pCTRLCfg->iTimeout) == NULL ||
+		    MscCmdStringCheck(szLogin) < 0)
+			return ErrGetErrorCode();
+	}
 
 	char **ppszTokens = StrGetTabLineStrings(szLogin);
 
@@ -611,10 +607,10 @@ static int CTRLLogin(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 	return 0;
 }
 
-static int CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
+static int CTRLHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock,
 			     SYS_INET_ADDR const &PeerInfo)
 {
-	CTRLConfig *pCTRLCfg = CTRLGetConfigCopy(hShbCTRL);
+	CTRLConfig *pCTRLCfg = CTRLGetConfigCopy(pThCfg->hThShb);
 
 	if (pCTRLCfg == NULL)
 		return ErrGetErrorCode();
@@ -647,29 +643,20 @@ static int CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 		return ErrorPop();
 	}
 
-	SysFree(pCTRLCfg);
-
 	/* Command loop */
 	char szCommand[CTRL_MAX_LINE_SIZE] = "";
 
 	while (!SvrInShutdown() &&
-	       (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, iSessionTimeout) != NULL)
-	       && (MscCmdStringCheck(szCommand) == 0)) {
-		/* Check for exit flag */
-		pCTRLCfg = CTRLGetConfigCopy(hShbCTRL);
-
-		if ((pCTRLCfg == NULL) || (pCTRLCfg->ulFlags & CTRLF_STOP_SERVER)) {
-			SysFree(pCTRLCfg);
+	       BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, iSessionTimeout) != NULL &&
+	       MscCmdStringCheck(szCommand) == 0) {
+		if (pThCfg->ulFlags & THCF_SHUTDOWN)
 			break;
-		}
+
 		/* Process client command */
-		int iCmdResult = CTRLProcessCommand(pCTRLCfg, hBSock, szCommand);
-
-		SysFree(pCTRLCfg);
-
-		if (iCmdResult == CTRL_QUIT_CMD_EXIT)
+		if (CTRLProcessCommand(pCTRLCfg, hBSock, szCommand) == CTRL_QUIT_CMD_EXIT)
 			break;
 	}
+	SysFree(pCTRLCfg);
 
 	return 0;
 }
@@ -1507,7 +1494,7 @@ static int CTRLDo_usersetmproc(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		return ErrorPop();
 	}
 	/* Set mailproc file ( or delete it if size == 0 ) */
-	if (UsrSetMailProcessFile(pUI, (FI.ulSize != 0) ? szMPFile: NULL,
+	if (UsrSetMailProcessFile(pUI, (FI.llSize != 0) ? szMPFile: NULL,
 				  iWhichMP) < 0) {
 		ErrorPush();
 		SysRemove(szMPFile);
@@ -1575,10 +1562,10 @@ static int CTRLDo_userstat(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		return ErrorPop();
 	}
 	/* Get mailbox infos */
-	unsigned long ulMBSize = 0;
+	SYS_OFF_T llMBSize = 0;
 	unsigned long ulNumMessages = 0;
 
-	if (UPopGetMailboxSize(pUI, ulMBSize, ulNumMessages) < 0) {
+	if (UPopGetMailboxSize(pUI, llMBSize, ulNumMessages) < 0) {
 		ErrorPush();
 		UsrFreeUserInfo(pUI);
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
@@ -1598,21 +1585,20 @@ static int CTRLDo_userstat(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 
 	CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
 
-	if ((BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"RealAddress\"\t\"%s\"",
-			     szRealAddress) < 0) ||
-	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxSize\"\t\"%lu\"",
-			     ulMBSize) < 0) ||
-	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
-			     ulNumMessages) < 0) ||
-	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginTimeDate\"\t\"%s\"",
-			     szLoginTime) < 0) ||
-	    (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
-			     szIPAddr) < 0)) {
+	if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"RealAddress\"\t\"%s\"",
+			    szRealAddress) < 0 ||
+	    BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxSize\"\t\"" SYS_OFFT_FMT "u\"",
+			    llMBSize) < 0 ||
+	    BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
+			    ulNumMessages) < 0 ||
+	    BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginTimeDate\"\t\"%s\"",
+			    szLoginTime) < 0 ||
+	    BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
+			    szIPAddr) < 0) {
 		ErrorPush();
 		UsrFreeUserInfo(pUI);
 		return ErrorPop();
 	}
-
 	UsrFreeUserInfo(pUI);
 
 	BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
@@ -1970,7 +1956,7 @@ static int CTRLDo_custdomset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 	}
 	/* Set custom domain file ( or delete it if size == 0 ) */
 	if (USmlSetCustomDomainFile(ppszTokens[1],
-				    (FI.ulSize != 0) ? szCustDomainFile: NULL) < 0) {
+				    (FI.llSize != 0) ? szCustDomainFile: NULL) < 0) {
 		ErrorPush();
 		SysRemove(szCustDomainFile);
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
@@ -2000,23 +1986,22 @@ static int CTRLDo_custdomlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 	USmlGetDomainCustomDir(szCustomPath, sizeof(szCustomPath), 0);
 
 	char szCustFileName[SYS_MAX_PATH] = "";
-	FSCAN_HANDLE hFileScan = MscFirstFile(szCustomPath, 0, szCustFileName);
+	FSCAN_HANDLE hFileScan = MscFirstFile(szCustomPath, 0, szCustFileName,
+					      sizeof(szCustFileName));
 
 	if (hFileScan != INVALID_FSCAN_HANDLE) {
 		do {
 			char szCustDomain[SYS_MAX_PATH] = "";
 
-			MscSplitPath(szCustFileName, NULL, szCustDomain, NULL);
-
-			if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"", szCustDomain) <
-			    0) {
+			MscSplitPath(szCustFileName, NULL, 0, szCustDomain, sizeof(szCustDomain),
+				     NULL, 0);
+			if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"",
+					    szCustDomain) < 0) {
 				ErrorPush();
 				MscCloseFindFile(hFileScan);
 				return ErrorPop();
 			}
-
-		} while (MscNextFile(hFileScan, szCustFileName));
-
+		} while (MscNextFile(hFileScan, szCustFileName, sizeof(szCustFileName)));
 		MscCloseFindFile(hFileScan);
 	}
 
@@ -2247,7 +2232,8 @@ static int CTRLDo_filelist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 
 	/* List files */
 	char szFileName[SYS_MAX_PATH] = "";
-	FSCAN_HANDLE hFileScan = MscFirstFile(szFullPath, 0, szFileName);
+	FSCAN_HANDLE hFileScan = MscFirstFile(szFullPath, 0, szFileName,
+					      sizeof(szFileName));
 
 	if (hFileScan != INVALID_FSCAN_HANDLE) {
 		do {
@@ -2260,18 +2246,16 @@ static int CTRLDo_filelist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 
 			SysSNPrintf(szFilePath, sizeof(szFilePath) - 1, "%s%s%s",
 				    szFullPath, SYS_SLASH_STR, szFileName);
-
 			if (SysGetFileInfo(szFilePath, FI) == 0) {
-				if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%lu\"",
-						    szFileName, FI.ulSize) < 0) {
+				if (BSckVSendString(hBSock, pCTRLCfg->iTimeout,
+						    "\"%s\"\t\"" SYS_OFFT_FMT "u\"",
+						    szFileName, FI.llSize) < 0) {
 					ErrorPush();
 					MscCloseFindFile(hFileScan);
 					return ErrorPop();
 				}
 			}
-
-		} while (MscNextFile(hFileScan, szFileName));
-
+		} while (MscNextFile(hFileScan, szFileName, sizeof(szFileName)));
 		MscCloseFindFile(hFileScan);
 	}
 
@@ -2402,7 +2386,7 @@ static int CTRLDo_cfgfileset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		return ErrorPop();
 	}
 
-	if (FI.ulSize != 0) {
+	if (FI.llSize != 0) {
 		if (MscCopyFile(szFullPath, szClientFile) < 0) {
 			ErrorPush();
 			RLckUnlockEX(hResLock);

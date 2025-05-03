@@ -23,9 +23,10 @@
 #ifndef _BUFFSOCK_H
 #define _BUFFSOCK_H
 
-#define STD_SOCK_BUFFER_SIZE        4096
+#define BSOCK_BIO_NAME "SOCK"
+#define STD_SOCK_BUFFER_SIZE 4096
 
-#define INVALID_BSOCK_HANDLE        ((BSOCK_HANDLE) 0)
+#define INVALID_BSOCK_HANDLE ((BSOCK_HANDLE) 0)
 
 typedef struct BSOCK_HANDLE_struct {
 } *BSOCK_HANDLE;
@@ -37,10 +38,11 @@ struct BSockLineBuffer {
 
 struct BufSockIOOps {
 	void *pPrivate;
+	char const *(*pName)(void *);
 	int (*pFree)(void *);
 	int (*pRead)(void *, void *, int, int);
 	int (*pWrite)(void *, void const *, int, int);
-	int (*pSendFile)(void *, char const *, unsigned long, unsigned long, int);
+	int (*pSendFile)(void *, char const *, SYS_OFF_T, SYS_OFF_T, int);
 };
 
 BSOCK_HANDLE BSckAttach(SYS_SOCKET SockFD, int iBufferSize = STD_SOCK_BUFFER_SIZE);
@@ -55,10 +57,11 @@ int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ..
 int BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout);
 int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout,
 		 int iSizeFill = 0);
-int BSckSendFile(BSOCK_HANDLE hBSock, char const *pszFilePath, unsigned long ulBaseOffset,
-		 unsigned long ulEndOffset, int iTimeout);
+int BSckSendFile(BSOCK_HANDLE hBSock, char const *pszFilePath, SYS_OFF_T llBaseOffset,
+		 SYS_OFF_T llEndOffset, int iTimeout);
 SYS_SOCKET BSckGetAttachedSocket(BSOCK_HANDLE hBSock);
 int BSckSetIOops(BSOCK_HANDLE hBSock, BufSockIOOps const *pIOops);
+char const *BSckBioName(BSOCK_HANDLE hBSock);
 int BSckBufferInit(BSockLineBuffer *pBLB, int iSize = -1);
 void BSckBufferFree(BSockLineBuffer *pBLB);
 char *BSckBufferGet(BSOCK_HANDLE hBSock, BSockLineBuffer *pBLB, int iTimeout,

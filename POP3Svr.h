@@ -23,26 +23,24 @@
 #ifndef _POP3SVR_H
 #define _POP3SVR_H
 
+#define POP3_SERVER_NAME            "[" APP_NAME_VERSION_STR " POP3 Server]"
 #define STD_POP3_PORT               110
-#define MAX_POP3_ACCEPT_ADDRESSES   32
+#define POP3S_SERVER_NAME           "[" APP_NAME_VERSION_STR " POP3S Server]"
+#define STD_POP3S_PORT              995
+#define POP3_LISTEN_SIZE            64
 
-#define POP3F_STOP_SERVER           (1 << 0)
-#define POP3F_LOG_ENABLED           (1 << 1)
-#define POP3F_HANG_ON_BADLOGIN      (1 << 2)
+#define POP3F_LOG_ENABLED           (1 << 0)
+#define POP3F_HANG_ON_BADLOGIN      (1 << 1)
 
 struct POP3Config {
-	int iPort;
 	unsigned long ulFlags;
 	long lThreadCount;
 	long lMaxThreads;
 	int iSessionTimeout;
 	int iTimeout;
 	int iBadLoginWait;
-	int iNumAddr;
-	SYS_INET_ADDR SvrAddr[MAX_POP3_ACCEPT_ADDRESSES];
-
 };
 
-unsigned int POP3ThreadProc(void *pThreadData);
+unsigned int POP3ClientThread(void *pThreadData);
 
 #endif

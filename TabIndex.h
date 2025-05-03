@@ -27,23 +27,27 @@
 
 #define INVALID_INDEX_HANDLE            ((INDEX_HANDLE) 0)
 
+typedef SYS_UINT32 TabIdxUINT;
+
 typedef struct INDEX_HANDLE_struct {
 } *INDEX_HANDLE;
 
 char *TbixGetIndexFile(char const *pszTabFilePath, int const *piFieldsIdx, char *pszIndexFile);
 int TbixCreateIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
-		    int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) =
+		    int (*pHashFunc) (char const *const *, int const *, TabIdxUINT *, bool) =
 		    NULL);
 int TbixCalculateHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-		      SYS_UINT32 * puHashVal, bool bCaseSens);
+		      TabIdxUINT * puHashVal, bool bCaseSens);
 char **TbixLookup(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens, ...);
 int TbixCheckIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
-		   int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) =
+		   int (*pHashFunc) (char const *const *, int const *, TabIdxUINT *, bool) =
 		   NULL);
 INDEX_HANDLE TbixOpenHandle(char const *pszTabFilePath, int const *piFieldsIdx,
-			    SYS_UINT32 uHashVal);
+			    TabIdxUINT const *puHashVal, int iNumVals);
 int TbixCloseHandle(INDEX_HANDLE hIndexLookup);
-int TbixLookedUpRecords(INDEX_HANDLE hIndexLookup);
-char **TbixGetRecord(INDEX_HANDLE hIndexLookup, int iRecord);
+long TbixLookedUpRecords(INDEX_HANDLE hIndexLookup);
+char **TbixFirstRecord(INDEX_HANDLE hIndexLookup);
+char **TbixNextRecord(INDEX_HANDLE hIndexLookup);
 
 #endif
+

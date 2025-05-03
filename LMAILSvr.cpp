@@ -47,15 +47,15 @@
 #define LMAIL_LOG_FILE              "lmail"
 
 static LMAILConfig *LMAILGetConfigCopy(SHB_HANDLE hShbLMAIL);
-static int LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg = NULL);
-static int LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg = NULL);
+static int LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg = NULL);
+static int LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg = NULL);
 static int LMAILProcessLocalSpool(SHB_HANDLE hShbLMAIL, long lThreadId);
-static int LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId, char *pszSSFileName);
-static int LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const *pszListFileName);
-static int LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId, char const *pszSSFileName);
-static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile,
+static int LMAILGetFilesSnapShot(LMAILConfig *pLMAILCfg, long lThreadId, char *pszSSFileName);
+static int LMAILRemoveProcessed(LMAILConfig *pLMAILCfg, char const *pszListFileName);
+static int LMAILProcessList(LMAILConfig *pLMAILCfg, long lThreadId, char const *pszSSFileName);
+static int LMAILSubmitLocalFile(LMAILConfig *pLMAILCfg, const char *pszMailFile,
 				long lThreadId, char const *pszSMTPDomain);
-static int LMAILAddReceived(FILE * pSpoolFile, char const *pszSMTPDomain,
+static int LMAILAddReceived(FILE *pSpoolFile, char const *pszSMTPDomain,
 			    char const *pszMailFrom, char const *pszRcptTo, char const *pszTime);
 static int LMAILLogMessage(char const *pszMailFile, char const *pszSMTPDomain,
 			   char const *pszMessageID);
@@ -65,7 +65,6 @@ char *LMAILGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 	SvrGetSpoolDir(pszSpoolPath, iMaxPath);
 
 	AppendSlash(pszSpoolPath);
-
 	StrNCat(pszSpoolPath, LOCAL_SPOOL_DIR, iMaxPath);
 
 	return pszSpoolPath;
@@ -88,14 +87,13 @@ static LMAILConfig *LMAILGetConfigCopy(SHB_HANDLE hShbLMAIL)
 	return pNewLMAILCfg;
 }
 
-static int LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg)
+static int LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg)
 {
 	int iDoUnlock = 0;
 
 	if (pLMAILCfg == NULL) {
 		if ((pLMAILCfg = (LMAILConfig *) ShbLock(hShbLMAIL)) == NULL)
 			return ErrGetErrorCode();
-
 		++iDoUnlock;
 	}
 
@@ -107,14 +105,13 @@ static int LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL, LMAILConfig * 
 	return 0;
 }
 
-static int LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg)
+static int LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg)
 {
 	int iDoUnlock = 0;
 
 	if (pLMAILCfg == NULL) {
 		if ((pLMAILCfg = (LMAILConfig *) ShbLock(hShbLMAIL)) == NULL)
 			return ErrGetErrorCode();
-
 		++iDoUnlock;
 	}
 
@@ -150,7 +147,7 @@ unsigned int LMAILThreadProc(void *pThreadData)
 		/* Check shutdown condition */
 		pLMAILCfg = (LMAILConfig *) ShbLock(hShbLMAIL);
 
-		if ((pLMAILCfg == NULL) || (pLMAILCfg->ulFlags & LMAILF_STOP_SERVER)) {
+		if (pLMAILCfg == NULL || pLMAILCfg->ulFlags & LMAILF_STOP_SERVER) {
 			SysLogMessage(LOG_LEV_MESSAGE, "LMAIL thread [%02ld] exiting\n",
 				      lThreadId);
 
@@ -202,13 +199,12 @@ static int LMAILProcessLocalSpool(SHB_HANDLE hShbLMAIL, long lThreadId)
 	LMAILRemoveProcessed(pLMAILCfg, szSSFileName);
 
 	SysRemove(szSSFileName);
-
 	SysFree(pLMAILCfg);
 
 	return 0;
 }
 
-static int LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId, char *pszSSFileName)
+static int LMAILGetFilesSnapShot(LMAILConfig *pLMAILCfg, long lThreadId, char *pszSSFileName)
 {
 	char szSpoolDir[SYS_MAX_PATH] = "";
 
@@ -234,27 +230,23 @@ static int LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId, char *
 
 	int iFileCount = 0;
 	char szSpoolFileName[SYS_MAX_PATH] = "";
-	FSCAN_HANDLE hFileScan = MscFirstFile(szSpoolDir, 0, szSpoolFileName);
+	FSCAN_HANDLE hFileScan = MscFirstFile(szSpoolDir, 0, szSpoolFileName,
+					      sizeof(szSpoolFileName));
 
 	if (hFileScan != INVALID_FSCAN_HANDLE) {
 		do {
-			SYS_UINT32 uHashValue =
+			unsigned long ulHashValue =
 				MscHashString(szSpoolFileName, strlen(szSpoolFileName));
 
-			if ((uHashValue % (SYS_UINT32) pLMAILCfg->lNumThreads) ==
-			    (SYS_UINT32) lThreadId) {
+			if ((ulHashValue % (unsigned long) pLMAILCfg->lNumThreads) ==
+			    (unsigned long) lThreadId) {
 				fprintf(pSSFile, "%s\r\n", szSpoolFileName);
-
 				++iFileCount;
 			}
-
-		} while (MscNextFile(hFileScan, szSpoolFileName));
-
+		} while (MscNextFile(hFileScan, szSpoolFileName, sizeof(szSpoolFileName)));
 		MscCloseFindFile(hFileScan);
 	}
-
 	fclose(pSSFile);
-
 	RLckUnlockSH(hResLock);
 
 	if (iFileCount == 0) {
@@ -268,7 +260,7 @@ static int LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId, char *
 	return 0;
 }
 
-static int LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const *pszListFileName)
+static int LMAILRemoveProcessed(LMAILConfig *pLMAILCfg, char const *pszListFileName)
 {
 	char szSpoolDir[SYS_MAX_PATH] = "";
 
@@ -296,18 +288,15 @@ static int LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const *pszListFile
 		char szSpoolFilePath[SYS_MAX_PATH] = "";
 
 		sprintf(szSpoolFilePath, "%s%s%s", szSpoolDir, SYS_SLASH_STR, szSpoolFileName);
-
 		CheckRemoveFile(szSpoolFilePath);
 	}
-
 	fclose(pSSFile);
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
 }
 
-static int LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId, char const *pszSSFileName)
+static int LMAILProcessList(LMAILConfig *pLMAILCfg, long lThreadId, char const *pszSSFileName)
 {
 	char szSpoolDir[SYS_MAX_PATH] = "";
 
@@ -349,17 +338,14 @@ static int LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId, char const 
 		} else {
 			SysLogMessage(LOG_LEV_MESSAGE, "LMAIL [%02ld] file processed: %s\n",
 				      lThreadId, szSpoolFilePath);
-
 		}
-
 	}
-
 	fclose(pSSFile);
 
 	return 0;
 }
 
-static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile,
+static int LMAILSubmitLocalFile(LMAILConfig *pLMAILCfg, const char *pszMailFile,
 				long lThreadId, char const *pszSMTPDomain)
 {
 	FILE *pMailFile = fopen(pszMailFile, "rb");
@@ -409,8 +395,8 @@ static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile
 	/* Read "MAIL FROM:" ( 1th row of the smtp-mail file ) */
 	char szMailFrom[MAX_SPOOL_LINE] = "";
 
-	if ((MscGetString(pMailFile, szMailFrom, sizeof(szMailFrom) - 1) == NULL) ||
-	    (StrINComp(szMailFrom, MAIL_FROM_STR) != 0)) {
+	if (MscGetString(pMailFile, szMailFrom, sizeof(szMailFrom) - 1) == NULL ||
+	    StrINComp(szMailFrom, MAIL_FROM_STR) != 0) {
 		fclose(pMailFile);
 		ErrSetErrorCode(ERR_INVALID_SPOOL_FILE, pszMailFile);
 		return ERR_INVALID_SPOOL_FILE;
@@ -483,7 +469,6 @@ static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile
 			fclose(pMailFile);
 			return ErrorPop();
 		}
-
 		if (fclose(pSpoolFile)) {
 			QueCleanupMessage(hSpoolQueue, hMessage);
 			QueCloseMessage(hSpoolQueue, hMessage);
@@ -491,7 +476,6 @@ static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile
 			ErrSetErrorCode(ERR_FILE_WRITE, szQueueFilePath);
 			return ERR_FILE_WRITE;
 		}
-
 		fseek(pMailFile, ulCurrOffset, SEEK_SET);
 
 		/* Transfer file to the spool */
@@ -503,20 +487,23 @@ static int LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile
 			return ErrorPop();
 		}
 	}
-
 	fclose(pMailFile);
 
 	return 0;
 }
 
-static int LMAILAddReceived(FILE * pSpoolFile, char const *pszSMTPDomain,
+static int LMAILAddReceived(FILE *pSpoolFile, char const *pszSMTPDomain,
 			    char const *pszMailFrom, char const *pszRcptTo, char const *pszTime)
 {
+	int iError;
 	char szFrom[MAX_SMTP_ADDRESS] = "";
 	char szRcpt[MAX_SMTP_ADDRESS] = "";
 
-	if ((USmlParseAddress(pszMailFrom, NULL, 0, szFrom, sizeof(szFrom) - 1) < 0) ||
-	    (USmlParseAddress(pszRcptTo, NULL, 0, szRcpt, sizeof(szRcpt) - 1) < 0))
+	if ((iError = USmlParseAddress(pszMailFrom, NULL, 0, szFrom,
+				       sizeof(szFrom) - 1)) < 0 &&
+	    iError != ERR_EMPTY_ADDRESS)
+		return iError;
+	if (USmlParseAddress(pszRcptTo, NULL, 0, szRcpt, sizeof(szRcpt) - 1) < 0)
 		return ErrGetErrorCode();
 
 	/* Add "Received:" tag */
@@ -554,3 +541,4 @@ static int LMAILLogMessage(char const *pszMailFile, char const *pszSMTPDomain,
 
 	return 0;
 }
+

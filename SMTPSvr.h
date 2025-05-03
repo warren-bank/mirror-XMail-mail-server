@@ -23,14 +23,15 @@
 #ifndef _SMTPSVR_H
 #define _SMTPSVR_H
 
+#define SMTP_SERVER_NAME           "[" APP_NAME_VERSION_STR " ESMTP Server]"
 #define STD_SMTP_PORT               25
-#define MAX_SMTP_ACCEPT_ADDRESSES   32
+#define SMTPS_SERVER_NAME          "[" APP_NAME_VERSION_STR " ESMTPS Server]"
+#define STD_SMTPS_PORT              465
+#define SMTP_LISTEN_SIZE            64
 
-#define SMTPF_STOP_SERVER           (1 << 0)
-#define SMTPF_LOG_ENABLED           (1 << 1)
+#define SMTPF_LOG_ENABLED           (1 << 0)
 
 struct SMTPConfig {
-	int iPort;
 	unsigned long ulFlags;
 	long lThreadCount;
 	long lMaxThreads;
@@ -38,11 +39,8 @@ struct SMTPConfig {
 	int iTimeout;
 	int iMaxRcpts;
 	unsigned int uPopAuthExpireTime;
-	int iNumAddr;
-	SYS_INET_ADDR SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
-
 };
 
-unsigned int SMTPThreadProc(void *pThreadData);
+unsigned int SMTPClientThread(void *pThreadData);
 
 #endif

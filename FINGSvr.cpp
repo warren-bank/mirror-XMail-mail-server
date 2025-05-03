@@ -26,6 +26,8 @@
 #include "ShBlocks.h"
 #include "SList.h"
 #include "BuffSock.h"
+#include "SSLBind.h"
+#include "SSLConfig.h"
 #include "StrUtils.h"
 #include "ResLocks.h"
 #include "MiscUtils.h"
@@ -40,21 +42,15 @@
 #include "MailSvr.h"
 #include "FINGSvr.h"
 
-#define FINGSRV_ACCEPT_TIMEOUT  4
-#define FING_LISTEN_SIZE        64
-#define FING_WAIT_SLEEP         2
-#define MAX_CLIENTS_WAIT        300
 #define FING_IPMAP_FILE         "finger.ipmap.tab"
 #define FING_LOG_FILE           "finger"
-#define FING_SERVER_NAME        "[" APP_NAME_VERSION_STR " FINGER Server]"
 
 static int FINGCheckPeerIP(SYS_SOCKET SockFD);
 static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING);
 static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg = NULL);
-static unsigned int FINGClientThread(void *pThreadData);
 static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 			  SYS_INET_ADDR & PeerInfo, char const *pszQuery);
-static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock);
+static int FINGHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock);
 static int FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
 			    FINGConfig * pFINGCfg, char const *pszSockDomain,
 			    SVRCFG_HANDLE hSvrConfig);
@@ -106,7 +102,6 @@ static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
 	if (pFINGCfg == NULL) {
 		if ((pFINGCfg = (FINGConfig *) ShbLock(hShbFING)) == NULL)
 			return ErrGetErrorCode();
-
 		++iDoUnlock;
 	}
 
@@ -118,142 +113,91 @@ static int FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
 	return (ulFlags & FINGF_LOG_ENABLED) ? 1 : 0;
 }
 
-static unsigned int FINGClientThread(void *pThreadData)
+unsigned int FINGClientThread(void *pThreadData)
 {
-	SYS_SOCKET SockFD = (SYS_SOCKET) (unsigned long) pThreadData;
+	ThreadCreateCtx *pThCtx = (ThreadCreateCtx *) pThreadData;
 
-	/* Check peer IP address serivce access permissions */
-	if (FINGCheckPeerIP(SockFD) < 0) {
+	/* Check IP permission */
+	if (FINGCheckPeerIP(pThCtx->SockFD) < 0) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		SysCloseSocket(SockFD);
+		SysCloseSocket(pThCtx->SockFD);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
-	/* Increase threads count */
-	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
-
-	if (pFINGCfg == NULL) {
-		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		SysCloseSocket(SockFD);
-		return ErrorPop();
-	}
-
-	++pFINGCfg->lThreadCount;
-
-	ShbUnlock(hShbFING);
 
 	/* Link socket to the bufferer */
-	BSOCK_HANDLE hBSock = BSckAttach(SockFD);
+	BSOCK_HANDLE hBSock = BSckAttach(pThCtx->SockFD);
 
 	if (hBSock == INVALID_BSOCK_HANDLE) {
 		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		SysCloseSocket(SockFD);
+		SysCloseSocket(pThCtx->SockFD);
+		SysFree(pThCtx);
 		return ErrorPop();
 	}
+
+	/*
+	 * Do we need to switch to TLS?
+	 */
+	if (pThCtx->pThCfg->ulFlags & THCF_USE_SSL) {
+		int iError;
+		SslServerBind SSLB;
+		SslBindEnv SslE;
+
+		if (CSslBindSetup(&SSLB) < 0) {
+			ErrorPush();
+			BSckDetach(hBSock, 1);
+			SysFree(pThCtx);
+			return ErrorPop();
+		}
+		ZeroData(SslE);
+
+		iError = BSslBindServer(hBSock, &SSLB, MscSslEnvCB, &SslE);
+
+		CSslBindCleanup(&SSLB);
+		if (iError < 0) {
+			ErrorPush();
+			BSckDetach(hBSock, 1);
+			SysFree(pThCtx);
+			return ErrorPop();
+		}
+		/*
+		 * We may want to add verify code here ...
+		 */
+
+		SysFree(SslE.pszIssuer);
+		SysFree(SslE.pszSubject);
+	}
+	/* Increase threads count */
+	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(pThCtx->pThCfg->hThShb);
+
+	if (pFINGCfg == NULL) {
+		ErrorPush();
+		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
+		BSckDetach(hBSock, 1);
+		SysFree(pThCtx);
+		return ErrorPop();
+	}
+	++pFINGCfg->lThreadCount;
+	ShbUnlock(pThCtx->pThCfg->hThShb);
 
 	/* Handle client session */
-	FINGHandleSession(hShbFING, hBSock);
+	FINGHandleSession(pThCtx->pThCfg, hBSock);
 
-	/* Unlink socket to the bufferer and close it */
-	BSckDetach(hBSock, 1);
-
-	/* Decrease thread count */
-	pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
+	/* Decrease threads count */
+	pFINGCfg = (FINGConfig *) ShbLock(pThCtx->pThCfg->hThShb);
 
 	if (pFINGCfg == NULL) {
 		ErrorPush();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		return ErrorPop();
 	}
-
 	--pFINGCfg->lThreadCount;
+	ShbUnlock(pThCtx->pThCfg->hThShb);
 
-	ShbUnlock(hShbFING);
-
-	return 0;
-}
-
-unsigned int FINGThreadProc(void *pThreadData)
-{
-	FINGConfig *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
-
-	if (pFINGCfg == NULL) {
-		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		return ErrorPop();
-	}
-
-	int iNumSockFDs = 0;
-	SYS_SOCKET SockFDs[MAX_FING_ACCEPT_ADDRESSES];
-
-	if (MscCreateServerSockets(pFINGCfg->iNumAddr, pFINGCfg->SvrAddr, pFINGCfg->iPort,
-				   FING_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0) {
-		ErrorPush();
-		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-		ShbUnlock(hShbFING);
-		return ErrorPop();
-	}
-
-	ShbUnlock(hShbFING);
-
-	SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", FING_SERVER_NAME);
-
-	for (;;) {
-		int iNumConnSockFD = 0;
-		SYS_SOCKET ConnSockFD[MAX_FING_ACCEPT_ADDRESSES];
-
-		if (MscAcceptServerConnection(SockFDs, iNumSockFDs, ConnSockFD,
-					      iNumConnSockFD, FINGSRV_ACCEPT_TIMEOUT) < 0) {
-			unsigned long ulFlags = FINGF_STOP_SERVER;
-
-			pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
-
-			if (pFINGCfg != NULL)
-				ulFlags = pFINGCfg->ulFlags;
-
-			ShbUnlock(hShbFING);
-
-			if (ulFlags & FINGF_STOP_SERVER)
-				break;
-			else
-				continue;
-		}
-
-		for (int ss = 0; ss < iNumConnSockFD; ss++) {
-			SYS_THREAD hClientThread =
-				SysCreateServiceThread(FINGClientThread, ConnSockFD[ss]);
-
-			if (hClientThread != SYS_INVALID_THREAD)
-				SysCloseThread(hClientThread, 0);
-			else
-				SysCloseSocket(ConnSockFD[ss]);
-
-		}
-	}
-
-	for (int ss = 0; ss < iNumSockFDs; ss++)
-		SysCloseSocket(SockFDs[ss]);
-
-	/* Wait for clients completion */
-	for (int iTotalWait = 0; (iTotalWait < MAX_CLIENTS_WAIT); iTotalWait += FING_WAIT_SLEEP) {
-		pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
-
-		if (pFINGCfg == NULL)
-			break;
-
-		long lThreadCount = pFINGCfg->lThreadCount;
-
-		ShbUnlock(hShbFING);
-
-		if (lThreadCount == 0)
-			break;
-
-		SysSleep(FING_WAIT_SLEEP);
-	}
-
-	SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", FING_SERVER_NAME);
+	/* Unlink socket from the bufferer and close it */
+	BSckDetach(hBSock, 1);
+	SysFree(pThCtx);
 
 	return 0;
 }
@@ -285,9 +229,9 @@ static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 	return 0;
 }
 
-static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
+static int FINGHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 {
-	FINGConfig *pFINGCfg = FINGGetConfigCopy(hShbFING);
+	FINGConfig *pFINGCfg = FINGGetConfigCopy(pThCfg->hThShb);
 
 	/* Get client socket info */
 	SYS_INET_ADDR PeerInfo;
@@ -304,7 +248,8 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 	/* Get server socket FQDN */
 	char szSvrFQDN[MAX_HOST_NAME] = "";
 
-	if (MscGetSockHost(BSckGetAttachedSocket(hBSock), szSvrFQDN) < 0) {
+	if (MscGetSockHost(BSckGetAttachedSocket(hBSock), szSvrFQDN,
+			   sizeof(szSvrFQDN)) < 0) {
 		ErrorPush();
 		BSckSendString(hBSock, ErrGetErrorString(ErrorFetch()), pFINGCfg->iTimeout);
 		SysFree(pFINGCfg);
@@ -316,7 +261,8 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 	char szSockHost[MAX_HOST_NAME] = "";
 	char szSockDomain[MAX_HOST_NAME] = "";
 
-	MscSplitFQDN(szSvrFQDN, szSockHost, szSockDomain);
+	MscSplitFQDN(szSvrFQDN, szSockHost, sizeof(szSockHost),
+		     szSockDomain, sizeof(szSockDomain));
 
 	char szIP[128] = "???.???.???.???";
 
@@ -325,8 +271,8 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 	char szQuery[1024] = "";
 
-	if ((BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL) &&
-	    (MscCmdStringCheck(szQuery) == 0)) {
+	if (BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL &&
+	    MscCmdStringCheck(szQuery) == 0) {
 		/* Log FINGER question */
 		if (FINGLogEnabled(hShbFING))
 			FINGLogSession(szSockHost, szSockDomain, PeerInfo, szQuery);
@@ -341,7 +287,6 @@ static int FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 		if (hSvrConfig != INVALID_SVRCFG_HANDLE)
 			SvrReleaseConfigHandle(hSvrConfig);
 	}
-
 	SysFree(pFINGCfg);
 
 	SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n", SysInetNToA(PeerInfo, szIP));
@@ -441,27 +386,23 @@ static int FINGDumpUser(char const *pszUser, char const *pszDomain,
 			char *pszHomePage = UsrGetUserInfoVar(pUI, "HomePage");
 			char szRespBuffer[2048] = "";
 
-			sprintf(szRespBuffer,
-				"EMail       : %s\r\n"
-				"  Real Name : %s\r\n"
-				"  Home Page : %s",
-				szRealAddr,
-				(pszRealName != NULL) ? pszRealName : "??",
-				(pszHomePage != NULL) ? pszHomePage : "??");
+			SysSNPrintf(szRespBuffer, sizeof(szRespBuffer),
+				    "EMail       : %s\r\n"
+				    "  Real Name : %s\r\n"
+				    "  Home Page : %s",
+				    szRealAddr,
+				    (pszRealName != NULL) ? pszRealName : "??",
+				    (pszHomePage != NULL) ? pszHomePage : "??");
 
 			BSckSendString(hBSock, szRespBuffer, pFINGCfg->iTimeout);
 
-			if (pszRealName != NULL)
-				SysFree(pszRealName);
-
-			if (pszHomePage != NULL)
-				SysFree(pszHomePage);
+			SysFree(pszRealName);
+			SysFree(pszHomePage);
 		} else {
 			/* Local mailing list case */
 
 			FINGDumpMailingList(pUI, hBSock, pFINGCfg);
 		}
-
 		UsrFreeUserInfo(pUI);
 	} else {
 		ErrSetErrorCode(ERR_USER_NOT_FOUND);
@@ -496,8 +437,8 @@ static int FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig *
 
 		UsrMLFreeUser(pMLUI);
 	}
-
 	UsrMLCloseDB(hUsersDB);
 
 	return 0;
 }
+

@@ -74,9 +74,9 @@ char const *USmlSendMailFrom(SPLF_HANDLE hFSpool);
 char const *const *USmlGetRcptTo(SPLF_HANDLE hFSpool);
 char const *USmlRcptTo(SPLF_HANDLE hFSpool);
 char const *USmlSendRcptTo(SPLF_HANDLE hFSpool);
-unsigned long USmlMessageSize(SPLF_HANDLE hFSpool);
+SYS_OFF_T USmlMessageSize(SPLF_HANDLE hFSpool);
 int USmlSyncChanges(SPLF_HANDLE hFSpool);
-int USmlGetMsgFileSection(SPLF_HANDLE hFSpool, FileSection &FS);
+int USmlGetMsgFileSection(SPLF_HANDLE hFSpool, FileSection &FSect);
 int USmlWriteMailFile(SPLF_HANDLE hFSpool, FILE *pMsgFile);
 char *USmlGetTag(SPLF_HANDLE hFSpool, char const *pszTagName, TAG_POSITION &TagPosition);
 int USmlAddTag(SPLF_HANDLE hFSpool, char const *pszTagName,

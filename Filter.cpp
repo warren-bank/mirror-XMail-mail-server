@@ -64,7 +64,7 @@ struct FilterMsgInfo {
 struct FilterMacroSubstCtx {
 	SPLF_HANDLE hFSpool;
 	FilterMsgInfo const *pFMI;
-	FileSection FS;
+	FileSection FSect;
 };
 
 static char *FilGetLogExecStr(FilterLogInfo const *pFLI, int *piSize);
@@ -616,7 +616,7 @@ static char *FilMacroLkupProc(void *pPrivate, char const *pszName, int iSize)
 		return SysStrDup(pFMS->pFMI->szRecipient);
 	} else if (MemMatch(pszName, iSize, "FILE", 4)) {
 
-		return SysStrDup(pFMS->FS.szFilePath);
+		return SysStrDup(pFMS->FSect.szFilePath);
 	} else if (MemMatch(pszName, iSize, "MSGID", 5)) {
 
 		return SysStrDup(USmlGetSpoolFile(pFMS->hFSpool));
@@ -651,7 +651,7 @@ static int FilFilterMacroSubstitutes(char **ppszCmdTokens, SPLF_HANDLE hFSpool,
 	 * This function retrieve the spool file message section and sync the content.
 	 * This is necessary before passing the file name to external programs.
 	 */
-	if (USmlGetMsgFileSection(hFSpool, FMS.FS) < 0)
+	if (USmlGetMsgFileSection(hFSpool, FMS.FSect) < 0)
 		return ErrGetErrorCode();
 
 	return MscReplaceTokens(ppszCmdTokens, FilMacroLkupProc, &FMS);

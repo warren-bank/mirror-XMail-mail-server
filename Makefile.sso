@@ -19,98 +19,31 @@
 #  Davide Libenzi <davidel@xmailserver.org>
 #
 SYSTYPE = solaris
-O = o
-A = a
-CPP = cpp
 CC = g++
 LD = g++
+STRIP = touch
 
-ifeq ($(XMAIL_DEBUG), 1)
-CFLAGS = -g
-else
-CFLAGS = -O2
+ifneq ("$(WITH_SSL_INCLUDE)", "")
+    CFLAGS := $(CFLAGS) -I$(WITH_SSL_INCLUDE)
+endif
+ifneq ("$(WITH_SSL_LIB)", "")
+    LDFLAGS := $(LDFLAGS) -L$(WITH_SSL_LIB)
 endif
 
-CFLAGS := $(CFLAGS)  -I. -D__UNIX__ -D__SOLARIS__ -D_THREAD_SAFE=1 -D_REENTRANT=1 -DHAS_SYSMACHINE
+ifeq ("$(SSLLIBS)", "")
+    SSLLIBS = -lssl -lcrypto
+endif
 
-# LDFLAGS = -ldl -lsocket -lpthread -lrt
-LDFLAGS = -ldl -lsocket -lnsl -lpthread -lrt
+MAINSRC = MainSolaris.cpp
+MAINOBJ = MainSolaris.o
+SYSSRCS = SysDepSolaris.cpp SysDepUnix.cpp
+SYSOBJS = SysDepSolaris.o SysDepUnix.o
 
-OUTDIR = bin
-MKMACHDEPINC = SysMachine.h
-MKMACHDEP = ${OUTDIR}/MkMachDep
-MAILSVR = ${OUTDIR}/XMail
-CRTLCLNT = ${OUTDIR}/CtrlClnt
-XMCRYPT = ${OUTDIR}/XMCrypt
-MKUSERS = ${OUTDIR}/MkUsers
-SENDMAIL = ${OUTDIR}/sendmail
+CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__SOLARIS__ -D_THREAD_SAFE=1 -D_REENTRANT=1 -DHAS_SYSMACHINE \
+	-D_GNU_SOURCE -D_LARGEFILE64_SOURCE -D_POSIX_PTHREAD_SEMANTICS
 
-MKMACHDEPSRCS = MkMachDep.${CPP}
-MKMACHDEPOBJS = MkMachDep.${O}
+# LDFLAGS := $(LDFLAGS) $(SSLLIBS) -ldl -lsocket -lpthread -lrt
+LDFLAGS := $(LDFLAGS) $(SSLLIBS) -ldl -lsocket -lnsl -lpthread -lrt
 
-SVRSRCS = BuffSock.${CPP} CTRLSvr.${CPP} DynDNS.${CPP} DNS.${CPP} DNSCache.${CPP} Errors.${CPP} ExtAliases.${CPP} FINGSvr.${CPP} \
-	MailConfig.${CPP} MailSvr.${CPP} Maildir.${CPP} MailDomains.${CPP} MD5.${CPP} MiscUtils.${CPP} LMAILSvr.${CPP} \
-	AliasDomain.${CPP} POP3GwLink.${CPP} POP3Svr.${CPP} POP3Utils.${CPP} PSYNCSvr.${CPP} ResLocks.${CPP} SList.${CPP} SMAILSvr.${CPP} \
-	TabIndex.${CPP} SMAILUtils.${CPP} SMTPSvr.${CPP} SMTPUtils.${CPP} ShBlocks.${CPP} StrUtils.${CPP} MessQueue.${CPP} \
-	QueueUtils.${CPP} SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP} \
-	Filter.${CPP}
-
-SVROBJS = BuffSock.${O} CTRLSvr.${O} DynDNS.${O} DNS.${O} DNSCache.${O} Errors.${O} ExtAliases.${O} FINGSvr.${O} \
-	MailConfig.${O} MailSvr.${O} Maildir.${O} MailDomains.${O} MD5.${O} MiscUtils.${O} LMAILSvr.${O} \
-	AliasDomain.${O} POP3GwLink.${O} POP3Svr.${O} POP3Utils.${O} PSYNCSvr.${O} ResLocks.${O} SList.${O} SMAILSvr.${O} \
-	TabIndex.${O} SMAILUtils.${O} SMTPSvr.${O} SMTPUtils.${O} ShBlocks.${O} StrUtils.${O} MessQueue.${O} \
-	QueueUtils.${O} SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O} \
-	Filter.${O}
-
-CCLNSRCS = Base64Enc.${CPP} BuffSock.${CPP} SysDep.${CPP} StrUtils.${CPP} MD5.${CPP} MiscUtils.${CPP} CTRLClient.${CPP} Errors.${CPP}
-
-CCLNOBJS = Base64Enc.${O} BuffSock.${O} SysDep.${O} StrUtils.${O} MD5.${O} MiscUtils.${O} CTRLClient.${O} Errors.${O}
-
-XMCSRCS = XMCrypt.${CPP}
-
-XMCOBJS = XMCrypt.${O}
-
-MKUSRCS = MkUsers.${CPP}
-
-MKUOBJS = MkUsers.${O}
-
-SENDMAILSRCS = SendMail.${CPP}
-
-SENDMAILOBJS = SendMail.${O}
-
-%.${O} : %.${CPP}
-	${CC} ${CPPFLAGS} ${CFLAGS} -c $*.${CPP}
-
-all: ${OUTDIR} ${MKMACHDEPINC} ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
-
-${OUTDIR}:
-	@mkdir ${OUTDIR}
-
-${MKMACHDEPINC}: ${MKMACHDEP}
-	./${MKMACHDEP} > ${MKMACHDEPINC}
-
-${MKMACHDEP}: ${MKMACHDEPOBJS}
-	${LD} -o ${MKMACHDEP} ${MKMACHDEPOBJS} ${LDFLAGS}
-
-${MAILSVR}: ${SVROBJS}
-	${LD} -o ${MAILSVR} ${SVROBJS} ${LDFLAGS}
-
-${CRTLCLNT}: ${CCLNOBJS}
-	${LD} -o ${CRTLCLNT} ${CCLNOBJS} ${LDFLAGS}
-
-${XMCRYPT}: ${XMCOBJS}
-	${LD} -o ${XMCRYPT} ${XMCOBJS} ${LDFLAGS}
-
-${MKUSERS}: ${MKUOBJS}
-	${LD} -o ${MKUSERS} ${MKUOBJS} ${LDFLAGS}
-
-${SENDMAIL}: ${SENDMAILOBJS}
-	${LD} -o ${SENDMAIL} ${SENDMAILOBJS} ${LDFLAGS}
-
-distclean: clean
-
-clean:
-	rm -f .depend a.out core ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
-	rm -f *.${O} *~ ${MKMACHDEPINC} ${MKMACHDEP}
-	rm -rf ${OUTDIR}
+include Makefile.common
 

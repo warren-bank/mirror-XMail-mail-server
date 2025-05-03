@@ -25,15 +25,12 @@
 
 #define INVALID_POP3_HANDLE         ((POP3_HANDLE) 0)
 
-#define AUTH_TYPE_CLEAR             "CLR"
-#define AUTH_TYPE_APOP              "APOP"
-
 #define POP3_USER_SPLITTERS         "@:"
 
 typedef struct POP3_HANDLE_struct {
 } *POP3_HANDLE;
 
-struct PopSyncReport {
+struct MailSyncReport {
 	int iMsgSync;
 	int iMsgErr;
 	unsigned long ulSizeSync;
@@ -45,8 +42,8 @@ struct PopLastLoginInfo {
 	time_t LTime;
 };
 
-int UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize, unsigned long &ulNumMessages);
-int UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace = NULL);
+int UPopGetMailboxSize(UserInfo *pUI, SYS_OFF_T &llMBSize, unsigned long &ulNumMessages);
+int UPopCheckMailboxSize(UserInfo *pUI, SYS_OFF_T *pllAvailSpace = NULL);
 int UPopAuthenticateAPOP(const char *pszDomain, const char *pszUsrName,
 			 const char *pszTimeStamp, const char *pszDigest);
 POP3_HANDLE UPopBuildSession(const char *pszDomain, const char *pszUsrName,
@@ -68,11 +65,10 @@ int UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iNumLines, BSO
 int UPopSaveUserIP(POP3_HANDLE hPOPSession);
 int UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer,
 		       const char *pszRmtName, const char *pszRmtPassword,
-		       PopSyncReport * pSRep,
+		       MailSyncReport *pSRep, const char *pszSyncCfg,
 		       const char *pszFetchHdrTags = "+X-Deliver-To,To,Cc",
-		       const char *pszAuthType = AUTH_TYPE_CLEAR,
 		       const char *pszErrorAccount = NULL);
-int UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const *pPeerInfo, unsigned int uExpireTime);
+int UPopUserIpCheck(UserInfo *pUI, SYS_INET_ADDR const *pPeerInfo, unsigned int uExpireTime);
 int UPopGetLastLoginInfo(UserInfo *pUI, PopLastLoginInfo *pInfo);
 
 #endif

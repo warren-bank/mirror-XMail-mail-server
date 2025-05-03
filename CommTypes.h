@@ -23,10 +23,28 @@
 #ifndef _XMCOMMTYPES_H
 #define _XMCOMMTYPES_H
 
+
 struct FileSection {
 	char szFilePath[SYS_MAX_PATH];
-	unsigned long ulStartOffset;
-	unsigned long ulEndOffset;
+	SYS_OFF_T llStartOffset;
+	SYS_OFF_T llEndOffset;
 };
+
+struct Datum {
+	char *pData;
+	long lSize;
+};
+
+struct LstDatum {
+	SysListHead LLnk;
+	Datum Data;
+};
+
+struct LstNDatum {
+	SysListHead LLnk;
+	Datum Name;
+	Datum Data;
+};
+
 
 #endif

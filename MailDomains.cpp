@@ -142,9 +142,7 @@ int MDomLookupDomain(char const *pszDomain)
 		ErrSetErrorCode(ERR_DOMAIN_NOT_HANDLED, pszDomain);
 		return ERR_DOMAIN_NOT_HANDLED;
 	}
-
 	StrFreeStrings(ppszTabTokens);
-
 	RLckUnlockSH(hResLock);
 
 	return 0;
@@ -190,10 +188,8 @@ int MDomAddDomain(char const *pszDomain)
 			ErrSetErrorCode(ERR_DOMAIN_ALREADY_HANDLED);
 			return ERR_DOMAIN_ALREADY_HANDLED;
 		}
-
 		StrFreeStrings(ppszStrings);
 	}
-
 	fseek(pDomainsFile, 0, SEEK_END);
 
 	fprintf(pDomainsFile, "\"%s\"\n", pszDomain);
@@ -222,7 +218,6 @@ int MDomAddDomain(char const *pszDomain)
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
@@ -283,13 +278,10 @@ int MDomRemoveDomain(char const *pszDomain)
 		if ((iFieldsCount >= domMax) && (stricmp(pszDomain, ppszStrings[domDomain]) == 0)) {
 
 			++iDomainsFound;
-
 		} else
 			fprintf(pTmpFile, "%s\n", szDomainsLine);
-
 		StrFreeStrings(ppszStrings);
 	}
-
 	fclose(pDomainsFile);
 	fclose(pTmpFile);
 
@@ -304,20 +296,17 @@ int MDomRemoveDomain(char const *pszDomain)
 	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
 	sprintf(szTmpAliasFilePath, "%s.tmp", szDomainsFilePath);
-
 	if (MscMoveFile(szDomainsFilePath, szTmpAliasFilePath) < 0) {
 		ErrorPush();
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	if (MscMoveFile(szTmpFile, szDomainsFilePath) < 0) {
 		ErrorPush();
 		MscMoveFile(szTmpAliasFilePath, szDomainsFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	SysRemove(szTmpAliasFilePath);
 
 	/* Rebuild indexes */
@@ -384,7 +373,6 @@ int MDomGetDomainsFileSnapShot(const char *pszFileName)
 		RLckUnlockSH(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockSH(hResLock);
 
 	return 0;
@@ -443,10 +431,8 @@ char const *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB)
 
 		if (iFieldsCount >= domMax) {
 			StrSNCpy(pDSD->szCurrDomain, ppszStrings[0]);
-
 			pszDomain = pDSD->szCurrDomain;
 		}
-
 		StrFreeStrings(ppszStrings);
 	}
 
@@ -471,10 +457,8 @@ char const *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB)
 
 		if (iFieldsCount >= domMax) {
 			StrSNCpy(pDSD->szCurrDomain, ppszStrings[0]);
-
 			pszDomain = pDSD->szCurrDomain;
 		}
-
 		StrFreeStrings(ppszStrings);
 	}
 
@@ -507,3 +491,4 @@ int MDomIsHandledDomain(char const *pszDomain)
 
 	return MDomLookupDomain(pszDomain);
 }
+

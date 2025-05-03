@@ -23,22 +23,18 @@
 #ifndef _FINGSVR_H
 #define _FINGSVR_H
 
+#define FING_SERVER_NAME           "[" APP_NAME_VERSION_STR " FINGER Server]"
 #define STD_FINGER_PORT             79
-#define MAX_FING_ACCEPT_ADDRESSES   32
+#define FING_LISTEN_SIZE            64
 
-#define FINGF_STOP_SERVER           (1 << 0)
-#define FINGF_LOG_ENABLED           (1 << 1)
+#define FINGF_LOG_ENABLED           (1 << 0)
 
 struct FINGConfig {
-	int iPort;
 	unsigned long ulFlags;
 	long lThreadCount;
 	int iTimeout;
-	int iNumAddr;
-	SYS_INET_ADDR SvrAddr[MAX_FING_ACCEPT_ADDRESSES];
-
 };
 
-unsigned int FINGThreadProc(void *pThreadData);
+unsigned int FINGClientThread(void *pThreadData);
 
 #endif

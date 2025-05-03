@@ -39,8 +39,8 @@
 
 #define SYS_LIST_ADD(new, prev, next) \
 	do { \
-		struct SysListHead *    pPrev = prev; \
-		struct SysListHead *    pNext = next; \
+		struct SysListHead *pPrev = prev; \
+		struct SysListHead *pNext = next; \
 		pNext->pPrev = new; \
 		(new)->pNext = pNext; \
 		(new)->pPrev = pPrev; \
@@ -68,10 +68,10 @@
 
 #define SYS_LIST_SPLICE(list, head) \
 	do { \
-		struct SysListHead *    first = (list)->pNext; \
+		struct SysListHead *first = (list)->pNext; \
 		if (first != list) { \
-			struct SysListHead *    last = (list)->pPrev; \
-			struct SysListHead *    at = (head)->pNext; \
+			struct SysListHead *last = (list)->pPrev; \
+			struct SysListHead *at = (head)->pNext; \
 			(first)->pPrev = head; \
 			(head)->pNext = first; \
 			(last)->pNext = at; \
@@ -86,6 +86,10 @@
 #define SYS_LIST_FIRST(head)                (((head)->pNext != (head)) ? (head)->pNext: NULL)
 
 #define SYS_LIST_LAST(head)                 (((head)->pPrev != (head)) ? (head)->pPrev: NULL)
+
+#define SYS_LIST_NEXT(pos, head)            (((pos)->pNext != (head)) ? (pos)->pNext: NULL)
+
+#define SYS_LIST_PREV(pos, head)            (((pos)->pPrev != (head)) ? (pos)->pPrev: NULL)
 
 #define SYS_LIST_LINKED(ptr)                (((ptr)->pPrev != NULL) && ((ptr)->pNext != NULL))
 

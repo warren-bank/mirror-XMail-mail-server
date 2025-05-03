@@ -23,24 +23,22 @@
 #ifndef _CTRLSVR_H
 #define _CTRLSVR_H
 
+#define CTRL_SERVER_NAME           "[" APP_NAME_VERSION_STR " CTRL Server]"
 #define STD_CTRL_PORT               6017
-#define MAX_CTRL_ACCEPT_ADDRESSES   32
+#define CTRLS_SERVER_NAME          "[" APP_NAME_VERSION_STR " CTRLS Server]"
+#define STD_CTRLS_PORT              6018
+#define CTRL_LISTEN_SIZE            8
 
-#define CTRLF_STOP_SERVER           (1 << 0)
-#define CTRLF_LOG_ENABLED           (1 << 1)
+#define CTRLF_LOG_ENABLED           (1 << 0)
 
 struct CTRLConfig {
 	unsigned long ulFlags;
-	int iPort;
 	long lThreadCount;
 	long lMaxThreads;
 	int iSessionTimeout;
 	int iTimeout;
-	int iNumAddr;
-	SYS_INET_ADDR SvrAddr[MAX_CTRL_ACCEPT_ADDRESSES];
-
 };
 
-unsigned int CTRLThreadProc(void *pThreadData);
+unsigned int CTRLClientThread(void *pThreadData);
 
 #endif

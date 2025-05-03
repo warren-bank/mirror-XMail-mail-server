@@ -18,7 +18,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
-you should have received a copy of the GNU General Public License
+You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.23
+1.24
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-Nov 19, 2006
+Jan 1, 2007
 
 =head2 project by
 
@@ -144,11 +144,11 @@ continued lines and indenting the continuation line(s):
 
 =item *
 
-ESMTP server
+ESMTP/ESMTPS server
 
 =item *
 
-POP3 server
+POP3/POP3S server
 
 =item *
 
@@ -168,15 +168,7 @@ SMTP relay checking
 
 =item *
 
-SMTP RBL maps check (rbl.maps.vix.com)
-
-=item *
-
-SMTP RSS maps check (relays.mail-abuse.org)
-
-=item *
-
-SMTP DUL map check (dialups.mail-abuse.org)
+Custom SMTP maps check
 
 =item *
 
@@ -228,15 +220,19 @@ Logging
 
 =item *
 
-Multi platform
+Multi platform (any Windows and almost any Unix OSs)
 
 =item *
 
-Domain message filters
+Fine grained message filters
 
 =item *
 
-Custom (external) POP3 authentication
+Custom (external) POP3/SMTP authentication
+
+=item *
+
+TLS support for SMTP and POP3, both server and client side
 
 =back
 
@@ -244,7 +240,7 @@ Custom (external) POP3 authentication
 
 =head1 PORTING STATUS
 
-Right now the Linux and NT ports are stable, while the Solaris, FreeBSD and OpenBSD
+Right now the Linux and NT ports are stable, while the Solaris, FreeBSD, OpenBSD and OSX
 ones have not been tested as well as the previous OSs.
 
 [L<top|"__index__">]
@@ -290,16 +286,29 @@ Use the correct distribution for your system and don't mix Unix files with
 Windows ones because this is one of the most common cause of XMail bad behavior.
 
 When you unzip (or untar) the package you've to check that the MailRoot
-directory contained inside
-the package itself is complete (look at the directory tree listed below) because
-some unzippers don't restore empty directories. 
+directory contained inside the package itself is complete (look at the directory tree 
+listed below) because some unzippers don't restore empty directories. 
 
 [L<top|"__index__">]
 
 =head1 BUILD
 
-For Windows, Visual C++ project files are supplied, while for *nixes, the following
-options are given:
+XMail depends on OpenSSL to provide SSL support, so the development package of OpenSSL
+(in Debian called libssl-dev) must be installed on your system. For Windows, the XMail
+source already contains a pre-built version of the OpenSSL libraries, include files, and
+executable. The OpenSSL web site can be found here L<http://www.openssl.org>.
+
+[Windows]
+
+  You have to have the command line environment setup before (usually the vcvars32.bat
+  script inside the Visual C++ directory). You also need to copy the openSSL DLLs
+  (located in "win32ssl\dll") inside the same folder where the XMail.exe binary resides.
+
+  C:> nmake /f Makefile.win
+  
+  If once you run the XMail binaries, Windows complain about missing DLLs, your system
+  is probably missing the Microsoft CRT redistributable package, that you can download
+  here L<http://www.xmailserver.org/vcredist_x86.exe>.
 
 [Linux]
 
@@ -454,11 +463,18 @@ Setup the file 'B<smtprelay.tab>' if you want to extend mail relaying to IPs out
 of the internet's private IP blocks (or you want to deny even those - that comes enabled by
 default with XMail).
 
+=item 16
+
+Look at [L<SSL CONFIGURATION|"SSL CONFIGURATION">] for information about how to
+create the required 'B<SERVER.KEY>' and 'B<SERVER.CERT>' files.
+
 =back
+
+For further configuration options, please see the [L<COMMAND LINE|"COMMAND LINE">] section.
 
 [L<configuration|"Configuration">] [L<top|"__index__">]
 
-=head2 NT/Win2K
+=head2 NT/Win2K/XP
 
 =over 4
 
@@ -478,7 +494,8 @@ if you're Administrator (service startup as System).
 
 =item 4.
 
-Copy XMail executables to 'B<C:\MailRoot\bin>'.
+Copy XMail executables to 'B<C:\MailRoot\bin>'. Copy also the OpenSSL DLLs located in
+"win32ssl\dll" to 'B<C:\MailRoot\bin>'.
 
 =item 5.
 
@@ -544,7 +561,14 @@ Setup the file 'B<smtprelay.tab>' if you want to extend mail relaying to IPs out
 of the internet's private IP blocks (or you want to deny even those - that comes enabled by
 default with XMail).
 
+=item 17
+
+Look at [L<SSL CONFIGURATION|"SSL CONFIGURATION">] for information about how to
+create the required 'B<SERVER.KEY>' and 'B<SERVER.CERT>' files.
+
 =back
+
+For further configuration options, please see the [L<COMMAND LINE|"COMMAND LINE">] section.
 
 [L<configuration|"Configuration">] [L<top|"__index__">]
 
@@ -592,6 +616,8 @@ Mail root directory contain these files:
   message.id  <file>
   pop3links.tab   <file>
   server.tab  <file>
+  server.cert <file>
+  server.key <file>
   smtpgw.tab  <file>
   smtpfwd.tab <file>
   smtprelay.tab   <file>
@@ -611,6 +637,7 @@ Mail root directory contain these files:
   filters.pre-data.tab <file>
   filters.post-data.tab <file>
   smtp.ipprop.tab <file>
+  smtp.hnprop.tab <file>
 
 and these directories:
 
@@ -637,7 +664,7 @@ and these directories:
         temp        <dir>
         slog        <dir>
         lock        <dir>
-        cust        <dir>
+        mprc        <dir>
         froz        <dir>
       ...
     ...
@@ -645,8 +672,9 @@ and these directories:
     pop3    <dir>
     smtp    <dir>
   domains     <dir>
+  msgsync     <dir>
 
-and for each domain DOMAIN handled a directory (inside  domains):
+and for each domain DOMAIN handled a directory (inside  B<domains>):
 
     DOMAIN      <dir>
     userdef.tab <file>
@@ -671,7 +699,10 @@ for mailbox structure, while:
           new <dir>
           cur <dir>
 
-for Maildir structure.
+for Maildir structure. The B<msgsync> directory is used to store UIDL lists
+for PSYNC accounts that require leaving messages on the server. Inside the B<msgsync>
+other directories will be created with the name of the remote server, directories that
+will store UIDL DB files.
 
 [L<configuration|"Configuration">] [L<top|"__index__">]
 
@@ -737,6 +768,8 @@ The following sections explain each file's structure and use.
 =item L<"MAILPROC.TAB">
 
 =item L<"SMTP.IPPROP.TAB">
+
+=item L<"SMTP.HNPROP.TAB">
 
 =item L<"FILTERS.IN.TAB">
 
@@ -884,7 +917,45 @@ Set it at 1 when you install the server and leave it be handled by the software.
 
 (remember, enter as one line) where:
 
-'B<authtype>' = authentication method ('B<CLR>' = USER/PASS auth,  'B<APOP>' = APOP auth).
+'B<authtype>' = Comma-separated list of options:
+
+=over 4
+
+=item CLR
+
+Use clear-text USER/PASS authentication
+
+=item APOP
+
+Use POP3 APOP authentication (that does not send clear-text passwords over the wire).
+Fall back to 'B<CLR>' if 'B<APOP>' is not supported
+
+=item FAPOP
+
+Use POP3 APOP authentication (that does not send clear-text passwords over the wire).
+
+=item STLS
+
+Establish an SSL link with the server by issuing a POP3 STLS command.
+Continue with the non-encrypted link is STLS is not supported
+
+=item FSTLS
+
+Establish an SSL link with the server by issuing a POP3 STLS command.
+
+=item Leave
+
+Leave messages on the server, and download only the new ones. In order this
+functionality to work, the remote POP3 server must support the UIDL command.
+
+=item OutBind
+
+Sets the IP address of the network interface that should be used when connecting
+to the remote host. This configuration should be used carefully, because XMail
+will fail if the selected IP of the interface does not have a route to the remote
+host using such IP.
+
+=back
 
 Examples;
 
@@ -995,20 +1066,24 @@ in this way:  relay.xmailserver.org --> mail.nowhere.org --> E<64>DESTINATION.
 
  "domain"[TAB]"smtp-mx-list"[NEWLINE]
 
+The "smtp-mx-list" is a semicolon separated list of SMTP relays, and can also contain options as
+a comma-separated list (see [L<SMTP GATEWAY CONFIGURATION|"SMTP GATEWAY CONFIGURATION">] for more
+information).
+
 Examples:
 
- "foo.example.com"   "mail.xmailserver.org:7001,192.168.1.1:6123,mx.xmailserver.org"
+ "foo.example.com"   "mail.xmailserver.org:7001;192.168.1.1:6123,NeedTLS=1;mx.xmailserver.org"
 
 sends all mail for 'foo.example.com' using the provided list of mail exchangers,
 while:
 
- "*.dummy.net"   "mail.xmailserver.org,192.168.1.1,mx.xmailserver.org:6423"
+ "*.dummy.net"   "mail.xmailserver.org,NeedTLS=1;192.168.1.1;mx.xmailserver.org:6423"
 
 sends all mail for  "*'*.dummy.net'  through the provided list of mail exchangers.
 If the port (:nn) is not specified the default SMTP port (25) is assumed.
 you can also enable XMail to random-select the order of the gateway list by specifying:
 
- "*.dummy.net"   "#mail.xmailserver.org,192.168.1.1,mx.xmailserver.org:6423"
+ "*.dummy.net"   "#mail.xmailserver.org;192.168.1.1;mx.xmailserver.org:6423"
 
 using the character 'B<#>'  as the first char of the gateway list.
 
@@ -1060,6 +1135,10 @@ ETRN command enabled (bypass SERVER.TAB variable)
 
 disable mail size checking (bypass SERVER.TAB variable)
 
+=item S
+
+ease SSL requirement for this user (bypass the "WantTLS" mail config variable)
+
 =back
 
 When PLAIN, LOGIN or CRAM-MD5 authentication mode are used, first a lookup in 'B<MAILUSERS.TAB>'
@@ -1074,14 +1153,16 @@ If the lookup fails then 'B<SMTPAUTH.TAB>' lookup is done.
 
 =head3 SMTPEXTAUTH.TAB
 
-Besides internal SMTP authentication methods a user (XMail administrator) can define
-custom authentication procedures by setting up this file properly.
-The section L<"SMTP Client Authentication"> explains the client part of custom
-authentication when we put an 'B<external>' line inside the configuration file.
-The file 'B<SMTPEXTAUTH.TAB>' is the server part of the custom authentication which has
-the given format:
+The 'B<SMTPEXTAUTH.TAB>' file enable the XMail administrator to use external authentications
+methods to verify SMTP clients. If the 'B<SMTPEXTAUTH.TAB>' does not exist, or it is empty,
+XMail standard authentication methods are used, and those will use either the 'B<MAILUSERS.TAB>'
+or the 'B<SMTPAUTH.TAB>' to verify account credentials.
+If the file 'B<SMTPEXTAUTH.TAB>' is not empty, then the XMail standard authentication methods are
+not advertised in the B<AUTH> response of the B<EHLO> SMTP command. Instead, only the ones
+listed inside the 'B<SMTPEXTAUTH.TAB>' are reported to the SMTP client.
+The 'B<SMTPEXTAUTH.TAB>' file can contain multiple lines with the following format:
 
- "auth-name"[TAB]"base-challenge"[TAB]"program-path"[TAB]"arg-or-macro"...[NEWLINE]
+ "auth-name"[TAB]"program-path"[TAB]"arg-or-macro"...[NEWLINE]
 
 This file can contain multiple lines whose 'B<auth-name>' are listed during the
 EHLO command response.
@@ -1089,30 +1170,55 @@ Where 'arg-or-macro' can be (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
 
 =over 4
 
+=item AUTH
+
+authentication method (PLAIN, LOGIN, CRAM-MD5, ...)
+
+=item USER
+
+SMTP client supplied username (available in PLAIN, LOGIN and CRAM-MD5)
+
+=item PASS
+
+SMTP client supplied password (available in PLAIN and LOGIN)
+
 =item CHALL
 
-server challenge given by  base-challenge + ':' + server-timestamp
+challenge used by the server (available in CRAM-MD5)
 
 =item DGEST
 
-client response to server challenge (E<64>CHALL)
+client response to server challenge (E<64>CHALL - available in CRAM-MD5)
 
-=item FSECRT
+=item RFILE
 
-a file containing all the lines (username + ':' + password) of SMTPAUTH.TAB
+a file path where the external authentication binary might supply extra
+informations/credentials about the account (available in all authentications)
+
+=back
+
+The B<RFILE> file is composed by multiple lines with the following format:
+
+  VAR=VALUE
+
+Currently supported variables inside the B<RFILE> file are:
+
+=over 4
+
+=item Perms
+
+Supply SMTP permissions for the account (see [L<SMTPAUTH.TAB|"SMTPAUTH.TAB">] for detailed inforamtion)
 
 =back
 
 Example:
 
- "RSA-AUTH" "foochallenge" "/usr/bin/myrsa-authenticate"=>
-   "-c" "@@CHALL" "-f" "@@FSECRT" "-d" "@@DGEST"
+ "PLAIN" "/usr/bin/my-auth" "-a" "@@AUTH" "-u" "@@USER" "-p" "@@PASS" "-r" "@@RFILE"
 
-The external program must test all lines of 'B<FSECRT>' to find the one (if it exists)
-that matches the client digest (B<DGEST>).
-If it finds a match, it must return zero and overwrite 'B<FSECRT>' with the matching secret
-(username + ':' + password).
-If a match is not found, the program must return a value other than zero.
+The external authentication binary may or may not fill a response file. If the authentication
+has been successful, the binary should exit with a code equal to zero. Any other exit code
+different from zero, will be interpreted as failure.
+
 
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
 
@@ -1525,18 +1631,23 @@ that has a redirect to E@F. With "redirect" E@F will see A@B has sender while wi
 
 [SMTPRELAY]
 
- "smtprelay"[TAB]"server[:port],server[:port],..."[NEWLINE]
+ "smtprelay"[TAB]"server[:port][,options];server[:port][,options];..."[NEWLINE]
 
 Send mail to the specified SMTP server list by trying the first, if fails the second and so on.
 Otherwise You can use this syntax:
 
- "smtprelay"[TAB]"#server[:port],server[:port],..."[NEWLINE]
+ "smtprelay"[TAB]"#server[:port][,options];server[:port][,options];..."[NEWLINE]
 
 to have XMail random-select the order the specified relays.
+Each gateway definition can also contain options as a comma-separated list (see
+[L<SMTP GATEWAY CONFIGURATION|"SMTP GATEWAY CONFIGURATION">] for more information).
 
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
 
 =head3 SMTP.IPPROP.TAB
+
+This file lists SMTP properties to be associated with the remote SMTP peer IP.
+The format of the file is:
 
  "ip-addr"[TAB]"var0=value0"...[TAB]"varN=valueN"[NEWLINE]
 
@@ -1553,7 +1664,43 @@ defined variables:
 
 =item WhiteList
 
-If set to 1 and if the peer IP matches the address mask, all peer IP based checks will be skipped.
+If set to 1, all peer IP based checks will be skipped.
+
+=item EaseTLS
+
+If set to 1, drops the TLS requirement for SMTP sessions coming from the matched network.
+
+=item SenderDomainCheck
+
+If set to 0, bypasses the "CheckMailerDomain" 'B<SERVER.TAB>' variable.
+
+=back
+
+[L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
+
+=head3 SMTP.HNPROP.TAB
+
+This file lists SMTP properties to be associated with the remote SMTP peer host name.
+The format of the file is:
+
+ "host-spec"[TAB]"var0=value0"...[TAB]"varN=valueN"[NEWLINE]
+
+If the "host-spec" starts with a dot ('.'), the properties listed for that record will
+be applied to all sub-domains of the "host-spec" domain.
+Since applying the 'B<SMTP.HNPROP.TAB>' rules requires a DNS PTR lookup of the peer IP,
+you should be aware that this might introduce latencies into the XMail processing.
+If you do not have any hostname-based rules, do not create the 'B<SMTP.HNPROP.TAB>' file
+at all, since the simple existence of the file would trigger the DNS PTR lookup.
+Example:
+
+ "xmailserver.org"   "WhiteList=1"   "EaseTLS=1"
+
+or:
+
+ ".xmailserver.org"   "WhiteList=1"   "EaseTLS=1"
+
+See [L<SMTP.IPPROP.TAB|"SMTP.IPPROP.TAB">] for information about the properties allowed
+to be listed in this file.
 
 =back
 
@@ -1716,56 +1863,16 @@ and lines has this format:
 
 Valid lines are:
 
- "plain" "username"  "password"
+ "PLAIN" "username"  "password"
 
 or
 
- "login" "username"  "password"
+ "LOGIN" "username"  "password"
 
 or
 
- "cram-md5"  "username"  "password"
+ "CRAM-MD5"  "username"  "password"
 
-or
-
- "external"  "auth-name" "secret"    "prog-path" "arg-or-macro"  ...
-
-Where  'B<auth-name>' can be any symbolic name and 'B<arg-or-macro>' can be a program
-argument or one of these macros (see [L<MACRO SUBSTITUTION|"MACRO SUBSTITUTION">]):
-
-=over 4
-
-=item CHALL
-
-server challenge string
-
-=item SECRT
-
-authentication secret
-
-=item RFILE
-
-output response file path
-
-=back
-
-For example:
-
- "external" "RSA-AUTH" "mysecret" "/usr/bin/myrsa-auth" "-c" "@@CHALL" "-s"=>
-   "@@SECRT" "-f" "@@RFILE"
-
-XMail sends a line like:
-
- AUTH RSA-AUTH
-
-to the SMTP server, and wait for a line like:
-
- 3?? base64-challenge
-
-Then XMail decodes 'B<base64-challenge>' and invokes the external program to get the response
-to send to the SMTP server.
-The external program must return zero upon success and must put the response into
-the file $(RFILE) (without new line termination).
 
 [L<top|"__index__">]
 
@@ -1942,15 +2049,16 @@ that has a redirect to E@F. With "redirect" E@F will see A@B has sender while wi
 
 =item [SMTPRELAY]
 
- "smtprelay"[TAB]"server[:port],server[:port],..."[NEWLINE]
+ "smtprelay"[TAB]"server[:port][,options];server[:port][,options];..."[NEWLINE]
 
-Send mail to the specified SMTP server list by trying the first, if that fails, the second and so on.
+Send mail to the specified SMTP server list by trying the first, if fails the second and so on.
+Otherwise You can use this syntax:
 
-Otherwise you can use this syntax:
+ "smtprelay"[TAB]"#server[:port][,options];server[:port][,options];..."[NEWLINE]
 
- "smtprelay"[TAB]"#server[:port],server[:port],..."[NEWLINE]
-
-To have XMail random-select the order the specified relays.
+to have XMail random-select the order the specified relays.
+Each gateway definition can also contain options as a comma-separated list (see
+[L<SMTP GATEWAY CONFIGURATION|"SMTP GATEWAY CONFIGURATION">] for more information).
 
 =item [SMTP]
 
@@ -2024,7 +2132,13 @@ In case it's empty the notification message is sent to the sender only.
 
 =item [DefaultSMTPGateways]
 
-A comma separated list of SMTP servers XMail 'B<must>' use to send its mails.
+A semicolon separated list of SMTP servers XMail 'B<must>' use to send its mails.
+The definition can also contain options as a comma-separated list (see
+[L<SMTP GATEWAY CONFIGURATION|"SMTP GATEWAY CONFIGURATION">] for more information).
+Example:
+
+  "192.168.0.1,NeedTLS=2;192.168.0.2"
+
 This has the precedence over MX records.
 
 =item [HeloDomain]
@@ -2266,43 +2380,39 @@ The format is:
 Enable/disable the emission the the 'X-AuthUser:' mail header for authenticated users.
 Valid values are "0" or '1', default is "0" (emission enabled).
 
-=item [DynDnsSetup]
+=item [SMTP-TLS]
 
-Give the possibility to handle dynamic IP domain registration to dynamic IP servers.
-One of these service providers is 'www.dyndns.org' whose site you can watch for
-registrations and more info.
+Ask XMail to try to negotiate TLS sessions with remote SMTP servers. If set to "0"
+XMail will never try to use STARTTLS. If set to "1", XMail will try to establish
+a TLS link, and will fall back to non-encrypted link in case the remote server
+does not support TLS. If set to "2", XMail will try to establish a TLS link and
+will give up in case this will fail. Default is "0".
 
-The string has the format:
+=item [EnableCTRL-TLS]
 
- server,port,HTTP-GET-String[,username,password]
+Enable CTRL TLS negotiation (default "1").
 
-For Example:
+=item [EnablePOP3-TLS]
 
-members.dyndns.org,80,/nic/dyndns?action=edit&started=1&hostname=YES&host_id=yourhost.ourdomain.ext&myip=%s&wildcard=OFF&mx=mail.exchanger.ext&backmx=NO,foouser,foopasswd
+Enable POP3 TLS (STLS) negotiation (default "1").
 
-or
+=item [EnableSMTP-TLS]
 
-www.dns4ever.com,80,/sys/u.cgi?d=DOMAIN&u=USERNAME&p=PASSWORD&i=%s
+Enable SMTP TLS (STARTTLS) negotiation (default "1").
 
-where:
+=item [SSLUseCertsFile]
 
-=over 8
+=item [SSLUseCertsDir]
 
-=item DOMAIN
+=item [SSLWantVerify]
 
-the domain you've registered
+=item [SSLAllowSelfSigned]
 
-=item USERNAME
+=item [SSLWantCert]
 
-the username you get from service provider
+=item [SSLMaxCertsDepth]
 
-=item PASSWORD
-
-the password you get from service provider
-
-=back
-
-The %s in HTTP-GET-String is replaced with the IP address to register.
+See [L<SSL CONFIGURATION|"SSL CONFIGURATION">] for information.
 
 =item [SmtpConfig]
 
@@ -2316,11 +2426,17 @@ meaning is:
 
 =over 8
 
-=item mail-auth
+=item MailAuth
 
 authentication required to send mail to the server.
 Please note that by setting this value everything requires authentication,
 even for sending to local domains, and this is probably not what you want.
+The "mail-auth" is also synonym of "MailAuth".
+
+=item WantTLS
+
+TLS connection needed to talk to this server. This is either done by issuing
+a STARTTLS command over a standard SMTP session, or by using an SMTPS port
 
 =back
 
@@ -2774,6 +2890,120 @@ of the 'B<SERVER.TAB>' file is off, the message file is moved into the 'B<froz>'
 
 [L<top|"__index__">]
 
+=head1 SMTP GATEWAY CONFIGURATION
+
+An SMTP gateway definition inside XMail can be followed by a set of configuration options,
+that are in the form of a comma-separated VAR=VAL or FLAG definitions.
+Currently defined options are:
+
+=over 4
+
+=item NeedTLS
+
+If set to 1, instruct XMail to try to establish a TLS session with the remote host
+(by the means of a STARTTLS SMTP command). If set to 2, XMail will try to establish a TLS session,
+but it will fail if not able to do so (the remote server does not support STARTTLS, or
+reject our attempt to negotiate the TLS link).
+
+=item OutBind
+
+Sets the IP address of the network interface that should be used when connecting
+to the remote host. This configuration should be used carefully, because XMail
+will fail if the selected IP of the interface does not have a route to the remote
+host using such IP.
+
+=back
+
+[L<top|"__index__">]
+
+=head1 SSL CONFIGURATION
+
+XMail uses to identify itself during SSL negotiations, by the mean of the two files
+'B<SERVER.CERT>' and 'B<SERVER.KEY>'. These files 'B<MUST>' be available inside the
+'B<MAIL_ROOT>' directory. Both are in PEM format, and one represent the server certificate file
+('B<SERVER.CERT>') while the other represent the server private key file ('B<SERVER.KEY>').
+XMail uses the OpenSSL libraries for its SSL operations. L<http://www.openssl.org/docs/HOWTO/certificates.txt>
+contains examples about how to create certificates to be use by XMail, while
+L<http://www.openssl.org/docs/HOWTO/keys.txt> describes own to generate keys.
+In order to properly manage your XMail server when using SSL support, you need to have access
+to the OpenSSL binary. For Unix ports, this is available as a package, whose name varies
+depending on the distribution. For Windows, pre-built versions of theOpenSSL libraries and binary
+are supplied inside the "win32ssl" directory of the XMail source package.
+For example, to create a self-signed certificate, you first have to create a private key with:
+
+  $ openssl genrsa 2048 > server.key
+
+After you have created the private key, you can create you own copy of the self-signed
+certificate with:
+
+  $ openssl req -new -x509 -key server.key -out server.cert
+
+  C:> openssl req -new -x509 -key server.key -out server.cert -config openssl.cnf
+
+If you want to have a certificate signed by an authority, you need to generate a certificate
+request file:
+
+  $ openssl req -new -key server.key -out cert.csr
+  
+  C:> openssl req -new -key server.key -out cert.csr -config openssl.cnf
+
+The 'B<openssl.cnf>' file is supplied inside the Xmail's Windows binary package, and
+inside the 'B<win32ssl\conf>' directory of the source package.
+The 'B<cert.csr>' file needs then to be submitted to the certificate authority in order to
+obtain a root-signed certificate file (that will be your 'B<SERVER.CERT>').
+The behaviour of the XMail SSL module is controlled by a few 'B<SERVER.TAB>' variables:
+
+=over 4
+
+=item [SSLWantVerify]
+
+Tells the SSL link negotiation code to verify the remote peer certificate. If this
+is enabled, you need to use either B<SSLUseCertsFile> or B<SSLUseCertsDir> to provide
+a set of valid root certificates. You can also add your own certificates in the set,
+in order to provide access to your servers by clients using certificates signed by you.
+
+=item [SSLWantCert]
+
+Tells the SSL link negotiation code to fail if the remote peer does not supply
+a certificate.
+
+=item [SSLAllowSelfSigned]
+
+Allows self-signed certificates supplied by remote peers.
+
+=item [SSLMaxCertsDepth]
+
+Set the maximum certificate chain depth for the verification process.
+
+=item [SSLUseCertsFile]
+
+When using B<SSLWantVerify>, the SSL code will verify the peer certificate using
+standard SSL certificate chain verification rules. It is possible to supply to
+XMail an extra list of valid certificates, by filling up a 'B<CERTS.PEM>' file
+and setting B<SSLUseCertsFile> to 1. The 'B<CERTS.PEM>' is a concatenation of
+certificates in PEM format.
+
+=item [SSLUseCertsDir]
+
+In the same way as B<SSLUseCertsFile> does, setting B<SSLUseCertsDir> to 1 enables
+the usage of extra valid certificates stored inside the 'B<CERTS>' XMail sub-directory.
+The 'B<CERTS>' containes hashed file names that are created by feeding the directory
+path to the 'B<c_rehash>' OpenSSL Perl script (a Windows-friedly version of 'B<c_rehash>', named
+'B<c_rehash.pl>' is contained inside the 'B<win32ssl\bin>' subdirectory of the source package). 
+Unix users will find proper CA certificates inside the standard install paths of OpenSSL,
+while Windows users will find them inside the 'B<win32ssl\certs>' subdirectory of the
+source package. To use 'B<c_rehash>' you need to have the OpenSSL binaries (executable and
+shared libraries) correctly installed in your system, and the executable reacheable from
+your B<PATH>. Then you simply run it by passing the path to the PEM certificates directory
+('B<CERTS>'). The 'B<c_rehash>' script will call the OpenSSL binary and will generated
+hashed file names (that are either symlinks or copies) that point/replicate the mapped
+certificate.
+
+=back
+
+
+[L<top|"__index__">]
+
 =head1 SMTP COMMANDS
 
 These are commands understood by ESMTP server:
@@ -2789,6 +3019,8 @@ These are commands understood by ESMTP server:
 =item HELO
 
 =item EHLO
+
+=item STARTTLS
 
 =item AUTH
 
@@ -2817,6 +3049,10 @@ These are commands understood by POP3 server:
 =item USER
 
 =item PASS
+
+=item CAPA
+
+=item STLS
 
 =item APOP
 
@@ -2898,6 +3134,10 @@ Set the number of subdirectories allocated for the DNS cache files storage ( def
 
 =over 8
 
+=item -P-
+
+Disable the service.
+
 =item -Pp port
 
 Set POP3 server port (if you change this you must know what you're doing).
@@ -2930,9 +3170,31 @@ Set the maximum number of threads for POP3 server.
 
 =back
 
+=item [POP3S]
+
+=over 8
+
+=item -B-
+
+Disable the service.
+
+=item -Bp port
+
+Set POP3S server port (if you change this you must know what you're doing).
+
+=item -BI ip[:port]
+
+Bind server to the specified ip address and (optional) port (can be multiple).
+
+=back
+
 =item [SMTP]
 
 =over 8
+
+=item -S-
+
+Disable the service.
 
 =item -Sp port
 
@@ -2962,6 +3224,24 @@ Set the maximu number of recipients for a single SMTP message (default 100).
 =item -Se nsecs
 
 Set the expire timeout for a POP3 authentication IP (default 900).
+
+=back
+
+=item [SMTPS]
+
+=over 8
+
+=item -X-
+
+Disable the service.
+
+=item -Xp port
+
+Set SMTPS server port (if you change this you must know what you're doing).
+
+=item -XI ip[:port]
+
+Bind server to the specified ip address and (optional) port (can be multiple).
 
 =back
 
@@ -3010,6 +3290,10 @@ Enable filter logging.
 
 =over 8
 
+=item -Y-
+
+Disable the service.
+
 =item -Yi interval
 
 Set external POP3 accounts sync interval. Setting this to zero will disable
@@ -3029,6 +3313,10 @@ Enable PSYNC logging.
 
 =over 8
 
+=item -F-
+
+Disable the service.
+
 =item -Fp port
 
 Set FINGER server port (if you change this you must know what you're doing).
@@ -3046,6 +3334,10 @@ Bind server to the specified ip address and (optional) port (can be multiple).
 =item [CTRL]
 
 =over 8
+
+=item -C-
+
+Disable the service.
 
 =item -Cp port
 
@@ -3067,6 +3359,24 @@ Bind server to the specified ip address and (optional) port (can be multiple).
 =item -CX nthreads
 
 Set the maximum number of threads for CTRL server.
+
+=back
+
+=item [CTRLS]
+
+=over 8
+
+=item -W-
+
+Disable the service.
+
+=item -Wp port
+
+Set CTRLS server port.
+
+=item -WI ip[:port]
+
+Bind server to the specified ip address and (optional) port (can be multiple).
 
 =back
 
@@ -3240,8 +3550,8 @@ authentication string with this format:
 
  "user"[TAB]"password"<CR><LF>
 
-where user must be enabled to remote admin XMail. Clear text
-authentication should not be used due server security.
+where user must be enabled to remote admin XMail. Clear text authentication should not be
+used due server security.
 Using MD5 authentication instead, the client must perform an MD5 checksum on the
 string composed by (<> included):
 
@@ -3255,6 +3565,10 @@ where  md5chksum  is the MD5 checksum (note 'B<#>' as first char of sent digest)
 The result of the authentication send is a RESSTRING.
 If the user does not receive a positive authentication response, the connection is
 closed by the server.
+It is possible to establish an SSL session with the server by issuing the "#!TLS"
+string as login string. In response to that, the server will send back a RESSTRING.
+In case of success RESSTRING, the client can proceed with the SSL link negotiation
+with the server.
 
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
 
@@ -4066,7 +4380,7 @@ external user password.
 
 =item authtype    
 
-authentication method ('B<CLR>' = USER/PASS auth 'B<APOP>' = APOP auth).
+authentication method (see [L<POP3LINKS.TAB|"POP3LINKS.TAB">]).
 
 =back
 
@@ -4520,7 +4834,7 @@ You can use CtrlClnt to send administration commands to XMail.
 These commands are defined in the previous section (L<"XMAIL ADMIN PROTOCOL">).
 The syntax of CtrlClnt is:
 
- CtrlClnt  [-snuptf]  ...
+ CtrlClnt  [-snuptfSLcKCXHD]  ...
 
 where:
 
@@ -4549,6 +4863,36 @@ set timeout [60].
 =item -f filename
 
 set dump filename [stdout].
+
+=item -S
+
+enable SSL link negotiation (talks to a CTRL port)
+
+=item -L
+
+use native SSL link (talks to a CTRLS port)
+
+=item -K filename
+
+set the SSL private key file (the environment variable "CTRL_KEY_FILE" also sets it)
+
+=item -C filename
+
+set the SSL certificate file (the environment variable "CTRL_CERT_FILE" also sets it)
+
+=item -X filename
+
+set the SSL certificate-list file (the environment variable "CTRL_CA_FILE" also sets it).
+See [L<SSL CONFIGURATION|"SSL CONFIGURATION">] for more information
+
+=item -H dir
+
+set the SSL certificate-store directory (the environment variable "CTRL_CA_PATH" also sets it).
+See [L<SSL CONFIGURATION|"SSL CONFIGURATION">] for more information
+
+=item -D
+
+enable debug output
 
 =back
 
@@ -4876,32 +5220,6 @@ I don't want money ;)
 
 [L<top|"__index__">]
 
-=head1 KNOWN BUGS
-
-Version 0.1 (Alpha-1):
-
-=over 4
-
-=item 0.1-001     Linux   (FIXED)
-
-SMail threads don't wake up upon a release semaphore by SMTP threads.
-
-=item 0.27-001    Windows
-
-Using XMail inside a net that use MS Proxy Server 2.0 cause XMail to fail
-in sending UDP packets for DNS MX queries (due to a bug of WS2_32.DLL linked
-to MS Proxy 2.0). I don't know if more recent versions of MS Proxy fixes this bug.
-To makes XMail work in such environment you can use 'DefaultSMTPGateways' option
-in 'B<SERVER.TAB>' (see L<"SERVER.TAB VARIABLES"> above) to use smart SMTP hosts.
-Or better still, strip away MS Proxy server and
-setup a cheap PC running Linux + IP-Masquerading that cost exactly 0.0 $ and works great.
-Or use 'SmartDNSHost' configuration to redirect recursion queries to a DNS smart host
-that support TCP and recursion.
-
-=back
-
-[L<top|"__index__">]
-
 =head1 THANKS
 
 My mother Adelisa, for giving me the light.
@@ -4911,8 +5229,5 @@ My cat Grace, for her patience waiting for food while I'm coding.
 All of the free source community, for giving me code and knowledge.
 
 [L<top|"__index__">]
-
-
-
 
 

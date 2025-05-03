@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail Change Log v 1.23</title>
+<title>XMail Change Log v 1.24</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rev="made" href="mailto:root@localhost" />
@@ -19,6 +19,7 @@
 	<li><a href="#change_log">CHANGE LOG</a></li>
 	<ul>
 
+		<li><a href="#jan_1__2007_v_1_24">Jan 1, 2007 v 1.24</a></li>
 		<li><a href="#nov_19__2006_v_1_23">Nov 19, 2006 v 1.23</a></li>
 		<li><a href="#oct_12__2005_v_1_22">Oct 12, 2005 v 1.22</a></li>
 		<li><a href="#jan_9__2005_v_1_21">Jan 9, 2005 v 1.21</a></li>
@@ -112,12 +113,116 @@
 <p>
 </p>
 <h1><a name="name">NAME</a></h1>
-<p>XMail Change Log as of Version 1.23</p>
+<p>XMail Change Log as of Version 1.24</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <hr />
 <h1><a name="change_log">CHANGE LOG</a></h1>
+<p>
+</p>
+<h2><a name="jan_1__2007_v_1_24">Jan 1, 2007 v 1.24</a></h2>
+<ul>
+<li>
+<pre>
+ ********************************************************************
+ * Removed the DynDNS feature.
+ ********************************************************************</pre>
+<li>
+<p>Added the new ``OutBind'' options for PSYNC accounts. It allows to specify the
+IP of the interface to be used when talking to the remote server.</p>
+</li>
+<li>
+<p>Added a new ``OutBind'' option to the ``SmtpConfig'' SERVER.TAB variables.
+It allows to specify the IP of the interface to be used when talking to the
+remote server.</p>
+</li>
+<li>
+<p>Added a new SMTP.HNPROP.TAB file to drive remote peers SMTP properties
+through host name.</p>
+</li>
+<li>
+<p>Added command line options to disable single services.</p>
+</li>
+<li>
+<pre>
+ ********************************************************************
+ * The external SMTP authentication (both server and client) changed.
+ * Changed is also the format of the SMTPEXTAUTH.TAB file.
+ * The external SMTP client authentication has been removed.
+ ********************************************************************</pre>
+<li>
+<p>Added the new ``Leave'' options for PSYNC accounts, that allows messages to be left
+on the remote server. This option only works if the remote POP3 server supports
+the UIDL command.</p>
+</li>
+<li>
+<p>Fixed a bug in the mailbox size check between SMTP and SMAIL layers. This
+resulted in EFULL errors never returned at SMTP level.</p>
+</li>
+<li>
+<p>Fixed a bug in alias resolution for aliased users inside aliased domains.</p>
+</li>
+<li>
+<pre>
+ ********************************************************************
+ * SSL support has been added. See the &quot;SSL CONFIGURATION&quot; section of
+ * the documentation to find out how to properly configure XMail.
+ * You MUST do this in order to have SSL support working.
+ ********************************************************************</pre>
+<li>
+<pre>
+ ********************************************************************
+ * The format of the &quot;DefaultSMTPGateways&quot; SERVER.TAB variable, of the
+ * SMTPFWD.TAB relay list, and of the &quot;smtprelay&quot; list changed
+ * (separator is now the ';' character and can have options attached,
+ * separated by comma).
+ * You need to adjust it according to the new format
+ ********************************************************************</pre>
+<li>
+<p>Added new ``EnableCTRL-TLS'', ``EnableSMTP-TLS'' and ``EnablePOP3-TLS'' SERVER.TAB variables.</p>
+</li>
+<li>
+<p>Added SMTP gateway options to the ``DefaultSMTPGateways'' variable, to the
+SMTPFWD.TAB file, and to the ``smtprelay'' command inside the mail processing files.</p>
+<p>Added a new ``WantTLS'' option to the ``SmtpConfig'' SERVER.TAB variables.</p>
+</li>
+<li>
+<p>Added a new ``EaseTLS'' option to the SMTP.IPPROP.TAB file.</p>
+</li>
+<li>
+<p>Added a new 'S' SMTP auth option to bypass a ``WantTLS'' configuration.</p>
+</li>
+<li>
+<p>Added ``SSLUseCertsFile'', ``SSLUseCertsDir'', ``SSLWantVerify'', ``SSLAllowSelfSigned'',
+``SSLWantCert'' and ``SSLMaxCertsDepth'' SERVER.TAB variables to configure XMail's SSL behaviour.</p>
+</li>
+<li>
+<p>Added STARTTLS SMTP support.</p>
+</li>
+<li>
+<p>Added STLS POP3 support (and the new CAPA command).</p>
+</li>
+<li>
+<p>Added SMTPS support.</p>
+</li>
+<li>
+<p>Added POP3S support.</p>
+</li>
+<li>
+<p>Added CTRLS support.</p>
+</li>
+<li>
+<p>Added FAPOP, STLS and FSTLS authentication options to the POP3LINKS.TAB file..</p>
+</li>
+<li>
+<p>Added a new ``SMTP-TLS'' SERVER.TAB variable to tell XMail if it has to try to negotiate
+TLS sessions with remote SMTP servers.</p>
+</li>
+<li>
+<p>Added SSL support to the CTRL protocol and to the CtrlClnt client.</p>
+</li>
+</ul>
 <p>
 </p>
 <h2><a name="nov_19__2006_v_1_23">Nov 19, 2006 v 1.23</a></h2>

@@ -272,24 +272,19 @@ static int QueLoad(MessageQueue *pMQ)
 {
 	char szCurrPath[SYS_MAX_PATH] = "";
 
-	for (int ii = 0; ii < pMQ->iNumDirsLevel; ii++) {
-		SysSNPrintf(szCurrPath, sizeof(szCurrPath) - 1, "%s%d", pMQ->pszRootPath, ii);
-
+	for (int i = 0; i < pMQ->iNumDirsLevel; i++) {
+		SysSNPrintf(szCurrPath, sizeof(szCurrPath) - 1, "%s%d", pMQ->pszRootPath, i);
 		if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
 			return ErrGetErrorCode();
 
-		for (int jj = 0; jj < pMQ->iNumDirsLevel; jj++) {
+		for (int j = 0; j < pMQ->iNumDirsLevel; j++) {
 			SysSNPrintf(szCurrPath, sizeof(szCurrPath) - 1, "%s%d%s%d",
-				    pMQ->pszRootPath, ii, SYS_SLASH_STR, jj);
-
+				    pMQ->pszRootPath, i, SYS_SLASH_STR, j);
 			if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
 				return ErrGetErrorCode();
 
-			if (QueCreateStruct(szCurrPath) < 0)
-				return ErrGetErrorCode();
-
-			/* Load queue directory */
-			if (QueLoadMessages(pMQ, ii, jj) < 0)
+			if (QueCreateStruct(szCurrPath) < 0 ||
+			    QueLoadMessages(pMQ, i, j) < 0)
 				return ErrGetErrorCode();
 		}
 	}
@@ -307,7 +302,8 @@ static int QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2)
 		    SYS_SLASH_STR, QUEUE_MESS_DIR);
 
 	char szMsgFileName[SYS_MAX_PATH] = "";
-	FSCAN_HANDLE hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName);
+	FSCAN_HANDLE hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName,
+					      sizeof(szMsgFileName));
 
 	if (hFileScan != INVALID_FSCAN_HANDLE) {
 		do {
@@ -322,7 +318,7 @@ static int QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2)
 					++pMQ->iReadyCount;
 				}
 			}
-		} while (MscNextFile(hFileScan, szMsgFileName));
+		} while (MscNextFile(hFileScan, szMsgFileName, sizeof(szMsgFileName)));
 		MscCloseFindFile(hFileScan);
 
 		/* Set the mess event if the queue is not empty */
@@ -334,7 +330,8 @@ static int QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2)
 		    pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2,
 		    SYS_SLASH_STR, QUEUE_RSND_DIR);
 
-	if ((hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName)) != INVALID_FSCAN_HANDLE) {
+	if ((hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName,
+				      sizeof(szMsgFileName))) != INVALID_FSCAN_HANDLE) {
 		do {
 			if (!IsDotFilename(szMsgFileName)) {
 				QueueMessage *pQM = QueAllocMessage(iLevel1, iLevel2,
@@ -359,7 +356,7 @@ static int QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2)
 					}
 				}
 			}
-		} while (MscNextFile(hFileScan, szMsgFileName));
+		} while (MscNextFile(hFileScan, szMsgFileName, sizeof(szMsgFileName)));
 		MscCloseFindFile(hFileScan);
 	}
 
@@ -417,10 +414,8 @@ char *QueLoadLastLogEntry(char const *pszLogFilePath)
 		return NULL;
 	}
 	/* Walk log entries */
-	unsigned long ulCurrOffset = 0;
-	unsigned long ulBaseOffset = (unsigned long) -1;
-	unsigned long ulEndOffset;
-	unsigned long ulPeekTime;
+	unsigned long ulCurrOffset = 0, ulBaseOffset = (unsigned long) -1;
+	unsigned long ulEndOffset, ulPeekTime;
 	char szLogLine[1024] = "";
 
 	for (;;) {
@@ -428,11 +423,9 @@ char *QueLoadLastLogEntry(char const *pszLogFilePath)
 
 		if (MscFGets(szLogLine, sizeof(szLogLine) - 1, pLogFile) == NULL)
 			break;
-
 		if (sscanf(szLogLine, "[PeekTime] %lu", &ulPeekTime) == 1)
 			ulBaseOffset = ulCurrOffset;
 	}
-
 	if (ulBaseOffset == (unsigned long) -1) {
 		fclose(pLogFile);
 		ErrSetErrorCode(ERR_EMPTY_LOG, pszLogFilePath);
@@ -450,7 +443,6 @@ char *QueLoadLastLogEntry(char const *pszLogFilePath)
 		fclose(pLogFile);
 		return NULL;
 	}
-
 	fseek(pLogFile, ulBaseOffset, SEEK_SET);
 	if (!fread(pszEntry, uEntrySize, 1, pLogFile)) {
 		SysFree(pszEntry);
@@ -459,7 +451,6 @@ char *QueLoadLastLogEntry(char const *pszLogFilePath)
 		return NULL;
 	}
 	pszEntry[uEntrySize] = '\0';
-
 	fclose(pLogFile);
 
 	return pszEntry;
@@ -657,12 +648,10 @@ int QueInitMessageStats(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 	MessageQueue *pMQ = (MessageQueue *) hQueue;
 	QueueMessage *pQM = (QueueMessage *) hMessage;
-
-	/* Clean 'slog' file */
 	char szQueueFilePath[SYS_MAX_PATH] = "";
 
 	QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_SLOG_DIR);
-	CheckRemoveFile(szQueueFilePath);
+	SysRemove(szQueueFilePath);
 
 	/* Init message statistics */
 	pQM->iNumTries = 0;
@@ -691,28 +680,28 @@ static int QueDoMessageCleanup(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 	} else {
 		/* Clean message file */
 		QueGetFilePath(pMQ, pQM, szQueueFilePath);
-		CheckRemoveFile(szQueueFilePath);
+		SysRemove(szQueueFilePath);
 
 		/* Clean 'info' file */
 		QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_INFO_DIR);
-		CheckRemoveFile(szQueueFilePath);
+		SysRemove(szQueueFilePath);
 
 		/* Clean 'slog' file */
 		QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_SLOG_DIR);
-		CheckRemoveFile(szQueueFilePath);
+		SysRemove(szQueueFilePath);
 	}
 
 	/* Clean 'temp' file */
 	QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_TEMP_DIR);
-	CheckRemoveFile(szQueueFilePath);
+	SysRemove(szQueueFilePath);
 
 	/* Clean 'cust' file */
 	QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_CUST_DIR);
-	CheckRemoveFile(szQueueFilePath);
+	SysRemove(szQueueFilePath);
 
 	/* Clean 'mprc' file */
 	QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_MPRC_DIR);
-	CheckRemoveFile(szQueueFilePath);
+	SysRemove(szQueueFilePath);
 
 	return 0;
 }
@@ -783,7 +772,7 @@ static time_t QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
 	unsigned int uNextOp = uRetryTimeout;
 
 	if (uRetryIncrRatio != 0)
-		for (int ii = 1; ii < iNumTries; ii++)
+		for (int i = 1; i < iNumTries; i++)
 			uNextOp += uNextOp / uRetryIncrRatio;
 
 	return (time_t) uNextOp;
@@ -887,8 +876,6 @@ QMSG_HANDLE QueExtractMessage(QUEUE_HANDLE hQueue, int iTimeout)
 static unsigned int QueRsndThread(void *pThreadData)
 {
 	MessageQueue *pMQ = (MessageQueue *) pThreadData;
-
-	/* Scan the rsnd arena to find out ready-to-send messages */
 	int iElapsedTime = 0;
 
 	while ((pMQ->ulFlags & QUEF_SHUTDOWN) == 0) {
@@ -902,8 +889,6 @@ static unsigned int QueRsndThread(void *pThreadData)
 			QueScanRsndArena(pMQ);
 		}
 	}
-
-	/* Reset the shutdown flag */
 	pMQ->ulFlags &= ~QUEF_SHUTDOWN;
 
 	return 0;
@@ -970,14 +955,10 @@ int QueCheckMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 static bool QueMessageDestMatch(MessageQueue *pMQ, QueueMessage *pQM,
 				char const *pszAddressMatch)
 {
-	/* Get the queue file path */
+	SpoolFileHeader SFH;
 	char szQueueFilePath[SYS_MAX_PATH] = "";
 
 	QueGetFilePath(pMQ, pQM, szQueueFilePath);
-
-	/* Load queue file header */
-	SpoolFileHeader SFH;
-
 	if (USmlLoadSpoolFileHeader(szQueueFilePath, SFH) < 0)
 		return false;
 

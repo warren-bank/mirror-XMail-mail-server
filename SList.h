@@ -34,18 +34,18 @@ typedef LISTLINK *PLISTLINK;
 
 typedef PLISTLINK HSLIST;
 
-void ListInit(HSLIST & hList);
-void ListAddHead(HSLIST & hList, PLISTLINK pLLink);
-void ListAddTail(HSLIST & hList, PLISTLINK pLLink);
-PLISTLINK ListFirst(HSLIST & hList);
-PLISTLINK ListNext(HSLIST & hList, PLISTLINK pLLink);
-PLISTLINK ListRemovePtr(HSLIST & hList, PLISTLINK pLLink);
-PLISTLINK ListRemove(HSLIST & hList);
-void ListPurgeFree(HSLIST & hList);
-void ListPurge(HSLIST & hList);
-bool ListIsEmpty(HSLIST & hList);
-int ListGetCount(HSLIST & hList);
-PLISTLINK *ListGetPointers(HSLIST & hList, int &iListCount);
-void ListReleasePointers(PLISTLINK * pPointers);
+void ListInit(HSLIST &hList);
+void ListAddHead(HSLIST &hList, PLISTLINK pLLink);
+void ListAddTail(HSLIST &hList, PLISTLINK pLLink);
+PLISTLINK ListFirst(HSLIST &hList);
+PLISTLINK ListNext(HSLIST &hList, PLISTLINK pLLink);
+PLISTLINK ListRemovePtr(HSLIST &hList, PLISTLINK pLLink);
+PLISTLINK ListRemove(HSLIST &hList);
+void ListPurgeFree(HSLIST &hList);
+void ListPurge(HSLIST &hList);
+bool ListIsEmpty(HSLIST &hList);
+int ListGetCount(HSLIST &hList);
+PLISTLINK *ListGetPointers(HSLIST &hList, int &iListCount);
+void ListReleasePointers(PLISTLINK *pPointers);
 
 #endif

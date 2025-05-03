@@ -23,14 +23,15 @@
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
+#include "ShBlocks.h"
 #include "StrUtils.h"
 #include "BuffSock.h"
 #include "MiscUtils.h"
 #include "Base64Enc.h"
 
-#define OK                  (0)
-#define FAIL                (-1)
-#define BUFOVER             (-2)
+#define OK                  0
+#define FAIL                -1
+#define BUFOVER             -2
 
 #define CHAR64(c)           (((c) < 0 || (c) > 127) ? -1 : index_64[(c)])
 
@@ -48,90 +49,92 @@ static char index_64[128] = {
 		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1
 };
 
-int encode64(const char *_in, unsigned inlen, char *_out, unsigned outmax, unsigned *outlen)
+int Base64Encode(const char *pIn, int iInSize, char *pszOut, int *piOutSize)
 {
-	const unsigned char *in = (const unsigned char *) _in;
-	unsigned char *out = (unsigned char *) _out;
+	const unsigned char *in = (const unsigned char *) pIn;
+	unsigned char *out = (unsigned char *) pszOut;
 	unsigned char oval;
 	char *blah;
-	unsigned olen;
+	int olen;
+	int omax = *piOutSize;
 
-	olen = (inlen + 2) / 3 * 4;
-	if (outlen)
-		*outlen = olen;
-	if (outmax < olen)
+	olen = (iInSize + 2) / 3 * 4;
+	if (piOutSize)
+		*piOutSize = olen;
+	if (omax < olen)
 		return BUFOVER;
 
 	blah = (char *) out;
-	while (inlen >= 3) {
+	while (iInSize >= 3) {
 		/* user provided max buffer size; make sure we don't go over it */
 		*out++ = basis_64[in[0] >> 2];
 		*out++ = basis_64[((in[0] << 4) & 0x30) | (in[1] >> 4)];
 		*out++ = basis_64[((in[1] << 2) & 0x3c) | (in[2] >> 6)];
 		*out++ = basis_64[in[2] & 0x3f];
 		in += 3;
-		inlen -= 3;
+		iInSize -= 3;
 	}
-	if (inlen > 0) {
+	if (iInSize > 0) {
 		/* user provided max buffer size; make sure we don't go over it */
 		*out++ = basis_64[in[0] >> 2];
 		oval = (in[0] << 4) & 0x30;
-		if (inlen > 1)
+		if (iInSize > 1)
 			oval |= in[1] >> 4;
 		*out++ = basis_64[oval];
-		*out++ = (inlen < 2) ? '=' : basis_64[(in[1] << 2) & 0x3c];
+		*out++ = (iInSize < 2) ? '=' : basis_64[(in[1] << 2) & 0x3c];
 		*out++ = '=';
 	}
 
-	if (olen < outmax)
+	if (olen < omax)
 		*out = '\0';
 
 	return OK;
 }
 
-int decode64(const char *in, unsigned inlen, char *out, unsigned *outlen)
+int Base64Decode(const char *pszIn, int iInSize, char *pOut, int *piOutSize)
 {
 	unsigned len = 0;
 	unsigned lup;
+	int omax = *piOutSize;
 	int c1;
 	int c2;
 	int c3;
 	int c4;
 
-	if (inlen >= 2 && in[0] == '+' && in[1] == ' ')
-		in += 2, inlen -= 2;
+	if (iInSize >= 2 && pszIn[0] == '+' && pszIn[1] == ' ')
+		pszIn += 2, iInSize -= 2;
 
-	if (*in == '\0')
+	if (*pszIn == '\0')
 		return FAIL;
 
-	for (lup = 0; lup < inlen / 4; lup++) {
-		c1 = in[0];
+	for (lup = 0; lup < (unsigned) iInSize / 4; lup++) {
+		c1 = pszIn[0];
 		if (CHAR64(c1) == -1)
 			return FAIL;
-		c2 = in[1];
+		c2 = pszIn[1];
 		if (CHAR64(c2) == -1)
 			return FAIL;
-		c3 = in[2];
+		c3 = pszIn[2];
 		if (c3 != '=' && CHAR64(c3) == -1)
 			return FAIL;
-		c4 = in[3];
+		c4 = pszIn[3];
 		if (c4 != '=' && CHAR64(c4) == -1)
 			return FAIL;
-		in += 4;
-		*out++ = (CHAR64(c1) << 2) | (CHAR64(c2) >> 4);
+		pszIn += 4;
+		*pOut++ = (CHAR64(c1) << 2) | (CHAR64(c2) >> 4);
 		++len;
 		if (c3 != '=') {
-			*out++ = ((CHAR64(c2) << 4) & 0xf0) | (CHAR64(c3) >> 2);
+			*pOut++ = ((CHAR64(c2) << 4) & 0xf0) | (CHAR64(c3) >> 2);
 			++len;
 			if (c4 != '=') {
-				*out++ = ((CHAR64(c3) << 6) & 0xc0) | CHAR64(c4);
+				*pOut++ = ((CHAR64(c3) << 6) & 0xc0) | CHAR64(c4);
 				++len;
 			}
 		}
 	}
 
-	*out = 0;
-	*outlen = len;
+	*pOut = 0;
+	*piOutSize = len;
 
 	return OK;
 }

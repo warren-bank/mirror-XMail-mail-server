@@ -110,12 +110,12 @@ static char *CDNS_GetCacheFilePath(char const *pszDomain, char const *pszSubDir,
 
 	StrLower(pszLwrDomain);
 
-	SYS_UINT32 uStringHash = MscHashString(pszLwrDomain, strlen(pszLwrDomain));
+	unsigned long ulStringHash = MscHashString(pszLwrDomain, strlen(pszLwrDomain));
 
 	/* Build cache file path */
 	SysSNPrintf(pszFilePath, SYS_MAX_PATH - 1,
 		    "%s%s" SYS_SLASH_STR "%s" SYS_SLASH_STR "%u" SYS_SLASH_STR "%s", szRootPath,
-		    DNS_CACHE_DIRCTORY, pszSubDir, (unsigned int) (uStringHash % iNumCacheDirs),
+		    DNS_CACHE_DIRCTORY, pszSubDir, (unsigned int) (ulStringHash % iNumCacheDirs),
 		    pszLwrDomain);
 
 	SysFree(pszLwrDomain);
@@ -181,16 +181,13 @@ static int CDNS_MxLoad(char const *pszDomain, char *&pszMXDomains)
 		ErrSetErrorCode(ERR_DNS_CACHE_FILE_FMT);
 		return ERR_DNS_CACHE_FILE_FMT;
 	}
-
 	if ((pszMXDomains = SysStrDup(szCacheLine)) == NULL) {
 		ErrorPush();
 		fclose(pCacheFile);
 		RLckUnlockSH(hResLock);
 		return ErrorPop();
 	}
-
 	fclose(pCacheFile);
-
 	RLckUnlockSH(hResLock);
 
 	return 0;
@@ -272,19 +269,19 @@ int CDNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains, char const *psz
 		return ERR_BAD_SMARTDNSHOST_SYNTAX;
 	}
 	/* Walk through the list of smart DNS hosts to find a DNS response */
-	for (int ii = 0; ii < (iTokensCount - 1); ii += 2) {
+	for (int i = 0; i < (iTokensCount - 1); i += 2) {
 		int iQuerySockType =
-			(stricmp(ppszTokens[ii + 1], "tcp") == 0) ? DNS_QUERY_TCP : DNS_QUERY_UDP;
+			(stricmp(ppszTokens[i + 1], "tcp") == 0) ? DNS_QUERY_TCP: DNS_QUERY_UDP;
 
-		if (DNS_GetDomainMXDirect(ppszTokens[ii], pszDomain, iQuerySockType,
+		if (DNS_GetDomainMXDirect(ppszTokens[i], pszDomain, iQuerySockType,
 					  pszMXDomains, &TTL) == 0) {
 			StrFreeStrings(ppszTokens);
 
 			return CDNS_MxSave(pszDomain, pszMXDomains, TTL);
 		}
 	}
-
 	StrFreeStrings(ppszTokens);
 
 	return ErrGetErrorCode();
 }
+

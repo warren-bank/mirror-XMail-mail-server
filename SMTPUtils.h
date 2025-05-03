@@ -38,6 +38,9 @@
 #define DEFAULT_SMTP_ERR            "417 Temporary delivery error"
 #define SMTP_SERVER_VARNAME         "SMTP-Server"
 
+#define SMTP_GWF_USE_TLS            (1 << 0)
+#define SMTP_GWF_FORCE_TLS          (1 << 1)
+
 typedef struct MXS_HANDLE_struct {
 } *MXS_HANDLE;
 
@@ -48,6 +51,12 @@ struct SMTPError {
 	char *pszServer;
 	int iSTMPResponse;
 	char *pszSTMPResponse;
+};
+
+struct SMTPGateway {
+	char *pszHost;
+	char *pszIFace;
+	unsigned long ulFlags;
 };
 
 enum SmtpMsgInfo {
@@ -69,7 +78,9 @@ enum SpoolMsgInfo {
 		smiMax
 };
 
-char **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
+SMTPGateway **USmtpMakeGateways(char const * const *ppszGwHosts, char const *pszOptions);
+void USmtpFreeGateways(SMTPGateway **ppGws);
+SMTPGateway **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
 int USmtpGetGateway(SVRCFG_HANDLE hSvrConfig, const char *pszDomain, char *pszGateway);
 int USmtpAddGateway(const char *pszDomain, const char *pszGateway);
 int USmtpRemoveGateway(const char *pszDomain);
@@ -86,17 +97,19 @@ char const *USmtpGetErrorMessage(SMTPError const *pSMTPE);
 int USmtpCleanupError(SMTPError *pSMTPE);
 char *USmtpGetSMTPError(SMTPError *pSMTPE, char *pszError, int iMaxError);
 char const *USmtpGetErrorServer(SMTPError const *pSMTPE);
-SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain,
+SMTPCH_HANDLE USmtpCreateChannel(SMTPGateway const *pGw, const char *pszDomain,
 				 SMTPError *pSMTPE = NULL);
 int USmtpCloseChannel(SMTPCH_HANDLE hSmtpCh, int iHardClose = 0, SMTPError *pSMTPE = NULL);
 int USmtpChannelReset(SMTPCH_HANDLE hSmtpCh, SMTPError *pSMTPE = NULL);
 int USmtpSendMail(SMTPCH_HANDLE hSmtpCh, const char *pszFrom, const char *pszRcpt,
 		  FileSection const *pFS, SMTPError *pSMTPE = NULL);
-int USmtpSendMail(const char *pszServer, const char *pszDomain,
-		  const char *pszFrom, const char *pszRcpt, FileSection const *pFS,
-		  SMTPError *pSMTPE = NULL);
+int USmtpSendMail(SMTPGateway const *pGw, const char *pszDomain, const char *pszFrom,
+		  const char *pszRcpt, FileSection const *pFS, SMTPError *pSMTPE = NULL);
+int USmtpMailRmtDeliver(SVRCFG_HANDLE hSvrConfig, const char *pszServer, const char *pszDomain,
+			const char *pszFrom, const char *pszRcpt, FileSection const *pFS,
+			SMTPError *pSMTPE = NULL);
 char *USmtpBuildRcptPath(char const *const *ppszRcptTo, SVRCFG_HANDLE hSvrConfig);
-char **USmtpGetMailExchangers(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
+SMTPGateway **USmtpGetMailExchangers(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
 int USmtpCheckMailDomain(SVRCFG_HANDLE hSvrConfig, char const *pszDomain);
 MXS_HANDLE USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain, char *pszMXHost);
 int USmtpGetMXNext(MXS_HANDLE hMXSHandle, char *pszMXHost);
@@ -113,3 +126,4 @@ char *USmtpGetReceived(int iType, char const *pszAuth, char const *const *ppszMs
 		       char const *pszMailFrom, char const *pszRcptTo, char const *pszMessageID);
 
 #endif
+

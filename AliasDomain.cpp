@@ -53,7 +53,7 @@ struct ADomainScanData {
 
 static bool ADomIsWildAlias(char const *pszAlias);
 static int ADomCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-			     SYS_UINT32 * puHashVal, bool bCaseSens);
+			     TabIdxUINT *puHashVal, bool bCaseSens);
 static int ADomRebuildADomainIndexes(char const *pszADomainFilePath);
 static char *ADomGetADomainFilePath(char *pszADomainFilePath, int iMaxPath);
 static int ADomLookupDomainLK(const char *pszADomainFilePath, const char *pszADomain,
@@ -71,12 +71,12 @@ static bool ADomIsWildAlias(char const *pszAlias)
 }
 
 static int ADomCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
-			     SYS_UINT32 * puHashVal, bool bCaseSens)
+			     TabIdxUINT *puHashVal, bool bCaseSens)
 {
 	/* This will group wild alias ( * ? ) */
 	int iFieldsCount = StrStringsCount(ppszTabTokens);
 
-	if ((iFieldsCount > adomADomain) && ADomIsWildAlias(ppszTabTokens[adomADomain])) {
+	if (iFieldsCount > adomADomain && ADomIsWildAlias(ppszTabTokens[adomADomain])) {
 		*puHashVal = WILD_ADOMAIN_HASH;
 
 		return 0;
@@ -110,7 +110,6 @@ static int ADomRebuildADomainIndexes(char const *pszADomainFilePath)
 static char *ADomGetADomainFilePath(char *pszADomainFilePath, int iMaxPath)
 {
 	CfgGetRootPath(pszADomainFilePath, iMaxPath);
-
 	StrNCat(pszADomainFilePath, ADOMAIN_FILE, iMaxPath);
 
 	return pszADomainFilePath;
@@ -138,21 +137,18 @@ static int ADomLookupDomainLK(const char *pszADomainFilePath, const char *pszADo
 
 	/* Lookup record using the specified index ( lookup wild aliases grouped */
 	/* under WILD_ADOMAIN_HASH hash key ) */
+	TabIdxUINT uLkHVal = WILD_ADOMAIN_HASH;
 	INDEX_HANDLE hIndexLookup = TbixOpenHandle(pszADomainFilePath, iIdxADomain_Alias,
-						   WILD_ADOMAIN_HASH);
+						   &uLkHVal, 1);
 
 	if (hIndexLookup != INVALID_INDEX_HANDLE) {
-		int iNumRecords = TbixLookedUpRecords(hIndexLookup);
+		char **ppszTabTokens;
 
-		for (int ii = 0; ii < iNumRecords; ii++) {
-			char **ppszTabTokens = TbixGetRecord(hIndexLookup, ii);
-
-			if (ppszTabTokens == NULL)
-				continue;
-
+		for (ppszTabTokens = TbixFirstRecord(hIndexLookup); ppszTabTokens != NULL;
+		     ppszTabTokens = TbixNextRecord(hIndexLookup)) {
 			int iFieldsCount = StrStringsCount(ppszTabTokens);
 
-			if ((iFieldsCount >= adomMax) &&
+			if (iFieldsCount >= adomMax &&
 			    StrIWildMatch(pszADomain, ppszTabTokens[adomADomain])) {
 				if (pszDomain != NULL)
 					StrNCpy(pszDomain, ppszTabTokens[adomDomain],
@@ -163,10 +159,8 @@ static int ADomLookupDomainLK(const char *pszADomainFilePath, const char *pszADo
 
 				return 1;
 			}
-
 			StrFreeStrings(ppszTabTokens);
 		}
-
 		TbixCloseHandle(hIndexLookup);
 	}
 
@@ -226,8 +220,8 @@ int ADomAddADomain(char const *pszADomain, char const *pszDomain)
 
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
-		if ((iFieldsCount >= adomMax) &&
-		    (stricmp(pszADomain, ppszStrings[adomADomain]) == 0)) {
+		if (iFieldsCount >= adomMax &&
+		    stricmp(pszADomain, ppszStrings[adomADomain]) == 0) {
 			StrFreeStrings(ppszStrings);
 			fclose(pDomainsFile);
 			RLckUnlockEX(hResLock);
@@ -238,11 +232,8 @@ int ADomAddADomain(char const *pszADomain, char const *pszDomain)
 
 		StrFreeStrings(ppszStrings);
 	}
-
 	fseek(pDomainsFile, 0, SEEK_END);
-
 	fprintf(pDomainsFile, "\"%s\"\t\"%s\"\n", pszADomain, pszDomain);
-
 	fclose(pDomainsFile);
 
 	/* Rebuild indexes */
@@ -251,7 +242,6 @@ int ADomAddADomain(char const *pszADomain, char const *pszDomain)
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
@@ -260,11 +250,9 @@ int ADomAddADomain(char const *pszADomain, char const *pszDomain)
 int ADomRemoveADomain(char const *pszADomain)
 {
 	char szADomainFilePath[SYS_MAX_PATH] = "";
-
-	ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
-
 	char szTmpFile[SYS_MAX_PATH] = "";
 
+	ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 	SysGetTmpFile(szTmpFile);
 
 	char szResLock[SYS_MAX_PATH] = "";
@@ -273,7 +261,7 @@ int ADomRemoveADomain(char const *pszADomain)
 
 	if (hResLock == INVALID_RLCK_HANDLE) {
 		ErrorPush();
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 		return ErrorPop();
 	}
 
@@ -281,7 +269,7 @@ int ADomRemoveADomain(char const *pszADomain)
 
 	if (pDomainsFile == NULL) {
 		RLckUnlockEX(hResLock);
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 
 		ErrSetErrorCode(ERR_ADOMAIN_FILE_NOT_FOUND);
 		return ERR_ADOMAIN_FILE_NOT_FOUND;
@@ -292,7 +280,7 @@ int ADomRemoveADomain(char const *pszADomain)
 	if (pTmpFile == NULL) {
 		fclose(pDomainsFile);
 		RLckUnlockEX(hResLock);
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 
 		ErrSetErrorCode(ERR_FILE_CREATE, szTmpFile);
 		return ERR_FILE_CREATE;
@@ -309,8 +297,8 @@ int ADomRemoveADomain(char const *pszADomain)
 
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
-		if ((iFieldsCount >= adomMax) &&
-		    (stricmp(pszADomain, ppszStrings[adomADomain]) == 0)) {
+		if (iFieldsCount >= adomMax &&
+		    stricmp(pszADomain, ppszStrings[adomADomain]) == 0) {
 
 			++iADomainFound;
 
@@ -319,7 +307,6 @@ int ADomRemoveADomain(char const *pszADomain)
 
 		StrFreeStrings(ppszStrings);
 	}
-
 	fclose(pDomainsFile);
 	fclose(pTmpFile);
 
@@ -334,20 +321,17 @@ int ADomRemoveADomain(char const *pszADomain)
 	char szTmpADomainFilePath[SYS_MAX_PATH] = "";
 
 	sprintf(szTmpADomainFilePath, "%s.tmp", szADomainFilePath);
-
 	if (MscMoveFile(szADomainFilePath, szTmpADomainFilePath) < 0) {
 		ErrorPush();
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	if (MscMoveFile(szTmpFile, szADomainFilePath) < 0) {
 		ErrorPush();
 		MscMoveFile(szTmpADomainFilePath, szADomainFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	SysRemove(szTmpADomainFilePath);
 
 	/* Rebuild indexes */
@@ -356,7 +340,6 @@ int ADomRemoveADomain(char const *pszADomain)
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
@@ -365,11 +348,9 @@ int ADomRemoveADomain(char const *pszADomain)
 int ADomRemoveLinkedDomains(char const *pszDomain)
 {
 	char szADomainFilePath[SYS_MAX_PATH] = "";
-
-	ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
-
 	char szTmpFile[SYS_MAX_PATH] = "";
 
+	ADomGetADomainFilePath(szADomainFilePath, sizeof(szADomainFilePath));
 	SysGetTmpFile(szTmpFile);
 
 	char szResLock[SYS_MAX_PATH] = "";
@@ -378,7 +359,7 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 
 	if (hResLock == INVALID_RLCK_HANDLE) {
 		ErrorPush();
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 		return ErrorPop();
 	}
 
@@ -386,7 +367,7 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 
 	if (pDomainsFile == NULL) {
 		RLckUnlockEX(hResLock);
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 
 		ErrSetErrorCode(ERR_ADOMAIN_FILE_NOT_FOUND);
 		return ERR_ADOMAIN_FILE_NOT_FOUND;
@@ -397,7 +378,7 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 	if (pTmpFile == NULL) {
 		fclose(pDomainsFile);
 		RLckUnlockEX(hResLock);
-		CheckRemoveFile(szTmpFile);
+		SysRemove(szTmpFile);
 
 		ErrSetErrorCode(ERR_FILE_CREATE, szTmpFile);
 		return ERR_FILE_CREATE;
@@ -414,17 +395,14 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
-		if ((iFieldsCount >= adomMax) &&
-		    (stricmp(pszDomain, ppszStrings[adomDomain]) == 0)) {
+		if (iFieldsCount >= adomMax &&
+		    stricmp(pszDomain, ppszStrings[adomDomain]) == 0) {
 
 			++iDomainFound;
-
 		} else
 			fprintf(pTmpFile, "%s\n", szADomainLine);
-
 		StrFreeStrings(ppszStrings);
 	}
-
 	fclose(pDomainsFile);
 	fclose(pTmpFile);
 
@@ -437,20 +415,17 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 	char szTmpADomainFilePath[SYS_MAX_PATH] = "";
 
 	sprintf(szTmpADomainFilePath, "%s.tmp", szADomainFilePath);
-
 	if (MscMoveFile(szADomainFilePath, szTmpADomainFilePath) < 0) {
 		ErrorPush();
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	if (MscMoveFile(szTmpFile, szADomainFilePath) < 0) {
 		ErrorPush();
 		MscMoveFile(szTmpADomainFilePath, szADomainFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	SysRemove(szTmpADomainFilePath);
 
 	/* Rebuild indexes */
@@ -459,7 +434,6 @@ int ADomRemoveLinkedDomains(char const *pszDomain)
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
@@ -483,7 +457,6 @@ int ADomGetADomainFileSnapShot(const char *pszFileName)
 		RLckUnlockSH(hResLock);
 		return ErrorPop();
 	}
-
 	RLckUnlockSH(hResLock);
 
 	return 0;
@@ -497,13 +470,11 @@ ADOMAIN_HANDLE ADomOpenDB(void)
 		return INVALID_ADOMAIN_HANDLE;
 
 	SysGetTmpFile(pDSD->szTmpDBFile);
-
 	if (ADomGetADomainFileSnapShot(pDSD->szTmpDBFile) < 0) {
 		CheckRemoveFile(pDSD->szTmpDBFile);
 		SysFree(pDSD);
 		return INVALID_ADOMAIN_HANDLE;
 	}
-
 	if ((pDSD->pDBFile = fopen(pDSD->szTmpDBFile, "rt")) == NULL) {
 		SysRemove(pDSD->szTmpDBFile);
 		SysFree(pDSD);
@@ -520,14 +491,10 @@ void ADomCloseDB(ADOMAIN_HANDLE hDomainsDB)
 	ADomainScanData *pDSD = (ADomainScanData *) hDomainsDB;
 
 	fclose(pDSD->pDBFile);
-
 	SysRemove(pDSD->szTmpDBFile);
-
 	if (pDSD->ppszStrings != NULL)
 		StrFreeStrings(pDSD->ppszStrings);
-
 	SysFree(pDSD);
-
 }
 
 char const *const *ADomGetFirstDomain(ADOMAIN_HANDLE hDomainsDB)
@@ -583,3 +550,4 @@ char const *const *ADomGetNextDomain(ADOMAIN_HANDLE hDomainsDB)
 
 	return NULL;
 }
+

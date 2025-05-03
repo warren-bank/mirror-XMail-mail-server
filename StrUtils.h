@@ -56,7 +56,6 @@ int StrSplitString(char const *pszString, char const *pszSplitters,
 char *StrLTrim(char *pszString, char const *pszTrimChars);
 char *StrRTrim(char *pszString, char const *pszTrimChars);
 char *StrTrim(char *pszString, char const *pszTrimChars);
-char *StrEOLTrim(char *pszString);
 char *StrIStr(char const *pszBuffer, char const *pszMatch);
 int StrDynInit(DynString *pDS, char const *pszInit = NULL);
 int StrDynFree(DynString *pDS);

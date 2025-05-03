@@ -40,6 +40,7 @@
 
 #define SYS_LLU_FMT             "%llu"
 #define SYS_LLX_FMT             "%llX"
+#define SYS_OFFT_FMT            "%ll"
 
 #define SYS_INVALID_HANDLE      ((SYS_HANDLE) 0)
 #define SYS_INVALID_SOCKET      ((SYS_SOCKET) (-1))
@@ -82,24 +83,13 @@ typedef void *SYS_EVENT;
 typedef void *SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 typedef void *SYS_MMAP;
+typedef SYS_INT64 SYS_OFF_T;
+typedef long SYS_SIZE_T;
 
 struct SYS_INET_ADDR {
 	struct sockaddr_in Addr;
 };
 
-enum SysFileTypes {
-	ftNormal = 1,
-		ftDirectory,
-		ftLink,
-		ftOther,
-
-		ftMax
-};
-
-struct SYS_FILE_INFO {
-	int iFileType;
-	unsigned long ulSize;
-	time_t tMod;
-};
 
 #endif
+

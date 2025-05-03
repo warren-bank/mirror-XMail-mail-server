@@ -25,20 +25,18 @@
 #include "SvrDefines.h"
 #include "SList.h"
 
-void ListInit(HSLIST & hList)
+void ListInit(HSLIST &hList)
 {
 	hList = INVALID_SLIST_PTR;
-
 }
 
-void ListAddHead(HSLIST & hList, PLISTLINK pLLink)
+void ListAddHead(HSLIST &hList, PLISTLINK pLLink)
 {
 	pLLink->pNext = hList;
 	hList = pLLink;
-
 }
 
-void ListAddTail(HSLIST & hList, PLISTLINK pLLink)
+void ListAddTail(HSLIST &hList, PLISTLINK pLLink)
 {
 	PLISTLINK lpPrev = INVALID_SLIST_PTR, lpCurr = hList;
 
@@ -53,20 +51,19 @@ void ListAddTail(HSLIST & hList, PLISTLINK pLLink)
 		hList = pLLink;
 	else
 		lpPrev->pNext = pLLink;
-
 }
 
-PLISTLINK ListFirst(HSLIST & hList)
+PLISTLINK ListFirst(HSLIST &hList)
 {
 	return hList;
 }
 
-PLISTLINK ListNext(HSLIST & hList, PLISTLINK pLLink)
+PLISTLINK ListNext(HSLIST &hList, PLISTLINK pLLink)
 {
 	return pLLink->pNext;
 }
 
-PLISTLINK ListRemovePtr(HSLIST & hList, PLISTLINK pLLink)
+PLISTLINK ListRemovePtr(HSLIST &hList, PLISTLINK pLLink)
 {
 	PLISTLINK lpPrev = INVALID_SLIST_PTR, lpCurr = hList;
 
@@ -90,7 +87,7 @@ PLISTLINK ListRemovePtr(HSLIST & hList, PLISTLINK pLLink)
 	return lpCurr;
 }
 
-PLISTLINK ListRemove(HSLIST & hList)
+PLISTLINK ListRemove(HSLIST &hList)
 {
 	PLISTLINK lpCurr = hList;
 
@@ -100,53 +97,50 @@ PLISTLINK ListRemove(HSLIST & hList)
 	return lpCurr;
 }
 
-void ListPurgeFree(HSLIST & hList)
+void ListPurgeFree(HSLIST &hList)
 {
 	PLISTLINK lpCurr;
 
 	while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR)
 		SysFree(lpCurr);
-
 }
 
-void ListPurge(HSLIST & hList)
+void ListPurge(HSLIST &hList)
 {
 	PLISTLINK lpCurr;
 
 	while ((lpCurr = ListRemove(hList)) != INVALID_SLIST_PTR);
-
 }
 
-bool ListIsEmpty(HSLIST & hList)
+bool ListIsEmpty(HSLIST &hList)
 {
 	return hList == INVALID_SLIST_PTR;
 }
 
-int ListGetCount(HSLIST & hList)
+int ListGetCount(HSLIST &hList)
 {
-	int iListCount;
+	int i;
 	PLISTLINK lpCurr = ListFirst(hList);
 
-	for (iListCount = 0; lpCurr != INVALID_SLIST_PTR;
-	     lpCurr = ListNext(hList, lpCurr), iListCount++);
+	for (i = 0; lpCurr != INVALID_SLIST_PTR;
+	     lpCurr = ListNext(hList, lpCurr), i++);
 
-	return iListCount;
+	return i;
 }
 
-PLISTLINK *ListGetPointers(HSLIST & hList, int &iListCount)
+PLISTLINK *ListGetPointers(HSLIST &hList, int &iListCount)
 {
 	iListCount = ListGetCount(hList);
 
 	PLISTLINK *pPointers = (PLISTLINK *) SysAlloc((iListCount + 1) * sizeof(PLISTLINK));
 
 	if (pPointers != NULL) {
-		int ii;
+		int i;
 		PLISTLINK lpCurr = ListFirst(hList);
 
-		for (ii = 0; lpCurr != INVALID_SLIST_PTR; lpCurr = ListNext(hList, lpCurr), ii++)
-			pPointers[ii] = lpCurr;
-
-		pPointers[ii] = INVALID_SLIST_PTR;
+		for (i = 0; lpCurr != INVALID_SLIST_PTR; lpCurr = ListNext(hList, lpCurr), i++)
+			pPointers[i] = lpCurr;
+		pPointers[i] = INVALID_SLIST_PTR;
 	}
 
 	return pPointers;
@@ -155,5 +149,5 @@ PLISTLINK *ListGetPointers(HSLIST & hList, int &iListCount)
 void ListReleasePointers(PLISTLINK * pPointers)
 {
 	SysFree(pPointers);
-
 }
+

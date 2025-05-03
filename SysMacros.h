@@ -51,13 +51,16 @@
 #define Cpy2Sz(d, s, n)         do { memcpy(d, s, (n) * sizeof(*(s))); (d)[n] = 0; } while (0)
 #define StrAppend(s)            ((char *) (s) + strlen(s))
 #define CheckRemoveFile(fp)     ((SysExistFile(fp)) ? SysRemove(fp) : 0)
+#define SysFreeNullify(p)       do { SysFree(p), (p) = NULL; } while(0)
 #define ErrorPush()             int __iPushedError = ErrGetErrorCode()
 #define ErrorPop()              (ErrSetErrorCode(__iPushedError), __iPushedError)
 #define ErrorFetch()            __iPushedError
-#define SysFreeCheck(p)         do { if ((p) != NULL) SysFree(p), (p) = NULL; } while(0)
+#define DatumStrSet(d, s)       do { (d)->pData = (char *) (s); (d)->lSize = strlen(s); } while (0)
 #define IsDotFilename(f)        ((f)[0] == '.')
 #define IsEmailAddress(a)       (strchr((a), '@') != NULL)
 #define MemMatch(s, n, m, l)    ((n) == (l) && memcmp(s, m, n) == 0)
+#define EquivDatum(a, b)        ((a)->lSize == (b)->lSize && memcmp((a)->pData, (b)->pData, (a)->lSize) == 0)
+#define ArrayInit(a, v)         do { unsigned int __i; for (__i = 0; __i < CountOf(a); __i++) (a)[__i] = (v); } while (0)
 #define StrVSprint(r, l, f) do { \
 	int             iCurrSize = 256; \
 	int             iPSize; \
@@ -95,17 +98,15 @@ inline char *StrNCat(char *pszDest, char const *pszSrc, int iMaxSize)
 
 inline int StrNCmdMatch(char const *pszCmdLine, char const *pszCmd, int iCmdLength)
 {
-	return (((strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0) &&
-		 ((pszCmdLine[iCmdLength] == '\0') || (pszCmdLine[iCmdLength] == ' ') ||
-		  (pszCmdLine[iCmdLength] == '\t'))) ? 1 : 0);
-
+	return strnicmp(pszCmdLine, pszCmd, iCmdLength) == 0 &&
+		(pszCmdLine[iCmdLength] == '\0' || strchr(" \r\n\t", pszCmdLine[iCmdLength]) != NULL);
 }
 
 inline char *AppendChar(char *pszString, int iChar)
 {
 	int iStrLength = strlen(pszString);
 
-	if ((iStrLength == 0) || (pszString[iStrLength - 1] != iChar)) {
+	if (iStrLength == 0 || pszString[iStrLength - 1] != iChar) {
 		pszString[iStrLength] = iChar;
 		pszString[iStrLength + 1] = '\0';
 	}
@@ -122,7 +123,7 @@ inline char *DelFinalChar(char *pszString, int iChar)
 {
 	int iStrLength = strlen(pszString);
 
-	if ((iStrLength > 0) && (pszString[iStrLength - 1] == iChar))
+	if (iStrLength > 0 && pszString[iStrLength - 1] == iChar)
 		pszString[iStrLength - 1] = '\0';
 
 	return pszString;
@@ -130,7 +131,6 @@ inline char *DelFinalChar(char *pszString, int iChar)
 
 inline char *DelFinalSlash(char *pszPath)
 {
-
 	return DelFinalChar(pszPath, SYS_SLASH_CHAR);
 }
 
@@ -164,7 +164,7 @@ inline char *ClearEOL(char *pszBuffer)
 {
 	int iSize = strlen(pszBuffer);
 
-	for (; iSize > 0 && ((pszBuffer[iSize - 1] == '\r') || (pszBuffer[iSize - 1] == '\n'));
+	for (; iSize > 0 && (pszBuffer[iSize - 1] == '\r' || pszBuffer[iSize - 1] == '\n');
 	     iSize--);
 	pszBuffer[iSize] = '\0';
 
@@ -172,3 +172,4 @@ inline char *ClearEOL(char *pszBuffer)
 }
 
 #endif
+

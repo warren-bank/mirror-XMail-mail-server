@@ -28,11 +28,16 @@ NULL=nul
 
 SRC_DIR=.
 
-INCL_DIRS=/I"$(SRC_DIR)"
+INCL_DIRS=/I"$(SRC_DIR)" /I"$(SRC_DIR)\win32ssl\include"
 
-LIBS=
+LIBPATH=/libpath:"$(SRC_DIR)\win32ssl\lib"
+LIBS=libeay32.lib ssleay32.lib
 
 CPP_DEFS=/nologo /D "XMAIL_OS=Win32" /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE
+
+!IF "$(DEBUG_OSSL)" == "1"
+CPP_FLAGS=$(CPP_FLAGS) /D DEBUG_OSSL
+!ENDIF
 
 !IF "$(CFG)" == "release"
 
@@ -53,7 +58,7 @@ LINK_DEBUG=/debug
 
 CPP=cl.exe
 LINK32=link.exe
-LINK32_FLAGS=$(LIBS) kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib \
+LINK32_FLAGS=$(LIBPATH) $(LIBS) kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib \
 	advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib \
 	/subsystem:console /incremental:no /machine:I386 $(LINK_DEBUG) /nologo
 
@@ -66,7 +71,6 @@ XMAIL_OBJS= \
 	"$(OUTDIR)\CTRLSvr.obj" \
 	"$(OUTDIR)\DNSCache.obj" \
 	"$(OUTDIR)\DNS.obj" \
-	"$(OUTDIR)\DynDNS.obj" \
 	"$(OUTDIR)\Errors.obj" \
 	"$(OUTDIR)\ExtAliases.obj" \
 	"$(OUTDIR)\Filter.obj" \
@@ -99,6 +103,10 @@ XMAIL_OBJS= \
 	"$(OUTDIR)\UsrAuth.obj" \
 	"$(OUTDIR)\UsrMailList.obj" \
 	"$(OUTDIR)\UsrUtils.obj" \
+	"$(OUTDIR)\SSLBind.obj" \
+	"$(OUTDIR)\SSLConfig.obj" \
+	"$(OUTDIR)\Hash.obj" \
+	"$(OUTDIR)\Array.obj" \
 
 XMCRYPT_TARGET=XMCrypt
 XMCRYPT_OBJS= \
@@ -118,6 +126,7 @@ CTRLCLNT_OBJS= \
 	"$(OUTDIR)\StrUtils.obj" \
 	"$(OUTDIR)\MiscUtils.obj" \
 	"$(OUTDIR)\SysDepWin.obj" \
+	"$(OUTDIR)\SSLBind.obj" \
 
 SENDMAIL_TARGET=SendMail
 SENDMAIL_OBJS= \

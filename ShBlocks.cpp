@@ -38,21 +38,16 @@ SHB_HANDLE ShbCreateBlock(unsigned int uSize)
 	if (pSHB == NULL)
 		return SHB_INVALID_HANDLE;
 
-	ZeroData(*pSHB);
 	pSHB->uSize = uSize;
-
 	if ((pSHB->hMutex = SysCreateMutex()) == SYS_INVALID_MUTEX) {
 		SysFree(pSHB);
 		return SHB_INVALID_HANDLE;
 	}
-
 	if ((pSHB->pData = SysAlloc(uSize)) == NULL) {
 		SysCloseMutex(pSHB->hMutex);
 		SysFree(pSHB);
 		return SHB_INVALID_HANDLE;
 	}
-
-	memset(pSHB->pData, 0, uSize);
 
 	return (SHB_HANDLE) pSHB;
 }
@@ -62,9 +57,7 @@ int ShbCloseBlock(SHB_HANDLE hBlock)
 	SharedBlock *pSHB = (SharedBlock *) hBlock;
 
 	SysCloseMutex(pSHB->hMutex);
-
 	SysFree(pSHB->pData);
-
 	SysFree(pSHB);
 
 	return 0;
@@ -88,3 +81,4 @@ int ShbUnlock(SHB_HANDLE hBlock)
 
 	return 0;
 }
+

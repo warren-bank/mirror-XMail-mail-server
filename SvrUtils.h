@@ -46,5 +46,9 @@ int SvrConfigVar(char const *pszVarName, char *pszVarValue, int iMaxVarValue,
 		 SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, char const *pszDefault = NULL);
 int SvrCheckDiskSpace(unsigned long ulMinSpace);
 int SvrCheckVirtMemSpace(unsigned long ulMinSpace);
+int SvrEnumProtoProps(char const *pszProto, const SYS_INET_ADDR *pPeerInfo,
+		      char const *pszHostName, int (*pfEnum)(void *, char const *, char const *),
+		      void *pPrivate);
 
 #endif
+

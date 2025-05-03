@@ -66,7 +66,7 @@ use warnings;
 		}
 
 	my $cmd = ($^O =~ m/win32/i) ? "del" : "rm";
-	$cmd .= " pod2h*.x~~";
+	$cmd .= " pod2h*.x~~ *.tmp";
 	print "$cmd\n";
 	system $cmd;
 	

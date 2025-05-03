@@ -23,7 +23,7 @@
 #ifndef _BASE64ENC_H
 #define _BASE64ENC_H
 
-int encode64(const char *_in, unsigned inlen, char *_out, unsigned outmax, unsigned *outlen);
-int decode64(const char *in, unsigned inlen, char *out, unsigned *outlen);
+int Base64Encode(const char *pIn, int iInSize, char *pszOut, int *piOutSize);
+int Base64Decode(const char *pszIn, int iInSize, char *pOut, int *piOutSize);
 
 #endif

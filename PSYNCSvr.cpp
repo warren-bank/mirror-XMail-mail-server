@@ -53,14 +53,14 @@ struct PSYNCThreadData {
 
 static bool PSYNCNeedSync(void);
 static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC);
-static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg = NULL);
+static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg = NULL);
 static int PSYNCTimeToStop(SHB_HANDLE hShbPSYNC);
-static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link * pPopLnk);
-static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg);
+static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link *pPopLnk);
+static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg);
 unsigned int PSYNCThreadSyncProc(void *pThreadData);
 static int PSYNCThreadNotifyExit(void);
-static int PSYNCLogEnabled(PSYNCConfig * pPSYNCCfg);
-static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
+static int PSYNCLogEnabled(PSYNCConfig *pPSYNCCfg);
+static int PSYNCLogSession(POP3Link const *pPopLnk, MailSyncReport const *pSRep,
 			   char const *pszStatus);
 
 static bool PSYNCNeedSync(void)
@@ -97,7 +97,7 @@ static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC)
 	return pNewPSYNCCfg;
 }
 
-static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
+static int PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
 {
 	int iDoUnlock = 0;
 
@@ -186,7 +186,7 @@ unsigned int PSYNCThreadProc(void *pThreadData)
 	return 0;
 }
 
-static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link * pPopLnk)
+static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link *pPopLnk)
 {
 	PSYNCThreadData *pSTD = (PSYNCThreadData *) SysAlloc(sizeof(PSYNCThreadData));
 
@@ -211,7 +211,7 @@ static SYS_THREAD PSYNCCreateSyncThread(SHB_HANDLE hShbPSYNC, POP3Link * pPopLnk
 	return hThread;
 }
 
-static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
+static int PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
 {
 	GWLKF_HANDLE hLinksDB = GwLkOpenDB();
 
@@ -315,7 +315,7 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 	PSYNCThreadCountAdd(+1, hShbPSYNC);
 
 	/* Sync for real internal account ? */
-	PopSyncReport SRep;
+	MailSyncReport SRep;
 
 	if (GwLkLocalDomain(pPopLnk)) {
 		/* Verify user credentials */
@@ -331,10 +331,9 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 
 			UsrGetAddress(pUI, szUserAddress);
 
-			if (UPopSyncRemoteLink
-			    (szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-			     pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
-			     pszErrorAccount) < 0) {
+			if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain,
+					       pPopLnk->pszRmtName, pPopLnk->pszRmtPassword, &SRep,
+					       pPopLnk->pszAuthType, szFetchHdrTags, pszErrorAccount) < 0) {
 				ErrLogMessage(LOG_LEV_MESSAGE,
 					      "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
 					      pPopLnk->pszName, pPopLnk->pszDomain);
@@ -364,10 +363,9 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 			      pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
 		/* Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain ) */
-		if (UPopSyncRemoteLink
-		    (pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-		     pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags, pPopLnk->pszAuthType,
-		     pszErrorAccount) < 0) {
+		if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+				       pPopLnk->pszRmtPassword, &SRep, pPopLnk->pszAuthType,
+				       szFetchHdrTags, pszErrorAccount) < 0) {
 			ErrLogMessage(LOG_LEV_MESSAGE,
 				      "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
 				      pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain,
@@ -392,8 +390,8 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 
 		/* Sync ( "pszDomain" == "@" + domain ) */
 		if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-				       pPopLnk->pszRmtPassword, &SRep, szFetchHdrTags,
-				       pPopLnk->pszAuthType, pszErrorAccount) < 0) {
+				       pPopLnk->pszRmtPassword, &SRep, pPopLnk->pszAuthType, szFetchHdrTags,
+				       pszErrorAccount) < 0) {
 			ErrLogMessage(LOG_LEV_MESSAGE,
 				      "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
 				      szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
@@ -423,12 +421,12 @@ unsigned int PSYNCThreadSyncProc(void *pThreadData)
 	return 0;
 }
 
-static int PSYNCLogEnabled(PSYNCConfig * pPSYNCCfg)
+static int PSYNCLogEnabled(PSYNCConfig *pPSYNCCfg)
 {
 	return (pPSYNCCfg->ulFlags & PSYNCF_LOG_ENABLED) ? 1 : 0;
 }
 
-static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
+static int PSYNCLogSession(POP3Link const *pPopLnk, MailSyncReport const *pSRep,
 			   char const *pszStatus)
 {
 	char szTime[256] = "";
@@ -460,3 +458,4 @@ static int PSYNCLogSession(POP3Link const *pPopLnk, PopSyncReport const *pSRep,
 
 	return 0;
 }
+
