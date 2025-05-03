@@ -605,5 +605,18 @@ Date 19-05-2002	1.8
 	paramenter specification.
 	Fixed a bug inside the PSYNC server code that made XMail to fail to resolve POP3 server addresses.
 	Various code cleanups.
-	
-	
+Date 15-06-2002	1.9
+	 Fixed a bug in HOSTNAME:PORT handing code inside the PSYNC server.
+	 Fixed a bug introduced in 1.8 in the Windows version that made XMail to have bad behaviour when
+	 used with external programs.
+	 Fixed a bug that resulted in XMail generating frozen messages even if the SERVER.TAB variable was
+	 set to not create them.
+	 Fixed a bug that made it possible to send a "MAIL FROM:<@localdomain:remoteaddress>" and to have
+	 the message relayed if the IP of the current machine was inside the smtprelay.tab of the machine
+	 handling the MX of @localdomain.
+	 Implemented internal mail loop checking ( internal redirects ).
+     Added a new MLUSERS.TAB permissions flags 'A', that is similar to 'W' by instead of checking
+     the "MAIL FROM:<...>" address check the SMTP authentication address ( this will prevent malicious
+     users to forge the address to gain write permissions on the list ).
+	 
+

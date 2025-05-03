@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.8
+Version      : 1.9
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 19-05-2002
+Date         : 15-06-2002
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>

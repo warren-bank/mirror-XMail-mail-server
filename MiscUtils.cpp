@@ -1530,29 +1530,25 @@ int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszC
 {
 
     char const     *pszColon = strchr(pszConnSpec, ':');
+    char            szServer[MAX_HOST_NAME] = "";
 
     ZeroData(SvrPath);
 
     if (pszColon != NULL)
     {
-        int             iIPLen = (int) (pszColon - pszConnSpec);
-        char            szIP[256] = "";
+        int             iIPLen = Min((int) (pszColon - pszConnSpec), sizeof(szServer) - 1);
 
-        strncpy(szIP, pszConnSpec, iIPLen = Min(iIPLen, sizeof(szIP) - 1));
-        szIP[iIPLen] = '\0';
+        strncpy(szServer, pszConnSpec, iIPLen);
+        szServer[iIPLen] = '\0';
 
-        SvrPath.NetAddr = SysInetAddr(szIP);
+        pszConnSpec = szServer;
+
         SvrPath.iPortNo = atoi(pszColon + 1);
     }
     else
-    {
-        if (MscGetServerAddress(pszConnSpec, SvrPath.NetAddr) < 0)
-            return (ErrGetErrorCode());
-
         SvrPath.iPortNo = iDefPortNo;
-    }
 
-    return (0);
+    return (MscGetServerAddress(pszConnSpec, SvrPath.NetAddr));
 
 }
 

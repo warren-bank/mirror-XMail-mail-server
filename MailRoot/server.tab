@@ -19,7 +19,7 @@
 #"MaxMessageSize"	"20000"
 #"EnableAuthSMTP-POP3"	"0"
 #"Pop3SyncErrorAccount"	"psync-errors@xmailserver.test"
-#"AllowNullSender"	"0"
+#"AllowNullSender"	"1"
 #"AllowSmtpVRFY"	"1"
 #"AllowSmtpETRN"	"1"
 #"SmtpMinDiskSpace"	"100000"

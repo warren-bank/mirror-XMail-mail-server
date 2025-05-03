@@ -170,6 +170,7 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
+static int      CTRLCheckRelativePath(char const * pszPath);
 static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
@@ -2565,6 +2566,24 @@ static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
+static int      CTRLCheckRelativePath(char const * pszPath)
+{
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check 101 tricky path
+///////////////////////////////////////////////////////////////////////////////
+    if (strstr(pszPath, "..") != NULL)
+    {
+        ErrSetErrorCode(ERR_BAD_RELATIVE_PATH);
+        return (ERR_BAD_RELATIVE_PATH);
+    }
+
+    return (0);
+
+}
+
+
+
 static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount)
 {
@@ -2574,6 +2593,16 @@ static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
         ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
         return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check relative path syntax
+///////////////////////////////////////////////////////////////////////////////
+    if (CTRLCheckRelativePath(ppszTokens[1]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2648,6 +2677,16 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Check relative path syntax
+///////////////////////////////////////////////////////////////////////////////
+    if (CTRLCheckRelativePath(ppszTokens[1]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
 //  Setup client target file path
 ///////////////////////////////////////////////////////////////////////////////
     char            szRelativePath[SYS_MAX_PATH] = "",
@@ -2657,6 +2696,7 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     MscTranslatePath(szRelativePath);
 
     CfgGetFullPath(szRelativePath, szFullPath, sizeof(szFullPath));
+    DelFinalSlash(szFullPath);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Share lock client target file
@@ -2724,6 +2764,16 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Check relative path syntax
+///////////////////////////////////////////////////////////////////////////////
+    if (CTRLCheckRelativePath(ppszTokens[1]) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
 //  Setup client target file path
 ///////////////////////////////////////////////////////////////////////////////
     char            szRelativePath[SYS_MAX_PATH] = "",
@@ -2733,6 +2783,7 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     MscTranslatePath(szRelativePath);
 
     CfgGetFullPath(szRelativePath, szFullPath, sizeof(szFullPath));
+    DelFinalSlash(szFullPath);
 
 
     CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_WAITDATA_RESULT);

@@ -463,8 +463,8 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
     int             iNotifyResult = QueUtTXErrorExNotifySender(hFSpool, szQueueFilePath,
                             "ErrorsAdmin", pszReason, NULL, szQueueLogFilePath);
 
-    if ((iNotifyResult != ERR_NULL_SENDER) &&
-            ((iNotifyResult != 0) || !QueUtRemoveSpoolErrors()))
+    if (((iNotifyResult != 0) && (iNotifyResult != ERR_NULL_SENDER)) ||
+            !QueUtRemoveSpoolErrors())
         bFreeze = true;
 
 

@@ -103,7 +103,6 @@ static int      SysSendLL(SYS_SOCKET SockFD, char const * pszBuffer, int iBuffer
 static unsigned int SysThreadRunner(void *pRunData);
 static int      SysThreadSetup(void);
 static int      SysThreadCleanup(void);
-static int      SysSetupStartupInfo(STARTUPINFO *pSI);
 static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
 static void     SysTimetToFileTime(time_t tTime, LPFILETIME pFT);
 static time_t   SysFileTimeToTimet(LPFILETIME pFT);
@@ -1557,43 +1556,6 @@ unsigned long   SysGetCurrentThreadId(void)
 
 
 
-static int      SysSetupStartupInfo(STARTUPINFO *pSI)
-{
-
-    ZeroData(*pSI);
-    pSI->cb = sizeof(STARTUPINFO);
-    pSI->dwFlags = STARTF_USESTDHANDLES;
-
-    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_INPUT_HANDLE), GetCurrentProcess(),
-            &pSI->hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS))
-    {
-        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
-        return (ERR_DUPLICATE_HANDLE);
-    }
-
-    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_OUTPUT_HANDLE), GetCurrentProcess(),
-            &pSI->hStdOutput, 0, TRUE, DUPLICATE_SAME_ACCESS))
-    {
-        CloseHandle(pSI->hStdInput);
-        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
-        return (ERR_DUPLICATE_HANDLE);
-    }
-
-    if (!DuplicateHandle(GetCurrentProcess(), GetStdHandle(STD_ERROR_HANDLE), GetCurrentProcess(),
-            &pSI->hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS))
-    {
-        CloseHandle(pSI->hStdOutput);
-        CloseHandle(pSI->hStdInput);
-        ErrSetErrorCode(ERR_DUPLICATE_HANDLE);
-        return (ERR_DUPLICATE_HANDLE);
-    }
-
-    return (0);
-
-}
-
-
-
 int             SysExec(char const * pszCommand, char const * const * pszArgs, int iWaitTimeout,
                         int iPriority, int *piExitStatus)
 {
@@ -1615,25 +1577,18 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
         sprintf(StrAppend(pszCmdLine), " \"%s\"", pszArgs[ii]);
 
 
-    STARTUPINFO     SI;
     PROCESS_INFORMATION PI;
+    STARTUPINFO     SI;
 
     ZeroData(PI);
-
-    if (SysSetupStartupInfo(&SI) < 0)
-    {
-        SysFree(pszCmdLine);
-        return (ErrGetErrorCode());
-    }
+    ZeroData(SI);
+    SI.cb = sizeof(STARTUPINFO);
 
 
-    BOOL            bProcessCreated = CreateProcess(NULL, pszCmdLine, NULL, NULL, TRUE,
+    BOOL            bProcessCreated = CreateProcess(NULL, pszCmdLine, NULL, NULL, FALSE,
                             CREATE_NO_WINDOW | NORMAL_PRIORITY_CLASS, NULL, NULL, &SI, &PI);
 
 
-    CloseHandle(SI.hStdInput);
-    CloseHandle(SI.hStdOutput);
-    CloseHandle(SI.hStdError);
     SysFree(pszCmdLine);
 
 

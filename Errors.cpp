@@ -277,6 +277,7 @@ static ErrorStrings Errors[] =
     {ERR_LISTDIR_NOT_FOUND, "Listing directory not found"},
     {ERR_DUPLICATE_HANDLE, "Error in function {DuplicateHandle}"},
     {ERR_EMPTY_LOG, "Log file is empty"},
+    {ERR_BAD_RELATIVE_PATH, "Error in relative path syntax"},
 
 };
 

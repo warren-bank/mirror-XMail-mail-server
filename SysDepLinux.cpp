@@ -1606,6 +1606,7 @@ static int      SysThreadSetup(ThrData * pTD)
     sigaddset(&SigMask, SIGALRM);
     sigaddset(&SigMask, SIGINT);
     sigaddset(&SigMask, SIGHUP);
+    sigaddset(&SigMask, SIGSTOP);
 
     pthread_sigmask(SIG_BLOCK, &SigMask, NULL);
 
@@ -2710,35 +2711,36 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
 #if defined(XMAIL_SPARC)
 
-    __asm__ __volatile__("ldstub %1,%0":
-            "=r"(uValue), "=m"(*pSpinLock):
-            "m"(*pSpinLock));
+    __asm__ __volatile__(
+        "ldstub %1,%0;\n":
+        "=r"(uValue), "=m"(*pSpinLock):
+        "m"(*pSpinLock));
 
     return (uValue);
 
 #elif defined(XMAIL_X86)
 
     __asm__  __volatile__(
-            "xchgl %0, %1":
-            "=r"(uValue), "=m"(*pSpinLock):
-            "0"(1), "m"(*pSpinLock):
-            "memory");
+        "xchgl %0, %1;\n":
+        "=r"(uValue), "=m"(*pSpinLock):
+        "0"(1), "m"(*pSpinLock):
+        "memory");
 
     return (uValue);
 
 #elif defined(XMAIL_PPC)
 
     __asm__ __volatile__(
-            "      sync;\n"
-            "0:    lwarx %0,0,%1;\n"
-            "      xor. %0,%3,%0;\n"
-            "      bne 1f;\n"
-            "      stwcx. %2,0,%1;\n"
-            "      bne- 0b;\n"
-            "1:    sync;\n":
-            "=&r"(uValue):
-            "r"(pSpinLock), "r"(1), "r"(0):
-            "cr0", "memory");
+        "      sync;\n"
+        "0:    lwarx %0,0,%1;\n"
+        "      xor. %0,%3,%0;\n"
+        "      bne 1f;\n"
+        "      stwcx. %2,0,%1;\n"
+        "      bne- 0b;\n"
+        "1:    sync;\n":
+        "=&r"(uValue):
+        "r"(pSpinLock), "r"(1), "r"(0):
+        "cr0", "memory");
 
     return ((uValue == 0) ? 1: 0);
 

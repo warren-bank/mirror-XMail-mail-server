@@ -6,6 +6,5 @@ if [ -z $MAIL_ROOT ]; then
 fi
 
 
-$MAIL_ROOT/bin/sendmail $*
-
+/usr/sbin/sendmail.xmail $*
 

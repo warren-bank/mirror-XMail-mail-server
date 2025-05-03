@@ -3146,19 +3146,20 @@ int             USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig)
 ///////////////////////////////////////////////////////////////////////////////
 //  Count MTA ops
 ///////////////////////////////////////////////////////////////////////////////
-    int             iReceivedCount = 0,
-                    iMaxMTAOps = SvrGetConfigInt("MaxMTAOps", MAX_MTA_OPS, hSvrConfig);
+    int             iLoopsCount = 0,
+        iMaxMTAOps = SvrGetConfigInt("MaxMTAOps", MAX_MTA_OPS, hSvrConfig);
     MessageTagData *pMTD = (MessageTagData *) ListFirst(pSFD->hTagList);
 
     for (; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
-            ListNext(pSFD->hTagList, (PLISTLINK) pMTD))
-        if (stricmp(pMTD->pszTagName, "received") == 0)
-            ++iReceivedCount;
+             ListNext(pSFD->hTagList, (PLISTLINK) pMTD))
+        if ((stricmp(pMTD->pszTagName, "Received") == 0) ||
+            (stricmp(pMTD->pszTagName, "X-Deliver-To") == 0))
+            ++iLoopsCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check MTA count
 ///////////////////////////////////////////////////////////////////////////////
-    if (iReceivedCount > iMaxMTAOps)
+    if (iLoopsCount > iMaxMTAOps)
     {
         ErrSetErrorCode(ERR_MAIL_LOOP_DETECTED);
         return (ERR_MAIL_LOOP_DETECTED);

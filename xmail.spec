@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.8
+Version: 1.9
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -34,14 +34,15 @@ make -f Makefile.lnx
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/var/MailRoot/bin
+mkdir -p $RPM_BUILD_ROOT/usr/sbin
 cp -R MailRoot $RPM_BUILD_ROOT/var/MailRoot.sample
 
 install -m 755 XMail $RPM_BUILD_ROOT/var/MailRoot/bin/XMail
 install -m 755 XMCrypt $RPM_BUILD_ROOT/var/MailRoot/bin/XMCrypt
 install -m 755 CtrlClnt $RPM_BUILD_ROOT/var/MailRoot/bin/CtrlClnt
 install -m 755 MkUsers $RPM_BUILD_ROOT/var/MailRoot/bin/MkUsers
-install -m 755 sendmail $RPM_BUILD_ROOT/var/MailRoot/bin/sendmail
-install -m 755 sendmail.sh $RPM_BUILD_ROOT/var/MailRoot/bin/sendmail.sh
+install -m 4755 sendmail $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail
+install -m 755 sendmail.sh $RPM_BUILD_ROOT/usr/sbin/sendmail.xmail.sh
 
 install -m 644 Readme.txt $RPM_BUILD_ROOT/var/MailRoot/bin/Readme.txt
 
@@ -81,6 +82,12 @@ then
     cp -R /var/MailRoot.sample/* /var/MailRoot
 fi
 
+if [ ! -f /usr/sbin/sendmail.orig ]
+then
+    mv /usr/sbin/sendmail /usr/sbin/sendmail.orig
+    ln -s /usr/sbin/sendmail.xmail.sh /usr/sbin/sendmail
+fi
+
 /etc/rc.d/init.d/xmail start
 
 
@@ -90,17 +97,19 @@ then
     /etc/rc.d/init.d/xmail stop
 fi
 
-
 %postun
-
+if [ -f /usr/sbin/sendmail.orig ]
+then
+    mv /usr/sbin/sendmail.orig /usr/sbin/sendmail
+fi
 
 %files
 /var/MailRoot/bin/XMail
 /var/MailRoot/bin/XMCrypt
 /var/MailRoot/bin/CtrlClnt
 /var/MailRoot/bin/MkUsers
-/var/MailRoot/bin/sendmail
-/var/MailRoot/bin/sendmail.sh
+/usr/sbin/sendmail.xmail
+/usr/sbin/sendmail.xmail.sh
 
 /var/MailRoot/bin/Readme.txt
 
@@ -117,6 +126,20 @@ fi
 
 
 %changelog
+
+* Sat Jun 15 2002 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a bug in HOSTNAME:PORT handing code inside the PSYNC server.
+    Fixed a bug introduced in 1.8 in the Windows version that made XMail to have bad behaviour when
+    used with external programs.
+    Fixed a bug that resulted in XMail generating frozen messages even if the SERVER.TAB variable was
+    set to not create them.
+    Fixed a bug that made it possible to send a "MAIL FROM:<@localdomain:remoteaddress>" and to have
+    the message relayed if the IP of the current machine was inside the smtprelay.tab of the machine
+    handling the MX of @localdomain.
+    Implemented internal mail loop checking ( internal redirects ).
+    Added a new MLUSERS.TAB permissions flags 'A', that is similar to 'W' by instead of checking
+    the "MAIL FROM:<...>" address check the SMTP authentication address ( this will prevent malicious
+    users to forge the address to gain write permissions on the list ).
 
 * Sun May 19 2002 Davide Libenzi <davidel@xmailserver.org>
     Changed XMail's behaviour upon receival on long ( RFC compared ) data lines on SMTP and POP3 fetch

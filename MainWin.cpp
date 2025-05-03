@@ -147,9 +147,15 @@ static int      MnSetupStdHandles(void)
         return (-1);
     }
 
-    SetStdHandle(STD_INPUT_HANDLE, hInFile);
-    SetStdHandle(STD_OUTPUT_HANDLE, hOutFile);
-    SetStdHandle(STD_ERROR_HANDLE, hErrFile);
+    if (!SetStdHandle(STD_INPUT_HANDLE, hInFile) || !SetStdHandle(STD_OUTPUT_HANDLE, hOutFile) ||
+            !SetStdHandle(STD_ERROR_HANDLE, hErrFile))
+    {
+        AddToMessageLog(_T("SetStdHandle"));
+        CloseHandle(hErrFile);
+        CloseHandle(hOutFile);
+        CloseHandle(hInFile);
+        return (-1);
+    }
 
     return (0);
 

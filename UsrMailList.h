@@ -27,7 +27,7 @@
 
 
 
-#define INVALID_USRML_HANDLE            ((USRML_HANDLE) 0)
+#define INVALID_USRML_HANDLE        ((USRML_HANDLE) 0)
 
 #define DEFAULT_MLUSER_PERMS        "RW"
 
@@ -51,7 +51,8 @@ typedef struct USRML_HANDLE_struct
 
 MLUserInfo     *UsrMLAllocDefault(char const * pszAddress, char const * pszPerms);
 int             UsrMLFreeUser(MLUserInfo * pMLUI);
-int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser);
+int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser,
+                                   char const * pszLogonUser);
 int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI);
 int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser);
 int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName);

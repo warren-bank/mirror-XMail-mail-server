@@ -242,6 +242,8 @@
 #define ERR_LISTDIR_NOT_FOUND       (-226)
 #define ERR_DUPLICATE_HANDLE        (-227)
 #define ERR_EMPTY_LOG               (-228)
+#define ERR_BAD_RELATIVE_PATH       (-229)
+
 
 
 

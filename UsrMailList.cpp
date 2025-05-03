@@ -154,7 +154,8 @@ int             UsrMLFreeUser(MLUserInfo * pMLUI)
 
 
 
-int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser)
+int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser,
+                                   char const * pszLogonUser)
 {
 
     char           *pszClosed = UsrGetUserInfoVar(pUI, "ClosedML");
@@ -179,8 +180,10 @@ int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser)
 
             for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
             {
-                if ((stricmp(pszUser, pMLUI->pszAddress) == 0) &&
-                        (strchr(pMLUI->pszPerms, 'W') != NULL))
+                if (((stricmp(pszUser, pMLUI->pszAddress) == 0) &&
+                     (strchr(pMLUI->pszPerms, 'W') != NULL)) ||
+                    ((pszLogonUser != NULL) && (stricmp(pszLogonUser, pMLUI->pszAddress) == 0) &&
+                     (strchr(pMLUI->pszPerms, 'A') != NULL)))
                 {
                     UsrMLFreeUser(pMLUI);
                     UsrMLCloseDB(hUsersDB);
@@ -249,7 +252,7 @@ int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -277,7 +280,7 @@ int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= mlusrAddress) &&
-                (stricmp(ppszStrings[mlusrAddress], pMLUI->pszAddress) == 0))
+            (stricmp(ppszStrings[mlusrAddress], pMLUI->pszAddress) == 0))
         {
             StrFreeStrings(ppszStrings);
             fclose(pMLUFile);
@@ -333,7 +336,7 @@ int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMLTablePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -372,7 +375,7 @@ int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= mlusrAddress) &&
-                (stricmp(ppszStrings[mlusrAddress], pszMLUser) == 0))
+            (stricmp(ppszStrings[mlusrAddress], pszMLUser) == 0))
         {
 
             ++iMLUserFound;
@@ -434,7 +437,7 @@ int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileNam
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szMLTablePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

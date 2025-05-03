@@ -1547,6 +1547,7 @@ static int      SysThreadSetup(ThrData * pTD)
     sigaddset(&SigMask, SIGALRM);
     sigaddset(&SigMask, SIGINT);
     sigaddset(&SigMask, SIGHUP);
+    sigaddset(&SigMask, SIGSTOP);
 
     pthread_sigmask(SIG_BLOCK, &SigMask, NULL);
 
@@ -2682,17 +2683,18 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
 #if defined(XMAIL_SPARC)
 
-    __asm__ __volatile__("ldstub %1,%0":
-            "=r"(uValue), "=m"(*pSpinLock):
-            "m"(*pSpinLock));
+    __asm__ __volatile__(
+        "ldstub %1,%0;\n":
+        "=r"(uValue), "=m"(*pSpinLock):
+        "m"(*pSpinLock));
 
 #elif defined(XMAIL_X86)
 
     __asm__  __volatile__(
-            "xchgl %0, %1":
-            "=r"(uValue), "=m"(*pSpinLock):
-            "0"(1), "m"(*pSpinLock):
-            "memory");
+        "xchgl %0, %1;\n":
+        "=r"(uValue), "=m"(*pSpinLock):
+        "0"(1), "m"(*pSpinLock):
+        "memory");
 
 #else
 
@@ -2870,7 +2872,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 
 
     unsigned int    uResult,
-                    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+        uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
 
 #if !defined(USE_ASM_STK_DISP)
 
@@ -2883,34 +2885,34 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 #if defined(XMAIL_SPARC)
 
     __asm__ __volatile__(
-            "sub %%sp, %0, %%sp\n":
-            :
-            "r"(uStkDisp));
+        "sub %%sp, %0, %%sp\n":
+        :
+        "r"(uStkDisp));
 
 
     uResult = pProc(pData);
 
 
     __asm__ __volatile__(
-            "add %%sp, %0, %%sp\n":
-            :
-            "r"(uStkDisp));
+        "add %%sp, %0, %%sp\n":
+        :
+        "r"(uStkDisp));
 
 #elif defined(XMAIL_X86)
 
     __asm__ __volatile__(
-            "sub %0, %%esp\n":
-            :
-            "r"(uStkDisp));
+        "sub %0, %%esp\n":
+        :
+        "r"(uStkDisp));
 
 
     uResult = pProc(pData);
 
 
     __asm__ __volatile__(
-            "add %0, %%esp\n":
-            :
-            "r"(uStkDisp));
+        "add %0, %%esp\n":
+        :
+        "r"(uStkDisp));
 
 #else
 
