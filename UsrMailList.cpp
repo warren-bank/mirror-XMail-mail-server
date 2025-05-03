@@ -306,24 +306,10 @@ int UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 		ErrSetErrorCode(ERR_MLUSER_NOT_FOUND);
 		return ERR_MLUSER_NOT_FOUND;
 	}
-
-	char szTmpMLFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpMLFilePath, "%s.tmp", szMLTablePath);
-
-	if (MscMoveFile(szMLTablePath, szTmpMLFilePath) < 0) {
-		RLckUnlockEX(hResLock);
-		return ErrGetErrorCode();
-	}
-
 	if (MscMoveFile(szTmpFile, szMLTablePath) < 0) {
-		MscMoveFile(szTmpMLFilePath, szMLTablePath);
 		RLckUnlockEX(hResLock);
 		return ErrGetErrorCode();
 	}
-
-	SysRemove(szTmpMLFilePath);
-
 	RLckUnlockEX(hResLock);
 
 	return 0;

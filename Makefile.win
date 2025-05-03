@@ -99,6 +99,7 @@ XMAIL_OBJS= \
 	"$(OUTDIR)\StrUtils.obj" \
 	"$(OUTDIR)\SvrUtils.obj" \
 	"$(OUTDIR)\SysDepWin.obj" \
+	"$(OUTDIR)\SysDepCommon.obj" \
 	"$(OUTDIR)\TabIndex.obj" \
 	"$(OUTDIR)\UsrAuth.obj" \
 	"$(OUTDIR)\UsrMailList.obj" \
@@ -126,6 +127,7 @@ CTRLCLNT_OBJS= \
 	"$(OUTDIR)\StrUtils.obj" \
 	"$(OUTDIR)\MiscUtils.obj" \
 	"$(OUTDIR)\SysDepWin.obj" \
+	"$(OUTDIR)\SysDepCommon.obj" \
 	"$(OUTDIR)\SSLBind.obj" \
 
 SENDMAIL_TARGET=SendMail

@@ -276,7 +276,6 @@ int MDomRemoveDomain(char const *pszDomain)
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
 		if ((iFieldsCount >= domMax) && (stricmp(pszDomain, ppszStrings[domDomain]) == 0)) {
-
 			++iDomainsFound;
 		} else
 			fprintf(pTmpFile, "%s\n", szDomainsLine);
@@ -292,22 +291,11 @@ int MDomRemoveDomain(char const *pszDomain)
 		ErrSetErrorCode(ERR_DOMAIN_NOT_HANDLED);
 		return ERR_DOMAIN_NOT_HANDLED;
 	}
-
-	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpAliasFilePath, "%s.tmp", szDomainsFilePath);
-	if (MscMoveFile(szDomainsFilePath, szTmpAliasFilePath) < 0) {
-		ErrorPush();
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szDomainsFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpAliasFilePath, szDomainsFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpAliasFilePath);
 
 	/* Rebuild indexes */
 	if (MDomRebuildDomainsIndexes(szDomainsFilePath) < 0) {
@@ -319,19 +307,11 @@ int MDomRemoveDomain(char const *pszDomain)
 	RLckUnlockEX(hResLock);
 
 	/* Domain cleanup */
-	if (UsrRemoveDomainUsers(pszDomain) < 0)
-		return ErrGetErrorCode();
-
-	if (UsrRemoveDomainAliases(pszDomain) < 0)
-		return ErrGetErrorCode();
-
-	if (ExAlRemoveDomainAliases(pszDomain) < 0)
-		return ErrGetErrorCode();
-
-	if (GwLkRemoveDomainLinks(pszDomain) < 0)
-		return ErrGetErrorCode();
-
-	if (ADomRemoveLinkedDomains(pszDomain) < 0)
+	if (UsrRemoveDomainUsers(pszDomain) < 0 ||
+	    UsrRemoveDomainAliases(pszDomain) < 0 ||
+	    ExAlRemoveDomainAliases(pszDomain) < 0 ||
+	    GwLkRemoveDomainLinks(pszDomain) < 0 ||
+	    ADomRemoveLinkedDomains(pszDomain) < 0)
 		return ErrGetErrorCode();
 
 	/* Try ( if defined ) to drop external auth domain */

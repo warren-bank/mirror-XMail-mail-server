@@ -30,15 +30,18 @@
 #define LOG_LEV_WARNING             2
 #define LOG_LEV_ERROR               3
 
-#define SYS_PRIORITY_LOWER          -1
+#define SYS_PRIORITY_LOWER          (-1)
 #define SYS_PRIORITY_NORMAL         0
-#define SYS_PRIORITY_HIGHER         +1
+#define SYS_PRIORITY_HIGHER         1
 
 #define SYS_THREAD_ATTACH           1
 #define SYS_THREAD_DETACH           2
 
 #define SYS_MMAP_READ               (1 << 0)
 #define SYS_MMAP_WRITE              (1 << 1)
+
+#define SYS_INET46                  (-1)
+#define SYS_INET64                  (-2)
 
 #define SYS_IS_VALID_FILENAME(f)    ((strcmp(f, ".") != 0) && (strcmp(f, "..") != 0))
 
@@ -57,6 +60,11 @@ struct SYS_FILE_INFO {
 	time_t tMod;
 };
 
+struct SYS_INET_ADDR {
+	int iSize;
+	unsigned char Addr[128 - sizeof(int)];
+};
+
 
 int SysInitLibrary(void);
 void SysCleanupLibrary(void);
@@ -66,36 +74,41 @@ int SysShutdownLibrary(int iMode = SYS_SHUTDOWN_SOFT);
 int SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize);
 SYS_SOCKET SysCreateSocket(int iAddressFamily, int iType, int iProtocol);
 void SysCloseSocket(SYS_SOCKET SockFD);
+int SysShutdownSocket(SYS_SOCKET SockFD, int iHow);
 int SysBlockSocket(SYS_SOCKET SockFD, int iBlocking);
-int SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr *SockName, int iNameLen);
+int SysBindSocket(SYS_SOCKET SockFD, const SYS_INET_ADDR *SockName);
 void SysListenSocket(SYS_SOCKET SockFD, int iConnections);
 int SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout);
 int SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout);
-int SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
-		    char *pszBuffer, int iBufferSize, int iTimeout);
+int SysRecvDataFrom(SYS_SOCKET SockFD, SYS_INET_ADDR *pFrom, char *pszBuffer,
+		    int iBufferSize, int iTimeout);
 int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout);
 int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout);
-int SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
-		  int iToLen, char const *pszBuffer, int iBufferSize, int iTimeout);
-int SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR *pSockName, int iNameLen, int iTimeout);
-SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNameLen, int iTimeout);
+int SysSendDataTo(SYS_SOCKET SockFD, const SYS_INET_ADDR *pTo,
+		  char const *pszBuffer, int iBufferSize, int iTimeout);
+int SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR *pSockName, int iTimeout);
+SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int iTimeout);
 int SysSelect(int iMaxFD, SYS_fd_set *pReadFDs, SYS_fd_set *pWriteFDs, SYS_fd_set *pExcptFDs,
 	      int iTimeout);
 int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, SYS_OFF_T llBaseOffset,
 		SYS_OFF_T llEndOffset, int iTimeout);
-int SysSetupAddress(SYS_INET_ADDR &AddrInfo, int iFamily,
-		    NET_ADDRESS const &NetAddr, int iPortNo);
-int SysGetAddrAddress(SYS_INET_ADDR const &AddrInfo, NET_ADDRESS &NetAddr);
+int SysInetAnySetup(SYS_INET_ADDR &AddrInfo, int iFamily, int iPortNo);
+int SysGetAddrFamily(SYS_INET_ADDR const &AddrInfo);
 int SysGetAddrPort(SYS_INET_ADDR const &AddrInfo);
-int SysSetAddrAddress(SYS_INET_ADDR &AddrInfo, NET_ADDRESS const &NetAddr);
 int SysSetAddrPort(SYS_INET_ADDR &AddrInfo, int iPortNo);
-int SysGetHostByName(char const *pszName, NET_ADDRESS &NetAddr);
+int SysGetHostByName(char const *pszName, int iFamily, SYS_INET_ADDR &AddrInfo);
 int SysGetHostByAddr(SYS_INET_ADDR const &AddrInfo, char *pszFQDN, int iSize);
 int SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR &AddrInfo);
 int SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR &AddrInfo);
-char *SysInetNToA(SYS_INET_ADDR const &AddrInfo, char *pszIP);
-int SysInetAddr(char const *pszDotName, NET_ADDRESS &NetAddr);
-int SysSameAddress(NET_ADDRESS const &NetAddr1, NET_ADDRESS const &NetAddr2);
+char *SysInetNToA(SYS_INET_ADDR const &AddrInfo, char *pszIP, int iSize);
+char *SysInetRevNToA(SYS_INET_ADDR const &AddrInfo, char *pszRevIP, int iSize);
+void const *SysInetAddrData(SYS_INET_ADDR const &AddrInfo, int *piSize);
+int SysSameAddress(SYS_INET_ADDR const &NetAddr1, SYS_INET_ADDR const &NetAddr2);
+int SysInetIPV6CompatIPV4(SYS_INET_ADDR const &Addr);
+int SysInetIPV6ToIPV4(SYS_INET_ADDR const &SAddr, SYS_INET_ADDR &DAddr);
+int SysInetAddrMatch(SYS_INET_ADDR const &Addr, SYS_UINT8 const *pMask, int iMaskSize,
+		     SYS_INET_ADDR const &TestAddr);
+int SysInetAddrMatch(SYS_INET_ADDR const &Addr, SYS_INET_ADDR const &TestAddr);
 
 SYS_SEMAPHORE SysCreateSemaphore(int iInitCount, int iMaxCount);
 int SysCloseSemaphore(SYS_SEMAPHORE hSemaphore);

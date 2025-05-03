@@ -36,6 +36,8 @@ extern QUEUE_HANDLE hSpoolQueue;
 extern SYS_SEMAPHORE hSyncSem;
 extern int iLogRotateHours;
 extern int iQueueSplitLevel;
+extern int iAddrFamily;
+extern int iPOP3ClientTimeout;
 extern int iMailboxType;
 
 int SvrMain(int iArgCount, char *pszArgs[]);

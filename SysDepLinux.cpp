@@ -126,19 +126,18 @@ int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 	iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
 	switch (iPriority) {
-	case (SYS_PRIORITY_NORMAL):
+	case SYS_PRIORITY_NORMAL:
 		SchParam.sched_priority = iStdPriority;
 		break;
 
-	case (SYS_PRIORITY_LOWER):
+	case SYS_PRIORITY_LOWER:
 		SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
 		break;
 
-	case (SYS_PRIORITY_HIGHER):
+	case SYS_PRIORITY_HIGHER:
 		SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
 		break;
 	}
-
 	if (pthread_setschedparam(pTD->ThreadId, iPolicy, &SchParam) != 0) {
 		ErrSetErrorCode(ERR_SET_THREAD_PRIORITY);
 		return ERR_SET_THREAD_PRIORITY;
@@ -160,7 +159,6 @@ int SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)
 		ErrSetErrorCode(ERR_GET_DISK_SPACE_INFO);
 		return ERR_GET_DISK_SPACE_INFO;
 	}
-
 	*pTotal = (SYS_INT64) SFStat.f_bsize * (SYS_INT64) SFStat.f_blocks;
 	*pFree = (SYS_INT64) SFStat.f_bsize * (SYS_INT64) SFStat.f_bavail;
 
@@ -176,7 +174,6 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
 		return ERR_GET_MEMORY_INFO;
 	}
-
 	*pRamTotal = (SYS_INT64) SI.totalram;
 	*pRamFree = (SYS_INT64) SI.freeram;
 	*pVirtTotal = (SYS_INT64) SI.totalswap + (SYS_INT64) SI.totalram;

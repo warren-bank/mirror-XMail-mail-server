@@ -28,7 +28,6 @@
 #define INVALID_FSCAN_HANDLE   ((FSCAN_HANDLE) 0)
 
 #define HASH_INIT_VALUE        5381
-#define MAX_ACCEPT_ADDRESSES   32
 
 #define THCF_USE_SSL           (1 << 0)
 #define THCF_SHUTDOWN          (1 << 1)
@@ -36,14 +35,9 @@
 typedef struct FSCAN_HANDLE_struct {
 } *FSCAN_HANDLE;
 
-union AddrUnion {
-	NET_ADDRESS a;
-	SYS_UINT8 b[sizeof(NET_ADDRESS)];
-};
-
 struct AddressFilter {
-	AddrUnion Addr;
-	AddrUnion Mask;
+	SYS_INET_ADDR Addr;
+	SYS_UINT8 Mask[sizeof(SYS_INET_ADDR)];
 };
 
 struct ThreadConfig {
@@ -64,7 +58,6 @@ struct ThreadCreateCtx {
 };
 
 
-void *MscMemDup(void const *pData, long lSize, long lExtra);
 int MscDatumAlloc(Datum *pDm, void const *pData, long lSize);
 LstDatum *MscLstDatumAlloc(void const *pData, long lSize);
 int MscLstDatumAddT(SysListHead *pHead, void const *pData, long lSize);
@@ -110,13 +103,14 @@ int MscGetFileName(char const *pszFilePath, char *pszFileName);
 int MscCreateClientSocket(char const *pszServer, int iPortNo, int iSockType,
 			  SYS_SOCKET *pSockFD, SYS_INET_ADDR *pSvrAddr,
 			  SYS_INET_ADDR *pSockAddr, int iTimeout);
-int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iPortNo,
-			   int iListenSize, SYS_SOCKET *pSockFDs, int &iNumSockFDs);
+int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iFamily,
+			   int iPortNo, int iListenSize, SYS_SOCKET *pSockFDs,
+			   int &iNumSockFDs);
 int MscGetMaxSockFD(SYS_SOCKET const *pSockFDs, int iNumSockFDs);
 int MscAcceptServerConnection(SYS_SOCKET const *pSockFDs, int iNumSockFDs,
 			      SYS_SOCKET *pConnSockFD, int &iNumConnSockFD, int iTimeout);
 int MscLoadAddressFilter(char const *const *ppszFilter, int iNumTokens, AddressFilter &AF);
-bool MscAddressMatch(AddressFilter const &AF, NET_ADDRESS const &TestAddr);
+int MscAddressMatch(AddressFilter const &AF, SYS_INET_ADDR const &TestAddr);
 int MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR &PeerInfo, bool bDefault);
 char **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR *pPeerInfo);
 int MscHostSubMatch(char const *pszHostName, char const *pszHostMatch);

@@ -33,14 +33,21 @@
 #include "AppDefines.h"
 #include "MailSvr.h"
 
-#define RUNNING_PIDS_DIR            "/var/run"
-#define DEVNULL                     "/dev/null"
+#define RUNNING_PIDS_DIR      "/var/run"
+#define DEVNULL               "/dev/null"
 #if !defined(NOFILE)
-#define NOFILE                      64
-#endif				// #if !defined(NOFILE)
+#define NOFILE                64
+#endif /* !NOFILE */
 
-#define XMAIL_DEBUG_OPTION          "-Md"
-#define XMAIL_PIDDIR_ENV            "XMAIL_PID_DIR"
+#define XMAIL_DEBUG_OPTION    "-Md"
+#define XMAIL_PIDDIR_ENV      "XMAIL_PID_DIR"
+
+#if defined(__GLIBC__) && defined (__FreeBSD_kernel__)
+#define BSD_SETPGRP()         setpgrp()
+#else
+#define BSD_SETPGRP()         setpgrp(0, getpid())
+#endif
+
 
 static int MnEventLog(char const *pszFormat, ...);
 static char const *MnGetPIDDir(void);
@@ -54,20 +61,16 @@ static int MnDaemonStartup(int iArgCount, char *pszArgs[]);
 
 static int MnEventLog(char const *pszFormat, ...)
 {
-	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
-
 	va_list Args;
-
-	va_start(Args, pszFormat);
-
 	char szBuffer[2048] = "";
 
+	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
+	va_start(Args, pszFormat);
 	vsnprintf(szBuffer, sizeof(szBuffer) - 1, pszFormat, Args);
 
 	syslog(LOG_ERR, "%s", szBuffer);
 
 	va_end(Args);
-
 	closelog();
 
 	return 0;
@@ -92,9 +95,7 @@ static int MnSavePID(char const *pszPidFile)
 		perror(szPidFile);
 		return -errno;
 	}
-
 	fprintf(pFile, "%u", (unsigned int) getpid());
-
 	fclose(pFile);
 
 	return 0;
@@ -122,9 +123,7 @@ static void MnSIGCLD(int iSignal)
 	while ((iDeadPID = wait3(&iExitStatus, WNOHANG, (struct rusage *) NULL)) > 0) {
 
 	}
-
 	signal(iSignal, MnSIGCLD);
-
 }
 
 static void MnSetupStdHandles(void)
@@ -168,12 +167,14 @@ static int MnDaemonBootStrap(void)
 		MnEventLog("Cannot fork : %s", strerror(errno));
 
 		exit(errno);
-	} else if (iChildPID > 0)
-			exit(0);
-
-	/* Disassociate from controlling terminal and process group. Ensure the process */
-	/* can't reacquire a new controlling terminal. */
-	if (setpgrp(0, getpid()) == -1) {
+	} else if (iChildPID > 0) {
+		exit(0);
+	}
+	/*
+	 * Disassociate from controlling terminal and process group.
+	 * Ensure the process can't reacquire a new controlling terminal.
+	 */
+	if (BSD_SETPGRP() == -1) {
 		MnEventLog("Can't change process group : %s", strerror(errno));
 
 		exit(errno);
@@ -210,8 +211,8 @@ static int MnDaemonBootStrap(void)
 
 static int MnIsDebugStartup(int iArgCount, char *pszArgs[])
 {
-	for (int ii = 0; ii < iArgCount; ii++)
-		if (strcmp(pszArgs[ii], XMAIL_DEBUG_OPTION) == 0)
+	for (int i = 0; i < iArgCount; i++)
+		if (strcmp(pszArgs[i], XMAIL_DEBUG_OPTION) == 0)
 			return 1;
 
 	return 0;
@@ -243,3 +244,4 @@ int main(int iArgCount, char *pszArgs[])
 {
 	return MnDaemonStartup(iArgCount, pszArgs);
 }
+

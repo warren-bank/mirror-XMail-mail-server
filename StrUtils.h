@@ -29,6 +29,7 @@ struct DynString {
 	int iBufferSize;
 };
 
+void *StrMemDup(void const *pData, long lSize, long lExtra);
 int StrCmdLineToken(char const *&pszCmdLine, char *pszToken);
 char **StrGetArgs(char const *pszCmdLine, int &iArgsCount);
 char *StrLower(char *pszString);
@@ -57,6 +58,8 @@ char *StrLTrim(char *pszString, char const *pszTrimChars);
 char *StrRTrim(char *pszString, char const *pszTrimChars);
 char *StrTrim(char *pszString, char const *pszTrimChars);
 char *StrIStr(char const *pszBuffer, char const *pszMatch);
+char *StrLimStr(char const *pszBuffer, char const *pszMatch, char const *pszLimits);
+char *StrLimIStr(char const *pszBuffer, char const *pszMatch, char const *pszLimits);
 int StrDynInit(DynString *pDS, char const *pszInit = NULL);
 int StrDynFree(DynString *pDS);
 int StrDynTruncate(DynString *pDS);

@@ -53,6 +53,7 @@ struct CClnChannelCfg {
 /* Needed by library functions ( START ) */
 bool bServerDebug = false;
 int iLogRotateHours = 24;
+int iAddrFamily = AF_INET;
 static char const * const pszCClnErrors[] = {
 	"Wrong command line usage",
 		"Either none or both private key and certificate file must be supplied"
@@ -219,12 +220,12 @@ BSOCK_HANDLE CClnConnectServer(char const *pszServer, int iPortNo,
 		return INVALID_BSOCK_HANDLE;
 
 	/* Try connect to server */
-	SYS_SOCKET SockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
+	SYS_SOCKET SockFD = SysCreateSocket(SysGetAddrFamily(SvrAddr), SOCK_STREAM, 0);
 
 	if (SockFD == SYS_INVALID_SOCKET)
 		return INVALID_BSOCK_HANDLE;
 
-	if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), iTimeout) < 0) {
+	if (SysConnect(SockFD, &SvrAddr, iTimeout) < 0) {
 		SysCloseSocket(SockFD);
 		return INVALID_BSOCK_HANDLE;
 	}

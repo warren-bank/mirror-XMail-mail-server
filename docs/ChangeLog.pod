@@ -1,13 +1,116 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.24
+XMail Change Log as of Version 1.25
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
 
+=head2 Jan 3, 2008 v 1.25
+
+=over 4
+
+=item *
+
+Added the ability to select SmtpConfig-IP options by local port too (SmtpConfig-IP,PORT).
+
+=item *
+
+Added a new -YT command line option to set the timeout used by a POP3 client connection.
+
+=item *
+
+Fixed a bug in the RFC822 ATEXT token definition.
+
+=item *
+
+If the recipient domain does not have an MX record, and does not have an A record,
+now XMail bounces immediately.
+
+=item *
+
+Fixed OpenSSL connection shutdown to avoid RST packet generation.
+
+=item *
+
+Changed SMTP AUTH LOGIN authentication to support the optional inline parameter.
+
+=item *
+
+Added IPV6 support. New command line options are available to select XMail's
+behaviour with respect to IPV4/IPV6 compatibility.
+
+=item *
+
+Fixed/strengthened RFC address parsing.
+
+=item *
+
+Drop the SMTP connection is case of timeout.
+
+=item *
+
+Fixed a bug caused by the new strict host/doman name check added in 1.24 (in the
+SMTPGW.TAB parsing).
+
+=item *
+
+Completely changed the DNS resolution code.
+
+=item *
+
+Do not try the A-record delivery in case of temporary DNS/network errors.
+
+=item *
+
+Added remote MTA message ID to SMAIL logging.
+
+=item *
+
+Added a new "POP3S" option to the POP3LINKS.TAB file, to allow connections
+to full POP3S remote servers.
+
+=item *
+
+Fixed a bug in the SMTP Outbind feature.
+
+=item *
+
+Changed POP3 log format to add information about the success or failure of the operation,
+and to report the number of messages and the total size of the mailbox (in
+case of successful login).
+
+=item *
+
+Added a new "Pop3LogPasswd" SERVER.TAB variable to control if POP3 passwords
+are logged into the POP3 log file.
+
+=item *
+
+Added a new "SmtpNoTLSAuths" SERVER.TAB variable. It allows to specify
+which SMTP authentications are allowed in non-TLS mode.
+
+=item *
+
+Fixed a small memory leak affecting users using the "OutBind" feature.
+
+=item *
+
+Removed the "SMTP-TLS" SERVER.TAB variable and replaced with "SmtpGwConfig"
+that supports the format described in "SMTP GATEWAY CONFIGURATION". The
+"SmtpGwConfig" allows the user to specify global options for remote SMTP
+connections.
+
+=item *
+
+Added $(RRCPT) macro to SMTP filters.
+
+=back
+
 =head2 Jan 1, 2007 v 1.24
+
+=over 4
 
 =item *
 

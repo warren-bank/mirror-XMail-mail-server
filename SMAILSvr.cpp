@@ -41,6 +41,7 @@
 #include "ExtAliases.h"
 #include "UsrMailList.h"
 #include "Filter.h"
+#include "DNS.h"
 #include "MailConfig.h"
 #include "SMAILSvr.h"
 #include "AppDefines.h"
@@ -70,7 +71,7 @@ static int SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 static int SMAILMailingListExplode(UserInfo *pUI, SPLF_HANDLE hFSpool);
 static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 				  SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-				  char const *pszDestDomain, SMTPError *pSMTPE = NULL);
+				  char const *pszDestDomain, SMTPError *pSMTPE);
 static int SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 					SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
 					QMSG_HANDLE hMessage, char const *pszDestDomain,
@@ -558,6 +559,7 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 	if (FilFilterMessage(hFSpool, hQueue, hMessage, FILTER_MODE_OUTBOUND) < 0)
 		return ErrGetErrorCode();
 
+	int iError;
 	char const *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
 	char const *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
 	char const *pszSpoolFile = USmlGetSpoolFile(hFSpool);
@@ -587,8 +589,7 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 			      "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 			      pszRelayDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-		if (pSMTPE != NULL)
-			USmtpCleanupError(pSMTPE);
+		USmtpCleanupError(pSMTPE);
 
 		if (USmtpMailRmtDeliver(hSvrConfig, pszRelayDomain, pszHeloDomain, pszSendMailFrom,
 					pszSendRcptTo, &FSect, pSMTPE) < 0) {
@@ -599,14 +600,16 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 			USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 			ErrLogMessage(LOG_LEV_MESSAGE,
-				      "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+				      "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" "
+				      "From = \"%s\" To = \"%s\" Failed !\n"
 				      "%s = \"%s\"\n"
 				      "%s = \"%s\"\n", pszRelayDomain, pszSMTPDomain, pszMailFrom,
 				      pszRcptTo, SMTP_ERROR_VARNAME, szSmtpError,
 				      SMTP_SERVER_VARNAME, USmtpGetErrorServer(pSMTPE));
 
 			QueUtErrLogMessage(hQueue, hMessage,
-					   "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					   "SMAIL SMTP-Send CMX = \"%s\" SMTP = \"%s\" "
+					   "From = \"%s\" To = \"%s\" Failed !\n"
 					   "%s = \"%s\"\n"
 					   "%s = \"%s\"\n", pszRelayDomain, pszSMTPDomain,
 					   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
@@ -615,8 +618,13 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 
 			return ErrorPop();
 		}
-		if (SMAILLogEnabled(hShbSMAIL))
-			USmlLogMessage(hFSpool, "SMTP", pszRelayDomain);
+		if (SMAILLogEnabled(hShbSMAIL)) {
+			char szRmtMsgID[256] = "";
+
+			USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE), szRmtMsgID,
+					     sizeof(szRmtMsgID));
+			USmlLogMessage(hFSpool, "SMTP", szRmtMsgID, pszRelayDomain);
+		}
 
 		return 0;
 	}
@@ -624,24 +632,28 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 	SMTPGateway **ppszFwdGws = USmtpGetFwdGateways(hSvrConfig, pszDestDomain);
 
 	if (ppszFwdGws != NULL) {
-		/* By initializing this to zero makes XMail to discharge all mail for domains */
-		/* that have an empty forwarders list */
-		int iSendErrorCode = 0;
-
+		/*
+		 * By initializing this to zero makes XMail to discharge all mail
+		 * for domains that have an empty forwarders list
+		 */
+		iError = 0;
 		for (int i = 0; ppszFwdGws[i] != NULL; i++) {
 			SysLogMessage(LOG_LEV_MESSAGE,
 				      "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 				      ppszFwdGws[i]->pszHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-			if (pSMTPE != NULL)
-				USmtpCleanupError(pSMTPE);
+			USmtpCleanupError(pSMTPE);
 
-			if ((iSendErrorCode = USmtpSendMail(ppszFwdGws[i], pszHeloDomain, pszSendMailFrom,
-							    pszSendRcptTo, &FSect, pSMTPE)) == 0) {
+			if ((iError = USmtpSendMail(ppszFwdGws[i], pszHeloDomain, pszSendMailFrom,
+						    pszSendRcptTo, &FSect, pSMTPE)) == 0) {
 				/* Log Mailer operation */
-				if (SMAILLogEnabled(hShbSMAIL))
-					USmlLogMessage(hFSpool, "FWD", ppszFwdGws[i]->pszHost);
+				if (SMAILLogEnabled(hShbSMAIL)) {
+					char szRmtMsgID[256] = "";
 
+					USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE), szRmtMsgID,
+							     sizeof(szRmtMsgID));
+					USmlLogMessage(hFSpool, "FWD", szRmtMsgID, ppszFwdGws[i]->pszHost);
+				}
 				break;
 			}
 
@@ -650,26 +662,28 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 			USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 			ErrLogMessage(LOG_LEV_MESSAGE,
-				      "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+				      "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" "
+				      "From = \"%s\" To = \"%s\" Failed !\n"
 				      "%s = \"%s\"\n"
 				      "%s = \"%s\"\n", ppszFwdGws[i]->pszHost, pszSMTPDomain, pszMailFrom,
 				      pszRcptTo, SMTP_ERROR_VARNAME, szSmtpError,
 				      SMTP_SERVER_VARNAME, USmtpGetErrorServer(pSMTPE));
 
 			QueUtErrLogMessage(hQueue, hMessage,
-					   "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					   "SMAIL SMTP-Send FWD = \"%s\" SMTP = \"%s\" "
+					   "From = \"%s\" To = \"%s\" Failed !\n"
 					   "%s = \"%s\"\n"
 					   "%s = \"%s\"\n", ppszFwdGws[i]->pszHost, pszSMTPDomain,
 					   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
 					   szSmtpError, SMTP_SERVER_VARNAME,
 					   USmtpGetErrorServer(pSMTPE));
 
-			if (pSMTPE != NULL && USmtpIsFatalError(pSMTPE))
+			if (USmtpIsFatalError(pSMTPE))
 				break;
 		}
 		USmtpFreeGateways(ppszFwdGws);
 
-		return iSendErrorCode;
+		return iError;
 	}
 	/* Try to get custom mail exchangers or DNS mail exchangers and if both tests */
 	/* fails try direct */
@@ -686,8 +700,7 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				      "SMAIL SMTP-Send IP = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 				      szIP, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-			if (pSMTPE != NULL)
-				USmtpCleanupError(pSMTPE);
+			USmtpCleanupError(pSMTPE);
 
 			if (USmtpMailRmtDeliver(hSvrConfig, szIP, pszHeloDomain, pszSendMailFrom, pszSendRcptTo,
 						&FSect, pSMTPE) < 0) {
@@ -698,14 +711,16 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 				ErrLogMessage(LOG_LEV_MESSAGE,
-					      "SMAIL SMTP-Send IP = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					      "SMAIL SMTP-Send IP = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\" Failed !\n"
 					      "%s = \"%s\"\n"
 					      "%s = \"%s\"\n", szIP, pszSMTPDomain, pszMailFrom,
 					      pszRcptTo, SMTP_ERROR_VARNAME, szSmtpError,
 					      SMTP_SERVER_VARNAME, USmtpGetErrorServer(pSMTPE));
 
 				QueUtErrLogMessage(hQueue, hMessage,
-						   "SMAIL SMTP-Send IP = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+						   "SMAIL SMTP-Send IP = \"%s\" SMTP = \"%s\" "
+						   "From = \"%s\" To = \"%s\" Failed !\n"
 						   "%s = \"%s\"\n"
 						   "%s = \"%s\"\n", szIP, pszSMTPDomain,
 						   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
@@ -715,38 +730,48 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				return ErrorPop();
 			}
 			/* Log Mailer operation */
-			if (SMAILLogEnabled(hShbSMAIL))
-				USmlLogMessage(hFSpool, "SMTP", szIP);
+			if (SMAILLogEnabled(hShbSMAIL)) {
+				char szRmtMsgID[256] = "";
+
+				USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE), szRmtMsgID,
+						     sizeof(szRmtMsgID));
+				USmlLogMessage(hFSpool, "SMTP", szRmtMsgID, szIP);
+			}
 
 			return 0;
 		}
 
 		/* Do DNS MX lookup and send to mail exchangers */
-		char szDomainMXHost[256] = "";
+		char szDomainMXHost[MAX_HOST_NAME] = "";
 		MXS_HANDLE hMXSHandle = USmtpGetMXFirst(hSvrConfig, pszDestDomain,
 							szDomainMXHost);
 
 		if (hMXSHandle != INVALID_MXS_HANDLE) {
-			int iSendErrorCode = 0;
-
+			iError = 0;
 			do {
 				SysLogMessage(LOG_LEV_MESSAGE,
-					      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
+					      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\"\n",
 					      szDomainMXHost, pszSMTPDomain, pszMailFrom,
 					      pszRcptTo);
 
-				if (pSMTPE != NULL)
-					USmtpCleanupError(pSMTPE);
+				USmtpCleanupError(pSMTPE);
 
-				if ((iSendErrorCode = USmtpMailRmtDeliver(hSvrConfig, szDomainMXHost,
-									  pszHeloDomain,
-									  pszSendMailFrom,
-									  pszSendRcptTo, &FSect,
-									  pSMTPE)) == 0) {
+				if ((iError = USmtpMailRmtDeliver(hSvrConfig, szDomainMXHost,
+								  pszHeloDomain,
+								  pszSendMailFrom,
+								  pszSendRcptTo, &FSect,
+								  pSMTPE)) == 0) {
 					/* Log Mailer operation */
-					if (SMAILLogEnabled(hShbSMAIL))
-						USmlLogMessage(hFSpool, "SMTP", szDomainMXHost);
+					if (SMAILLogEnabled(hShbSMAIL)) {
+						char szRmtMsgID[256] = "";
 
+						USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE),
+								     szRmtMsgID,
+								     sizeof(szRmtMsgID));
+						USmlLogMessage(hFSpool, "SMTP", szRmtMsgID,
+							       szDomainMXHost);
+					}
 					break;
 				}
 
@@ -755,7 +780,8 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 				ErrLogMessage(LOG_LEV_MESSAGE,
-					      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\" Failed !\n"
 					      "%s = \"%s\"\n"
 					      "%s = \"%s\"\n", szDomainMXHost, pszSMTPDomain,
 					      pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
@@ -763,43 +789,75 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 					      USmtpGetErrorServer(pSMTPE));
 
 				QueUtErrLogMessage(hQueue, hMessage,
-						   "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+						   "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" "
+						   "From = \"%s\" To = \"%s\" Failed !\n"
 						   "%s = \"%s\"\n"
 						   "%s = \"%s\"\n", szDomainMXHost, pszSMTPDomain,
 						   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
 						   szSmtpError, SMTP_SERVER_VARNAME,
 						   USmtpGetErrorServer(pSMTPE));
 
-				if (pSMTPE != NULL && USmtpIsFatalError(pSMTPE))
+				if (USmtpIsFatalError(pSMTPE))
 					break;
 			} while (USmtpGetMXNext(hMXSHandle, szDomainMXHost) == 0);
 			USmtpMXSClose(hMXSHandle);
 
-			if (iSendErrorCode < 0)
-				return iSendErrorCode;
+			if (iError < 0)
+				return iError;
 		} else {
+			iError = ErrGetErrorCode();
+
 			/*
-			 * If the target domain does not exist at all, bounce soon
-			 * without trying the 'A' record. It's pointless engaging in
-			 * retry policies when the recipient domain does not exist.
+			 * If the target domain does not exist at all (or it has a
+			 * misconfigured DNS), bounce soon without trying the A record.
+			 * It's pointless engaging in retry policies when the recipient
+			 * domain does not exist.
 			 */
-			if (ErrGetErrorCode() == ERR_DNS_NXDOMAIN) {
+			if (DNS_FatalError(iError)) {
 				ErrorPush();
 
 				/* No account inside the handled domain */
 				char szBounceMsg[512] = "";
 
 				SysSNPrintf(szBounceMsg, sizeof(szBounceMsg) - 1,
-					    "Recipient domain \"%s\" does not exist", pszDestDomain);
+					    "Recipient domain \"%s\" does not exist "
+					    "(or it has a misconfigured DNS)", pszDestDomain);
 
 				SysLogMessage(LOG_LEV_MESSAGE,
-					      "SMAIL SMTP-Send NXD = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed!\n",
+					      "SMAIL SMTP-Send NXD/EDNS = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\" Failed!\n",
 					      pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 				QueUtErrLogMessage(hQueue, hMessage, "%s\n", szBounceMsg);
 				QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool, szBounceMsg, NULL,
 							   true);
 
 				return ErrorPop();
+			}
+
+			/*
+			 * Fall back to A record delivery only if the domain has
+			 * no MX records.
+			 */
+			if (iError != ERR_DNS_NOTFOUND) {
+				ErrLogMessage(LOG_LEV_MESSAGE,
+					      "SMAIL SMTP-Send EDNS = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\" Failed !\n"
+					      "%s = \"%s\"\n"
+					      "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain,
+					      pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
+					      ErrGetErrorString(iError), SMTP_SERVER_VARNAME,
+					      pszDestDomain);
+
+				QueUtErrLogMessage(hQueue, hMessage,
+						   "SMAIL SMTP-Send EDNS = \"%s\" SMTP = \"%s\" "
+						   "From = \"%s\" To = \"%s\" Failed !\n"
+						   "%s = \"%s\"\n"
+						   "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain,
+						   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
+						   ErrGetErrorString(iError), SMTP_SERVER_VARNAME,
+						   pszDestDomain);
+
+				return ErrorSet(iError);
 			}
 
 			/* MX records for destination domain not found, try direct ! */
@@ -811,19 +869,29 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				      "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 				      pszDestDomain, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-			if (pSMTPE != NULL)
-				USmtpCleanupError(pSMTPE);
+			USmtpCleanupError(pSMTPE);
 
-			if (USmtpMailRmtDeliver(hSvrConfig, pszDestDomain, pszHeloDomain, pszSendMailFrom,
-						pszSendRcptTo, &FSect, pSMTPE) < 0) {
+			if ((iError = USmtpMailRmtDeliver(hSvrConfig, pszDestDomain,
+							  pszHeloDomain, pszSendMailFrom,
+							  pszSendRcptTo, &FSect, pSMTPE)) < 0) {
 				ErrorPush();
+
+				/*
+				 * If the A record of the recipient host does not exist, set the
+				 * fatal SMTP error so that the caller can properly bounce the
+				 * message.
+				 */
+				if (iError == ERR_DNS_NOTFOUND || iError == ERR_BAD_SERVER_ADDR)
+					USmtpSetError(pSMTPE, SMTP_FATAL_ERROR,
+						      ErrGetErrorString(iError), pszDestDomain);
 
 				char szSmtpError[512] = "";
 
 				USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 				ErrLogMessage(LOG_LEV_MESSAGE,
-					      "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					      "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" "
+					      "From = \"%s\" To = \"%s\" Failed !\n"
 					      "%s = \"%s\"\n"
 					      "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain,
 					      pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
@@ -831,7 +899,8 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 					      USmtpGetErrorServer(pSMTPE));
 
 				QueUtErrLogMessage(hQueue, hMessage,
-						   "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+						   "SMAIL SMTP-Send FF = \"%s\" SMTP = \"%s\" "
+						   "From = \"%s\" To = \"%s\" Failed !\n"
 						   "%s = \"%s\"\n"
 						   "%s = \"%s\"\n", pszDestDomain, pszSMTPDomain,
 						   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
@@ -841,26 +910,34 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 				return ErrorPop();
 			}
 			/* Log Mailer operation */
-			if (SMAILLogEnabled(hShbSMAIL))
-				USmlLogMessage(hFSpool, "SMTP", pszDestDomain);
+			if (SMAILLogEnabled(hShbSMAIL)) {
+				char szRmtMsgID[256] = "";
+
+				USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE),
+						     szRmtMsgID, sizeof(szRmtMsgID));
+				USmlLogMessage(hFSpool, "SMTP", szRmtMsgID, pszDestDomain);
+			}
 		}
 	} else {
-		int iSendErrorCode = 0;
-
+		iError = 0;
 		for (int i = 0; ppMXGWs[i] != NULL; i++) {
 			SysLogMessage(LOG_LEV_MESSAGE,
 				      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 				      ppMXGWs[i]->pszHost, pszSMTPDomain, pszMailFrom, pszRcptTo);
 
-			if (pSMTPE != NULL)
-				USmtpCleanupError(pSMTPE);
+			USmtpCleanupError(pSMTPE);
 
-			if ((iSendErrorCode = USmtpSendMail(ppMXGWs[i], pszHeloDomain, pszSendMailFrom,
-							    pszSendRcptTo, &FSect, pSMTPE)) == 0) {
+			if ((iError = USmtpSendMail(ppMXGWs[i], pszHeloDomain, pszSendMailFrom,
+						    pszSendRcptTo, &FSect, pSMTPE)) == 0) {
 				/* Log Mailer operation */
-				if (SMAILLogEnabled(hShbSMAIL))
-					USmlLogMessage(hFSpool, "SMTP", ppMXGWs[i]->pszHost);
+				if (SMAILLogEnabled(hShbSMAIL)) {
+					char szRmtMsgID[256] = "";
 
+					USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(pSMTPE),
+							     szRmtMsgID, sizeof(szRmtMsgID));
+					USmlLogMessage(hFSpool, "SMTP", szRmtMsgID,
+						       ppMXGWs[i]->pszHost);
+				}
 				break;
 			}
 
@@ -869,27 +946,29 @@ static int SMAILRemoteMsgSMTPSend(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
 			USmtpGetSMTPError(pSMTPE, szSmtpError, sizeof(szSmtpError));
 
 			ErrLogMessage(LOG_LEV_MESSAGE,
-				      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+				      "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" "
+				      "From = \"%s\" To = \"%s\" Failed !\n"
 				      "%s = \"%s\"\n"
 				      "%s = \"%s\"\n", ppMXGWs[i]->pszHost, pszSMTPDomain, pszMailFrom,
 				      pszRcptTo, SMTP_ERROR_VARNAME, szSmtpError,
 				      SMTP_SERVER_VARNAME, USmtpGetErrorServer(pSMTPE));
 
 			QueUtErrLogMessage(hQueue, hMessage,
-					   "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n"
+					   "SMAIL SMTP-Send MX = \"%s\" SMTP = \"%s\" "
+					   "From = \"%s\" To = \"%s\" Failed !\n"
 					   "%s = \"%s\"\n"
 					   "%s = \"%s\"\n", ppMXGWs[i]->pszHost, pszSMTPDomain,
 					   pszMailFrom, pszRcptTo, SMTP_ERROR_VARNAME,
 					   szSmtpError, SMTP_SERVER_VARNAME,
 					   USmtpGetErrorServer(pSMTPE));
 
-			if (pSMTPE != NULL && USmtpIsFatalError(pSMTPE))
+			if (USmtpIsFatalError(pSMTPE))
 				break;
 		}
 		USmtpFreeGateways(ppMXGWs);
 
-		if (iSendErrorCode < 0)
-			return iSendErrorCode;
+		if (iError < 0)
+			return iError;
 	}
 
 	return 0;
@@ -917,8 +996,10 @@ static int SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hSh
 	if (SMAILRemoteMsgSMTPSend(hSvrConfig, hShbSMAIL, hFSpool, hQueue, hMessage,
 				   pszDestDomain, &SMTPE) < 0) {
 		ErrorPush();
-		/* If a permanent SMTP error has been detected, then notify the message */
-		/* sender and remove the spool file */
+		/*
+		 * If a permanent SMTP error has been detected, then notify the message
+		 * sender and remove the spool file
+		 */
 		if (USmtpIsFatalError(&SMTPE))
 			QueUtNotifyPermErrDelivery(hQueue, hMessage, hFSpool,
 						   USmtpGetErrorMessage(&SMTPE),
@@ -1156,7 +1237,7 @@ static int SMAILCmd_external(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 	}
 	/* Log Mailer operation */
 	if (SMAILLogEnabled(hShbSMAIL))
-		USmlLogMessage(hFSpool, "EXTRN", ppszCmdTokens[3]);
+		USmlLogMessage(hFSpool, "EXTRN", NULL, ppszCmdTokens[3]);
 
 	return (iExitStatus == SMAIL_EXTERNAL_EXIT_BREAK) ? SMAIL_STOP_PROCESSING: 0;
 }
@@ -1194,7 +1275,7 @@ static int SMAILCmd_filter(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 
 	/* Log Mailer operation */
 	if (SMAILLogEnabled(hShbSMAIL))
-		USmlLogMessage(hFSpool, "FILTER", ppszCmdTokens[3]);
+		USmlLogMessage(hFSpool, "FILTER", NULL, ppszCmdTokens[3]);
 
 	/* Separate code from flags */
 	int iExitFlags = iExitStatus & FILTER_FLAGS_MASK;
@@ -1319,8 +1400,8 @@ static int SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 	if (ppszRelays == NULL)
 		return ErrGetErrorCode();
 
-	SMTPGateway **ppGws = USmtpMakeGateways(ppszRelays, iNumTokens > 2 ?
-						ppszCmdTokens[2]: NULL);
+	SMTPGateway **ppGws = USmtpGetCfgGateways(hSvrConfig, ppszRelays,
+						  iNumTokens > 2 ? ppszCmdTokens[2]: NULL);
 
 	StrFreeStrings(ppszRelays);
 	if (ppGws == NULL)
@@ -1368,9 +1449,15 @@ static int SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 		if (USmtpSendMail(ppGws[i], pszHeloDomain, pszSendMailFrom,
 				  pszSendRcptTo, &FSect, &SMTPE) == 0) {
 			/* Log Mailer operation */
-			if (SMAILLogEnabled(hShbSMAIL))
-				USmlLogMessage(hFSpool, "RLYS", ppGws[i]->pszHost);
+			if (SMAILLogEnabled(hShbSMAIL)) {
+				char szRmtMsgID[256] = "";
 
+				USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(&SMTPE),
+						     szRmtMsgID,
+						     sizeof(szRmtMsgID));
+				USmlLogMessage(hFSpool, "RLYS", szRmtMsgID,
+					       ppGws[i]->pszHost);
+			}
 			USmtpCleanupError(&SMTPE);
 			USmtpFreeGateways(ppGws);
 

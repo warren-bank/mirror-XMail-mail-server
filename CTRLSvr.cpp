@@ -253,8 +253,8 @@ static int CTRLLogSession(char const *pszUsername, char const *pszPassword,
 		   "\t\"%s\""
 		   "\t\"%s\""
 		   "\t\"%s\""
-		   "\n", SysInetNToA(PeerInfo, szIP), pszUsername, pszPassword, szTime,
-		   (iStatus == 0) ? "REQ": ((iStatus > 0) ? "AUTH": "FAIL"));
+		   "\n", SysInetNToA(PeerInfo, szIP, sizeof(szIP)), pszUsername, pszPassword,
+		   szTime, (iStatus == 0) ? "REQ": ((iStatus > 0) ? "AUTH": "FAIL"));
 
 	RLckUnlockEX(hResLock);
 
@@ -366,12 +366,13 @@ unsigned int CTRLClientThread(void *pThreadData)
 	char szIP[128] = "???.???.???.???";
 
 	SysLogMessage(LOG_LEV_MESSAGE, "CTRL client connection from [%s]\n",
-		      SysInetNToA(PeerInfo, szIP));
+		      SysInetNToA(PeerInfo, szIP, sizeof(szIP)));
 
 	/* Handle client session */
 	CTRLHandleSession(pThCtx->pThCfg, hBSock, PeerInfo);
 
-	SysLogMessage(LOG_LEV_MESSAGE, "CTRL client exit [%s]\n", SysInetNToA(PeerInfo, szIP));
+	SysLogMessage(LOG_LEV_MESSAGE, "CTRL client exit [%s]\n",
+		      SysInetNToA(PeerInfo, szIP, sizeof(szIP)));
 
 	/* Decrease threads count */
 	CTRLThreadCountAdd(-1, pThCtx->pThCfg->hThShb);
@@ -626,7 +627,8 @@ static int CTRLHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock,
 	char szIP[128] = "???.???.???.???";
 
 	sprintf(szTimeStamp, "<%lu.%lu@%s>",
-		(unsigned long) time(NULL), SysGetCurrentThreadId(), SysInetNToA(SockInfo, szIP));
+		(unsigned long) time(NULL), SysGetCurrentThreadId(),
+		SysInetNToA(SockInfo, szIP, sizeof(szIP)));
 
 	/* Welcome */
 	char szTime[256] = "";
@@ -1578,7 +1580,7 @@ static int CTRLDo_userstat(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 	char szLoginTime[128] = "";
 
 	if (UPopGetLastLoginInfo(pUI, &LoginInfo) == 0) {
-		SysInetNToA(LoginInfo.Address, szIPAddr);
+		SysInetNToA(LoginInfo.Address, szIPAddr, sizeof(szIPAddr));
 		LTime = LoginInfo.LTime;
 	}
 	MscGetTimeStr(szLoginTime, sizeof(szLoginTime) - 1, LTime);

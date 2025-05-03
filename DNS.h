@@ -26,6 +26,8 @@
 #define DNS_QUERY_TCP           1
 #define DNS_QUERY_UDP           2
 
+#define DNS_STD_MAXDEPTH        32
+
 #define QTYPE_A                 1
 #define QTYPE_NS                2
 #define QTYPE_MD                3
@@ -43,6 +45,9 @@
 #define QTYPE_MX                15
 #define QTYPE_TXT               16
 
+#define QTYPE_AAAA              28
+#define QTYPE_ANSWER_MAX        29
+
 #define QTYPE_AXFR              252
 #define QTYPE_MAILB             253
 #define QTYPE_MAILA             254
@@ -55,7 +60,11 @@
 
 #define QCLASS_ALL              255
 
+#define RCODE_FORMAT            1
+#define RCODE_SVRFAIL           2
 #define RCODE_NXDOMAIN          3
+#define RCODE_NOTSUPPORTED      4
+#define RCODE_REFUSED           5
 
 struct DNS_HEADER {
 	SYS_UINT16 Id;
@@ -72,17 +81,48 @@ struct DNS_HEADER {
 	SYS_UINT16 ARCount;
 };
 
-int DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
-			 char const *pszRespFile, bool & bAuth, char *pszCName,
-			 SYS_UINT32 * pTTL = NULL);
-int DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
-		       char const *pszRespFile, char *pszCName, SYS_UINT32 * pTTL = NULL);
-int DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
-			  char *pszCName, SYS_UINT32 * pTTL = NULL);
-int DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile);
-int DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
-		    char *pszCName, SYS_UINT32 * pTTL = NULL);
-int DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszDomain,
-			  int iQuerySockType, char *&pszMXDomains, SYS_UINT32 * pTTL = NULL);
+struct DNSRecord {
+	struct SysListHead Lnk;
+	char szName[MAX_HOST_NAME];
+	SYS_UINT32 TTL;
+	SYS_UINT32 Class;
+	union {
+		struct {
+			SYS_UINT16 Pref;
+		} MX;
+		struct {
+			SYS_UINT32 IAddr4;
+		} A;
+		struct {
+			SYS_UINT8 IAddr6[16];
+		} AAAA;
+		struct {
+			char szAddr[MAX_ADDR_NAME];
+			SYS_UINT32 Serial;
+			SYS_UINT32 Refresh;
+			SYS_UINT32 Retry;
+			SYS_UINT32 Expire;
+			SYS_UINT32 MinTTL;
+		} SOA;
+	} U;
+};
+
+struct DNSAnswer {
+	int iQDCount;
+	int iANCount;
+	int iNSCount;
+	int iARCount;
+	struct SysListHead RecsLst[QTYPE_ANSWER_MAX];
+};
+
+int DNS_InitAnswer(DNSAnswer *pAns);
+void DNS_FreeRecList(SysListHead *pHead);
+void DNS_FreeAnswer(DNSAnswer *pAns);
+int DNS_FatalError(int iError);
+int DNS_Query(char const *pszName, unsigned int uQType, DNSAnswer *pAns,
+	      int iMaxDepth = DNS_STD_MAXDEPTH);
+int DNS_QueryDirect(char const *pszDNSServer, char const *pszName,
+		    unsigned int uQType, int iQuerySockType, DNSAnswer *pAns);
 
 #endif
+

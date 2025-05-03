@@ -153,7 +153,8 @@ void HashDel(HASH_HANDLE hHash, HashNode *pHNode) {
 	pHash->ulCount--;
 }
 
-int HashGet(HASH_HANDLE hHash, Datum const *Key, HashNode **ppHNode) {
+int HashGetFirst(HASH_HANDLE hHash, Datum const *Key,
+		 HashEnum *pHEnum, HashNode **ppHNode) {
 	Hash *pHash = (Hash *) hHash;
 	unsigned long ulHIdx;
 	SysListHead *pHead, *pPos;
@@ -166,6 +167,29 @@ int HashGet(HASH_HANDLE hHash, Datum const *Key, HashNode **ppHNode) {
 		pHNode = SYS_LIST_ENTRY(pPos, HashNode, HLnk);
 		if (EquivDatum(Key, &pHNode->Key)) {
 			*ppHNode = pHNode;
+			pHEnum->ulHIdx = ulHIdx;
+			pHEnum->pNext = SYS_LIST_NEXT(pPos, pHead);
+			return 0;
+		}
+	}
+
+	ErrSetErrorCode(ERR_NOT_FOUND);
+	return ERR_NOT_FOUND;
+}
+
+int HashGetNext(HASH_HANDLE hHash, Datum const *Key,
+		HashEnum *pHEnum, HashNode **ppHNode) {
+	Hash *pHash = (Hash *) hHash;
+	SysListHead *pPos, *pHead;
+	HashNode *pHNode;
+
+	pHead = &pHash->pBkts[pHEnum->ulHIdx];
+	for (pPos = pHEnum->pNext; pPos != NULL;
+	     pPos = SYS_LIST_NEXT(pPos, pHead)) {
+		pHNode = SYS_LIST_ENTRY(pPos, HashNode, HLnk);
+		if (EquivDatum(Key, &pHNode->Key)) {
+			*ppHNode = pHNode;
+			pHEnum->pNext = SYS_LIST_NEXT(pPos, pHead);
 			return 0;
 		}
 	}

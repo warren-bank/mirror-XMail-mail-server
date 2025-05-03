@@ -78,10 +78,13 @@ enum SpoolMsgInfo {
 		smiMax
 };
 
-SMTPGateway **USmtpMakeGateways(char const * const *ppszGwHosts, char const *pszOptions);
+SMTPGateway **USmtpMakeGateways(char const * const *ppszGwHosts, char const **ppszOptions);
 void USmtpFreeGateways(SMTPGateway **ppGws);
+SMTPGateway **USmtpGetCfgGateways(SVRCFG_HANDLE hSvrConfig,  char const * const *ppszGwHosts,
+				  const char *pszOptions);
 SMTPGateway **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);
-int USmtpGetGateway(SVRCFG_HANDLE hSvrConfig, const char *pszDomain, char *pszGateway);
+int USmtpGetGateway(SVRCFG_HANDLE hSvrConfig, const char *pszDomain, char *pszGateway,
+		    int iSize);
 int USmtpAddGateway(const char *pszDomain, const char *pszGateway);
 int USmtpRemoveGateway(const char *pszDomain);
 int USmtpIsAllowedRelay(const SYS_INET_ADDR & PeerInfo, SVRCFG_HANDLE hSvrConfig);
@@ -96,6 +99,7 @@ bool USmtpIsFatalError(SMTPError const *pSMTPE);
 char const *USmtpGetErrorMessage(SMTPError const *pSMTPE);
 int USmtpCleanupError(SMTPError *pSMTPE);
 char *USmtpGetSMTPError(SMTPError *pSMTPE, char *pszError, int iMaxError);
+char *USmtpGetSMTPRmtMsgID(char const *pszAckDATA, char *pszRmtMsgID, int iMaxMsg);
 char const *USmtpGetErrorServer(SMTPError const *pSMTPE);
 SMTPCH_HANDLE USmtpCreateChannel(SMTPGateway const *pGw, const char *pszDomain,
 				 SMTPError *pSMTPE = NULL);
@@ -114,7 +118,7 @@ int USmtpCheckMailDomain(SVRCFG_HANDLE hSvrConfig, char const *pszDomain);
 MXS_HANDLE USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain, char *pszMXHost);
 int USmtpGetMXNext(MXS_HANDLE hMXSHandle, char *pszMXHost);
 void USmtpMXSClose(MXS_HANDLE hMXSHandle);
-bool USmtpDnsMapsContained(SYS_INET_ADDR const &PeerInfo, char const *pszMapsServer);
+int USmtpDnsMapsContained(SYS_INET_ADDR const &PeerInfo, char const *pszMapsServer);
 int USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo, char *&pszInfo);
 int USmtpSpamAddressCheck(char const *pszAddress);
 int USmtpAddMessageInfo(FILE *pMsgFile, char const *pszClientDomain,

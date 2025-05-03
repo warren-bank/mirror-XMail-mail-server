@@ -54,8 +54,10 @@ struct SslBindCtx {
 static void BSslLockingCB(int iMode, int iType, const char *pszFile, int iLine);
 static void BSslThreadExit(void *pPrivate, SYS_THREAD ThreadID, int iMode);
 static void BSslFreeOSSL(void);
+static int BSslHandleAsync(SslBindCtx *pCtx, int iCode, int iDefError, int iTimeo);
 static int BSslReadLL(SslBindCtx *pCtx, void *pData, int iSize, int iTimeo);
 static int BSslWriteLL(SslBindCtx *pCtx, void const *pData, int iSize, int iTimeo);
+static int BSslShutdown(SslBindCtx *pCtx);
 static char const *BSslCtx__Name(void *pPrivate);
 static int BSslCtx__Free(void *pPrivate);
 static int BSslCtx__Read(void *pPrivate, void *pData, int iSize, int iTimeo);
@@ -158,29 +160,43 @@ void BSslCleanup(void)
 	SysFree(pSslMtxs);
 }
 
-static int BSslReadLL(SslBindCtx *pCtx, void *pData, int iSize, int iTimeo)
+static int BSslHandleAsync(SslBindCtx *pCtx, int iCode, int iDefError, int iTimeo)
 {
-	int iRead, iError;
+	int iError, iResult = 0;
 	SYS_fd_set FdSet;
 
-	for (;;) {
-		iRead = SSL_read(pCtx->pSSL, pData, iSize);
-		if ((iError = SSL_get_error(pCtx->pSSL, iRead)) == SSL_ERROR_NONE)
-			break;
+	if ((iError = SSL_get_error(pCtx->pSSL, iCode)) != SSL_ERROR_NONE) {
 		SYS_FD_ZERO(&FdSet);
 		SYS_FD_SET(pCtx->SockFD, &FdSet);
 		if (iError == SSL_ERROR_WANT_READ) {
 			if (SysSelect((long) pCtx->SockFD + 1, &FdSet, NULL,
 				      NULL, iTimeo) < 0)
 				return ErrGetErrorCode();
+			iResult = 1;
 		} else if (iError == SSL_ERROR_WANT_WRITE) {
 			if (SysSelect((long) pCtx->SockFD + 1, NULL, &FdSet,
 				      NULL, iTimeo) < 0)
 				return ErrGetErrorCode();
+			iResult = 1;
 		} else {
-			ErrSetErrorCode(ERR_SSL_READ);
-			return ERR_SSL_READ;
+			ErrSetErrorCode(iDefError);
+			iResult = iDefError;
 		}
+	}
+
+	return iResult;
+}
+
+static int BSslReadLL(SslBindCtx *pCtx, void *pData, int iSize, int iTimeo)
+{
+	int iRead, iError;
+
+	for (;;) {
+		iRead = SSL_read(pCtx->pSSL, pData, iSize);
+		if ((iError = BSslHandleAsync(pCtx, iRead, ERR_SSL_READ, iTimeo)) < 0)
+			return iError;
+		if (iError == 0)
+			break;
 	}
 
 	return iRead;
@@ -189,29 +205,37 @@ static int BSslReadLL(SslBindCtx *pCtx, void *pData, int iSize, int iTimeo)
 static int BSslWriteLL(SslBindCtx *pCtx, void const *pData, int iSize, int iTimeo)
 {
 	int iWrite, iError;
-	SYS_fd_set FdSet;
 
 	for (;;) {
 		iWrite = SSL_write(pCtx->pSSL, pData, iSize);
-		if ((iError = SSL_get_error(pCtx->pSSL, iWrite)) == SSL_ERROR_NONE)
+		if ((iError = BSslHandleAsync(pCtx, iWrite, ERR_SSL_WRITE, iTimeo)) < 0)
+			return iError;
+		if (iError == 0)
 			break;
-		SYS_FD_ZERO(&FdSet);
-		SYS_FD_SET(pCtx->SockFD, &FdSet);
-		if (iError == SSL_ERROR_WANT_READ) {
-			if (SysSelect((long) pCtx->SockFD + 1, &FdSet, NULL,
-				      NULL, iTimeo) < 0)
-				return ErrGetErrorCode();
-		} else if (iError == SSL_ERROR_WANT_WRITE) {
-			if (SysSelect((long) pCtx->SockFD + 1, NULL, &FdSet,
-				      NULL, iTimeo) < 0)
-				return ErrGetErrorCode();
-		} else {
-			ErrSetErrorCode(ERR_SSL_WRITE);
-			return ERR_SSL_WRITE;
-		}
 	}
 
 	return iWrite;
+}
+
+static int BSslShutdown(SslBindCtx *pCtx)
+{
+
+	/*
+	 * OpenSSL SSL_shutdown() is broken, and does not support non-blocking
+	 * BIOs at this time. We need to set the socket back to blocking mode,
+	 * in order for SSL_shutdown() to perform correctly. If we do not do
+	 * this, TCP/IP connections will be terminated with RST packets, instead
+	 * of proper FIN/ACK exchanges.
+	 * This sucks, but the problem has been posted by others to OpenSSL dev
+	 * mailing lists, and they did not fix it.
+	 */
+	SysBlockSocket(pCtx->SockFD, 1);
+	if (SSL_shutdown(pCtx->pSSL) == 0) {
+		SysShutdownSocket(pCtx->SockFD, SYS_SHUT_WR);
+		SSL_shutdown(pCtx->pSSL);
+	}
+
+	return 0;
 }
 
 static char const *BSslCtx__Name(void *pPrivate)
@@ -224,9 +248,10 @@ static int BSslCtx__Free(void *pPrivate)
 {
 	SslBindCtx *pCtx = (SslBindCtx *) pPrivate;
 
-	SSL_shutdown(pCtx->pSSL);
+	BSslShutdown(pCtx);
 	SSL_free(pCtx->pSSL);
 	SSL_CTX_free(pCtx->pSCtx);
+
 	/*
 	 * Restore default system blocking mode (-1)
 	 */

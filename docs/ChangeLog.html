@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail Change Log v 1.24</title>
+<title>XMail Change Log v 1.25</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rev="made" href="mailto:root@localhost" />
@@ -19,6 +19,7 @@
 	<li><a href="#change_log">CHANGE LOG</a></li>
 	<ul>
 
+		<li><a href="#jan_3__2008_v_1_25">Jan 3, 2008 v 1.25</a></li>
 		<li><a href="#jan_1__2007_v_1_24">Jan 1, 2007 v 1.24</a></li>
 		<li><a href="#nov_19__2006_v_1_23">Nov 19, 2006 v 1.23</a></li>
 		<li><a href="#oct_12__2005_v_1_22">Oct 12, 2005 v 1.22</a></li>
@@ -113,12 +114,91 @@
 <p>
 </p>
 <h1><a name="name">NAME</a></h1>
-<p>XMail Change Log as of Version 1.24</p>
+<p>XMail Change Log as of Version 1.25</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <hr />
 <h1><a name="change_log">CHANGE LOG</a></h1>
+<p>
+</p>
+<h2><a name="jan_3__2008_v_1_25">Jan 3, 2008 v 1.25</a></h2>
+<ul>
+<li>
+<p>Added the ability to select SmtpConfig-IP options by local port too (SmtpConfig-IP,PORT).</p>
+</li>
+<li>
+<p>Added a new -YT command line option to set the timeout used by a POP3 client connection.</p>
+</li>
+<li>
+<p>Fixed a bug in the RFC822 ATEXT token definition.</p>
+</li>
+<li>
+<p>If the recipient domain does not have an MX record, and does not have an A record,
+now XMail bounces immediately.</p>
+</li>
+<li>
+<p>Fixed OpenSSL connection shutdown to avoid RST packet generation.</p>
+</li>
+<li>
+<p>Changed SMTP AUTH LOGIN authentication to support the optional inline parameter.</p>
+</li>
+<li>
+<p>Added IPV6 support. New command line options are available to select XMail's
+behaviour with respect to IPV4/IPV6 compatibility.</p>
+</li>
+<li>
+<p>Fixed/strengthened RFC address parsing.</p>
+</li>
+<li>
+<p>Drop the SMTP connection is case of timeout.</p>
+</li>
+<li>
+<p>Fixed a bug caused by the new strict host/doman name check added in 1.24 (in the
+SMTPGW.TAB parsing).</p>
+</li>
+<li>
+<p>Completely changed the DNS resolution code.</p>
+</li>
+<li>
+<p>Do not try the A-record delivery in case of temporary DNS/network errors.</p>
+</li>
+<li>
+<p>Added remote MTA message ID to SMAIL logging.</p>
+</li>
+<li>
+<p>Added a new ``POP3S'' option to the POP3LINKS.TAB file, to allow connections
+to full POP3S remote servers.</p>
+</li>
+<li>
+<p>Fixed a bug in the SMTP Outbind feature.</p>
+</li>
+<li>
+<p>Changed POP3 log format to add information about the success or failure of the operation,
+and to report the number of messages and the total size of the mailbox (in
+case of successful login).</p>
+</li>
+<li>
+<p>Added a new ``Pop3LogPasswd'' SERVER.TAB variable to control if POP3 passwords
+are logged into the POP3 log file.</p>
+</li>
+<li>
+<p>Added a new ``SmtpNoTLSAuths'' SERVER.TAB variable. It allows to specify
+which SMTP authentications are allowed in non-TLS mode.</p>
+</li>
+<li>
+<p>Fixed a small memory leak affecting users using the ``OutBind'' feature.</p>
+</li>
+<li>
+<p>Removed the ``SMTP-TLS'' SERVER.TAB variable and replaced with ``SmtpGwConfig''
+that supports the format described in ``SMTP GATEWAY CONFIGURATION''. The
+``SmtpGwConfig'' allows the user to specify global options for remote SMTP
+connections.</p>
+</li>
+<li>
+<p>Added $(RRCPT) macro to SMTP filters.</p>
+</li>
+</ul>
 <p>
 </p>
 <h2><a name="jan_1__2007_v_1_24">Jan 1, 2007 v 1.24</a></h2>
@@ -128,6 +208,7 @@
  ********************************************************************
  * Removed the DynDNS feature.
  ********************************************************************</pre>
+</li>
 <li>
 <p>Added the new ``OutBind'' options for PSYNC accounts. It allows to specify the
 IP of the interface to be used when talking to the remote server.</p>
@@ -151,6 +232,7 @@ through host name.</p>
  * Changed is also the format of the SMTPEXTAUTH.TAB file.
  * The external SMTP client authentication has been removed.
  ********************************************************************</pre>
+</li>
 <li>
 <p>Added the new ``Leave'' options for PSYNC accounts, that allows messages to be left
 on the remote server. This option only works if the remote POP3 server supports
@@ -170,6 +252,7 @@ resulted in EFULL errors never returned at SMTP level.</p>
  * the documentation to find out how to properly configure XMail.
  * You MUST do this in order to have SSL support working.
  ********************************************************************</pre>
+</li>
 <li>
 <pre>
  ********************************************************************
@@ -179,6 +262,7 @@ resulted in EFULL errors never returned at SMTP level.</p>
  * separated by comma).
  * You need to adjust it according to the new format
  ********************************************************************</pre>
+</li>
 <li>
 <p>Added new ``EnableCTRL-TLS'', ``EnableSMTP-TLS'' and ``EnablePOP3-TLS'' SERVER.TAB variables.</p>
 </li>
@@ -962,6 +1046,7 @@ on a per-user basis (look at the  CmdAliases  section).</p>
  * You must create the directory 'cmdaliases' inside $MAIL_ROOT
  * to have 1.2 work correctly
  ********************************************************************</pre>
+</li>
 <li>
 <p>Fixed a bug that had XMail not check for the user variable SmtpPerms with CRAM-MD5 authetication.</p>
 </li>
@@ -1000,6 +1085,7 @@ parameters (-Ooet).</p>
  * You must create the file ALIASDOMAIN.TAB inside $MAIL_ROOT
  * (even if empty)
  ********************************************************************</pre>
+</li>
 <li>
 <p>Added CTRL commands 'aliasdomainadd', 'aliasdomaindel' and 'aliasdomainlist' to handle domain aliases
 through the CTRL protocol.</p>
@@ -1534,6 +1620,7 @@ in 23 * 23 = 529 subdirectories).</p>
  * 7) Move all spool/logs/ file into 0/0/slog
  * 8) Now You can remove the above directories and restart XMail
  ********************************************************************</pre>
+</li>
 <li>
 <p>ORBS relays checking has been added and is activated by the new  SERVER.TAB  option
 'ORBS-MAPSCheck'.</p>
@@ -1678,6 +1765,7 @@ has been added (watch at MkUsers section).</p>
  * In order to use this new version You MUST move Your domains
  * directories inside the new  domains  directory
  ********************************************************************</pre>
+</li>
 <li>
 <p>SMAIL scheduling times in sending messages has been changed (see -Qi command line option).</p>
 </li>
@@ -1968,6 +2056,7 @@ that travel in attachments with given dangerous extensions.</p>
  * In order to use this new version You MUST flush the spool before
  * starting the new version of XMail.
  ********************************************************************</pre>
+</li>
 <li>
 <p>Modified <code>SysRename()</code> to <code>MscMoveFile()</code> to avoid errors in all cases where files are
 positioned on differents mount points (Unixes versions).</p>

@@ -25,7 +25,7 @@
 
 #define APP_PRODUCER            "GNU"
 #define APP_NAME_STR            "XMail"
-#define APP_VERSION_STR         "1.24"
+#define APP_VERSION_STR         "1.25"
 #define APP_NAME_VERSION_STR    APP_NAME_STR " " APP_VERSION_STR
 #define APP_URL                 "http://www.xmailserver.org"
 

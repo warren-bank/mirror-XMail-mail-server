@@ -57,9 +57,6 @@
 #define SMAIL_EXTERNAL_EXIT_BREAK       16
 #define SMAIL_STOP_PROCESSING           3111965L
 
-#define RFC822_ATEXT(c)                 (isalpha(c) || isdigit(c) || \
-						 strchr("!#$%&'*+-/=?^_{|}~", c) != NULL)
-
 
 struct SpoolFileData {
 	char **ppszInfo;
@@ -137,9 +134,11 @@ static int USmlCmd_smtprelay(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE
 			     QMSG_HANDLE hMessage, LocalMailProcConfig &LMPC);
 static int USmlLogMessage(char const *pszSMTPDomain, char const *pszMessageID,
 			  char const *pszSmtpMessageID, char const *pszFrom, char const *pszRcpt,
-			  char const *pszMedium, char const *pszParam);
+			  char const *pszMedium, char const *pszParam, char const *pszRmtMsgID);
+static int USmlRFC822_ATEXT(int c);
 static char const *USmlDotAtom(char const *pszStr, char const *pszTop);
-static int USmlIPDomain(char const *pszAddress, char const *pszTop);
+static char const *USmlIPDomain(char const *pszAddress, char const *pszTop);
+char const *USmlParseHost(char const *pszHost, char const *pszTop);
 static int USmlExtractFromAddress(HSLIST &hTagList, char *pszFromAddr, int iMaxAddress);
 static char const *USmlAddressFromAtPtr(char const *pszAt, char const *pszBase,
 					char *pszAddress, int iMaxAddress);
@@ -623,15 +622,18 @@ static int USmlLoadHandle(SpoolFileData *pSFD, const char *pszMessFilePath)
 	}
 	/* Check if it's a relay message */
 	if (StrStringsCount(pSFD->ppszRcpt) > 1) {
-		char szRelayDomain[MAX_ADDR_NAME] = "";
+		const char *pszHost = pSFD->ppszRcpt[0];
 
-		if (USmtpSplitEmailAddr(pSFD->ppszRcpt[0], NULL, szRelayDomain) < 0) {
+		if (*pszHost++ != '@') {
 			fclose(pSpoolFile);
-			ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
+			ErrSetErrorCode(ERR_INVALID_RELAY_ADDRESS, pSFD->ppszRcpt[0]);
 			return ERR_INVALID_SPOOL_FILE;
 		}
-
-		pSFD->pszRelayDomain = SysStrDup(szRelayDomain);
+		if (USmlValidHost(pszHost, StrEnd(pszHost)) < 0) {
+			fclose(pSpoolFile);
+			return ERR_INVALID_SPOOL_FILE;
+		}
+		pSFD->pszRelayDomain = SysStrDup(pszHost);
 	}
 	/* Load message tags */
 	if (USmlLoadTags(pSpoolFile, pSFD->hTagList) < 0)
@@ -663,7 +665,6 @@ static void USmlInitHandle(SpoolFileData *pSFD)
 	SetEmptyString(pSFD->szSMTPDomain);
 	pSFD->ulFlags = 0;
 	ListInit(pSFD->hTagList);
-
 }
 
 static SpoolFileData *USmlAllocEmptyHandle(void)
@@ -1265,7 +1266,7 @@ static int USmlLocalDelivery(SVRCFG_HANDLE hSvrConfig, UserInfo *pUI, SPLF_HANDL
 	if (LMPC.ulFlags & LMPCF_LOG_ENABLED) {
 		char szLocalAddress[MAX_ADDR_NAME] = "";
 
-		USmlLogMessage(hFSpool, "LOCAL", UsrGetAddress(pUI, szLocalAddress));
+		USmlLogMessage(hFSpool, "LOCAL", NULL, UsrGetAddress(pUI, szLocalAddress));
 	}
 
 	return 0;
@@ -1522,7 +1523,7 @@ static int USmlCmd_external(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE 
 	}
 	/* Log operation */
 	if (LMPC.ulFlags & LMPCF_LOG_ENABLED)
-		USmlLogMessage(hFSpool, "EXTRN", ppszCmdTokens[3]);
+		USmlLogMessage(hFSpool, "EXTRN", NULL, ppszCmdTokens[3]);
 
 	return (iExitStatus == SMAIL_EXTERNAL_EXIT_BREAK) ? SMAIL_STOP_PROCESSING: 0;
 }
@@ -1560,7 +1561,7 @@ static int USmlCmd_filter(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE hS
 
 	/* Log operation */
 	if (LMPC.ulFlags & LMPCF_LOG_ENABLED)
-		USmlLogMessage(hFSpool, "FILTER", ppszCmdTokens[3]);
+		USmlLogMessage(hFSpool, "FILTER", NULL, ppszCmdTokens[3]);
 
 	/* Separate code from flags */
 	int iExitFlags = iExitStatus & FILTER_FLAGS_MASK;
@@ -1683,7 +1684,7 @@ static int USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE 
 		}
 		/* Log the redir operation */
 		if (LMPC.ulFlags & LMPCF_LOG_ENABLED)
-			USmlLogMessage(hFSpool, "REDIR", ppszCmdTokens[i]);
+			USmlLogMessage(hFSpool, "REDIR", NULL, ppszCmdTokens[i]);
 	}
 
 	return 0;
@@ -1738,7 +1739,7 @@ static int USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE
 		}
 		/* Log the redir operation */
 		if (LMPC.ulFlags & LMPCF_LOG_ENABLED)
-			USmlLogMessage(hFSpool, "LREDIR", ppszCmdTokens[i]);
+			USmlLogMessage(hFSpool, "LREDIR", NULL, ppszCmdTokens[i]);
 	}
 
 	return 0;
@@ -1780,8 +1781,8 @@ static int USmlCmd_smtprelay(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE
 	if (ppszRelays == NULL)
 		return ErrGetErrorCode();
 
-	SMTPGateway **ppGws = USmtpMakeGateways(ppszRelays, iNumTokens > 2 ?
-						ppszCmdTokens[2]: NULL);
+	SMTPGateway **ppGws = USmtpGetCfgGateways(hSvrConfig, ppszRelays,
+						  iNumTokens > 2 ? ppszCmdTokens[2]: NULL);
 
 	StrFreeStrings(ppszRelays);
 	if (ppGws == NULL)
@@ -1829,9 +1830,13 @@ static int USmlCmd_smtprelay(char **ppszCmdTokens, int iNumTokens, SVRCFG_HANDLE
 		if (USmtpSendMail(ppGws[i], pszHeloDomain, pszSendMailFrom,
 				  pszSendRcptTo, &FSect, &SMTPE) == 0) {
 			/* Log Mailer operation */
-			if (LMPC.ulFlags & LMPCF_LOG_ENABLED)
-				USmlLogMessage(hFSpool, "RLYS", ppGws[i]->pszHost);
+			if (LMPC.ulFlags & LMPCF_LOG_ENABLED) {
+				char szRmtMsgID[256] = "";
 
+				USmtpGetSMTPRmtMsgID(USmtpGetErrorMessage(&SMTPE), szRmtMsgID,
+						     sizeof(szRmtMsgID));
+				USmlLogMessage(hFSpool, "RLYS", szRmtMsgID, ppGws[i]->pszHost);
+			}
 			USmtpCleanupError(&SMTPE);
 			USmtpFreeGateways(ppGws);
 
@@ -2158,7 +2163,7 @@ int USmlCustomizedDomain(char const *pszDestDomain)
 
 static int USmlLogMessage(char const *pszSMTPDomain, char const *pszMessageID,
 			  char const *pszSmtpMessageID, char const *pszFrom, char const *pszRcpt,
-			  char const *pszMedium, char const *pszParam)
+			  char const *pszMedium, char const *pszParam, char const *pszRmtMsgID)
 {
 	char szTime[256] = "";
 
@@ -2177,15 +2182,17 @@ static int USmlLogMessage(char const *pszSMTPDomain, char const *pszMessageID,
 		   "\t\"%s\""
 		   "\t\"%s\""
 		   "\t\"%s\""
+		   "\t\"%s\""
 		   "\n", pszSMTPDomain, pszMessageID, pszSmtpMessageID, pszFrom, pszRcpt,
-		   pszMedium, pszParam, szTime);
+		   pszMedium, pszParam, szTime, pszRmtMsgID);
 
 	RLckUnlockEX(hResLock);
 
 	return 0;
 }
 
-int USmlLogMessage(SPLF_HANDLE hFSpool, char const *pszMedium, char const *pszParam)
+int USmlLogMessage(SPLF_HANDLE hFSpool, char const *pszMedium, char const *pszRmtMsgID,
+		   char const *pszParam)
 {
 	char const *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
 	char const *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
@@ -2193,10 +2200,14 @@ int USmlLogMessage(SPLF_HANDLE hFSpool, char const *pszMedium, char const *pszPa
 	char const *pszMailFrom = USmlMailFrom(hFSpool);
 	char const *pszRcptTo = USmlRcptTo(hFSpool);
 
-	USmlLogMessage(pszSMTPDomain, pszMessageID, pszSmtpMessageID, pszMailFrom, pszRcptTo,
-		       pszMedium, pszParam);
+	return USmlLogMessage(pszSMTPDomain, pszMessageID, pszSmtpMessageID, pszMailFrom,
+			      pszRcptTo, pszMedium, pszParam,
+			      pszRmtMsgID != NULL ? pszRmtMsgID: "");
+}
 
-	return 0;
+static int USmlRFC822_ATEXT(int c)
+{
+	return isalpha(c) || isdigit(c) || strchr("!#$%&'*+-/=?^_`{|}~", c) != NULL;
 }
 
 static char const *USmlDotAtom(char const *pszStr, char const *pszTop)
@@ -2205,7 +2216,7 @@ static char const *USmlDotAtom(char const *pszStr, char const *pszTop)
 	for (;;) {
 		char const *pszAtom = pszStr;
 
-		for (; pszStr < pszTop && RFC822_ATEXT(*pszStr); pszStr++);
+		for (; pszStr < pszTop && USmlRFC822_ATEXT(*pszStr); pszStr++);
 		if (pszAtom == pszStr)
 			return NULL;
 		if (pszStr == pszTop || *pszStr != '.')
@@ -2216,56 +2227,81 @@ static char const *USmlDotAtom(char const *pszStr, char const *pszTop)
 	return pszStr;
 }
 
-static int USmlIPDomain(char const *pszAddress, char const *pszTop)
+static char const *USmlIPDomain(char const *pszAddress, char const *pszTop)
 {
-	int iSize = (int) (pszTop - pszAddress) - 2;
-	NET_ADDRESS NetAddr;
+	int iSize;
+	char const *pszNext;
+	SYS_INET_ADDR Addr;
 	char szIP[256];
 
-	if (*pszAddress != '[' || iSize >= (int) sizeof(szIP) || pszTop[-1] != ']') {
-		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS);
-		return ERR_BAD_TAG_ADDRESS;
+	if (*pszAddress != '[' ||
+	    (pszNext = (char const *) memchr(pszAddress, ']',
+					     (int) (pszTop - pszAddress))) == NULL ||
+	    (iSize = (int) (pszNext - pszAddress) - 1) >= (int) sizeof(szIP)) {
+		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS, pszAddress);
+		return NULL;
 	}
 	Cpy2Sz(szIP, pszAddress + 1, iSize);
-	if (SysInetAddr(szIP, NetAddr) < 0)
+	if (SysGetHostByName(szIP, -1, Addr) < 0)
+		return NULL;
+
+	return pszNext + 1;
+}
+
+char const *USmlParseHost(char const *pszHost, char const *pszTop)
+{
+	char const *pszNext;
+
+	if (*pszHost == '[')
+		pszNext = USmlIPDomain(pszHost, pszTop);
+	else if ((pszNext = USmlDotAtom(pszHost, pszTop)) == NULL)
+		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS, pszHost, (int) (pszTop - pszHost));
+
+	return pszNext;
+}
+
+int USmlValidHost(char const *pszHost, char const *pszTop)
+{
+	char const *pszEOH;
+
+	if ((pszEOH = USmlParseHost(pszHost, pszTop)) == NULL)
 		return ErrGetErrorCode();
+	if (pszEOH != pszTop) {
+		ErrSetErrorCode(ERR_INVALID_HOSTNAME, pszHost,
+				(int) (pszTop - pszHost));
+		return ERR_INVALID_HOSTNAME;
+	}
 
 	return 0;
 }
 
 int USmlValidAddress(char const *pszAddress, char const *pszTop)
 {
+	char const *pszAddr = pszAddress;
 
-	if (*pszAddress == '@') {
+	if (*pszAddr == '@') {
 		for (;;) {
-			if (*pszAddress++ != '@' ||
-			    (pszAddress = USmlDotAtom(pszAddress, pszTop)) == NULL) {
-				ErrSetErrorCode(ERR_BAD_TAG_ADDRESS);
-				return ERR_BAD_TAG_ADDRESS;
-			}
-			if (*pszAddress != ',')
+			if (*pszAddr++ != '@' ||
+			    (pszAddr = USmlParseHost(pszAddr, pszTop)) == NULL)
+				return ErrGetErrorCode();
+			if (*pszAddr != ',')
 				break;
-			pszAddress++;
+			pszAddr++;
 		}
-		if (*pszAddress++ != ':') {
-			ErrSetErrorCode(ERR_BAD_TAG_ADDRESS);
+		if (*pszAddr++ != ':') {
+			ErrSetErrorCode(ERR_BAD_TAG_ADDRESS, pszAddress,
+					(int) (pszTop - pszAddress));
 			return ERR_BAD_TAG_ADDRESS;
 		}
 	}
-	if ((pszAddress = USmlDotAtom(pszAddress, pszTop)) == NULL ||
-	    *pszAddress++ != '@') {
-		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS);
-		return ERR_BAD_TAG_ADDRESS;
-	}
-	if (*pszAddress == '[') {
-		if (USmlIPDomain(pszAddress, pszTop) < 0)
-			return ErrGetErrorCode();
-	} else if ((pszAddress = USmlDotAtom(pszAddress, pszTop)) == NULL) {
-		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS);
+	if ((pszAddr = USmlDotAtom(pszAddr, pszTop)) == NULL ||
+	    *pszAddr++ != '@') {
+		ErrSetErrorCode(ERR_BAD_TAG_ADDRESS, pszAddress,
+				(int) (pszTop - pszAddress));
 		return ERR_BAD_TAG_ADDRESS;
 	}
 
-	return 0;
+	return USmlValidHost(pszAddr, pszTop);
 }
 
 int USmlParseAddress(char const *pszAddress, char *pszPreAddr,
@@ -2442,7 +2478,7 @@ static char **USmlGetAddressList(HSLIST &hTagList, char const *const *ppszMatchD
 	}
 
 	/* Yes, i know, goto's might be bad. Not in this case though ... */
-	BuildAddrList:
+BuildAddrList:
 
 	char **ppszAddresses = StrTokenize(StrDynGet(&AddrDS), ADDRESS_TOKENIZER);
 

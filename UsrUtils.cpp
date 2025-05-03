@@ -859,20 +859,10 @@ int UsrRemoveAlias(const char *pszDomain, const char *pszAlias)
 		ErrSetErrorCode(ERR_ALIAS_NOT_FOUND);
 		return ERR_ALIAS_NOT_FOUND;
 	}
-
-	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
-	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
-		RLckUnlockEX(hResLock);
-		return ErrGetErrorCode();
-	}
 	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
-		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrGetErrorCode();
 	}
-	SysRemove(szTmpAlsFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
@@ -954,24 +944,11 @@ int UsrRemoveDomainAliases(const char *pszDomain)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
-	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpFile);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
-		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpAlsFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
@@ -1055,20 +1032,10 @@ static int UsrRemoveUserAlias(char const *pszDomain, char const *pszName)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpAlsFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpAlsFilePath, "%s.tmp", szAlsFilePath);
-	if (MscMoveFile(szAlsFilePath, szTmpAlsFilePath) < 0) {
-		RLckUnlockEX(hResLock);
-		return ErrGetErrorCode();
-	}
 	if (MscMoveFile(szTmpFile, szAlsFilePath) < 0) {
-		MscMoveFile(szTmpAlsFilePath, szAlsFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrGetErrorCode();
 	}
-	SysRemove(szTmpAlsFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildAliasesIndexes(szAlsFilePath) < 0) {
@@ -1266,24 +1233,12 @@ int UsrRemoveUser(const char *pszDomain, const char *pszName, unsigned int uUser
 		ErrSetErrorCode(ERR_USER_NOT_FOUND);
 		return ERR_USER_NOT_FOUND;
 	}
-
-	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
-		ErrorPush();
-		UsrFreeUserInfo(pUI);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
 		UsrFreeUserInfo(pUI);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpUsrFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
@@ -1295,16 +1250,13 @@ int UsrRemoveUser(const char *pszDomain, const char *pszName, unsigned int uUser
 	RLckUnlockEX(hResLock);
 
 	GwLkRemoveUserLinks(pUI->pszDomain, pUI->pszName);
-
 	ExAlRemoveUserAliases(pUI->pszDomain, pUI->pszName);
-
 	UsrRemoveUserAlias(pUI->pszDomain, pUI->pszName);
 
 	/* Try ( if defined ) to remove external auth user */
 	UAthDelUser(AUTH_SERVICE_POP3, pUI);
 
 	UsrDropUserEnv(pUI);
-
 	UsrFreeUserInfo(pUI);
 
 	return 0;
@@ -1396,23 +1348,11 @@ int UsrModifyUser(UserInfo *pUI)
 
 	UsrFreeUserInfo(pFoundUI);
 
-	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpFile);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
-		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpUsrFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {
@@ -1478,12 +1418,9 @@ int UsrRemoveDomainUsers(const char *pszDomain)
 		int iFieldsCount = StrStringsCount(ppszStrings);
 
 		if ((iFieldsCount >= usrMax) && (stricmp(pszDomain, ppszStrings[usrDomain]) == 0)) {
-
 			++iUsersFound;
-
 		} else
 			fprintf(pTmpFile, "%s\n", szUsrLine);
-
 		StrFreeStrings(ppszStrings);
 	}
 	fclose(pUsrFile);
@@ -1494,24 +1431,11 @@ int UsrRemoveDomainUsers(const char *pszDomain)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpUsrFilePath[SYS_MAX_PATH] = "";
-
-	sprintf(szTmpUsrFilePath, "%s.tmp", szUsrFilePath);
-	if (MscMoveFile(szUsrFilePath, szTmpUsrFilePath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpFile);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szUsrFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpUsrFilePath, szUsrFilePath);
-		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpUsrFilePath);
 
 	/* Rebuild indexes */
 	if (UsrRebuildUsersIndexes(szUsrFilePath) < 0) {

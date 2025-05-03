@@ -333,11 +333,9 @@ int ExAlRemoveAlias(ExtAlias * pExtAlias)
 		if (iFieldsCount >= ealMax &&
 		    stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0 &&
 		    stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0) {
-
 			++iAliasFound;
 		} else
 			fprintf(pTmpFile, "%s\n", szAliasLine);
-
 		StrFreeStrings(ppszStrings);
 	}
 	fclose(pAliasFile);
@@ -350,22 +348,10 @@ int ExAlRemoveAlias(ExtAlias * pExtAlias)
 		ErrSetErrorCode(ERR_EXTALIAS_NOT_FOUND);
 		return ERR_EXTALIAS_NOT_FOUND;
 	}
-
-	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-		    szAliasFilePath);
-
-	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
-		RLckUnlockEX(hResLock);
-		return ErrGetErrorCode();
-	}
 	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
-		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrGetErrorCode();
 	}
-	SysRemove(szTmpAliasFilePath);
 
 	/* Rebuild indexes */
 	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
@@ -430,11 +416,9 @@ int ExAlRemoveUserAliases(const char *pszDomain, const char *pszName)
 
 		if (iFieldsCount >= ealMax && stricmp(pszDomain, ppszStrings[ealDomain]) == 0 &&
 		    stricmp(pszName, ppszStrings[ealName]) == 0) {
-
 			++iAliasFound;
 		} else
 			fprintf(pTmpFile, "%s\n", szAliasLine);
-
 		StrFreeStrings(ppszStrings);
 	}
 	fclose(pAliasFile);
@@ -445,23 +429,11 @@ int ExAlRemoveUserAliases(const char *pszDomain, const char *pszName)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-		    szAliasFilePath);
-	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
-		ErrorPush();
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpAliasFilePath);
 
 	/* Rebuild indexes */
 	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {
@@ -539,25 +511,11 @@ int ExAlRemoveDomainAliases(const char *pszDomain)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpAliasFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
-		    szAliasFilePath);
-	if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpFile);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szAliasFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpAliasFilePath, szAliasFilePath);
-		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpAliasFilePath);
 
 	/* Rebuild indexes */
 	if (ExAlRebuildAliasIndexes(szAliasFilePath) < 0) {

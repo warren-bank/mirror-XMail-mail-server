@@ -105,19 +105,18 @@ int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 	int iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
 	switch (iPriority) {
-	case (SYS_PRIORITY_NORMAL):
+	case SYS_PRIORITY_NORMAL:
 		SchParam.sched_priority = iStdPriority;
 		break;
 
-	case (SYS_PRIORITY_LOWER):
+	case SYS_PRIORITY_LOWER:
 		SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
 		break;
 
-	case (SYS_PRIORITY_HIGHER):
+	case SYS_PRIORITY_HIGHER:
 		SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
 		break;
 	}
-
 	if (pthread_setschedparam(pTD->ThreadId, iPolicy, &SchParam) != 0) {
 		ErrSetErrorCode(ERR_SET_THREAD_PRIORITY);
 		return ERR_SET_THREAD_PRIORITY;
@@ -175,7 +174,6 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
 		return ERR_GET_MEMORY_INFO;
 	}
-
 	*pVirtTotal = *pRamTotal = (SYS_INT64) iValue *PageSize;
 
 	DataLen = sizeof(iValue);
@@ -183,7 +181,6 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
 		return ERR_GET_MEMORY_INFO;
 	}
-
 	*pVirtFree = *pRamFree = (SYS_INT64) iValue *PageSize;
 
 	/* Get swap infos through the kvm interface */
@@ -198,12 +195,10 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 	struct kvm_swap KSwap[8];
 	int iSwaps = kvm_getswapinfo(pKD, KSwap, CountOf(KSwap), SWIF_DEV_PREFIX);
 
-	for (int ii; ii < iSwaps; ii++) {
-		*pVirtFree += (SYS_INT64) (KSwap[ii].ksw_total - KSwap[ii].ksw_used) * PageSize;
-
-		*pVirtTotal += (SYS_INT64) KSwap[ii].ksw_total * PageSize;
+	for (int i; i < iSwaps; i++) {
+		*pVirtFree += (SYS_INT64) (KSwap[i].ksw_total - KSwap[i].ksw_used) * PageSize;
+		*pVirtTotal += (SYS_INT64) KSwap[i].ksw_total * PageSize;
 	}
-
 	kvm_close(pKD);
 
 	return 0;

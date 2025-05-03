@@ -68,6 +68,7 @@ struct POP3Session {
 	char szPassword[256];
 	POP3_HANDLE hPOPSession;
 	char szTimeStamp[256];
+	int iLogPasswd;
 };
 
 static POP3Config *POP3GetConfigCopy(SHB_HANDLE hShbPOP3);
@@ -76,7 +77,7 @@ static int POP3LogEnabled(SHB_HANDLE hShbPOP3, POP3Config *pPOP3Cfg = NULL);
 static int POP3CheckPeerIP(SYS_SOCKET SockFD);
 static int POP3CheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int POP3InitSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock, POP3Session &POP3S);
-static int POP3LogSession(POP3Session &POP3S);
+static int POP3LogSession(POP3Session &POP3S, char const *pszStatus, char const *pszFmt, ...);
 static int POP3HandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock);
 static void POP3ClearSession(POP3Session &POP3S);
 static int POP3HandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock, POP3Session &POP3S);
@@ -289,7 +290,7 @@ static int POP3InitSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock, POP3
 
 	if (MscGetSockHost(BSckGetAttachedSocket(hBSock), POP3S.szSvrFQDN,
 			   sizeof(POP3S.szSvrFQDN)) < 0)
-		StrSNCpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo, szIP));
+		StrSNCpy(POP3S.szSvrFQDN, SysInetNToA(POP3S.PeerInfo, szIP, sizeof(szIP)));
 	else {
 		/* Try to get a valid domain from the FQDN */
 		if (MDomGetClientDomain(POP3S.szSvrFQDN, POP3S.szSvrDomain,
@@ -326,6 +327,7 @@ static int POP3InitSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock, POP3
 	}
 
 	POP3S.iBadLoginWait = POP3S.pPOP3Cfg->iBadLoginWait;
+	POP3S.iLogPasswd = SvrGetConfigInt("Pop3LogPasswd", 0, POP3S.hSvrConfig);
 
 	/* Create timestamp for APOP command */
 	sprintf(POP3S.szTimeStamp, "<%lu.%lu@%s>",
@@ -334,17 +336,23 @@ static int POP3InitSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock, POP3
 	return 0;
 }
 
-static int POP3LogSession(POP3Session &POP3S)
+static int POP3LogSession(POP3Session &POP3S, char const *pszStatus, char const *pszFmt, ...)
 {
+	char *pszExtra = NULL;
 	char szTime[256] = "";
 
 	MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
+	if (pszFmt != NULL)
+		StrVSprint(pszExtra, pszFmt, pszFmt);
 
 	RLCK_HANDLE hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR POP3_LOG_FILE);
 
 	if (hResLock == INVALID_RLCK_HANDLE)
 		return ErrGetErrorCode();
 
+	char const *pszPassword = (POP3S.iLogPasswd == 2 || (POP3S.iLogPasswd == 1 &&
+							     POP3S.iPOP3State == stateLogged)) ?
+		POP3S.szPassword: "";
 	char szIP[128] = "???.???.???.???";
 
 	MscFileLog(POP3_LOG_FILE, "\"%s\""
@@ -353,10 +361,14 @@ static int POP3LogSession(POP3Session &POP3S)
 		   "\t\"%s\""
 		   "\t\"%s\""
 		   "\t\"%s\""
-		   "\n", POP3S.szSvrFQDN, POP3S.szSvrDomain, SysInetNToA(POP3S.PeerInfo, szIP),
-		   szTime, POP3S.szUser, POP3S.szPassword);
+		   "\t\"%s\""
+		   "%s"
+		   "\n", POP3S.szSvrFQDN, POP3S.szSvrDomain,
+		   SysInetNToA(POP3S.PeerInfo, szIP, sizeof(szIP)), szTime, POP3S.szUser,
+		   pszPassword, pszStatus, pszExtra != NULL ? pszExtra: "");
 
 	RLckUnlockEX(hResLock);
+	SysFree(pszExtra);
 
 	return 0;
 }
@@ -377,7 +389,7 @@ static int POP3HandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 	char szIP[128] = "???.???.???.???";
 
 	SysLogMessage(LOG_LEV_MESSAGE, "POP3 client connection from [%s]\n",
-		      SysInetNToA(POP3S.PeerInfo, szIP));
+		      SysInetNToA(POP3S.PeerInfo, szIP, sizeof(szIP)));
 
 	/* Send welcome message */
 	char szTime[256] = "";
@@ -405,7 +417,7 @@ static int POP3HandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 	}
 
 	SysLogMessage(LOG_LEV_MESSAGE, "POP3 client exit [%s]\n",
-		      SysInetNToA(POP3S.PeerInfo, szIP));
+		      SysInetNToA(POP3S.PeerInfo, szIP, sizeof(szIP)));
 
 	POP3ClearSession(POP3S);
 
@@ -418,10 +430,11 @@ static void POP3ClearSession(POP3Session &POP3S)
 		UPopReleaseSession(POP3S.hPOPSession, (POP3S.iPOP3State == stateExit) ? 1: 0);
 		POP3S.hPOPSession = INVALID_POP3_HANDLE;
 	}
-	if (POP3S.hSvrConfig != INVALID_SVRCFG_HANDLE)
-		SvrReleaseConfigHandle(POP3S.hSvrConfig), POP3S.hSvrConfig =
-		INVALID_SVRCFG_HANDLE;
-	SysFree(POP3S.pPOP3Cfg), POP3S.pPOP3Cfg = NULL;
+	if (POP3S.hSvrConfig != INVALID_SVRCFG_HANDLE) {
+		SvrReleaseConfigHandle(POP3S.hSvrConfig);
+		POP3S.hSvrConfig = INVALID_SVRCFG_HANDLE;
+	}
+	SysFreeNullify(POP3S.pPOP3Cfg);
 }
 
 static int POP3HandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock, POP3Session &POP3S)
@@ -508,6 +521,10 @@ static int POP3HandleCmd_USER(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 
 static int POP3HandleBadLogin(BSOCK_HANDLE hBSock, POP3Session &POP3S)
 {
+	/* Log POP3 session */
+	if (POP3LogEnabled(POP3S.pThCfg->hThShb, POP3S.pPOP3Cfg))
+		POP3LogSession(POP3S, "ELOGIN", NULL);
+
 	if (POP3S.pPOP3Cfg->ulFlags & POP3F_HANG_ON_BADLOGIN) {
 		/* Exit if POP3F_HANG_ON_BADLOGIN is set */
 
@@ -546,10 +563,6 @@ static int POP3HandleCmd_PASS(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 	StrSNCpy(POP3S.szPassword, ppszTokens[1]);
 	StrFreeStrings(ppszTokens);
 
-	/* Log POP3 session */
-	if (POP3LogEnabled(POP3S.pThCfg->hThShb, POP3S.pPOP3Cfg))
-		POP3LogSession(POP3S);
-
 	/* Check the presence of external authentication modules. If authentication */
 	/* succeed "pszPassword" is set to NULL that instruct "UPopBuildSession" */
 	/* to not make local authentication */
@@ -585,6 +598,12 @@ static int POP3HandleCmd_PASS(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 
 	int iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
 	unsigned long ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
+
+	/* Log POP3 session */
+	if (POP3LogEnabled(POP3S.pThCfg->hThShb, POP3S.pPOP3Cfg))
+		POP3LogSession(POP3S, "LOGIN",
+			       "\t\"%d\""
+			       "\t\"%lu\"", iMsgCount, ulMBSize);
 
 	BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
 			"+OK Maildrop has %d messages (%lu bytes)", iMsgCount, ulMBSize);
@@ -627,10 +646,6 @@ static int POP3HandleCmd_APOP(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 		StrSNCpy(POP3S.szSvrDomain, szAccountDomain);
 
 	StrFreeStrings(ppszTokens);
-
-	/* Log POP3 session */
-	if (POP3LogEnabled(POP3S.pThCfg->hThShb, POP3S.pPOP3Cfg))
-		POP3LogSession(POP3S);
 
 	/* Check the presence of external authentication modules. If authentication */
 	/* succeed "pszPassword" is set to NULL that instruct "UPopBuildSession" */
@@ -678,6 +693,12 @@ static int POP3HandleCmd_APOP(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 
 	int iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
 	unsigned long ulMBSize = UPopGetSessionMBSize(POP3S.hPOPSession);
+
+	/* Log POP3 session */
+	if (POP3LogEnabled(POP3S.pThCfg->hThShb, POP3S.pPOP3Cfg))
+		POP3LogSession(POP3S, "LOGIN",
+			       "\t\"%d\""
+			       "\t\"%lu\"", iMsgCount, ulMBSize);
 
 	BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
 			"+OK Maildrop has %d messages (%lu bytes)", iMsgCount, ulMBSize);
@@ -760,7 +781,7 @@ static int POP3HandleCmd_STLS(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 		char szIP[128] = "";
 
 		SysLogMessage(LOG_LEV_MESSAGE, "POP3 failed to STLS [%s]\n",
-			      SysInetNToA(POP3S.PeerInfo, szIP));
+			      SysInetNToA(POP3S.PeerInfo, szIP, sizeof(szIP)));
 
 		/*
 		 * We have no other option than exit here ...

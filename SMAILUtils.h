@@ -112,8 +112,10 @@ int USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
 int USmlGetCustomDomainFile(char const *pszDestDomain, char const *pszCustFilePath);
 int USmlSetCustomDomainFile(char const *pszDestDomain, char const *pszCustFilePath);
 int USmlCustomizedDomain(char const *pszDestDomain);
-int USmlLogMessage(SPLF_HANDLE hFSpool, char const *pszMedium, char const *pszParam);
+int USmlLogMessage(SPLF_HANDLE hFSpool, char const *pszMedium, char const *pszRmtMsgID,
+		   char const *pszParam);
 int USmlValidAddress(char const *pszAddress, char const *pszTop);
+int USmlValidHost(char const *pszHost, char const *pszTop);
 int USmlParseAddress(char const *pszAddress, char *pszPreAddr,
 		     int iMaxPreAddress, char *pszEmailAddr, int iMaxAddress);
 int USmlDeliverFetchedMsg(char const *pszSyncAddr, const char *pszFetchHdrTags,

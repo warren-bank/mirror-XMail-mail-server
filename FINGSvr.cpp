@@ -221,7 +221,7 @@ static int FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
 		   "\t\"%s\""
 		   "\t\"%s\""
 		   "\t\"%s\""
-		   "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo, szIP),
+		   "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo, szIP, sizeof(szIP)),
 		   szTime, pszQuery);
 
 	RLckUnlockEX(hResLock);
@@ -267,7 +267,7 @@ static int FINGHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 	char szIP[128] = "???.???.???.???";
 
 	SysLogMessage(LOG_LEV_MESSAGE, "FINGER client connection from [%s]\n",
-		      SysInetNToA(PeerInfo, szIP));
+		      SysInetNToA(PeerInfo, szIP, sizeof(szIP)));
 
 	char szQuery[1024] = "";
 
@@ -278,7 +278,7 @@ static int FINGHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 			FINGLogSession(szSockHost, szSockDomain, PeerInfo, szQuery);
 
 		SysLogMessage(LOG_LEV_MESSAGE, "FINGER query [%s] : \"%s\"\n",
-			      SysInetNToA(PeerInfo, szIP), szQuery);
+			      SysInetNToA(PeerInfo, szIP, sizeof(szIP)), szQuery);
 
 		SVRCFG_HANDLE hSvrConfig = SvrGetConfigHandle();
 
@@ -289,7 +289,8 @@ static int FINGHandleSession(ThreadConfig const *pThCfg, BSOCK_HANDLE hBSock)
 	}
 	SysFree(pFINGCfg);
 
-	SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n", SysInetNToA(PeerInfo, szIP));
+	SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n",
+		      SysInetNToA(PeerInfo, szIP, sizeof(szIP)));
 
 	return 0;
 }

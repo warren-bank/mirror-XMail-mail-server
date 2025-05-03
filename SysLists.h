@@ -76,6 +76,7 @@
 			(head)->pNext = first; \
 			(last)->pNext = at; \
 			(at)->pPrev = last; \
+			SYS_INIT_LIST_HEAD(list); \
 		} \
 	} while (0)
 

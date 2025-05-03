@@ -36,6 +36,10 @@ struct HashNode {
 	Datum Key;
 };
 
+struct HashEnum {
+	unsigned long ulHIdx;
+	SysListHead *pNext;
+};
 
 
 HASH_HANDLE HashCreate(unsigned long ulSize);
@@ -44,7 +48,10 @@ void HashFree(HASH_HANDLE hHash, void (*pfFree)(void *, HashNode *),
 void HashInitNode(HashNode *pHNode);
 int HashAdd(HASH_HANDLE hHash, HashNode *pHNode);
 void HashDel(HASH_HANDLE hHash, HashNode *pHNode);
-int HashGet(HASH_HANDLE hHash, Datum const *Key, HashNode **ppHNode);
+int HashGetFirst(HASH_HANDLE hHash, Datum const *Key,
+		 HashEnum *pHEnum, HashNode **ppHNode);
+int HashGetNext(HASH_HANDLE hHash, Datum const *Key,
+		HashEnum *pHEnum, HashNode **ppHNode);
 int HashFirst(HASH_HANDLE hHash, SysListHead **ppPos, HashNode **ppHNode);
 int HashNext(HASH_HANDLE hHash, SysListHead **ppPos, HashNode **ppHNode);
 

@@ -29,6 +29,20 @@
 #define LoChar(c)           ((((c) >= 'A') && ((c) <= 'Z')) ? ((c) - 'A' + 'a'): (c))
 #define MIN_DYNSTR_INCR     256
 
+void *StrMemDup(void const *pData, long lSize, long lExtra)
+{
+	void *pDData;
+
+	if (lSize < 0)
+		lSize = strlen((char const *) pData) + 1;
+	if ((pDData = SysAllocNZ(lSize + lExtra)) == NULL)
+		return NULL;
+	memcpy(pDData, pData, lSize);
+	memset((char *) pDData + lSize, 0, lExtra);
+
+	return pDData;
+}
+
 int StrCmdLineToken(char const *&pszCmdLine, char *pszToken)
 {
 	char const *pszCurr = pszCmdLine;
@@ -231,8 +245,9 @@ char **StrTokenize(const char *pszString, const char *pszTokenizer)
 
 void StrFreeStrings(char **ppszStrings)
 {
-	for (int i = 0; ppszStrings[i] != NULL; i++)
-		SysFree(ppszStrings[i]);
+	if (ppszStrings != NULL)
+		for (int i = 0; ppszStrings[i] != NULL; i++)
+			SysFree(ppszStrings[i]);
 	SysFree(ppszStrings);
 }
 
@@ -558,6 +573,9 @@ char *StrIStr(char const *pszBuffer, char const *pszMatch)
 	if (iMatchLen == 0)
 		return (char *) pszBuffer;
 
+	/*
+	 * The dumb algorithm is fine enough.
+	 */
 	for (; *pszBuffer != '\0'; pszBuffer++) {
 		if (LoChar(*pszBuffer) == iLoMatch) {
 			if (++iMatchPos == iMatchLen)
@@ -566,9 +584,44 @@ char *StrIStr(char const *pszBuffer, char const *pszMatch)
 			iLoMatch = LoChar(pszMatch[iMatchPos]);
 		} else if (iMatchPos != 0) {
 			iMatchPos = 0;
-
 			iLoMatch = LoChar(*pszMatch);
 		}
+	}
+
+	return NULL;
+}
+
+char *StrLimStr(char const *pszBuffer, char const *pszMatch, char const *pszLimits)
+{
+	int iMatchLen = strlen(pszMatch);
+	char const *pszPos;
+
+	for (pszPos = strstr(pszBuffer, pszMatch); pszPos != NULL;
+	     pszPos = strstr(pszBuffer, pszMatch)) {
+		if ((pszBuffer == (char const *) pszPos ||
+		     strchr(pszLimits, *pszPos) != NULL) &&
+		    (pszPos[iMatchLen] == '\0' ||
+		     strchr(pszLimits, pszPos[iMatchLen]) != NULL))
+			return (char *) pszPos;
+		pszBuffer = pszPos + iMatchLen;
+	}
+
+	return NULL;
+}
+
+char *StrLimIStr(char const *pszBuffer, char const *pszMatch, char const *pszLimits)
+{
+	int iMatchLen = strlen(pszMatch);
+	char *pszPos;
+
+	for (pszPos = StrIStr(pszBuffer, pszMatch); pszPos != NULL;
+	     pszPos = StrIStr(pszBuffer, pszMatch)) {
+		if ((pszBuffer == (char const *) pszPos ||
+		     strchr(pszLimits, *pszPos) != NULL) &&
+		    (pszPos[iMatchLen] == '\0' ||
+		     strchr(pszLimits, pszPos[iMatchLen]) != NULL))
+			return pszPos;
+		pszBuffer = pszPos + iMatchLen;
 	}
 
 	return NULL;

@@ -136,9 +136,11 @@ int FilLogFilter(FilterLogInfo const *pFLI)
 		   "\t\"%d\""
 		   "\t\"%d\""
 		   "\t\"%s\""
-		   "\n", pFLI->pszSender, pFLI->pszRecipient, SysInetNToA(pFLI->LocalAddr, szLocIP),
-		   SysInetNToA(pFLI->RemoteAddr, szRmtIP), szTime, pFLI->pszType, pFLI->pszInfo,
-		   pFLI->iExecResult, pFLI->iExitCode, pszExStr);
+		   "\n", pFLI->pszSender, pFLI->pszRecipient,
+		   SysInetNToA(pFLI->LocalAddr, szLocIP, sizeof(szLocIP)),
+		   SysInetNToA(pFLI->RemoteAddr, szRmtIP, sizeof(szRmtIP)),
+		   szTime, pFLI->pszType, pFLI->pszInfo, pFLI->iExecResult,
+		   pFLI->iExitCode, pszExStr);
 
 	RLckUnlockEX(hResLock);
 	SysFree(pszExStr);
@@ -270,13 +272,6 @@ static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
 	if (hResLock == INVALID_RLCK_HANDLE)
 		return ErrGetErrorCode();
 
-	/* Get local and remote IP addresses */
-	NET_ADDRESS LocalAddr;
-	NET_ADDRESS RemoteAddr;
-
-	SysGetAddrAddress(FMI.LocalAddr, LocalAddr);
-	SysGetAddrAddress(FMI.RemoteAddr, RemoteAddr);
-
 	/* Open the filter database. Fail smootly if the file does not exist */
 	FILE *pFile = fopen(pszFilterFilePath, "rt");
 
@@ -304,9 +299,9 @@ static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
 			AddressFilter AFLocal;
 
 			if ((MscLoadAddressFilter(&ppszTokens[filRemoteAddr], 1, AFRemote) == 0)
-			    && MscAddressMatch(AFRemote, RemoteAddr) &&
+			    && MscAddressMatch(AFRemote, FMI.RemoteAddr) &&
 			    (MscLoadAddressFilter(&ppszTokens[filLocalAddr], 1, AFLocal) == 0) &&
-			    MscAddressMatch(AFLocal, LocalAddr)) {
+			    MscAddressMatch(AFLocal, FMI.LocalAddr)) {
 
 				FilAddFilter(ppszFilters, iNumFilters, ppszTokens[filFileName]);
 

@@ -57,7 +57,8 @@
 #define POPCHF_FORCE_APOP       (1 << 1)
 #define POPCHF_USE_STLS         (1 << 2)
 #define POPCHF_FORCE_STLS       (1 << 3)
-#define POPCHF_LEAVE_MSGS       (1 << 4)
+#define POPCHF_USE_POP3S        (1 << 4)
+#define POPCHF_LEAVE_MSGS       (1 << 5)
 
 #define STD_POP3_TIMEOUT        STD_SERVER_TIMEOUT
 
@@ -120,17 +121,19 @@ static int UPopCheckPeerIP(UserInfo *pUI, SYS_INET_ADDR const &PeerInfo);
 static int UPopUpdateMailbox(POP3SessionData *pPOPSD);
 static int UPopCheckResponse(const char *pszResponse, char *pszMessage = NULL);
 static int UPopGetResponse(BSOCK_HANDLE hBSock, char *pszResponse, int iMaxChars,
-			   int iTimeout = STD_POP3_TIMEOUT);
+			   int iTimeout);
 static char *UPopExtractServerTimeStamp(char const *pszResponse, char *pszTimeStamp,
 					int iMaxTimeStamp);
 static int UPopSendCommand(BSOCK_HANDLE hBSock, const char *pszCommand, char *pszResponse,
-			   int iMaxChars, int iTimeout = STD_POP3_TIMEOUT);
+			   int iMaxChars, int iTimeout);
 static int UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
 			       const char *pszPassword, char *pszRespBuffer, int iMaxRespChars);
 static int UPopDoAPOPAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
 			  const char *pszPassword, char const *pszTimeStamp,
 			  char *pszRespBuffer, int iMaxRespChars);
-static int UPopSwitchToSSL(BSOCK_HANDLE hBSock, const char *pszServer, char *pszRespBuffer,
+static int UPopSwitchToTLS(BSOCK_HANDLE hBSock, const char *pszServer,
+			   POP3ChannelCfg const *pChCfg);
+static int UPopInitiateTLS(BSOCK_HANDLE hBSock, const char *pszServer, char *pszRespBuffer,
 			   int iMaxRespChars, POP3ChannelCfg const *pChCfg);
 static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUsername,
 				      const char *pszPassword, POP3ChannelCfg const *pChCfg);
@@ -753,7 +756,7 @@ int UPopSaveUserIP(POP3_HANDLE hPOPSession)
 
 	char szIP[128] = "???.???.???.???";
 
-	SysInetNToA(pPOPSD->PeerInfo, szIP);
+	SysInetNToA(pPOPSD->PeerInfo, szIP, sizeof(szIP));
 
 	FILE *pIpFile = fopen(szIpFilePath, "wt");
 
@@ -829,12 +832,14 @@ static int UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
 {
 	/* Send USER and read result */
 	SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "USER %s", pszUsername);
-	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
+	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars,
+			    iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 
 	/* Send PASS and read result */
 	SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "PASS %s", pszPassword);
-	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
+	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars,
+			    iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 
 	return 0;
@@ -857,22 +862,19 @@ static int UPopDoAPOPAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
 
 	/* Send APOP and read result */
 	SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "APOP %s %s", pszUsername, szMD5);
-	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
+	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars,
+			    iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 
 	return 0;
 }
 
-static int UPopSwitchToSSL(BSOCK_HANDLE hBSock, const char *pszServer, char *pszRespBuffer,
-			   int iMaxRespChars, POP3ChannelCfg const *pChCfg)
+static int UPopSwitchToTLS(BSOCK_HANDLE hBSock, const char *pszServer,
+			   POP3ChannelCfg const *pChCfg)
 {
 	int iError;
 	SslServerBind SSLB;
 	SslBindEnv SslE;
-
-	SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "STLS");
-	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
-		return (pChCfg->ulFlags & POPCHF_FORCE_STLS) ? ErrGetErrorCode(): 0;
 
 	if (CSslBindSetup(&SSLB) < 0)
 		return ErrGetErrorCode();
@@ -891,6 +893,18 @@ static int UPopSwitchToSSL(BSOCK_HANDLE hBSock, const char *pszServer, char *psz
 	return iError;
 }
 
+static int UPopInitiateTLS(BSOCK_HANDLE hBSock, const char *pszServer, char *pszRespBuffer,
+			   int iMaxRespChars, POP3ChannelCfg const *pChCfg)
+{
+
+	SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "STLS");
+	if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars,
+			    iPOP3ClientTimeout) < 0)
+		return (pChCfg->ulFlags & POPCHF_FORCE_STLS) ? ErrGetErrorCode(): 0;
+
+	return UPopSwitchToTLS(hBSock, pszServer, pChCfg);
+}
+
 static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUsername,
 				      const char *pszPassword, POP3ChannelCfg const *pChCfg)
 {
@@ -899,7 +913,7 @@ static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUser
 	if (MscGetServerAddress(pszServer, SvrAddr, STD_POP3_PORT) < 0)
 		return INVALID_BSOCK_HANDLE;
 
-	SYS_SOCKET SockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
+	SYS_SOCKET SockFD = SysCreateSocket(SysGetAddrFamily(SvrAddr), SOCK_STREAM, 0);
 
 	if (SockFD == SYS_INVALID_SOCKET)
 		return INVALID_BSOCK_HANDLE;
@@ -911,13 +925,12 @@ static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUser
 		SYS_INET_ADDR BndAddr;
 
 		if (MscGetServerAddress(pChCfg->pszIFace, BndAddr, 0) < 0 ||
-		    SysBindSocket(SockFD, (struct sockaddr *) &BndAddr,
-				  sizeof(BndAddr)) < 0) {
+		    SysBindSocket(SockFD, &BndAddr) < 0) {
 			SysCloseSocket(SockFD);
 			return INVALID_BSOCK_HANDLE;
 		}
 	}
-	if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), STD_POP3_TIMEOUT) < 0) {
+	if (SysConnect(SockFD, &SvrAddr, iPOP3ClientTimeout) < 0) {
 		SysCloseSocket(SockFD);
 		return INVALID_BSOCK_HANDLE;
 	}
@@ -928,18 +941,29 @@ static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUser
 		SysCloseSocket(SockFD);
 		return INVALID_BSOCK_HANDLE;
 	}
+	/*
+	 * Is this a full POP3S connection?
+	 */
+	if ((pChCfg->ulFlags & POPCHF_USE_POP3S) &&
+	    UPopSwitchToTLS(hBSock, pszServer, pChCfg) < 0) {
+		SysCloseSocket(SockFD);
+		return INVALID_BSOCK_HANDLE;
+	}
+
 	/* Read welcome message */
 	char szRTXBuffer[2048] = "";
 
-	if (UPopGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 1) < 0) {
+	if (UPopGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 1,
+			    iPOP3ClientTimeout) < 0) {
 		UPopCloseChannel(hBSock);
 		return INVALID_BSOCK_HANDLE;
 	}
 	/*
-	 * SSL link required?
+	 * Non TLS mode active and STLS required?
 	 */
-	if ((pChCfg->ulFlags & POPCHF_USE_STLS) &&
-	    UPopSwitchToSSL(hBSock, pszServer, szRTXBuffer, sizeof(szRTXBuffer) - 1,
+	if (strcmp(BSckBioName(hBSock), BSSL_BIO_NAME) != 0 &&
+	    (pChCfg->ulFlags & POPCHF_USE_STLS) &&
+	    UPopInitiateTLS(hBSock, pszServer, szRTXBuffer, sizeof(szRTXBuffer) - 1,
 			    pChCfg) < 0) {
 		UPopCloseChannel(hBSock);
 		return INVALID_BSOCK_HANDLE;
@@ -987,7 +1011,8 @@ static int UPopCloseChannel(BSOCK_HANDLE hBSock, int iHardClose)
 		/* Send QUIT and read result */
 		char szRTXBuffer[2048] = "";
 
-		if (UPopSendCommand(hBSock, "QUIT", szRTXBuffer, sizeof(szRTXBuffer) - 1) < 0) {
+		if (UPopSendCommand(hBSock, "QUIT", szRTXBuffer, sizeof(szRTXBuffer) - 1,
+				    iPOP3ClientTimeout) < 0) {
 			BSckDetach(hBSock, 1);
 			return ErrGetErrorCode();
 		}
@@ -1001,7 +1026,8 @@ static int UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount, unsigned lo
 {
 	char szRTXBuffer[2048] = "";
 
-	if (UPopSendCommand(hBSock, "STAT", szRTXBuffer, sizeof(szRTXBuffer) - 1) < 0)
+	if (UPopSendCommand(hBSock, "STAT", szRTXBuffer, sizeof(szRTXBuffer) - 1,
+			    iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 	if (sscanf(szRTXBuffer, "+OK %d %lu", &iMsgCount, &ulMailboxSize) != 2) {
 		ErrSetErrorCode(ERR_INVALID_POP3_RESPONSE, szRTXBuffer);
@@ -1024,7 +1050,8 @@ static int UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *p
 	char szRTXBuffer[2048] = "";
 
 	sprintf(szRTXBuffer, "RETR %d", iMsgIndex);
-	if (UPopSendCommand(hBSock, szRTXBuffer, szRTXBuffer, sizeof(szRTXBuffer) - 1) < 0) {
+	if (UPopSendCommand(hBSock, szRTXBuffer, szRTXBuffer, sizeof(szRTXBuffer) - 1,
+			    iPOP3ClientTimeout) < 0) {
 		fclose(pMsgFile);
 		return ErrGetErrorCode();
 	}
@@ -1034,7 +1061,7 @@ static int UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *p
 
 	for (;;) {
 		if (BSckGetString(hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 3,
-				  STD_POP3_TIMEOUT, &iLineLength, &iGotNL) == NULL) {
+				  iPOP3ClientTimeout, &iLineLength, &iGotNL) == NULL) {
 			fclose(pMsgFile);
 
 			ErrSetErrorCode(ERR_POP3_RETR_BROKEN);
@@ -1069,7 +1096,8 @@ static int UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 	char szRTXBuffer[2048] = "";
 
 	sprintf(szRTXBuffer, "DELE %d", iMsgIndex);
-	if (UPopSendCommand(hBSock, szRTXBuffer, szRTXBuffer, sizeof(szRTXBuffer) - 1) < 0)
+	if (UPopSendCommand(hBSock, szRTXBuffer, szRTXBuffer, sizeof(szRTXBuffer) - 1,
+			    iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 
 	return 0;
@@ -1087,6 +1115,8 @@ static int UPopChanConfigAssign(void *pPrivate, char const *pszName, char const 
 		pChCfg->ulFlags |= POPCHF_USE_STLS;
 	else if (strcmp(pszName, "FSTLS") == 0)
 		pChCfg->ulFlags |= POPCHF_USE_STLS | POPCHF_FORCE_STLS;
+	else if (strcmp(pszName, "POP3S") == 0)
+		pChCfg->ulFlags |= POPCHF_USE_POP3S;
 	else if (strcmp(pszName, "Leave") == 0) {
 		if (pszValue == NULL || atoi(pszValue) > 0)
 			pChCfg->ulFlags |= POPCHF_LEAVE_MSGS;
@@ -1178,11 +1208,12 @@ static int UPopSChanFilterSeen(POP3SyncChannel *pPSChan)
 
 	if (pUFile != NULL) {
 		Datum Key;
+		HashEnum HEnum;
 		char szUIDL[512];
 
 		while (MscFGets(szUIDL, sizeof(szUIDL) - 1, pUFile) != NULL) {
 			DatumStrSet(&Key, szUIDL);
-			if (HashGet(hHash, &Key, &pHNode) == 0) {
+			if (HashGetFirst(hHash, &Key, &HEnum, &pHNode) == 0) {
 				pSMsg = SYS_LIST_ENTRY(pHNode, POP3SyncMsg, HN);
 				SYS_LIST_DEL(&pSMsg->LLnk);
 				SYS_LIST_ADDT(&pSMsg->LLnk, &pPSChan->SeenMList);
@@ -1257,10 +1288,10 @@ static int UPopSChanFillStatus(POP3SyncChannel *pPSChan)
 	 * feature, if requested ...
 	 */
 	if (UPopSendCommand(pPSChan->hBSock, szRTXBuffer, szRTXBuffer,
-			    sizeof(szRTXBuffer) - 1) == 0) {
+			    sizeof(szRTXBuffer) - 1, iPOP3ClientTimeout) == 0) {
 		for (;;) {
 			if (BSckGetString(pPSChan->hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 1,
-					  STD_POP3_TIMEOUT, &iLineLength) == NULL)
+					  iPOP3ClientTimeout, &iLineLength) == NULL)
 				return ErrGetErrorCode();
 			/* Check end of data condition */
 			if (strcmp(szRTXBuffer, ".") == 0)
@@ -1299,11 +1330,11 @@ static int UPopSChanFillStatus(POP3SyncChannel *pPSChan)
 	 */
 	strcpy(szRTXBuffer, "LIST");
 	if (UPopSendCommand(pPSChan->hBSock, szRTXBuffer, szRTXBuffer,
-			    sizeof(szRTXBuffer) - 1) < 0)
+			    sizeof(szRTXBuffer) - 1, iPOP3ClientTimeout) < 0)
 		return ErrGetErrorCode();
 	for (;;) {
 		if (BSckGetString(pPSChan->hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 1,
-				  STD_POP3_TIMEOUT, &iLineLength) == NULL)
+				  iPOP3ClientTimeout, &iLineLength) == NULL)
 			return ErrGetErrorCode();
 		/* Check end of data condition */
 		if (strcmp(szRTXBuffer, ".") == 0)
@@ -1511,12 +1542,10 @@ int UPopUserIpCheck(UserInfo *pUI, SYS_INET_ADDR const *pPeerInfo, unsigned int 
 	fclose(pIpFile);
 
 	/* Do IP matching */
-	NET_ADDRESS PrevAddr;
-	NET_ADDRESS CurrAddr;
+	SYS_INET_ADDR CurrAddr;
 
-	if (SysInetAddr(szIP, PrevAddr) < 0 ||
-	    SysGetAddrAddress(*pPeerInfo, CurrAddr) < 0 ||
-	    !SysSameAddress(PrevAddr, CurrAddr)) {
+	if (SysGetHostByName(szIP, SysGetAddrFamily(*pPeerInfo), CurrAddr) < 0 ||
+	    !SysInetAddrMatch(*pPeerInfo, CurrAddr)) {
 		ErrSetErrorCode(ERR_NO_POP3_IP);
 		return ERR_NO_POP3_IP;
 	}
@@ -1548,11 +1577,6 @@ int UPopGetLastLoginInfo(UserInfo *pUI, PopLastLoginInfo *pInfo)
 	MscFGets(szIP, sizeof(szIP) - 1, pIpFile);
 	fclose(pIpFile);
 
-	NET_ADDRESS NetAddr;
-
-	if (SysInetAddr(szIP, NetAddr) < 0)
-		return ErrGetErrorCode();
-
-	return SysSetupAddress(pInfo->Address, AF_INET, NetAddr, 0);
+	return SysGetHostByName(szIP, -1, pInfo->Address);
 }
 

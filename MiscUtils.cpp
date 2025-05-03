@@ -63,20 +63,6 @@ static char *MscMacroReplace(char const *pszIn, int *piSize,
 			     char *(*pLkupProc)(void *, char const *, int), void *pPriv);
 
 
-void *MscMemDup(void const *pData, long lSize, long lExtra)
-{
-	void *pDData;
-
-	if (lSize < 0)
-		lSize = strlen((char const *) pData);
-	if ((pDData = SysAllocNZ(lSize + lExtra)) == NULL)
-		return NULL;
-	memcpy(pDData, pData, lSize);
-	memset((char *) pDData + lSize, 0, lExtra);
-
-	return pDData;
-}
-
 int MscDatumAlloc(Datum *pDm, void const *pData, long lSize)
 {
 	if ((pDm->pData = (char *) SysAllocNZ(lSize + 1)) == NULL)
@@ -661,17 +647,12 @@ int MscGetSockHost(SYS_SOCKET SockFD, char *pszFQDN, int iSize)
 
 int MscGetServerAddress(char const *pszServer, SYS_INET_ADDR &SvrAddr, int iPortNo)
 {
-	NET_ADDRESS NetAddr;
 	char szServer[MAX_HOST_NAME] = "";
 
-	ZeroData(SvrAddr);
-	if (MscSplitAddressPort(pszServer, szServer, iPortNo, iPortNo) < 0)
+	if (MscSplitAddressPort(pszServer, szServer, iPortNo, iPortNo) < 0 ||
+	    SysGetHostByName(szServer, iAddrFamily, SvrAddr) < 0 ||
+	    SysSetAddrPort(SvrAddr, iPortNo) < 0)
 		return ErrGetErrorCode();
-	if (SysInetAddr(szServer, NetAddr) < 0 &&
-	    SysGetHostByName(szServer, NetAddr) < 0)
-		return ErrGetErrorCode();
-
-	SysSetupAddress(SvrAddr, AF_INET, NetAddr, iPortNo);
 
 	return 0;
 }
@@ -812,26 +793,23 @@ int MscCreateClientSocket(char const *pszServer, int iPortNo, int iSockType,
 			  SYS_SOCKET *pSockFD, SYS_INET_ADDR *pSvrAddr,
 			  SYS_INET_ADDR *pSockAddr, int iTimeout)
 {
-	/* Get server address */
 	SYS_INET_ADDR SvrAddr;
 
 	if (MscGetServerAddress(pszServer, SvrAddr, iPortNo) < 0)
 		return ErrGetErrorCode();
 
-	SYS_SOCKET SockFD = SysCreateSocket(AF_INET, iSockType, 0);
+	SYS_SOCKET SockFD = SysCreateSocket(SysGetAddrFamily(SvrAddr), iSockType, 0);
 
 	if (SockFD == SYS_INVALID_SOCKET)
 		return ErrGetErrorCode();
 
-	if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), iTimeout) < 0) {
+	if (SysConnect(SockFD, &SvrAddr, iTimeout) < 0) {
 		ErrorPush();
 		SysCloseSocket(SockFD);
 		return ErrorPop();
 	}
 
 	SYS_INET_ADDR SockAddr;
-
-	ZeroData(SockAddr);
 
 	if (SysGetSockInfo(SockFD, SockAddr) < 0) {
 		ErrorPush();
@@ -847,20 +825,20 @@ int MscCreateClientSocket(char const *pszServer, int iPortNo, int iSockType,
 	return 0;
 }
 
-int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iPortNo,
-			   int iListenSize, SYS_SOCKET *pSockFDs, int &iNumSockFDs)
+int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iFamily,
+			   int iPortNo, int iListenSize, SYS_SOCKET *pSockFDs,
+			   int &iNumSockFDs)
 {
 	if (iNumAddr == 0) {
-		SYS_SOCKET SvrSockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
+		SYS_SOCKET SvrSockFD = SysCreateSocket(iFamily, SOCK_STREAM, 0);
 
 		if (SvrSockFD == SYS_INVALID_SOCKET)
 			return ErrGetErrorCode();
 
 		SYS_INET_ADDR InSvrAddr;
 
-		SysSetupAddress(InSvrAddr, AF_INET, htonl(INADDR_ANY), iPortNo);
-		if (SysBindSocket(SvrSockFD, (struct sockaddr *) &InSvrAddr,
-				  sizeof(InSvrAddr)) < 0) {
+		if (SysInetAnySetup(InSvrAddr, iFamily, iPortNo) < 0 ||
+		    SysBindSocket(SvrSockFD, &InSvrAddr) < 0) {
 			ErrorPush();
 			SysCloseSocket(SvrSockFD);
 			return ErrorPop();
@@ -873,7 +851,8 @@ int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iPor
 		iNumSockFDs = 0;
 
 		for (int i = 0; i < iNumAddr; i++) {
-			SYS_SOCKET SvrSockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
+			SYS_SOCKET SvrSockFD = SysCreateSocket(SysGetAddrFamily(pSvrAddr[i]),
+							       SOCK_STREAM, 0);
 
 			if (SvrSockFD == SYS_INVALID_SOCKET) {
 				ErrorPush();
@@ -886,8 +865,7 @@ int MscCreateServerSockets(int iNumAddr, SYS_INET_ADDR const *pSvrAddr, int iPor
 
 			if (SysGetAddrPort(InSvrAddr) == 0)
 				SysSetAddrPort(InSvrAddr, iPortNo);
-			if (SysBindSocket(SvrSockFD, (struct sockaddr *) &InSvrAddr,
-					  sizeof(InSvrAddr)) < 0) {
+			if (SysBindSocket(SvrSockFD, &InSvrAddr) < 0) {
 				ErrorPush();
 				SysCloseSocket(SvrSockFD);
 				for (--iNumSockFDs; iNumSockFDs >= 0; iNumSockFDs--)
@@ -937,12 +915,11 @@ int MscAcceptServerConnection(SYS_SOCKET const *pSockFDs, int iNumSockFDs,
 	for (i = 0; i < iNumSockFDs; i++) {
 		if (SYS_FD_ISSET(pSockFDs[i], &fdReadSet)) {
 			SYS_INET_ADDR ConnAddr;
-			int iConnAddrLength = sizeof(ConnAddr);
 
 			ZeroData(ConnAddr);
 
 			SYS_SOCKET ConnSockFD = SysAccept(pSockFDs[i], &ConnAddr,
-							  &iConnAddrLength, iTimeout);
+							  iTimeout);
 
 			if (ConnSockFD != SYS_INVALID_SOCKET)
 				pConnSockFD[iNumConnSockFD++] = ConnSockFD;
@@ -954,51 +931,51 @@ int MscAcceptServerConnection(SYS_SOCKET const *pSockFDs, int iNumSockFDs,
 
 int MscLoadAddressFilter(char const *const *ppszFilter, int iNumTokens, AddressFilter &AF)
 {
-	ZeroData(AF);
+	int iASize;
+	void const *pAData;
+	char const *pszMask;
+	SYS_INET_ADDR Mask;
 
-	if (iNumTokens > 1) {
-		SysInetAddr(ppszFilter[0], AF.Addr.a);
-		SysInetAddr(ppszFilter[1], AF.Mask.a);
+	if ((pszMask = strchr(ppszFilter[0], '/')) != NULL) {
+		int i;
+		int iAddrLength = (int) (pszMask - ppszFilter[0]);
+		int iMaskBits = atoi(pszMask + 1);
+		char szFilter[128];
+
+		iAddrLength = Min(iAddrLength, sizeof(szFilter) - 1);
+		Cpy2Sz(szFilter, ppszFilter[0], iAddrLength);
+		if (SysGetHostByName(szFilter, -1, AF.Addr) < 0)
+			return ErrGetErrorCode();
+
+		ZeroData(AF.Mask);
+		iMaskBits = Min(iMaskBits, 8 * sizeof(AF.Mask));
+		for (i = 0; (i + 8) <= iMaskBits; i += 8)
+			AF.Mask[i / 8] = 0xff;
+		if (i < iMaskBits)
+			AF.Mask[i / 8] = (SYS_UINT8) (((1 << (iMaskBits - i)) - 1) << (8 - iMaskBits + i));
+	} else if (iNumTokens > 1) {
+		/*
+		 * This is for the old IPV4 representation. They both must
+		 * be two IPV4 addresses (first network, second netmask).
+		 */
+		if (SysGetHostByName(ppszFilter[0], AF_INET, AF.Addr) < 0 ||
+		    SysGetHostByName(ppszFilter[1], AF_INET, Mask) < 0 ||
+		    (pAData = SysInetAddrData(Mask, &iASize)) == NULL)
+			return ErrGetErrorCode();
+		ZeroData(AF.Mask);
+		memcpy(AF.Mask, pAData, Min(iASize, sizeof(AF.Mask)));
 	} else {
-		char const *pszMask;
-
-		if ((pszMask = strchr(ppszFilter[0], '/')) != NULL) {
-			int i;
-			int iAddrLength = (int) (pszMask - ppszFilter[0]);
-			int iMaskBits = atoi(pszMask + 1);
-			char szFilter[128];
-
-			iAddrLength = Min(iAddrLength, sizeof(szFilter) - 1);
-			Cpy2Sz(szFilter, ppszFilter[0], iAddrLength);
-
-			SysInetAddr(szFilter, AF.Addr.a);
-
-			iMaskBits = Min(iMaskBits, 8 * sizeof(NET_ADDRESS));
-			for (i = 0; (i + 8) <= iMaskBits; i += 8)
-				AF.Mask.b[i / 8] = 0xff;
-			if (i < iMaskBits)
-				AF.Mask.b[i / 8] = (SYS_UINT8) (((1 << (iMaskBits - i)) - 1) << (8 - iMaskBits + i));
-		} else {
-			SysInetAddr(ppszFilter[0], AF.Addr.a);
-
-			for (int i = 0; i < sizeof(NET_ADDRESS); i++)
-				AF.Mask.b[i] = (AF.Addr.b[i] != 0) ? 0xff: 0x00;
-		}
+		ErrSetErrorCode(ERR_INVALID_PARAMETER);
+		return ERR_INVALID_PARAMETER;
 	}
 
 	return 0;
 }
 
-bool MscAddressMatch(AddressFilter const &AF, NET_ADDRESS const &TestAddr)
+int MscAddressMatch(AddressFilter const &AF, SYS_INET_ADDR const &TestAddr)
 {
-	AddrUnion Addr;
-
-	Addr.a = TestAddr;
-	for (int i = 0; i < sizeof(NET_ADDRESS); i++)
-		if ((Addr.b[i] & AF.Mask.b[i]) != (AF.Addr.b[i] & AF.Mask.b[i]))
-			return false;
-
-	return true;
+	return SysInetAddrMatch(AF.Addr, AF.Mask, sizeof(AF.Mask),
+				TestAddr);
 }
 
 int MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR &PeerInfo, bool bDefault)
@@ -1010,12 +987,9 @@ int MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR &PeerInfo, boo
 		return ERR_FILE_OPEN;
 	}
 
-	NET_ADDRESS TestAddr;
-
-	SysGetAddrAddress(PeerInfo, TestAddr);
-
 	bool bAllow = bDefault;
-	int iPrecedence = -1;
+	int iPrecedence = -1, iFieldsCount;
+	AddressFilter AF;
 	char szMapLine[512] = "";
 
 	while (MscGetConfigLine(szMapLine, sizeof(szMapLine) - 1, pMapFile) != NULL) {
@@ -1024,12 +998,10 @@ int MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR &PeerInfo, boo
 		if (ppszStrings == NULL)
 			continue;
 
-		int iFieldsCount = StrStringsCount(ppszStrings);
-		AddressFilter AF;
-
+		iFieldsCount = StrStringsCount(ppszStrings);
 		if (iFieldsCount >= ipmMax &&
 		    MscLoadAddressFilter(ppszStrings, iFieldsCount, AF) == 0 &&
-		    MscAddressMatch(AF, TestAddr)) {
+		    MscAddressMatch(AF, PeerInfo)) {
 			int iCurrPrecedence = atoi(ppszStrings[ipmPrecedence]);
 
 			if (iCurrPrecedence >= iPrecedence) {
@@ -1059,22 +1031,19 @@ char **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR *pPeerInf
 		return NULL;
 	}
 
-	NET_ADDRESS PeerAddr;
+	int iFieldsCount;
+	AddressFilter AFPeer;
 	char szLine[IPPROP_LINE_MAX] = "";
 
-	SysGetAddrAddress(*pPeerInfo, PeerAddr);
 	while (MscGetConfigLine(szLine, sizeof(szLine) - 1, pFile) != NULL) {
 		char **ppszTokens = StrGetTabLineStrings(szLine);
 
 		if (ppszTokens == NULL)
 			continue;
-
-		int iFieldsCount = StrStringsCount(ppszTokens);
-		AddressFilter AFPeer;
-
+		iFieldsCount = StrStringsCount(ppszTokens);
 		if (iFieldsCount >= 1 &&
 		    MscLoadAddressFilter(&ppszTokens[0], 1, AFPeer) == 0 &&
-		    MscAddressMatch(AFPeer, PeerAddr)) {
+		    MscAddressMatch(AFPeer, *pPeerInfo)) {
 			fclose(pFile);
 			return ppszTokens;
 		}
@@ -1113,6 +1082,7 @@ char **MscGetHNProperties(char const *pszFileName, char const *pszHostName)
 		return NULL;
 	}
 
+	int iFieldsCount;
 	char szLine[IPPROP_LINE_MAX] = "";
 
 	while (MscGetConfigLine(szLine, sizeof(szLine) - 1, pFile) != NULL) {
@@ -1120,9 +1090,7 @@ char **MscGetHNProperties(char const *pszFileName, char const *pszHostName)
 
 		if (ppszTokens == NULL)
 			continue;
-
-		int iFieldsCount = StrStringsCount(ppszTokens);
-
+		iFieldsCount = StrStringsCount(ppszTokens);
 		if (iFieldsCount >= 1 &&
 		    MscHostSubMatch(pszHostName, ppszTokens[0])) {
 			fclose(pFile);
@@ -1140,12 +1108,10 @@ char **MscGetHNProperties(char const *pszFileName, char const *pszHostName)
 int MscMD5Authenticate(const char *pszPassword, const char *pszTimeStamp, const char *pszDigest)
 {
 	char *pszHash = StrSprint("%s%s", pszTimeStamp, pszPassword);
+	char szMD5[128] = "";
 
 	if (pszHash == NULL)
 		return ErrGetErrorCode();
-
-	char szMD5[128] = "";
-
 	do_md5_string(pszHash, strlen(pszHash), szMD5);
 	SysFree(pszHash);
 	if (stricmp(pszDigest, szMD5) != 0) {
@@ -1247,13 +1213,15 @@ int MscSplitAddressPort(char const *pszConnSpec, char *pszAddress, int &iPortNo,
 			ErrSetErrorCode(ERR_BAD_SERVER_ADDR);
 			return ERR_BAD_SERVER_ADDR;
 		}
-		if ((pszPort = strrchr(pszEnd + 1, '|')) == NULL)
-			pszPort = strrchr(pszEnd + 1, ':');
+		if ((pszPort = strrchr(pszEnd + 1, '|')) == NULL &&
+		    (pszPort = strrchr(pszEnd + 1, ':')) == NULL)
+			pszPort = strrchr(pszEnd + 1, ';');
 		if (pszPort != NULL)
 			iPortNo = atoi(pszPort + 1);
 	} else {
-		if ((pszPort = strrchr(pszConnSpec, '|')) == NULL)
-			pszPort = strrchr(pszConnSpec, ':');
+		if ((pszPort = strrchr(pszConnSpec, '|')) == NULL &&
+		    (pszPort = strrchr(pszConnSpec, ':')) == NULL)
+			pszPort = strrchr(pszConnSpec, ';');
 		if ((pszEnd = pszPort) != NULL)
 			iPortNo = atoi(pszPort + 1);
 	}
@@ -1402,7 +1370,7 @@ int MscGetAddrString(SYS_INET_ADDR const &AddrInfo, char *pszAStr, int iSize)
 {
 	char szIP[128] = "";
 
-	SysInetNToA(AddrInfo, szIP);
+	SysInetNToA(AddrInfo, szIP, sizeof(szIP));
 	SysSNPrintf(pszAStr, iSize, "[%s]:%d", szIP, SysGetAddrPort(AddrInfo));
 
 	return 0;

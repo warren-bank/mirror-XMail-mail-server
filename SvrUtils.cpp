@@ -27,6 +27,7 @@
 #include "ResLocks.h"
 #include "StrUtils.h"
 #include "SList.h"
+#include "Hash.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
 #include "UsrUtils.h"
@@ -44,26 +45,27 @@
 #define SMTP_SPOOL_DIR              "spool"
 #define SVR_PROFILE_LINE_MAX        2048
 #define SYS_RES_CHECK_INTERVAL      8
+#define SVR_CFGHASH_INITSIZE        32
 
 struct ServerInfoVar {
-	LISTLINK LL;
-	char *pszName;
+	HashNode HN;
 	char *pszValue;
 };
 
 struct ServerConfigData {
 	RLCK_HANDLE hResLock;
 	int iWriteLock;
-	HSLIST hConfigList;
+	HASH_HANDLE hHash;
 };
 
 static char *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath);
+static void SvrFreeConfigVar(ServerInfoVar *pSIV);
+static void SvrHFreeConfigVar(void *pPrivate, HashNode *pHN);
+static ServerConfigData *SvrAllocConfig(RLCK_HANDLE hResLock, int iWriteLock);
 static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue);
-static void SvrFreeVar(ServerInfoVar *pSIV);
-static void SvrFreeInfoList(HSLIST &hConfigList);
-static ServerInfoVar *SvrGetUserVar(HSLIST &hConfigList, const char *pszName);
-static int SvrWriteInfoList(HSLIST &hConfigList, FILE *pProfileFile);
-static int SvrLoadServerConfig(HSLIST &hConfigList, const char *pszFilePath);
+static ServerInfoVar *SvrGetUserVar(HASH_HANDLE hHash, const char *pszName);
+static int SvrWriteConfig(HASH_HANDLE hHash, FILE *pFile);
+static int SvrReadConfig(HASH_HANDLE hHash, const char *pszFilePath);
 static char *SvrGetProtoIPPropFile(char const *pszProto, char *pszFileName, int iMaxName);
 static char *SvrGetProtoHNPropFile(char const *pszProto, char *pszFileName, int iMaxName);
 
@@ -76,16 +78,50 @@ static char *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath)
 	return pszFilePath;
 }
 
+static void SvrFreeConfigVar(ServerInfoVar *pSIV)
+{
+	SysFree(pSIV->HN.Key.pData);
+	SysFree(pSIV->pszValue);
+	SysFree(pSIV);
+}
+
+static void SvrHFreeConfigVar(void *pPrivate, HashNode *pHN)
+{
+	ServerInfoVar *pSIV = SYS_LIST_ENTRY(pHN, ServerInfoVar, HN);
+
+	SvrFreeConfigVar(pSIV);
+}
+
+static ServerConfigData *SvrAllocConfig(RLCK_HANDLE hResLock, int iWriteLock,
+					const char *pszProfilePath)
+{
+	ServerConfigData *pSCD;
+
+	if ((pSCD = (ServerConfigData *) SysAlloc(sizeof(ServerConfigData))) == NULL)
+		return NULL;
+	pSCD->hResLock = hResLock;
+	pSCD->iWriteLock = iWriteLock;
+	if ((pSCD->hHash = HashCreate(SVR_CFGHASH_INITSIZE)) == INVALID_HASH_HANDLE) {
+		SysFree(pSCD);
+		return NULL;
+	}
+	if (SvrReadConfig(pSCD->hHash, pszProfilePath) < 0) {
+		HashFree(pSCD->hHash, SvrHFreeConfigVar, NULL);
+		SysFree(pSCD);
+		return NULL;
+	}
+
+	return pSCD;
+}
+
 SVRCFG_HANDLE SvrGetConfigHandle(int iWriteLock)
 {
-	char szProfilePath[SYS_MAX_PATH] = "";
+	RLCK_HANDLE hResLock;
+	ServerConfigData *pSCD;
+	char szProfilePath[SYS_MAX_PATH];
+	char szResLock[SYS_MAX_PATH];
 
 	SvrGetProfileFilePath(szProfilePath, sizeof(szProfilePath));
-
-	/* Lock the profile resource */
-	RLCK_HANDLE hResLock = INVALID_RLCK_HANDLE;
-	char szResLock[SYS_MAX_PATH] = "";
-
 	if (iWriteLock) {
 		if ((hResLock =
 		     RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
@@ -97,25 +133,11 @@ SVRCFG_HANDLE SvrGetConfigHandle(int iWriteLock)
 						sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
 			return INVALID_SVRCFG_HANDLE;
 	}
-
-	ServerConfigData *pSCD = (ServerConfigData *) SysAlloc(sizeof(ServerConfigData));
-
-	if (pSCD == NULL) {
+	if ((pSCD = SvrAllocConfig(hResLock, iWriteLock, szProfilePath)) == NULL) {
 		if (iWriteLock)
 			RLckUnlockEX(hResLock);
 		else
 			RLckUnlockSH(hResLock);
-		return INVALID_SVRCFG_HANDLE;
-	}
-	pSCD->hResLock = hResLock;
-	pSCD->iWriteLock = iWriteLock;
-	ListInit(pSCD->hConfigList);
-	if (SvrLoadServerConfig(pSCD->hConfigList, szProfilePath) < 0) {
-		if (iWriteLock)
-			RLckUnlockEX(hResLock);
-		else
-			RLckUnlockSH(hResLock);
-		SysFree(pSCD);
 		return INVALID_SVRCFG_HANDLE;
 	}
 
@@ -126,25 +148,23 @@ void SvrReleaseConfigHandle(SVRCFG_HANDLE hSvrConfig)
 {
 	ServerConfigData *pSCD = (ServerConfigData *) hSvrConfig;
 
-	/* Unlock the profile resource */
 	if (pSCD->iWriteLock)
 		RLckUnlockEX(pSCD->hResLock);
 	else
 		RLckUnlockSH(pSCD->hResLock);
-	SvrFreeInfoList(pSCD->hConfigList);
+	HashFree(pSCD->hHash, SvrHFreeConfigVar, NULL);
 	SysFree(pSCD);
 }
 
 char *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName, const char *pszDefault)
 {
 	ServerConfigData *pSCD = (ServerConfigData *) hSvrConfig;
+	ServerInfoVar *pSIV;
 
-	ServerInfoVar *pSIV = SvrGetUserVar(pSCD->hConfigList, pszName);
-
-	if (pSIV != NULL)
+	if ((pSIV = SvrGetUserVar(pSCD->hHash, pszName)) != NULL)
 		return SysStrDup(pSIV->pszValue);
 
-	return (pszDefault != NULL) ? SysStrDup(pszDefault): NULL;
+	return pszDefault != NULL ? SysStrDup(pszDefault): NULL;
 }
 
 bool SvrTestConfigFlag(char const *pszName, bool bDefault, SVRCFG_HANDLE hSvrConfig)
@@ -153,161 +173,132 @@ bool SvrTestConfigFlag(char const *pszName, bool bDefault, SVRCFG_HANDLE hSvrCon
 
 	SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig, (bDefault) ? "1": "0");
 
-	return (atoi(szValue) != 0) ? true: false;
+	return atoi(szValue) != 0 ? true: false;
 }
 
 int SvrGetConfigInt(char const *pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
 {
 	char szValue[64] = "";
 
-	return (SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig, NULL) < 0 ||
-		IsEmptyString(szValue)) ? iDefault: atoi(szValue);
+	return SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig, NULL) < 0 ||
+		IsEmptyString(szValue) ? iDefault: atoi(szValue);
 }
 
 int SysFlushConfig(SVRCFG_HANDLE hSvrConfig)
 {
 	ServerConfigData *pSCD = (ServerConfigData *) hSvrConfig;
+	int iError;
+	FILE *pFile;
+	char szProfilePath[SYS_MAX_PATH];
 
 	if (!pSCD->iWriteLock) {
 		ErrSetErrorCode(ERR_SVR_PRFILE_NOT_LOCKED);
 		return ERR_SVR_PRFILE_NOT_LOCKED;
 	}
 
-	char szProfilePath[SYS_MAX_PATH] = "";
-
 	SvrGetProfileFilePath(szProfilePath, sizeof(szProfilePath));
-
-	char szResLock[SYS_MAX_PATH] = "";
-	RLCK_HANDLE hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
-							  sizeof(szResLock)));
-
-	if (hResLock == INVALID_RLCK_HANDLE)
-		return ErrGetErrorCode();
-
-	FILE *pProfileFile = fopen(szProfilePath, "wt");
-
-	if (pProfileFile == NULL) {
-		RLckUnlockEX(hResLock);
+	if ((pFile = fopen(szProfilePath, "wt")) == NULL) {
 		ErrSetErrorCode(ERR_FILE_CREATE);
 		return ERR_FILE_CREATE;
 	}
 
-	int iFlushResult = SvrWriteInfoList(pSCD->hConfigList, pProfileFile);
+	iError = SvrWriteConfig(pSCD->hHash, pFile);
 
-	fclose(pProfileFile);
-	RLckUnlockEX(hResLock);
+	fclose(pFile);
 
-	return iFlushResult;
+	return iError;
 }
 
 static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue)
 {
-	ServerInfoVar *pSIV = (ServerInfoVar *) SysAlloc(sizeof(ServerInfoVar));
+	char *pszDName;
+	ServerInfoVar *pSIV;
 
-	if (pSIV == NULL)
+	if ((pSIV = (ServerInfoVar *) SysAlloc(sizeof(ServerInfoVar))) == NULL)
 		return NULL;
-
-	ListLinkInit(pSIV);
-	pSIV->pszName = SysStrDup(pszName);
+	HashInitNode(&pSIV->HN);
+	pszDName = SysStrDup(pszName);
+	DatumStrSet(&pSIV->HN.Key, pszDName);
 	pSIV->pszValue = SysStrDup(pszValue);
 
 	return pSIV;
 }
 
-static void SvrFreeVar(ServerInfoVar *pSIV)
+static ServerInfoVar *SvrGetUserVar(HASH_HANDLE hHash, const char *pszName)
 {
-	SysFree(pSIV->pszName);
-	SysFree(pSIV->pszValue);
-	SysFree(pSIV);
+	HashNode *pHNode;
+	HashEnum HEnum;
+	Datum Key;
+
+	DatumStrSet(&Key, pszName);
+	if (HashGetFirst(hHash, &Key, &HEnum, &pHNode) < 0)
+		return NULL;
+
+	return SYS_LIST_ENTRY(pHNode, ServerInfoVar, HN);
 }
 
-static void SvrFreeInfoList(HSLIST &hConfigList)
+static int SvrWriteConfig(HASH_HANDLE hHash, FILE *pFile)
 {
+	SysListHead *pPos;
+	HashNode *pHNode;
 	ServerInfoVar *pSIV;
+	char *pszQuoted;
 
-	while ((pSIV = (ServerInfoVar *) ListRemove(hConfigList)) != INVALID_SLIST_PTR)
-		SvrFreeVar(pSIV);
-}
+	if (HashFirst(hHash, &pPos, &pHNode) == 0) {
+		do {
+			pSIV = SYS_LIST_ENTRY(pHNode, ServerInfoVar, HN);
 
-static ServerInfoVar *SvrGetUserVar(HSLIST &hConfigList, const char *pszName)
-{
-	ServerInfoVar *pSIV = (ServerInfoVar *) ListFirst(hConfigList);
+			if ((pszQuoted = StrQuote(pSIV->HN.Key.pData, '"')) == NULL)
+				return ErrGetErrorCode();
+			fprintf(pFile, "%s\t", pszQuoted);
+			SysFree(pszQuoted);
 
-	for (; pSIV != INVALID_SLIST_PTR; pSIV = (ServerInfoVar *)
-	     ListNext(hConfigList, (PLISTLINK) pSIV))
-		if (strcmp(pSIV->pszName, pszName) == 0)
-			return pSIV;
-
-	return NULL;
-}
-
-static int SvrWriteInfoList(HSLIST &hConfigList, FILE *pProfileFile)
-{
-	ServerInfoVar *pSIV = (ServerInfoVar *) ListFirst(hConfigList);
-
-	for (; pSIV != INVALID_SLIST_PTR; pSIV = (ServerInfoVar *)
-	     ListNext(hConfigList, (PLISTLINK) pSIV)) {
-		/* Write variabile name */
-		char *pszQuoted = StrQuote(pSIV->pszName, '"');
-
-		if (pszQuoted == NULL)
-			return ErrGetErrorCode();
-
-		fprintf(pProfileFile, "%s\t", pszQuoted);
-
-		SysFree(pszQuoted);
-
-		/* Write variabile value */
-		pszQuoted = StrQuote(pSIV->pszValue, '"');
-
-		if (pszQuoted == NULL)
-			return ErrGetErrorCode();
-
-		fprintf(pProfileFile, "%s\n", pszQuoted);
-		SysFree(pszQuoted);
+			if ((pszQuoted = StrQuote(pSIV->pszValue, '"')) == NULL)
+				return ErrGetErrorCode();
+			fprintf(pFile, "%s\n", pszQuoted);
+			SysFree(pszQuoted);
+		} while (HashNext(hHash, &pPos, &pHNode) == 0);
 	}
 
 	return 0;
 }
 
-static int SvrLoadServerConfig(HSLIST &hConfigList, const char *pszFilePath)
+static int SvrReadConfig(HASH_HANDLE hHash, const char *pszFilePath)
 {
-	char szResLock[SYS_MAX_PATH] = "";
-	RLCK_HANDLE hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
-							  sizeof(szResLock)));
+	FILE *pFile;
+	RLCK_HANDLE hResLock;
+	char szResLock[SYS_MAX_PATH];
+	char szProfileLine[SVR_PROFILE_LINE_MAX];
 
-	if (hResLock == INVALID_RLCK_HANDLE)
+	if ((hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
+						   sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
 		return ErrGetErrorCode();
-
-	FILE *pProfileFile = fopen(pszFilePath, "rt");
-
-	if (pProfileFile == NULL) {
+	if ((pFile = fopen(pszFilePath, "rt")) == NULL) {
 		RLckUnlockSH(hResLock);
 
 		ErrSetErrorCode(ERR_NO_USER_PRFILE, pszFilePath);
 		return ERR_NO_USER_PRFILE;
 	}
-
-	char szProfileLine[SVR_PROFILE_LINE_MAX] = "";
-
 	while (MscGetConfigLine(szProfileLine, sizeof(szProfileLine) - 1,
-				pProfileFile) != NULL) {
+				pFile) != NULL) {
 		char **ppszStrings = StrGetTabLineStrings(szProfileLine);
 
 		if (ppszStrings == NULL)
 			continue;
-
-		int iFieldsCount = StrStringsCount(ppszStrings);
-
-		if (iFieldsCount == 2) {
+		if (StrStringsCount(ppszStrings) >= 2) {
 			ServerInfoVar *pSIV = SvrAllocVar(ppszStrings[0], ppszStrings[1]);
 
-			if (pSIV != NULL)
-				ListAddTail(hConfigList, (PLISTLINK) pSIV);
+			if (pSIV != NULL && HashAdd(hHash, &pSIV->HN) < 0) {
+				SvrFreeConfigVar(pSIV);
+				StrFreeStrings(ppszStrings);
+				fclose(pFile);
+				RLckUnlockSH(hResLock);
+				return ErrGetErrorCode();
+			}
 		}
 		StrFreeStrings(ppszStrings);
 	}
-	fclose(pProfileFile);
+	fclose(pFile);
 	RLckUnlockSH(hResLock);
 
 	return 0;

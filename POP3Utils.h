@@ -25,7 +25,7 @@
 
 #define INVALID_POP3_HANDLE         ((POP3_HANDLE) 0)
 
-#define POP3_USER_SPLITTERS         "@:"
+#define POP3_USER_SPLITTERS         "@:%"
 
 typedef struct POP3_HANDLE_struct {
 } *POP3_HANDLE;

@@ -105,6 +105,8 @@ struct SvrShutdownCtx {
 
 static void SvrShutdownCleanup(void);
 static int SvrSetShutdown(void);
+static int SvrAddServerAddress(char const *pszServer, SYS_INET_ADDR *pSvrAddr,
+			       int *piPos, int iSize);
 static int SvrSetupCTRL(int iArgCount, char *pszArgs[]);
 static long SvrThreadCntCTRL(ThreadConfig const *pThCfg);
 static void SvrCleanupCTRL(void);
@@ -150,6 +152,8 @@ int iFilterTimeout = FILTER_TIMEOUT;
 bool bFilterLogEnabled = false;
 int iLogRotateHours = LOG_ROTATE_HOURS;
 int iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
+int iAddrFamily = AF_INET;
+int iPOP3ClientTimeout = STD_SERVER_TIMEOUT;
 
 #ifdef __UNIX__
 int iMailboxType = XMAIL_MAILDIR;
@@ -238,9 +242,25 @@ static void SvrShutdown__ThreadConfig(void *pPrivate)
 	pThCfg->ulFlags |= THCF_SHUTDOWN;
 }
 
+static int SvrAddServerAddress(char const *pszServer, SYS_INET_ADDR *pSvrAddr,
+			       int *piPos, int iSize)
+{
+	int iError;
+
+	if (*piPos >= iSize) {
+		ErrSetErrorCode(ERR_TOO_MANY_ELEMENTS);
+		return ERR_TOO_MANY_ELEMENTS;
+	}
+	if ((iError = MscGetServerAddress(pszServer, pSvrAddr[*piPos])) < 0)
+		return iError;
+	(*piPos)++;
+
+	return 0;
+}
+
 static int SvrSetupCTRL(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_CTRL_PORT, iDisable = 0;
+	int iPort = STD_CTRL_PORT, iDisable = 0, iFamily = AF_INET;
 	int iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT;
 	long lMaxThreads = MAX_CTRL_THREADS;
 	unsigned long ulFlags = 0;
@@ -276,9 +296,10 @@ static int SvrSetupCTRL(int iArgCount, char *pszArgs[])
 
 		case 'I':
 			if (++i < iArgCount &&
-			    MscGetServerAddress(pszArgs[i],
-						ThCfgCTRL.SvrAddr[ThCfgCTRL.iNumAddr]) == 0)
-				++ThCfgCTRL.iNumAddr;
+			    SvrAddServerAddress(pszArgs[i], ThCfgCTRL.SvrAddr,
+						&ThCfgCTRL.iNumAddr,
+						CountOf(ThCfgCTRL.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case 'X':
@@ -288,6 +309,10 @@ static int SvrSetupCTRL(int iArgCount, char *pszArgs[])
 
 		case '-':
 			iDisable++;
+			break;
+
+		case '6':
+			iFamily = AF_INET6;
 			break;
 		}
 	}
@@ -313,8 +338,8 @@ static int SvrSetupCTRL(int iArgCount, char *pszArgs[])
 	if (iDisable)
 		return 0;
 
-	if (MscCreateServerSockets(ThCfgCTRL.iNumAddr, ThCfgCTRL.SvrAddr, iPort,
-				   CTRL_LISTEN_SIZE, ThCfgCTRL.SockFDs,
+	if (MscCreateServerSockets(ThCfgCTRL.iNumAddr, ThCfgCTRL.SvrAddr, iFamily,
+				   iPort, CTRL_LISTEN_SIZE, ThCfgCTRL.SockFDs,
 				   ThCfgCTRL.iNumSockFDs) < 0) {
 		ShbCloseBlock(hShbCTRL);
 		return ErrGetErrorCode();
@@ -368,7 +393,7 @@ static void SvrCleanupCTRL(void)
 
 static int SvrSetupCTRLS(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_CTRLS_PORT;
+	int iPort = STD_CTRLS_PORT, iFamily = AF_INET;
 
 	/*
 	 * Initialize the service thread handle to SYS_INVALID_THREAD so that
@@ -393,18 +418,23 @@ static int SvrSetupCTRLS(int iArgCount, char *pszArgs[])
 			break;
 
 		case 'I':
-			if ((++i < iArgCount) &&
-			    (MscGetServerAddress(pszArgs[i],
-						 ThCfgCTRLS.SvrAddr[ThCfgCTRLS.iNumAddr]) == 0))
-				++ThCfgCTRLS.iNumAddr;
+			if (++i < iArgCount &&
+			    SvrAddServerAddress(pszArgs[i], ThCfgCTRLS.SvrAddr,
+						&ThCfgCTRLS.iNumAddr,
+						CountOf(ThCfgCTRLS.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case '-':
 			return 0;
+
+		case '6':
+			iFamily = AF_INET6;
+			break;
 		}
 	}
-	if (MscCreateServerSockets(ThCfgCTRLS.iNumAddr, ThCfgCTRLS.SvrAddr, iPort,
-				   CTRL_LISTEN_SIZE, ThCfgCTRLS.SockFDs,
+	if (MscCreateServerSockets(ThCfgCTRLS.iNumAddr, ThCfgCTRLS.SvrAddr, iFamily,
+				   iPort, CTRL_LISTEN_SIZE, ThCfgCTRLS.SockFDs,
 				   ThCfgCTRLS.iNumSockFDs) < 0)
 		return ErrGetErrorCode();
 	if ((hCTRLSThread = SysCreateThread(MscServiceThread,
@@ -438,7 +468,7 @@ static void SvrCleanupCTRLS(void)
 
 static int SvrSetupFING(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_FINGER_PORT, iDisable = 0;
+	int iPort = STD_FINGER_PORT, iDisable = 0, iFamily = AF_INET;
 	unsigned long ulFlags = 0;
 
 	/*
@@ -467,13 +497,18 @@ static int SvrSetupFING(int iArgCount, char *pszArgs[])
 
 		case 'I':
 			if (++i < iArgCount &&
-			    MscGetServerAddress(pszArgs[i],
-						ThCfgFING.SvrAddr[ThCfgFING.iNumAddr]) == 0)
-				++ThCfgFING.iNumAddr;
+			    SvrAddServerAddress(pszArgs[i], ThCfgFING.SvrAddr,
+						&ThCfgFING.iNumAddr,
+						CountOf(ThCfgFING.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case '-':
 			iDisable++;
+			break;
+
+		case '6':
+			iFamily = AF_INET6;
 			break;
 		}
 	}
@@ -496,8 +531,8 @@ static int SvrSetupFING(int iArgCount, char *pszArgs[])
 	if (iDisable)
 		return 0;
 
-	if (MscCreateServerSockets(ThCfgFING.iNumAddr, ThCfgFING.SvrAddr, iPort,
-				   FING_LISTEN_SIZE, ThCfgFING.SockFDs,
+	if (MscCreateServerSockets(ThCfgFING.iNumAddr, ThCfgFING.SvrAddr, iFamily,
+				   iPort, FING_LISTEN_SIZE, ThCfgFING.SockFDs,
 				   ThCfgFING.iNumSockFDs) < 0) {
 		ShbCloseBlock(hShbFING);
 		return ErrGetErrorCode();
@@ -551,7 +586,7 @@ static void SvrCleanupFING(void)
 
 static int SvrSetupPOP3(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_POP3_PORT, iDisable = 0;
+	int iPort = STD_POP3_PORT, iDisable = 0, iFamily = AF_INET;
 	int iSessionTimeout = STD_SERVER_SESSION_TIMEOUT;
 	int iBadLoginWait = STD_POP3_BADLOGIN_WAIT;
 	long lMaxThreads = MAX_POP3_THREADS;
@@ -597,9 +632,10 @@ static int SvrSetupPOP3(int iArgCount, char *pszArgs[])
 
 		case 'I':
 			if (++i < iArgCount &&
-			    MscGetServerAddress(pszArgs[i],
-						ThCfgPOP3.SvrAddr[ThCfgPOP3.iNumAddr]) == 0)
-				++ThCfgPOP3.iNumAddr;
+			    SvrAddServerAddress(pszArgs[i], ThCfgPOP3.SvrAddr,
+						&ThCfgPOP3.iNumAddr,
+						CountOf(ThCfgPOP3.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case 'X':
@@ -609,6 +645,10 @@ static int SvrSetupPOP3(int iArgCount, char *pszArgs[])
 
 		case '-':
 			iDisable++;
+			break;
+
+		case '6':
+			iFamily = AF_INET6;
 			break;
 		}
 	}
@@ -637,8 +677,8 @@ static int SvrSetupPOP3(int iArgCount, char *pszArgs[])
 	/* Remove POP3 lock files */
 	UsrClearPop3LocksDir();
 
-	if (MscCreateServerSockets(ThCfgPOP3.iNumAddr, ThCfgPOP3.SvrAddr, iPort,
-				   POP3_LISTEN_SIZE, ThCfgPOP3.SockFDs,
+	if (MscCreateServerSockets(ThCfgPOP3.iNumAddr, ThCfgPOP3.SvrAddr, iFamily,
+				   iPort, POP3_LISTEN_SIZE, ThCfgPOP3.SockFDs,
 				   ThCfgPOP3.iNumSockFDs) < 0) {
 		ShbCloseBlock(hShbPOP3);
 		return ErrGetErrorCode();
@@ -692,7 +732,7 @@ static void SvrCleanupPOP3(void)
 
 static int SvrSetupPOP3S(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_POP3S_PORT;
+	int iPort = STD_POP3S_PORT, iFamily = AF_INET;
 
 	/*
 	 * Initialize the service thread handle to SYS_INVALID_THREAD so that
@@ -718,17 +758,22 @@ static int SvrSetupPOP3S(int iArgCount, char *pszArgs[])
 
 		case 'I':
 			if (++i < iArgCount &&
-			    MscGetServerAddress(pszArgs[i],
-						ThCfgPOP3S.SvrAddr[ThCfgPOP3S.iNumAddr]) == 0)
-				++ThCfgPOP3S.iNumAddr;
+			    SvrAddServerAddress(pszArgs[i], ThCfgPOP3S.SvrAddr,
+						&ThCfgPOP3S.iNumAddr,
+						CountOf(ThCfgPOP3S.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case '-':
 			return 0;
+
+		case '6':
+			iFamily = AF_INET6;
+			break;
 		}
 	}
-	if (MscCreateServerSockets(ThCfgPOP3S.iNumAddr, ThCfgPOP3S.SvrAddr, iPort,
-				   POP3_LISTEN_SIZE, ThCfgPOP3S.SockFDs,
+	if (MscCreateServerSockets(ThCfgPOP3S.iNumAddr, ThCfgPOP3S.SvrAddr, iFamily,
+				   iPort, POP3_LISTEN_SIZE, ThCfgPOP3S.SockFDs,
 				   ThCfgPOP3S.iNumSockFDs) < 0)
 		return ErrGetErrorCode();
 	if ((hPOP3SThread = SysCreateThread(MscServiceThread,
@@ -762,7 +807,7 @@ static void SvrCleanupPOP3S(void)
 
 static int SvrSetupSMTP(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_SMTP_PORT, iDisable = 0;
+	int iPort = STD_SMTP_PORT, iDisable = 0, iFamily = AF_INET;
 	int iSessionTimeout = STD_SERVER_SESSION_TIMEOUT;
 	int iMaxRcpts = STD_SMTP_MAX_RCPTS;
 	unsigned int uPopAuthExpireTime = STD_POP3AUTH_EXPIRE_TIME;
@@ -799,10 +844,11 @@ static int SvrSetupSMTP(int iArgCount, char *pszArgs[])
 			break;
 
 		case 'I':
-			if ((++i < iArgCount) &&
-			    (MscGetServerAddress(pszArgs[i],
-						 ThCfgSMTP.SvrAddr[ThCfgSMTP.iNumAddr]) == 0))
-				++ThCfgSMTP.iNumAddr;
+			if (++i < iArgCount &&
+			    SvrAddServerAddress(pszArgs[i], ThCfgSMTP.SvrAddr,
+						&ThCfgSMTP.iNumAddr,
+						CountOf(ThCfgSMTP.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case 'X':
@@ -822,6 +868,10 @@ static int SvrSetupSMTP(int iArgCount, char *pszArgs[])
 
 		case '-':
 			iDisable++;
+			break;
+
+		case '6':
+			iFamily = AF_INET6;
 			break;
 		}
 	}
@@ -848,8 +898,8 @@ static int SvrSetupSMTP(int iArgCount, char *pszArgs[])
 	if (iDisable)
 		return 0;
 
-	if (MscCreateServerSockets(ThCfgSMTP.iNumAddr, ThCfgSMTP.SvrAddr, iPort,
-				   SMTP_LISTEN_SIZE, ThCfgSMTP.SockFDs,
+	if (MscCreateServerSockets(ThCfgSMTP.iNumAddr, ThCfgSMTP.SvrAddr, iFamily,
+				   iPort, SMTP_LISTEN_SIZE, ThCfgSMTP.SockFDs,
 				   ThCfgSMTP.iNumSockFDs) < 0) {
 		ShbCloseBlock(hShbSMTP);
 		return ErrGetErrorCode();
@@ -903,7 +953,7 @@ static void SvrCleanupSMTP(void)
 
 static int SvrSetupSMTPS(int iArgCount, char *pszArgs[])
 {
-	int iPort = STD_SMTPS_PORT;
+	int iPort = STD_SMTPS_PORT, iFamily = AF_INET;
 
 	/*
 	 * Initialize the service thread handle to SYS_INVALID_THREAD so that
@@ -928,18 +978,23 @@ static int SvrSetupSMTPS(int iArgCount, char *pszArgs[])
 			break;
 
 		case 'I':
-			if ((++i < iArgCount) &&
-			    (MscGetServerAddress(pszArgs[i],
-						 ThCfgSMTPS.SvrAddr[ThCfgSMTPS.iNumAddr]) == 0))
-				++ThCfgSMTPS.iNumAddr;
+			if (++i < iArgCount &&
+			    SvrAddServerAddress(pszArgs[i], ThCfgSMTPS.SvrAddr,
+						&ThCfgSMTPS.iNumAddr,
+						CountOf(ThCfgSMTPS.SvrAddr)) < 0)
+				return ErrGetErrorCode();
 			break;
 
 		case '-':
 			return 0;
+
+		case '6':
+			iFamily = AF_INET6;
+			break;
 		}
 	}
-	if (MscCreateServerSockets(ThCfgSMTPS.iNumAddr, ThCfgSMTPS.SvrAddr, iPort,
-				   SMTP_LISTEN_SIZE, ThCfgSMTPS.SockFDs,
+	if (MscCreateServerSockets(ThCfgSMTPS.iNumAddr, ThCfgSMTPS.SvrAddr, iFamily,
+				   iPort, SMTP_LISTEN_SIZE, ThCfgSMTPS.SockFDs,
 				   ThCfgSMTPS.iNumSockFDs) < 0)
 		return ErrGetErrorCode();
 	if ((hSMTPSThread = SysCreateThread(MscServiceThread,
@@ -1133,6 +1188,11 @@ static int SvrSetupPSYNC(int iArgCount, char *pszArgs[])
 
 		case 'l':
 			ulFlags |= PSYNCF_LOG_ENABLED;
+			break;
+
+		case 'T':
+			if (++i < iArgCount)
+				iPOP3ClientTimeout = atoi(pszArgs[i]);
 			break;
 
 		case '-':
@@ -1367,6 +1427,22 @@ static int SvrSetup(int iArgCount, char *pszArgs[])
 			if (++i < iArgCount)
 				iDnsCacheDirs = atoi(pszArgs[i]);
 			break;
+
+		case '4':
+			iAddrFamily = AF_INET;
+			break;
+
+		case '6':
+			iAddrFamily = AF_INET6;
+			break;
+
+		case '5':
+			iAddrFamily = SYS_INET46;
+			break;
+
+		case '7':
+			iAddrFamily = SYS_INET64;
+			break;
 		}
 	}
 
@@ -1522,7 +1598,7 @@ int SvrMain(int iArgCount, char *pszArgs[])
 	}
 	iError = 0;
 
-	ErrorExit:
+ErrorExit:
 	if (iError < 0) {
 		iError = ErrGetErrorCode();
 		SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());

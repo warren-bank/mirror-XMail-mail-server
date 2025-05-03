@@ -349,7 +349,6 @@ int GwLkRemoveLink(POP3Link *pPopLnk)
 		    stricmp(pPopLnk->pszName, ppszStrings[lnkName]) == 0 &&
 		    stricmp(pPopLnk->pszRmtDomain, ppszStrings[lnkRmtDomain]) == 0 &&
 		    stricmp(pPopLnk->pszRmtName, ppszStrings[lnkRmtName]) == 0) {
-
 			++iLinksFound;
 		} else
 			fprintf(pTmpFile, "%s\n", szLnkLine);
@@ -365,22 +364,11 @@ int GwLkRemoveLink(POP3Link *pPopLnk)
 		ErrSetErrorCode(ERR_LINK_NOT_FOUND);
 		return ERR_LINK_NOT_FOUND;
 	}
-
-	char szTmpLnkFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpLnkFilePath, sizeof(szTmpLnkFilePath) - 1, "%s.tmp", szLnkFilePath);
-	if (MscMoveFile(szLnkFilePath, szTmpLnkFilePath) < 0) {
-		ErrorPush();
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szLnkFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpLnkFilePath, szLnkFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpLnkFilePath);
 
 	/* Remove the disable file if exist */
 	char szRmFilePath[SYS_MAX_PATH] = "";
@@ -459,11 +447,9 @@ int GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
 
 		if (iFieldsCount >= lnkMax && stricmp(pszDomain, ppszStrings[lnkDomain]) == 0 &&
 		    stricmp(pszName, ppszStrings[lnkName]) == 0) {
-
 			++iLinksFound;
 		} else
 			fprintf(pTmpFile, "%s\n", szLnkLine);
-
 		StrFreeStrings(ppszStrings);
 	}
 	fclose(pLnkFile);
@@ -474,23 +460,11 @@ int GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpLnkFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpLnkFilePath, sizeof(szTmpLnkFilePath) - 1, "%s.tmp", szLnkFilePath);
-	if (MscMoveFile(szLnkFilePath, szTmpLnkFilePath) < 0) {
-		ErrorPush();
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szLnkFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpLnkFilePath, szLnkFilePath);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpLnkFilePath);
-
 	RLckUnlockEX(hResLock);
 
 	return 0;
@@ -568,25 +542,11 @@ int GwLkRemoveDomainLinks(const char *pszDomain)
 		RLckUnlockEX(hResLock);
 		return 0;
 	}
-
-	char szTmpLnkFilePath[SYS_MAX_PATH] = "";
-
-	SysSNPrintf(szTmpLnkFilePath, sizeof(szTmpLnkFilePath) - 1, "%s.tmp", szLnkFilePath);
-	if (MscMoveFile(szLnkFilePath, szTmpLnkFilePath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpFile);
-		RLckUnlockEX(hResLock);
-		return ErrorPop();
-	}
 	if (MscMoveFile(szTmpFile, szLnkFilePath) < 0) {
 		ErrorPush();
-		MscMoveFile(szTmpLnkFilePath, szLnkFilePath);
-		SysRemove(szTmpFile);
 		RLckUnlockEX(hResLock);
 		return ErrorPop();
 	}
-	SysRemove(szTmpLnkFilePath);
-
 	RLckUnlockEX(hResLock);
 
 	return 0;

@@ -26,6 +26,7 @@ STRIP = strip
 ifneq ("$(WITH_SSL_INCLUDE)", "")
     CFLAGS := $(CFLAGS) -I$(WITH_SSL_INCLUDE)
 endif
+
 ifneq ("$(WITH_SSL_LIB)", "")
     LDFLAGS := $(LDFLAGS) -L$(WITH_SSL_LIB)
 endif

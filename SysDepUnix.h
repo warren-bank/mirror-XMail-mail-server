@@ -23,13 +23,11 @@
 #ifndef _SYSDEPUNIX_H
 #define _SYSDEPUNIX_H
 
-#define SYS_INT_CALL()              (!iShutDown && (errno == EINTR))
+#define SYS_INT_CALL()     (!iShutDown && (errno == EINTR))
 
-#define SAIN_Addr(s)                (s).sin_addr.s_addr
-
-#define MIN_TCP_SEND_SIZE           (1024 * 8)
-#define MAX_TCP_SEND_SIZE           (1024 * 128)
-#define K_IO_TIME_RATIO             8
+#define MIN_TCP_SEND_SIZE  (1024 * 8)
+#define MAX_TCP_SEND_SIZE  (1024 * 128)
+#define K_IO_TIME_RATIO    8
 
 
 struct ThreadExitHook {

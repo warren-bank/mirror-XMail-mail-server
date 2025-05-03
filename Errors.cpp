@@ -151,7 +151,7 @@ static ErrorStrings Errors[] = {
 	{ ERR_SPAMMER_IP, "Server registered spammer IP" },
 	{ ERR_TRUNCATED_DGRAM_DNS_RESPONSE, "Truncated UDP DNS response" },
 	{ ERR_NO_DGRAM_DNS_RESPONSE, "Unable to get UDP DNS response" },
-	{ ERR_EMPTY_DNS_RESPONSE, "Empty DNS response" },
+	{ ERR_DNS_NOTFOUND, "Requested DNS record not found" },
 	{ ERR_BAD_SMARTDNSHOST_SYNTAX, "Bad SmartDNSHost config syntax" },
 	{ ERR_MAILBOX_SIZE, "User maximum mailbox size reached" },
 	{ ERR_DYNDNS_CONFIG, "Bad \"DynDnsSetup\" config syntax" },
@@ -270,7 +270,6 @@ static ErrorStrings Errors[] = {
 	{ ERR_IMAP_RESP_BAD, "IMAP response BAD" },
 	{ ERR_IMAP_RESP_BYE, "IMAP response BYE" },
 	{ ERR_IMAP_UNKNOWN_AUTH, "Unknown IMAP authentication method" },
-	{ ERR_DNS_IS_CNAME, "CNAME DNS record detected" },
 	{ ERR_NO_MESSAGE_AUTH, "Message authentication not found" },
 	{ ERR_INVALID_PARAMETER, "Invalid parameter" },
 	{ ERR_ALREADY_EXIST, "Already exist" },
@@ -295,8 +294,21 @@ static ErrorStrings Errors[] = {
 	{ ERR_SSL_ACCEPT, "Error establishing SSL connection (accept)" },
 	{ ERR_BAD_SEQUENCE, "Wrong sequence of commands" },
 	{ ERR_EMPTY_ADDRESS, "Empty email address" },
+	{ ERR_DNS_MAXDEPTH, "Maximum DNS quesry depth exceeded" },
+	{ ERR_THREAD_SETSTACK, "Unable to set thread stack" },
+	{ ERR_DNS_FORMAT, "Bad DNS query format" },
+	{ ERR_DNS_SVRFAIL, "Remote DNS server failed" },
+	{ ERR_DNS_NOTSUPPORTED, "DNS query not supported" },
+	{ ERR_DNS_REFUSED, "DNS query refused" },
+	{ ERR_INVALID_RELAY_ADDRESS, "Invalid relay address" },
+	{ ERR_INVALID_HOSTNAME, "Invalid host name" },
+	{ ERR_INVALID_INET_ADDR, "Invalid INET address" },
+	{ ERR_SOCKET_SHUTDOWN, "Connection shutdown error" },
+	{ ERR_SSL_SHUTDOWN, "SSL connection shutdown error" },
+	{ ERR_TOO_MANY_ELEMENTS, "Too many elements" },
 
 };
+
 static char const *pszErrors[ERROR_COUNT];
 
 
@@ -363,7 +375,7 @@ int ErrGetErrorCode(void)
 	return pEV->iErrorNo;
 }
 
-int ErrSetErrorCode(int iError, char const *pszInfo)
+int ErrSetErrorCode(int iError, char const *pszInfo, int iSize)
 {
 	ErrorEnv *pEV = ErrSetupEnv();
 
@@ -376,7 +388,7 @@ int ErrSetErrorCode(int iError, char const *pszInfo)
 		if (iError >= 0 && iError < ERROR_COUNT) {
 			if (pEV->pszInfo[iError] != NULL)
 				SysFree(pEV->pszInfo[iError]);
-			pEV->pszInfo[iError] = SysStrDup(pszInfo);
+			pEV->pszInfo[iError] = (char *) StrMemDup(pszInfo, iSize, 0);
 		}
 	}
 

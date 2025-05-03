@@ -33,7 +33,7 @@
 #define FAIL                -1
 #define BUFOVER             -2
 
-#define CHAR64(c)           (((c) < 0 || (c) > 127) ? -1 : index_64[(c)])
+#define CHAR64(c)           (((c) < 0 || (c) > 127) ? -1: index_64[(c)])
 
 static char basis_64[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????";
@@ -55,12 +55,10 @@ int Base64Encode(const char *pIn, int iInSize, char *pszOut, int *piOutSize)
 	unsigned char *out = (unsigned char *) pszOut;
 	unsigned char oval;
 	char *blah;
-	int olen;
-	int omax = *piOutSize;
+	int olen, omax = *piOutSize;
 
 	olen = (iInSize + 2) / 3 * 4;
-	if (piOutSize)
-		*piOutSize = olen;
+	*piOutSize = olen;
 	if (omax < olen)
 		return BUFOVER;
 
@@ -93,13 +91,7 @@ int Base64Encode(const char *pIn, int iInSize, char *pszOut, int *piOutSize)
 
 int Base64Decode(const char *pszIn, int iInSize, char *pOut, int *piOutSize)
 {
-	unsigned len = 0;
-	unsigned lup;
-	int omax = *piOutSize;
-	int c1;
-	int c2;
-	int c3;
-	int c4;
+	int i, c1, c2, c3, c4, omax = *piOutSize - 1, len = 0;
 
 	if (iInSize >= 2 && pszIn[0] == '+' && pszIn[1] == ' ')
 		pszIn += 2, iInSize -= 2;
@@ -107,7 +99,7 @@ int Base64Decode(const char *pszIn, int iInSize, char *pOut, int *piOutSize)
 	if (*pszIn == '\0')
 		return FAIL;
 
-	for (lup = 0; lup < (unsigned) iInSize / 4; lup++) {
+	for (i = 0; i < iInSize / 4; i++) {
 		c1 = pszIn[0];
 		if (CHAR64(c1) == -1)
 			return FAIL;
@@ -121,20 +113,26 @@ int Base64Decode(const char *pszIn, int iInSize, char *pOut, int *piOutSize)
 		if (c4 != '=' && CHAR64(c4) == -1)
 			return FAIL;
 		pszIn += 4;
+		if (len >= omax)
+			return FAIL;
 		*pOut++ = (CHAR64(c1) << 2) | (CHAR64(c2) >> 4);
 		++len;
 		if (c3 != '=') {
+			if (len >= omax)
+				return FAIL;
 			*pOut++ = ((CHAR64(c2) << 4) & 0xf0) | (CHAR64(c3) >> 2);
 			++len;
 			if (c4 != '=') {
+				if (len >= omax)
+					return FAIL;
 				*pOut++ = ((CHAR64(c3) << 6) & 0xc0) | CHAR64(c4);
 				++len;
 			}
 		}
 	}
-
 	*pOut = 0;
 	*piOutSize = len;
 
 	return OK;
 }
+
