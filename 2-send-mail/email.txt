@@ -1,0 +1,5 @@
+To: Davide Libenzi <davidel@xmailserver.org>
+Subject: XMail test
+Message-ID: <1@example.com>
+
+Message sent by XMail!
