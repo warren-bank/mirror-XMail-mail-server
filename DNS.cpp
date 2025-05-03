@@ -71,7 +71,7 @@ struct DNSQuery
 
 struct DNSResourceRecord
 {
-    char            szName[256];
+    char            szName[MAX_HOST_NAME];
     SYS_UINT16      Type;
     SYS_UINT16      Class;
     SYS_UINT32      TTL;
@@ -97,12 +97,12 @@ static void     DNS_FreeNameList(HSLIST & hNameList);
 static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
 static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
 static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        DNSResourceRecord * pRR = NULL);
+                        DNSResourceRecord * pRR = NULL, int * piRRLength = NULL);
 static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName = NULL);
+                        char *pszInetName = NULL, int * piRRLength = NULL);
 static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
                         char *pszInetName = NULL, SYS_UINT16 * pType = NULL,
-                        SYS_UINT16 * pClass = NULL);
+                        SYS_UINT16 * pClass = NULL, int * piRRLength = NULL);
 static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName);
 static SYS_UINT16 DNS_GetUniqueQueryId(void);
 static int      DNS_RequestSetup(DNSQuery & DNSQ, unsigned int uOpCode,
@@ -228,7 +228,7 @@ static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char
 
 
 static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        DNSResourceRecord * pRR)
+                        DNSResourceRecord * pRR, int * piRRLength)
 {
 
     if (pRR != NULL)
@@ -237,8 +237,12 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 ///////////////////////////////////////////////////////////////////////////////
 //  Read name field
 ///////////////////////////////////////////////////////////////////////////////
+    int             iRRLen = 0;
     char           *pszName = (pRR != NULL) ? pRR->szName : NULL;
-    int             iRRLen = DNS_GetName(pBaseData, pRespData, pszName);
+
+    if (DNS_GetName(pBaseData, pRespData, pszName, &iRRLen) < 0)
+        return (ErrGetErrorCode());
+
 
     pRespData += iRRLen;
 
@@ -289,22 +293,27 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
     iRRLen += (int) Lenght;
 
 
-    return (iRRLen);
+    if (piRRLength != NULL)
+        *piRRLength = iRRLen;
+
+
+    return (0);
 
 }
 
 
 
 static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName)
+                        char * pszInetName, int * piRRLength)
 {
 
-    char            szNameBuffer[512] = "";
+    char            szNameBuffer[MAX_HOST_NAME] = "";
 
     if (pszInetName == NULL)
         pszInetName = szNameBuffer;
 
-    int             iNameLen = 0,
+    int             iDataLength = 0,
+                    iNameLength = 0,
                     iBackLink = 0;
 
     while (*pRespData != 0)
@@ -316,38 +325,56 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
             pRespData = pBaseData + iLabelOffset;
 
             if (!iBackLink)
-                iNameLen += sizeof(SYS_UINT16), ++iBackLink;
+                iDataLength += sizeof(SYS_UINT16), ++iBackLink;
 
             continue;
         }
 
-        int             iLabelLen = (int) *pRespData;
 
-        memcpy(pszInetName, pRespData + 1, iLabelLen);
-        pszInetName[iLabelLen] = '.';
+        int             iLabelLength = (int) *pRespData;
 
-        pszInetName += iLabelLen + 1;
+        if ((iNameLength + iLabelLength + 2) >= MAX_HOST_NAME)
+        {
+            ErrSetErrorCode(ERR_BAD_DNS_NAME_RECORD);
+            return (ERR_BAD_DNS_NAME_RECORD);
+        }
+
+        memcpy(pszInetName, pRespData + 1, iLabelLength);
+        pszInetName[iLabelLength] = '.';
+
+        iNameLength += iLabelLength + 1;
+        pszInetName += iLabelLength + 1;
+
         if (!iBackLink)
-            iNameLen += iLabelLen + 1;
-        pRespData += iLabelLen + 1;
+            iDataLength += iLabelLength + 1;
+
+        pRespData += iLabelLength + 1;
     }
 
     *pszInetName = '\0';
 
-    return ((!iBackLink) ? iNameLen + 1 : iNameLen);
+    if (piRRLength != NULL)
+        *piRRLength = (!iBackLink) ? iDataLength + 1 : iDataLength;
+
+    return (0);
 
 }
 
 
 
 static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName, SYS_UINT16 * pType, SYS_UINT16 * pClass)
+                        char *pszInetName, SYS_UINT16 * pType, SYS_UINT16 * pClass,
+                        int * piRRLength)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Read name field
 ///////////////////////////////////////////////////////////////////////////////
-    int             iQueryLen = DNS_GetName(pBaseData, pRespData, pszInetName);
+    int             iQueryLen = 0;
+
+    if (DNS_GetName(pBaseData, pRespData, pszInetName, &iQueryLen) < 0)
+        return (ErrGetErrorCode());
+
 
     pRespData += iQueryLen;
 
@@ -369,7 +396,12 @@ static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRes
     pRespData += sizeof(SYS_UINT16);
     iQueryLen += sizeof(SYS_UINT16);
 
-    return (iQueryLen);
+
+    if (piRRLength != NULL)
+        *piRRLength = iQueryLen;
+
+
+    return (0);
 
 }
 
@@ -724,7 +756,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
     {
         if ((pMXFile = fopen(pszRespFile, "wb")) == NULL)
         {
-            ErrSetErrorCode(ERR_FILE_CREATE);
+            ErrSetErrorCode(ERR_FILE_CREATE, pszRespFile);
             return (ERR_FILE_CREATE);
         }
     }
@@ -739,12 +771,18 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
+        int             iQLenght = 0;
         SYS_UINT16      Type = 0,
                         Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
-
-        int             iQLenght = DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class);
+        if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
+        {
+            ErrorPush();
+            if (pMXFile != NULL)
+                fclose(pMXFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iQLenght;
@@ -757,10 +795,16 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.ANCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+        {
+            ErrorPush();
+            if (pMXFile != NULL)
+                fclose(pMXFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iRRLenght;
@@ -773,7 +817,13 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
         char            szMXDomain[MAX_HOST_NAME] = "";
 
-        DNS_GetName(pBaseData, pMXData, szMXDomain);
+        if (DNS_GetName(pBaseData, pMXData, szMXDomain) < 0)
+        {
+            ErrorPush();
+            if (pMXFile != NULL)
+                fclose(pMXFile);
+            return (ErrorPop());
+        }
 
         if (ii == 0)
             fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
@@ -800,10 +850,11 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 ///////////////////////////////////////////////////////////////////////////////
     for (ii = 0; ii < (int) pDNSQ->DNSH.NSCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+            return (ErrGetErrorCode());
 
 
         pRespData += iRRLenght;
@@ -813,7 +864,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
         char            szNSName[MAX_HOST_NAME] = "";
 
-        DNS_GetName(pBaseData, pNSData, szNSName);
+        if (DNS_GetName(pBaseData, pNSData, szNSName) < 0)
+            return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Recursively try authority name servers
@@ -829,10 +881,11 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 ///////////////////////////////////////////////////////////////////////////////
     for (ii = 0; ii < (int) pDNSQ->DNSH.ARCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+            return (ErrGetErrorCode());
 
 
         pRespData += iRRLenght;
@@ -890,12 +943,17 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
+        int             iQLenght = 0;
         SYS_UINT16      Type = 0,
                         Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
-
-        int             iQLenght = DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class);
+        if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pMXFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iQLenght;
@@ -909,10 +967,15 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.ANCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pMXFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iRRLenght;
@@ -925,7 +988,12 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
         char            szMXDomain[MAX_HOST_NAME] = "";
 
-        DNS_GetName(pBaseData, pMXData, szMXDomain);
+        if (DNS_GetName(pBaseData, pMXData, szMXDomain) < 0)
+        {
+            ErrorPush();
+            fclose(pMXFile);
+            return (ErrorPop());
+        }
 
         if (ii == 0)
             fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
@@ -968,7 +1036,7 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
     if (pNSFile == NULL)
     {
-        ErrSetErrorCode(ERR_FILE_CREATE);
+        ErrSetErrorCode(ERR_FILE_CREATE, pszRespFile);
         return (ERR_FILE_CREATE);
     }
 
@@ -988,12 +1056,17 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
+        int             iQLenght = 0;
         SYS_UINT16      Type = 0,
                         Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
-
-        int             iQLenght = DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class);
+        if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iQLenght;
@@ -1007,10 +1080,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.ANCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iRRLenght;
@@ -1020,7 +1098,12 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
         char            szNSName[MAX_HOST_NAME] = "";
 
-        DNS_GetName(pBaseData, pNSData, szNSName);
+        if (DNS_GetName(pBaseData, pNSData, szNSName) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
         fprintf(pNSFile, "%s\n", szNSName);
 
@@ -1047,10 +1130,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 ///////////////////////////////////////////////////////////////////////////////
     for (ii = 0; ii < (int) pDNSQ->DNSH.NSCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iRRLenght;
@@ -1060,7 +1148,12 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
         char            szNSName[MAX_HOST_NAME] = "";
 
-        DNS_GetName(pBaseData, pNSData, szNSName);
+        if (DNS_GetName(pBaseData, pNSData, szNSName) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
         fprintf(pNSFile, "%s\n", szNSName);
 
@@ -1087,10 +1180,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 ///////////////////////////////////////////////////////////////////////////////
     for (ii = 0; ii < (int) pDNSQ->DNSH.ARCount; ii++)
     {
+        int             iRRLenght = 0;
         DNSResourceRecord RR;
 
-
-        int             iRRLenght = DNS_GetResourceRecord(pBaseData, pRespData, &RR);
+        if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
+        {
+            ErrorPush();
+            fclose(pNSFile);
+            return (ErrorPop());
+        }
 
 
         pRespData += iRRLenght;

@@ -232,6 +232,7 @@
 #define ERR_LOW_DISK_SPACE          (-212)
 #define ERR_LOW_VM_SPACE            (-213)
 #define ERR_USER_DISABLED           (-214)
+#define ERR_BAD_DNS_NAME_RECORD     (-215)
 
 
 

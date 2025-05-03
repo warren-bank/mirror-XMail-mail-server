@@ -1,6 +1,6 @@
-Summary: Advanced ESMTP/POP3 mail server
+Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 0.72
+Version: 0.73
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -115,6 +115,8 @@ fi
 
 
 %changelog
+* Fri Jun 8 2001 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a possible buffer overflow bug inside the DNS resolver.
 * Tue May 29 2001 Davide Libenzi <davidel@xmailserver.org>
 	Fixed build errors in MkUsers.cpp and SendMail.cpp ( FreeBSD version ).
 	Added the ability to specify a list of matching domains when using PSYNC with
@@ -136,4 +138,3 @@ fi
     A new USER.TAB variable "ReceiveEnable" has been added to enable/disable the account from receiving emails.
     A new USER.TAB variable "PopEnable" has been added to enable/disable the account from fetching emails.
 
-	

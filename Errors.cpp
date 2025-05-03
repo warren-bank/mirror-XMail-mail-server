@@ -267,6 +267,7 @@ static ErrorStrings Errors[] =
     {ERR_LOW_DISK_SPACE, "System low in disk space"},
     {ERR_LOW_VM_SPACE, "System low in virtual memory"},
     {ERR_USER_DISABLED, "Account disabled"},
+    {ERR_BAD_DNS_NAME_RECORD, "Bad format for DNS name record"},
 
 };
 

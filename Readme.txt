@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.72
+Version      : 0.73
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 23-05-2001
+Date         : 08-06-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -505,7 +505,9 @@ Date 23-05-2001	0.72
 	If "SmtpPerms" is not found the SERVER.TAB variable "DefaultSmtpPerms" is checked.
 	A new USER.TAB variable "ReceiveEnable" has been added to enable/disable the account from receiving emails.
 	A new USER.TAB variable "PopEnable" has been added to enable/disable the account from fetching emails.
-
+Date 08-06-2001	0.73
+	Fixed a possible buffer overflow bug inside the DNS resolver.
+	
 
 
 
