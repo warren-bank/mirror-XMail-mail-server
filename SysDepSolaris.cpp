@@ -47,6 +47,9 @@
 
 #define MAX_SWAP_NAME_SIZE          256
 
+#define MAX_STACK_SHIFT             2048
+#define STACK_ALIGN_BYTES           16
+
 
 
 
@@ -123,6 +126,7 @@ static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
 static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
 static int      SysGetSwapInfo(SYS_INT64 * pSwapTotal, SYS_INT64 * pSwapFree);
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 
 
@@ -317,29 +321,31 @@ void            SysListenSocket(SYS_SOCKET SockFD, int iConnections)
 int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout)
 {
 
-    fd_set          rfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    ZeroData(tv);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLIN;
 
-    FD_ZERO(&rfds);
-    FD_SET((int) SockFD, &rfds);
 
-    if (select((int) SockFD + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv) == -1)
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    if (!FD_ISSET((int) SockFD, &rfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
     }
 
+
     int             iRecvBytes = recv((int) SockFD, pszBuffer, iBufferSize, 0);
+
 
     if (iRecvBytes == -1)
     {
@@ -379,30 +385,32 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
                         char *pszBuffer, int iBufferSize, int iTimeout)
 {
 
-    fd_set          rfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    ZeroData(tv);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLIN;
 
-    FD_ZERO(&rfds);
-    FD_SET((int) SockFD, &rfds);
 
-    if (select((int) SockFD + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv) == -1)
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    if (!FD_ISSET((int) SockFD, &rfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
     }
 
+
     socklen_t       SockALen = (socklen_t) iFromlen;
     int             iRecvBytes = recvfrom((int) SockFD, pszBuffer, iBufferSize, 0, pFrom, &SockALen);
+
 
     if (iRecvBytes == -1)
     {
@@ -419,29 +427,31 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSize, int iTimeout)
 {
 
-    fd_set          wfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    ZeroData(tv);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLOUT;
 
-    FD_ZERO(&wfds);
-    FD_SET((int) SockFD, &wfds);
 
-    if (select((int) SockFD + 1, (fd_set *) 0, &wfds, (fd_set *) 0, &tv) == -1)
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    if (!FD_ISSET((int) SockFD, &wfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
     }
 
+
     int             iSendBytes = send((int) SockFD, pszBuffer, iBufferSize, 0);
+
 
     if (iSendBytes == -1)
     {
@@ -481,29 +491,31 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
                         int iToLen, char const * pszBuffer, int iBufferSize, int iTimeout)
 {
 
-    fd_set          wfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    ZeroData(tv);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLOUT;
 
-    FD_ZERO(&wfds);
-    FD_SET((int) SockFD, &wfds);
 
-    if (select((int) SockFD + 1, (fd_set *) 0, &wfds, (fd_set *) 0, &tv) == -1)
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    if (!FD_ISSET((int) SockFD, &wfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
     }
 
+
     int             iSendBytes = sendto((int) SockFD, pszBuffer, iBufferSize, 0, pTo, iToLen);
+
 
     if (iSendBytes == -1)
     {
@@ -537,25 +549,25 @@ int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, i
         return (ERR_NETWORK);
     }
 
-    fd_set          wfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    FD_ZERO(&wfds);
-    FD_SET((int) SockFD, &wfds);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLOUT;
 
-    if (select((int) SockFD + 1, (fd_set *) 0, &wfds, (fd_set *) 0, &tv) == -1)
+
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    SysSetSockNoDelay(SockFD, 0);
+
+    if (iPollResult == -1)
     {
-        SysSetSockNoDelay(SockFD, 0);
-
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    SysSetSockNoDelay(SockFD, 0);
-
-    if (!FD_ISSET((int) SockFD, &wfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
@@ -570,27 +582,28 @@ int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, i
 SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen, int iTimeout)
 {
 
-    fd_set          rfds;
-    struct timeval  tv;
+    struct pollfd   pfds;
 
-    ZeroData(tv);
-    tv.tv_sec = iTimeout;
-    tv.tv_usec = 0;
+    ZeroData(pfds);
+    pfds.fd = (int) SockFD;
+    pfds.events = POLLIN;
 
-    FD_ZERO(&rfds);
-    FD_SET((int) SockFD, &rfds);
 
-    if (select((int) SockFD + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv) == -1)
+    int             iPollResult = poll(&pfds, 1, iTimeout * 1000);
+
+
+    if (iPollResult == -1)
     {
         ErrSetErrorCode(ERR_NETWORK);
         return (ERR_NETWORK);
     }
 
-    if (!FD_ISSET((int) SockFD, &rfds))
+    if (iPollResult == 0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
     }
+
 
     socklen_t       SockALen = (socklen_t) * iNameLen;
     int             iAcptSock = accept((int) SockFD,
@@ -1397,7 +1410,7 @@ static void    *SysThreadStartup(void *pThreadData)
 
     pthread_cleanup_push((void (*) (void *)) SysThreadCleanup, pTD);
 
-    pTD->iExitCode = iExitCode = pTD->ThreadProc(pTD->pThreadData);
+    pTD->iExitCode = iExitCode = SysStkCall(pTD->ThreadProc, pTD->pThreadData);
 
     pthread_cleanup_pop(1);
 
@@ -2686,5 +2699,45 @@ static int      SysGetSwapInfo(SYS_INT64 * pSwapTotal, SYS_INT64 * pSwapFree)
     free(pSwTab);
 
     return (0);
+
+}
+
+
+
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
+{
+
+    srand(getpid() * (unsigned int) time(NULL));
+
+
+    unsigned int    uResult,
+                    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+
+#if !defined(USE_ASM_STK_DISP)
+
+    void           *pStkSpace = alloca(uStkDisp);
+
+
+    uResult = pProc(pData);
+
+#else
+
+    __asm__ __volatile__(
+            "sub %%sp, %0, %%sp\n":
+            :
+            "r"(uStkDisp));
+
+
+    uResult = pProc(pData);
+
+
+    __asm__ __volatile__(
+            "add %%sp, %0, %%sp\n":
+            :
+            "r"(uStkDisp));
+
+#endif
+
+    return (uResult);
 
 }

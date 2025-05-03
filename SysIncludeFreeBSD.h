@@ -32,6 +32,7 @@
 #include <sys/select.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
+#include <sys/poll.h>
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/mount.h>

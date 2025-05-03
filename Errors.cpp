@@ -268,6 +268,9 @@ static ErrorStrings Errors[] =
     {ERR_LOW_VM_SPACE, "System low in virtual memory"},
     {ERR_USER_DISABLED, "Account disabled"},
     {ERR_BAD_DNS_NAME_RECORD, "Bad format for DNS name record"},
+    {ERR_MESSAGE_SIZE, "Message exceeds fixed maximum message size"},
+    {ERR_SMTPSRV_MSG_SIZE, "Message too big for the remote SMTP server"},
+    {ERR_MAPS_CONTAINED, "The peer IP is mapped"},
 
 };
 

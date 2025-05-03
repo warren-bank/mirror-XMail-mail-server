@@ -54,6 +54,11 @@
 #define MAX_TCP_SEND_SIZE               (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT           64
 
+#define MAX_STACK_SHIFT                 2048
+#define STACK_ALIGN_BYTES               8
+
+
+
 
 
 
@@ -101,6 +106,7 @@ static int      SysThreadCleanup(void);
 static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
 static void     SysTimetToFileTime(time_t tTime, LPFILETIME pFT);
 static time_t   SysFileTimeToTimet(LPFILETIME pFT);
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
 
 
 
@@ -1315,7 +1321,7 @@ static unsigned int SysThreadRunner(void *pRunData)
     }
 
 
-    unsigned int    uResultCode = pTR->pThreadProc(pTR->pThreadData);
+    unsigned int    uResultCode = SysStkCall(pTR->pThreadProc, pTR->pThreadData);
 
 
     SysThreadCleanup();
@@ -2433,5 +2439,45 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 #endif          // #if defined(_WIN32_WINNT 0x0500)
 
     return (0);
+
+}
+
+
+
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
+{
+
+    srand(GetCurrentThreadId() * (unsigned int) time(NULL));
+
+
+    unsigned int    uResult,
+                    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+
+#if !defined(USE_ASM_STK_DISP)
+
+    void           *pStkSpace = _alloca(uStkDisp);
+
+
+    uResult = pProc(pData);
+
+#else
+
+    __asm
+    {
+        sub esp, uStkDisp;
+    }
+
+
+    uResult = pProc(pData);
+
+
+    __asm
+    {
+        add esp, uStkDisp;
+    }
+
+#endif
+
+    return (uResult);
 
 }

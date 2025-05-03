@@ -33,6 +33,7 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
+#include <sys/poll.h>
 #include <sys/mman.h>
 #include <sys/vfs.h>
 #include <sys/sysinfo.h>

@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 0.73
+Version: 0.74
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -115,6 +115,20 @@ fi
 
 
 %changelog
+* Mon Jul 2 2001 Davide Libenzi <davidel@xmailserver.org>
+    A stack shifting call method has been implemented to make virtually impossible for attackers
+    to guess the stack frame pointer.
+    With this new feature, even if buffer overflows are present, the worst thing that could happen
+    is a server crash and not the attacker that execute root code on the server machine.
+    Implemented the SIZE ESMTP extension and introduced a new SERVER.TAB variable "MaxMessageSize" that set
+    the maximum message size that the server will accept ( in Kb ).
+    If this variable is not set or if it's zero, any message will be accepted.
+    A new SMTP authentication permission ( 'Z' ) has been added to allow authenticated users to bypass the check.
+    The SMTP sender now check for the remote support of the SIZE ESMTP extension.
+    A new SERVER.TAB variable has been added  "CustMapsList"  to enable the user to enter custom maps checking
+    ( look at the section "SERVER.TAB variables" ).
+    Fixed a bug in "frozdel" CTRL command.
+* Sun Jun 10 2001 Davide Libenzi <davidel@xmailserver.org>
 * Fri Jun 8 2001 Davide Libenzi <davidel@xmailserver.org>
     Fixed a possible buffer overflow bug inside the DNS resolver.
 * Tue May 29 2001 Davide Libenzi <davidel@xmailserver.org>

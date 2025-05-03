@@ -471,22 +471,15 @@ char          **StrGetTabLineStrings(const char *pszUsrLine)
 int             StrWriteCRLFString(FILE * pFile, const char *pszString)
 {
 
-    int             iStrLength = strlen(pszString);
-    char           *pszBuffer = (char *) SysAlloc(iStrLength + 3);
+    unsigned int    uStrLength = strlen(pszString);
 
-    if (pszBuffer == NULL)
-        return (ErrGetErrorCode());
-
-    sprintf(pszBuffer, "%s\r\n", pszString);
-
-    if (fwrite(pszBuffer, iStrLength + 2, 1, pFile) == 0)
+    if ((uStrLength != 0) && (fwrite(pszString, uStrLength, 1, pFile) == 0))
     {
         ErrSetErrorCode(ERR_FILE_WRITE);
-        SysFree(pszBuffer);
         return (ERR_FILE_WRITE);
     }
 
-    SysFree(pszBuffer);
+    fputs("\r\n", pFile);
 
     return (0);
 

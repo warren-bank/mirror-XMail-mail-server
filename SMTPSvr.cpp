@@ -110,6 +110,7 @@ struct SMTPSession
     SYS_INET_ADDR   PeerInfo;
     SYS_INET_ADDR   SockInfo;
     int             iCmdDelay;
+    unsigned long   ulMaxMsgSize;
     char            szSvrFQDN[MAX_ADDR_NAME];
     char            szSvrDomain[MAX_ADDR_NAME];
     char            szClientFQDN[MAX_ADDR_NAME];
@@ -153,6 +154,8 @@ static int      SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP,
                         SMTPConfig * pSMTPCfg = NULL);
 static unsigned int SMTPClientThread(void *pThreadData);
 static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
+static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
+                        int & iMapCode);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
@@ -165,11 +168,13 @@ static void     SMTPClearSession(SMTPSession & SMTPS);
 static void     SMTPResetSession(SMTPSession & SMTPS);
 static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
-static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
-                        char *&pszSMTPError);
+static int      SMTPCheckReturnPath(const char *pszCommand, char **ppszRetDomains,
+                        SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const * pszUser,
                         char const * pszDomain);
 static int      SMTPAddMessageInfo(SMTPSession & SMTPS);
+static int      SMTPCheckMailParams(const char *pszCommand, char **ppszRetDomains,
+                        SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPCheckRelayCapability(SMTPSession & SMTPS, char const * pszDestDomain);
@@ -526,6 +531,47 @@ static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig)
 
 
 
+static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
+                        int & iMapCode)
+{
+
+    for (; pszMapList != NULL; pszMapList++)
+    {
+        char const     *pszColon = strchr(pszMapList, ':');
+
+        if (pszColon == NULL)
+            break;
+
+        int             iRetCode = atoi(pszColon + 1),
+                        iMapLength = (int) (pszColon - pszMapList);
+        char            szMapName[MAX_HOST_NAME] = "";
+
+        strncpy(szMapName, pszMapList, iMapLength);
+        szMapName[iMapLength] = '\0';
+
+        if (USmtpDnsMapsContained(PeerInfo, szMapName))
+        {
+            iMapCode = iRetCode;
+
+            char            szIP[128] = "???.???.???.???",
+                            szMapSpec[MAX_HOST_NAME + 128] = "";
+
+            SysInetNToA(PeerInfo, szIP);
+            SysSNPrintf(szMapSpec, sizeof(szMapSpec) - 1, "%s:%s", szMapName, szIP);
+
+            ErrSetErrorCode(ERR_MAPS_CONTAINED, szMapSpec);
+            return (ERR_MAPS_CONTAINED);
+        }
+
+        pszMapList = strchr(pszColon, ',');
+    }
+
+    return (0);
+
+}
+
+
+
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
@@ -541,6 +587,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     SMTPS.pszSendRcpt = NULL;
     SMTPS.iRcptCount = 0;
     SMTPS.iCmdDelay = 0;
+    SMTPS.ulMaxMsgSize = 0;
     SetEmptyString(SMTPS.szMessageID);
     SetEmptyString(SMTPS.szDestDomain);
     SetEmptyString(SMTPS.szClientFQDN);
@@ -571,6 +618,34 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
         ErrorPush();
         SvrReleaseConfigHandle(SMTPS.hSvrConfig);
         return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Custom maps checking
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszMapsList = SvrGetConfigVar(SMTPS.hSvrConfig, "CustMapsList");
+
+    if (pszMapsList != NULL)
+    {
+        int             iMapCode = 0;
+
+        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, iMapCode) < 0)
+        {
+            if (iMapCode == 1)
+            {
+                ErrorPush();
+                SysFree(pszMapsList);
+                SvrReleaseConfigHandle(SMTPS.hSvrConfig);
+                return (ErrorPop());
+            }
+
+            if (iMapCode == 0)
+                SMTPS.ulFlags |= SMTPF_BLOCKED_IP;
+            else
+                SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, Abs(iMapCode));
+        }
+
+        SysFree(pszMapsList);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -694,6 +769,12 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Get maximum accepted message size
+///////////////////////////////////////////////////////////////////////////////
+    SMTPS.ulMaxMsgSize = 1024 * (unsigned long) SvrGetConfigInt("MaxMessageSize",
+            0, SMTPS.hSvrConfig);
+
+///////////////////////////////////////////////////////////////////////////////
 //  Try to load specific configuration
 ///////////////////////////////////////////////////////////////////////////////
     char            szConfigName[128] = "";
@@ -764,6 +845,10 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
 
             case ('T'):
                 SMTPS.ulFlags |= SMTPF_ETRN_ENABLED;
+                break;
+
+            case ('Z'):
+                SMTPS.ulMaxMsgSize = 0;
                 break;
         }
 
@@ -1055,8 +1140,8 @@ static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const * pszUser,
 
 
 
-static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
-                        char *&pszSMTPError)
+static int      SMTPCheckReturnPath(const char *pszCommand, char **ppszRetDomains,
+                        SMTPSession & SMTPS, char *&pszSMTPError)
 {
 
     int             iDomainCount = StrStringsCount(ppszRetDomains);
@@ -1136,6 +1221,12 @@ static int      SMTPCheckReturnPath(char **ppszRetDomains, SMTPSession & SMTPS,
         SMTPTryPopAuthIpCheck(SMTPS, szMailerUser, szMailerDomain);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Check extended mail from parameters
+///////////////////////////////////////////////////////////////////////////////
+    if (SMTPCheckMailParams(pszCommand, ppszRetDomains, SMTPS, pszSMTPError) < 0)
+        return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
 //  Setup From string
 ///////////////////////////////////////////////////////////////////////////////
     if (SMTPS.pszFrom != NULL)
@@ -1154,6 +1245,49 @@ static int      SMTPAddMessageInfo(SMTPSession & SMTPS)
 
     return (USmtpAddMessageInfo(SMTPS.pMsgFile, SMTPS.szClientDomain, SMTPS.PeerInfo,
                     SMTPS.szSvrDomain, SMTPS.SockInfo, SMTP_SERVER_NAME));
+
+}
+
+
+
+static int      SMTPCheckMailParams(const char *pszCommand, char **ppszRetDomains,
+                        SMTPSession & SMTPS, char *&pszSMTPError)
+{
+
+    char const     *pszParams = strrchr(pszCommand, '>');
+
+    if (pszParams == NULL)
+        pszParams = pszCommand;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check the SIZE parameter
+///////////////////////////////////////////////////////////////////////////////
+    if (SMTPS.ulMaxMsgSize != 0)
+    {
+        char const     *pszSize = pszParams;
+
+        while ((pszSize = StrIStr(pszSize, " SIZE=")) != NULL)
+        {
+            pszSize += CStringSize(" SIZE=");
+
+            if (isdigit(*pszSize) && (SMTPS.ulMaxMsgSize < (unsigned long) atol(pszSize)))
+            {
+                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                    SMTPLogSession(SMTPS, (ppszRetDomains[0] != NULL) ? ppszRetDomains[0]: "",
+                            "", "SIZE=EBIG", (unsigned long) atol(pszSize));
+
+                pszSMTPError = SysStrDup("552 Message exceeds fixed maximum message size");
+
+                ErrSetErrorCode(ERR_MESSAGE_SIZE);
+                return (ERR_MESSAGE_SIZE);
+            }
+        }
+
+    }
+
+
+
+    return (0);
 
 }
 
@@ -1193,7 +1327,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     char           *pszSMTPError = NULL;
 
-    if (SMTPCheckReturnPath(ppszRetDomains, SMTPS, pszSMTPError) < 0)
+    if (SMTPCheckReturnPath(pszCommand, ppszRetDomains, SMTPS, pszSMTPError) < 0)
     {
         ErrorPush();
         StrFreeStrings(ppszRetDomains);
@@ -1663,7 +1797,9 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     int             iErrorCode = 0,
                     iLineLength;
-    unsigned long   ulMessageSize = 0;
+    unsigned long   ulMessageSize = 0,
+                    ulMaxMsgSize = SMTPS.ulMaxMsgSize;
+    char const     *pszSmtpError = NULL;
     char            szBuffer[SMTP_MAX_LINE_SIZE + 4];
 
     for (;;)
@@ -1708,6 +1844,17 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
         ulMessageSize += (unsigned long) iLineLength;
 
 
+///////////////////////////////////////////////////////////////////////////////
+//  Check the message size
+///////////////////////////////////////////////////////////////////////////////
+        if ((ulMaxMsgSize != 0) && (ulMaxMsgSize < ulMessageSize))
+        {
+            pszSmtpError = "552 Message exceeds fixed maximum message size";
+
+            ErrSetErrorCode(iErrorCode = ERR_MESSAGE_SIZE);
+        }
+
+
         if (SvrInShutdown())
         {
             fclose(SMTPS.pMsgFile), SMTPS.pMsgFile = NULL;
@@ -1744,8 +1891,18 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
         }
     }
     else
-        BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
-                "451 Requested action aborted: (%d) local error in processing", ErrGetErrorCode());
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Notify the client the error condition
+///////////////////////////////////////////////////////////////////////////////
+        if (pszSmtpError == NULL)
+            BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
+                    "451 Requested action aborted: (%d) local error in processing",
+                    ErrGetErrorCode());
+        else
+            BSckSendString(hBSock, pszSmtpError, SMTPS.pSMTPCfg->iTimeout);
+
+    }
 
 
     SMTPResetSession(SMTPS);
@@ -1794,9 +1951,9 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
     char            szSpoolLine[MAX_SPOOL_LINE] = "";
 
     while ((MscGetString(pPkgFile, szSpoolLine, sizeof(szSpoolLine) - 1) != NULL) &&
-            (strncmp(szSpoolLine, SPOOL_FILE_DATA_START, strlen(SPOOL_FILE_DATA_START)) != 0));
+            (strncmp(szSpoolLine, SPOOL_FILE_DATA_START, CStringSize(SPOOL_FILE_DATA_START)) != 0));
 
-    if (strncmp(szSpoolLine, SPOOL_FILE_DATA_START, strlen(SPOOL_FILE_DATA_START)) != 0)
+    if (strncmp(szSpoolLine, SPOOL_FILE_DATA_START, CStringSize(SPOOL_FILE_DATA_START)) != 0)
     {
         fclose(pPkgFile);
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
@@ -2130,6 +2287,14 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
     SMTPListExtAuths(pRespFile, SMTPS);
 
     fprintf(pRespFile, "\r\n");
+
+///////////////////////////////////////////////////////////////////////////////
+//  Emit maximum message size ( if set )
+///////////////////////////////////////////////////////////////////////////////
+    if (SMTPS.ulMaxMsgSize != 0)
+        fprintf(pRespFile, "250 SIZE %lu\r\n", SMTPS.ulMaxMsgSize);
+    else
+        fprintf(pRespFile, "250 SIZE\r\n");
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send EHLO response file

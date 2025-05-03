@@ -60,7 +60,7 @@
 #define ENV_CMD_LINE                "MAIL_CMD_LINE"
 #define SVR_SHUTDOWN_FILE           ".shutdown"
 #define STD_SMAIL_THREADS           16
-#define MAX_SMAIL_THREADS           128
+#define MAX_SMAIL_THREADS           256
 #define STD_SMAIL_RETRY_TIMEOUT     480
 #define STD_SMAIL_RETRY_INCR_RATIO  16
 #define STD_SMAIL_MAX_RETRY         32

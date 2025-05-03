@@ -50,7 +50,7 @@
 #define SysSNPrintf             snprintf
 #define stricmp                 strcasecmp
 #define strnicmp                strncasecmp
-#define SysFileSync(fp)         do { fflush(fp); fdatasync(fileno(fp)); } while (0)
+#define SysFileSync(fp)         do { fflush(fp); fsync(fileno(fp)); } while (0)
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO

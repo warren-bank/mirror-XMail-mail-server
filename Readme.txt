@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.73
+Version      : 0.74
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 08-06-2001
+Date         : 10-06-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -507,6 +507,19 @@ Date 23-05-2001	0.72
 	A new USER.TAB variable "PopEnable" has been added to enable/disable the account from fetching emails.
 Date 08-06-2001	0.73
 	Fixed a possible buffer overflow bug inside the DNS resolver.
+Date 10-06-2001	0.74
+	A stack shifting call method has been implemented to make virtually impossible for attackers
+	to guess the stack frame pointer.
+	With this new feature, even if buffer overflows are present, the worst thing that could happen
+	is a server crash and not the attacker that execute root code on the server machine.
+	Implemented the SIZE ESMTP extension and introduced a new SERVER.TAB variable "MaxMessageSize" that set
+	the maximum message size that the server will accept ( in Kb ).
+	If this variable is not set or if it's zero, any message will be accepted.
+	A new SMTP authentication permission ( 'Z' ) has been added to allow authenticated users to bypass the check.
+	The SMTP sender now check for the remote support of the SIZE ESMTP extension.
+	A new SERVER.TAB variable has been added  "CustMapsList"  to enable the user to enter custom maps checking
+	( look at the section "SERVER.TAB variables" ).
+	Fixed a bug in "frozdel" CTRL command.
 	
 
 
@@ -739,7 +752,11 @@ Part 5			Getting sources
 	coz You're maybe using an old version.
 	Use the correct distribution for Your system and don't mix Unix files with
 	Windows ones coz this is one of the most common cause of XMail bad behaviour.
-	
+	When You unzip the package You've to check that the MailRoot directory contained inside
+	the package itself is complete ( look at the directory tree listed below ) coz
+	some unzippers don't restore empty directories.	
+
+
 
 
 
@@ -1199,6 +1216,7 @@ Part 7			Configuration
 	R	= open relay features ( bypass all other relay blocking traps )
 	V	= VRFY command enabled ( bypass SERVER.TAB variable )
 	T	= ETRN command enabled ( bypass SERVER.TAB variable )
+	Z	= disable mail size checking ( bypass SERVER.TAB variable )
 
 	When PLAIN, LOGIN or CRAM-MD5 authentication mode are used a first lookup in MAILUSERS.TAB
 	accounts is performed to avoid duplicating informations with SMTPAUTH.TAB.
@@ -1805,6 +1823,17 @@ Part 11			SERVER.TAB variables
 	[DefaultSmtpPerms]
 	This list SMTP permissions assigned to users looked up inside MAILUSERS.TAB during SMTP authentication.
 	It also defines the permissions for users authenticated with SMTP after POP3.
+	
+	[CustMapsList]
+	This is a list a user can use to set custom maps checking. The list has the given ( strict ) format :
+	
+	maps-root:code,maps-root:code...
+	
+	Where  maps-root  is the root for the dns query ( ie. dialups.mail-abuse.org. ) and the code can be :
+
+	1	= the connection is drooped soon
+	0	= the connection is kept alive but only authenticated users can send mail
+	-S	= the peer can send messages but a delay of S seconds will be introduced between commands
 
 	[SMTP-RDNSCheck]
 	Indicate if XMail must do an RDNS lookup before accepting a incoming SMTP connection.
@@ -3221,6 +3250,11 @@ Part 25			Miscellaneous
 	If You've enabled logging remember to setup the "-Mr ndays" option depending on the
 	traffic You get in Your server.
 	This avoid XMail to work with very big log files and can speedup server performances.
+	
+	[8]
+	If You're unable to start XMail even if You followed this document instructions check
+	the MailRoot directory with the one listed above.
+	More than one unzipper does not restore empty directories by default.
 
 	[-]
 	Please report me errors about XMail itself and about this document.

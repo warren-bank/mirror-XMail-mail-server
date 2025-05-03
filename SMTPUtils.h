@@ -28,6 +28,11 @@
 
 
 #define INVALID_MXS_HANDLE          ((MXS_HANDLE) 0)
+#define INVALID_SMTPCH_HANDLE       ((SMTPCH_HANDLE) 0)
+
+#define SMTP_FATAL_ERROR            999
+
+
 
 
 
@@ -35,6 +40,10 @@
 typedef struct MXS_HANDLE_struct
 {
 }              *MXS_HANDLE;
+
+typedef struct SMTPCH_HANDLE_struct
+{
+}              *SMTPCH_HANDLE;
 
 struct SMTPError
 {
@@ -73,11 +82,11 @@ int             USmtpInitError(SMTPError * pSMTPE);
 bool            USmtpIsFatalError(SMTPError const * pSMTPE);
 char const     *USmtpGetErrorMessage(SMTPError const * pSMTPE);
 int             USmtpCleanupError(SMTPError * pSMTPE);
-BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
+SMTPCH_HANDLE   USmtpCreateChannel(const char *pszServer, const char *pszDomain,
                         SMTPError * pSMTPE = NULL);
-int             USmtpCloseChannel(BSOCK_HANDLE hBSock, int iHardClose = 0, SMTPError * pSMTPE = NULL);
-int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE = NULL);
-int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const char *pszRcpt,
+int             USmtpCloseChannel(SMTPCH_HANDLE hSmtpCh, int iHardClose = 0, SMTPError * pSMTPE = NULL);
+int             USmtpChannelReset(SMTPCH_HANDLE hSmtpCh, SMTPError * pSMTPE = NULL);
+int             USmtpSendMail(SMTPCH_HANDLE hSmtpCh, const char *pszFrom, const char *pszRcpt,
                         FileSection const * pFS, SMTPError * pSMTPE = NULL);
 int             USmtpSendMail(const char *pszServer, const char *pszDomain,
                         const char *pszFrom, const char *pszRcpt, FileSection const * pFS,

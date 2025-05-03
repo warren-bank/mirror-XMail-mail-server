@@ -233,6 +233,9 @@
 #define ERR_LOW_VM_SPACE            (-213)
 #define ERR_USER_DISABLED           (-214)
 #define ERR_BAD_DNS_NAME_RECORD     (-215)
+#define ERR_MESSAGE_SIZE            (-216)
+#define ERR_SMTPSRV_MSG_SIZE        (-217)
+#define ERR_MAPS_CONTAINED          (-218)
 
 
 

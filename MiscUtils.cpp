@@ -1387,7 +1387,7 @@ int             MscBase64FileEncode(char const * pszBoundary, char const * pszFi
 //  Note that sizeof(szFileBuffer) must be multiple of 3
 ///////////////////////////////////////////////////////////////////////////////
     unsigned int    uReadSize;
-    char            szFileBuffer[240] = "",
+    char            szFileBuffer[80 * 3] = "",
                     szEncBuffer[512] = "";
 
     do
@@ -1398,7 +1398,7 @@ int             MscBase64FileEncode(char const * pszBoundary, char const * pszFi
         {
             unsigned int    uOutLength = sizeof(szEncBuffer);
 
-            encode64(szFileBuffer, uReadSize, szEncBuffer, sizeof(szEncBuffer), &uOutLength);
+            encode64(szFileBuffer, uReadSize, szEncBuffer, sizeof(szEncBuffer) - 1, &uOutLength);
 
             unsigned int    uWriteSize = 80;
             char           *pszWrite = szEncBuffer;
@@ -1712,6 +1712,30 @@ int             MscCmdStringCheck(char const * pszString)
             ErrSetErrorCode(ERR_BAD_CMDSTR_CHARS);
             return (ERR_BAD_CMDSTR_CHARS);
         }
+
+
+    return (0);
+
+}
+
+
+
+
+int             MscGetSectionSize(FileSection const * pFS, unsigned long * pulSize)
+{
+
+    if (pFS->ulEndOffset == (unsigned long) -1)
+    {
+        SYS_FILE_INFO       FI;
+
+        if (SysGetFileInfo(pFS->szFilePath, FI) < 0)
+            return (ErrGetErrorCode());
+
+
+        *pulSize = FI.ulSize - pFS->ulStartOffset;
+    }
+    else
+        *pulSize = pFS->ulEndOffset - pFS->ulStartOffset;
 
 
     return (0);

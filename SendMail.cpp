@@ -152,11 +152,7 @@ char           *SysGetEnv(const char *pszVarName)
 #define SYS_SLASH_STR               "/"
 #define SYS_MAX_PATH                256
 
-#if defined(__FREEBSD__)
 #define SysFileSync(fp)             do { fflush(fp); fsync(fileno(fp)); } while (0)
-#else           // #if defined(__FREEBSD__)
-#define SysFileSync(fp)             do { fflush(fp); fdatasync(fileno(fp)); } while (0)
-#endif          // #if defined(__FREEBSD__)
 
 #define stricmp                     strcasecmp
 #define strnicmp                    strncasecmp

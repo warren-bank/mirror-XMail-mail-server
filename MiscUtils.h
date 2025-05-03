@@ -131,6 +131,8 @@ void           *MscWriteUint16(void * pData, SYS_UINT16 uValue);
 void           *MscWriteUint32(void * pData, SYS_UINT32 uValue);
 void           *MscWriteUint64(void * pData, SYS_UINT64 uValue);
 int             MscCmdStringCheck(char const * pszString);
+int             MscGetSectionSize(FileSection const * pFS, unsigned long * pulSize);
+
 
 
 
