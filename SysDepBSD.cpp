@@ -78,10 +78,15 @@ struct ThrData {
 	int iUseCount;
 };
 
+union FilledDirent {
+	struct dirent DE;
+	char Pad[sizeof(struct dirent) + NAME_MAX];
+};
+
 struct FileFindData {
 	char szPath[SYS_MAX_PATH];
 	DIR *pDIR;
-	struct dirent DE;
+	FilledDirent FDE;
 	struct stat FS;
 };
 
@@ -232,9 +237,9 @@ static int SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay)
 
 static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Set socket buffer sizes
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Set socket buffer sizes
+	///////////////////////////////////////////////////////////////////////////////
 	if (iSndBufSize > 0) {
 		int iSize = iSndBufSize;
 
@@ -256,9 +261,9 @@ static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 		ErrSetErrorCode(ERR_SETSOCKOPT);
 		return (ERR_SETSOCKOPT);
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Disable linger
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Disable linger
+	///////////////////////////////////////////////////////////////////////////////
 	struct linger Ling;
 
 	ZeroData(Ling);
@@ -267,9 +272,9 @@ static int SysSetSocketsOptions(SYS_SOCKET SockFD)
 
 	setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling, sizeof(Ling));
 
-///////////////////////////////////////////////////////////////////////////////
-//  Set KEEPALIVE if supported
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Set KEEPALIVE if supported
+	///////////////////////////////////////////////////////////////////////////////
 	setsockopt(SockFD, SOL_SOCKET, SO_KEEPALIVE, (const char *) &iActivate,
 		   sizeof(iActivate));
 
@@ -617,13 +622,13 @@ int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBase
 		ErrSetErrorCode(ERR_MMAP);
 		return (ERR_MMAP);
 	}
-///////////////////////////////////////////////////////////////////////////////
-//  Send the file
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Send the file
+	///////////////////////////////////////////////////////////////////////////////
 	int iSndBuffSize = MIN_TCP_SEND_SIZE;
 	unsigned long ulCurrOffset = ulBaseOffset;
 	unsigned long ulSndEndOffset =
-	    (ulEndOffset != (unsigned long) -1) ? ulEndOffset : ulFileSize;
+		(ulEndOffset != (unsigned long) -1) ? ulEndOffset : ulFileSize;
 	char *pszBuffer = (char *) pMapAddress + ulBaseOffset;
 	time_t tStart;
 
@@ -1524,7 +1529,7 @@ int SysWaitThread(SYS_THREAD ThreadID, int iTimeout)
 			pthread_cleanup_push((void (*)(void *)) pthread_mutex_unlock, &pTD->Mtx);
 
 			iRetCode =
-			    pthread_cond_timedwait(&pTD->ExitWaitCond, &pTD->Mtx, &tsTimeout);
+				pthread_cond_timedwait(&pTD->ExitWaitCond, &pTD->Mtx, &tsTimeout);
 
 			pthread_cleanup_pop(0);
 		}
@@ -1623,22 +1628,22 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 			close(iPPipe[1]);
 			close(iPPipe[0]);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for the unlock from the parent
-///////////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////////
+			//  Wait for the unlock from the parent
+			///////////////////////////////////////////////////////////////////////////////
 			read(iCPipe[0], &ChildID, sizeof(ChildID));
 
 			close(iCPipe[1]);
 			close(iCPipe[0]);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Execute the command
-///////////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////////
+			//  Execute the command
+			///////////////////////////////////////////////////////////////////////////////
 			execv(pszCommand, (char **) pszArgs);
 
-///////////////////////////////////////////////////////////////////////////////
-//  We can only use async-signal safe functions, so we use write() directly
-///////////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////////
+			//  We can only use async-signal safe functions, so we use write() directly
+			///////////////////////////////////////////////////////////////////////////////
 			write(2, "execv error: cmd='", 18);
 			write(2, pszCommand, strlen(pszCommand));
 			write(2, "'\n", 2);
@@ -1649,9 +1654,9 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 		close(iCPipe[1]);
 		close(iCPipe[0]);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Tell the parent about the child-child PID
-///////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////
+		//  Tell the parent about the child-child PID
+		///////////////////////////////////////////////////////////////////////////////
 		write(iPPipe[1], &ChildID, sizeof(ChildID));
 
 		close(iPPipe[1]);
@@ -1660,9 +1665,9 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 		if (ChildID == (pid_t) - 1)
 			_exit(WAIT_ERROR_EXIT_STATUS);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for the child
-///////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////
+		//  Wait for the child
+		///////////////////////////////////////////////////////////////////////////////
 		iExitStatus = WAIT_TIMEO_EXIT_STATUS;
 		if (iWaitTimeout > 0)
 			SysWaitPID(ChildID, &iExitStatus, iWaitTimeout);
@@ -1684,9 +1689,9 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 	close(iPPipe[0]);
 
 	if (ChildID != (pid_t) - 1) {
-///////////////////////////////////////////////////////////////////////////////
-//  Set process priority
-///////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////
+		//  Set process priority
+		///////////////////////////////////////////////////////////////////////////////
 		switch (iPriority) {
 		case (SYS_PRIORITY_NORMAL):
 			setpriority(PRIO_PROCESS, ChildID, 0);
@@ -1701,18 +1706,18 @@ int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout
 			break;
 		}
 
-///////////////////////////////////////////////////////////////////////////////
-//  Unlock the child
-///////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////
+		//  Unlock the child
+		///////////////////////////////////////////////////////////////////////////////
 		write(iCPipe[1], &ChildID, sizeof(ChildID));
 	}
 
 	close(iCPipe[1]);
 	close(iCPipe[0]);
 
-///////////////////////////////////////////////////////////////////////////////
-//  Wait for completion (or timeout)
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Wait for completion (or timeout)
+	///////////////////////////////////////////////////////////////////////////////
 	while (((ExitPID = (pid_t) waitpid(ProcessID, &iExitStatus, 0)) != ProcessID) &&
 	       (errno == EINTR));
 
@@ -1756,9 +1761,9 @@ void SysSetBreakHandler(void (*BreakHandler) (void))
 
 	SysBreakHandler = BreakHandler;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Setup signal handlers and enable signals
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Setup signal handlers and enable signals
+	///////////////////////////////////////////////////////////////////////////////
 	SysSetSignal(SIGINT, SysBreakHandlerRoutine);
 	SysSetSignal(SIGHUP, SysBreakHandlerRoutine);
 
@@ -1931,7 +1936,7 @@ void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 
 }
 
-int SysEventLogV(char const *pszFormat, va_list Args)
+int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 {
 
 	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
@@ -1948,14 +1953,14 @@ int SysEventLogV(char const *pszFormat, va_list Args)
 
 }
 
-int SysEventLog(char const *pszFormat, ...)
+int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 {
 
 	va_list Args;
 
 	va_start(Args, pszFormat);
 
-	int iLogResult = SysEventLogV(pszFormat, Args);
+	int iLogResult = SysEventLogV(iLogLevel, pszFormat, Args);
 
 	va_end(Args);
 
@@ -1975,9 +1980,9 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 	va_start(Args, pszFormat);
 
 	if (bServerDebug) {
-///////////////////////////////////////////////////////////////////////////////
-//  Debug implementation
-///////////////////////////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////////////////////////
+		//  Debug implementation
+		///////////////////////////////////////////////////////////////////////////////
 
 		vprintf(pszFormat, Args);
 
@@ -1986,7 +1991,7 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 		case (LOG_LEV_WARNING):
 		case (LOG_LEV_ERROR):
 
-			SysEventLogV(pszFormat, Args);
+			SysEventLogV(iLogLevel, pszFormat, Args);
 
 			break;
 		}
@@ -2123,10 +2128,10 @@ SYS_HANDLE SysFirstFile(const char *pszPath, char *pszFileName)
 		return (SYS_INVALID_HANDLE);
 	}
 
-	struct dirent DE;
+	FilledDirent FDE;
 	struct dirent *pDirEntry = NULL;
 
-	readdir_r(pDIR, &DE, &pDirEntry);
+	readdir_r(pDIR, &FDE.DE, &pDirEntry);
 
 	if (pDirEntry == NULL) {
 		closedir(pDIR);
@@ -2143,13 +2148,13 @@ SYS_HANDLE SysFirstFile(const char *pszPath, char *pszFileName)
 	strcpy(pFFD->szPath, pszPath);
 	AppendSlash(pFFD->szPath);
 	pFFD->pDIR = pDIR;
-	pFFD->DE = *pDirEntry;
+	pFFD->FDE = FDE;
 
-	strcpy(pszFileName, pFFD->DE.d_name);
+	strcpy(pszFileName, pFFD->FDE.DE.d_name);
 
 	char szFilePath[SYS_MAX_PATH] = "";
 
-	snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->DE.d_name);
+	snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->FDE.DE.d_name);
 
 	if (stat(szFilePath, &pFFD->FS) != 0) {
 		SysFree(pFFD);
@@ -2187,16 +2192,16 @@ int SysNextFile(SYS_HANDLE hFind, char *pszFileName)
 	FileFindData *pFFD = (FileFindData *) hFind;
 	struct dirent *pDirEntry = NULL;
 
-	readdir_r(pFFD->pDIR, &pFFD->DE, &pDirEntry);
+	readdir_r(pFFD->pDIR, &pFFD->FDE.DE, &pDirEntry);
 
 	if (pDirEntry == NULL)
 		return (0);
 
-	strcpy(pszFileName, pFFD->DE.d_name);
+	strcpy(pszFileName, pFFD->FDE.DE.d_name);
 
 	char szFilePath[SYS_MAX_PATH] = "";
 
-	snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->DE.d_name);
+	snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->FDE.DE.d_name);
 
 	if (stat(szFilePath, &pFFD->FS) != 0) {
 		ErrSetErrorCode(ERR_STAT);
@@ -2230,8 +2235,8 @@ int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI)
 
 	ZeroData(FI);
 	FI.iFileType = (S_ISREG(stat_buffer.st_mode)) ? ftNormal :
-	    ((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory :
-	     ((S_ISLNK(stat_buffer.st_mode)) ? ftLink : ftOther));
+	((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory :
+	 ((S_ISLNK(stat_buffer.st_mode)) ? ftLink : ftOther));
 	FI.ulSize = (unsigned long) stat_buffer.st_size;
 	FI.tMod = stat_buffer.st_mtime;
 
@@ -2468,9 +2473,9 @@ int SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 	*pVirtFree = *pRamFree = (SYS_INT64) iValue *PageSize;
 
-///////////////////////////////////////////////////////////////////////////////
-//  Get swap infos through the kvm interface
-///////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////
+	//  Get swap infos through the kvm interface
+	///////////////////////////////////////////////////////////////////////////////
 	char szErrBuffer[_POSIX2_LINE_MAX] = "";
 	kvm_t *pKD = kvm_openfiles(NULL, NULL, NULL, O_RDONLY, szErrBuffer);
 
@@ -2533,7 +2538,7 @@ static unsigned int SysStkCall(unsigned int (*pProc) (void *), void *pData)
 
 	unsigned int uResult;
 	unsigned int uStkDisp =
-	    (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+		(unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
 	void *pStkSpace = alloca(uStkDisp);
 
 	uResult = pProc(pData);

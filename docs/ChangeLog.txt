@@ -1,10 +1,21 @@
 NAME
 
-    XMail Change Log as of Version 1.21
+    XMail Change Log as of Version 1.22
 
     [top]
 
 CHANGE LOG
+
+  Oct 12, 2005 v 1.22
+
+    *   The POP3 before SMTP authentication is now correctly interpreted as
+        real SMTP authentication, by the mean of @@USERAUTH.
+
+    *   'ATTENTION': Fixed a possible cause of buffer overflow in the
+        XMail's sendmail binary.
+
+    *   Changed the DNS MX resolution to allow better handling of partially
+        broken DNS servers configuations.
 
   Jan 9, 2005 v 1.21
 

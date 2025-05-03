@@ -1,5 +1,7 @@
 #!/bin/sh
+
 cp xmail /etc/rc.d/init.d/xmail
+
 ln -s ../init.d/xmail /etc/rc.d/rc0.d/K10xmail
 ln -s ../init.d/xmail /etc/rc.d/rc1.d/K10xmail
 ln -s ../init.d/xmail /etc/rc.d/rc2.d/K10xmail

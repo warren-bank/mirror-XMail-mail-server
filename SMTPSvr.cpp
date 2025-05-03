@@ -1202,6 +1202,11 @@ static int SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const *pszUser, char 
 		UsrFreeUserInfo(pUI);
 		return (ErrorPop());
 	}
+///////////////////////////////////////////////////////////////////////////////
+//  If the user did not authenticate, set the logon user token
+///////////////////////////////////////////////////////////////////////////////
+	if (IsEmptyString(SMTPS.szLogonUser))
+		UsrGetAddress(pUI, SMTPS.szLogonUser);
 
 	UsrFreeUserInfo(pUI);
 

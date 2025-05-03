@@ -112,6 +112,7 @@ static int DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain,
 			    SYS_UINT32 * pTTL = NULL);
 static int DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomain,
 			     char *&pszMXDomains, char *pszCName, SYS_UINT32 * pTTL = NULL);
+static int DNS_AppendHosts(FILE *pFile, char const *pszDestPath);
 static int DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
 				char const *pszRespFile, HSLIST & hNameList,
 				char *pszCName, SYS_UINT32 * pTTL = NULL);
@@ -768,21 +769,20 @@ static int DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const *pszDomain,
 
 		pRespData += iRRLenght;
 
-		SYS_UINT8 const *pMXData = RR.pRespData;
-		SYS_UINT16 Preference = ntohs(MscReadUint16(pMXData));
-
-		pMXData += sizeof(SYS_UINT16);
-
+		SYS_UINT8 const *pRRData = RR.pRespData;
 		char szRRName[MAX_HOST_NAME] = "";
 
-		if (DNS_GetName(pBaseData, pMXData, szRRName) < 0) {
-			ErrorPush();
-			fclose(pMXFile);
-			SysRemove(pszRespFile);
-			return (ErrorPop());
-		}
-
 		if (RR.Type == QTYPE_MX) {
+			SYS_UINT16 Preference = ntohs(MscReadUint16(pRRData));
+
+			pRRData += sizeof(SYS_UINT16);
+			if (DNS_GetName(pBaseData, pRRData, szRRName) < 0) {
+				ErrorPush();
+				fclose(pMXFile);
+				SysRemove(pszRespFile);
+				return (ErrorPop());
+			}
+
 			if (ii == 0)
 				fprintf(pMXFile, "%d:%s", (int) Preference, szRRName);
 			else
@@ -793,6 +793,13 @@ static int DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const *pszDomain,
 
 			++iMXRecords;
 		} else if (RR.Type == QTYPE_CNAME) {
+			if (DNS_GetName(pBaseData, pRRData, szRRName) < 0) {
+				ErrorPush();
+				fclose(pMXFile);
+				SysRemove(pszRespFile);
+				return (ErrorPop());
+			}
+
 			if (pszCName != NULL)
 				strcpy(pszCName, szRRName);
 			fclose(pMXFile);
@@ -942,24 +949,23 @@ static int DNS_DecodeDirResponseMX(SYS_UINT8 * pRespData, char const *pszRespFil
 
 		pRespData += iRRLenght;
 
-		SYS_UINT8 const *pMXData = RR.pRespData;
-		SYS_UINT16 Preference = ntohs(MscReadUint16(pMXData));
-
-		pMXData += sizeof(SYS_UINT16);
-
-		char szMXDomain[MAX_HOST_NAME] = "";
-
-		if (DNS_GetName(pBaseData, pMXData, szMXDomain) < 0) {
-			ErrorPush();
-			fclose(pMXFile);
-			return (ErrorPop());
-		}
+		SYS_UINT8 const *pRRData = RR.pRespData;
 
 		if (RR.Type == QTYPE_MX) {
+			SYS_UINT16 Preference = ntohs(MscReadUint16(pRRData));
+			char szRRName[MAX_HOST_NAME] = "";
+
+			pRRData += sizeof(SYS_UINT16);
+			if (DNS_GetName(pBaseData, pRRData, szRRName) < 0) {
+				ErrorPush();
+				fclose(pMXFile);
+				return (ErrorPop());
+			}
+
 			if (ii == 0)
-				fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
+				fprintf(pMXFile, "%d:%s", (int) Preference, szRRName);
 			else
-				fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
+				fprintf(pMXFile, ",%d:%s", (int) Preference, szRRName);
 
 			if ((TTL == 0) || (RR.TTL < TTL))
 				TTL = RR.TTL;
@@ -1268,6 +1274,28 @@ int DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
 
 }
 
+static int DNS_AppendHosts(FILE *pFile, char const *pszDestPath)
+{
+
+	FILE *pDest = fopen(pszDestPath, "a+t");
+
+	if (pDest == NULL) {
+		ErrSetErrorCode(ERR_FILE_OPEN);
+		return (ERR_FILE_OPEN);
+	}
+
+	rewind(pFile);
+
+	char szHost[MAX_HOST_NAME] = "";
+
+	while (MscFGets(szHost, sizeof(szHost) - 1, pFile) != NULL)
+		fprintf(pDest, "%s\n", szHost);
+
+	fclose(pDest);
+	
+	return (0);
+}
+
 static int DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
 				char const *pszRespFile, HSLIST & hNameList,
 				char *pszCName, SYS_UINT32 * pTTL)
@@ -1322,19 +1350,33 @@ static int DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
 
 			if ((iQueryResult == 0) || (iQueryResult == ERR_DNS_NXDOMAIN) ||
 			    (iQueryResult == ERR_DNS_IS_CNAME)) {
+///////////////////////////////////////////////////////////////////////////////
+//  If the result code is zero (success), add the non-auth servers at the end
+//  of the list. They will be tried only after a failure from all the auth ones
+///////////////////////////////////////////////////////////////////////////////
+				if (iQueryResult == 0)
+					iQueryResult = DNS_AppendHosts(pNSFile, pszRespFile);
 				fclose(pNSFile);
 				SysRemove(szRespFile);
 				return (iQueryResult);
 			}
 		}
 	}
-
 	fclose(pNSFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  We have got non-auth servers, better than nothing
+///////////////////////////////////////////////////////////////////////////////
+	if (MscCopyFile(pszRespFile, szRespFile) < 0) {
+		ErrorPush();
+		SysRemove(szRespFile);
+
+		return (ErrorPop());
+	}
 
 	SysRemove(szRespFile);
 
-	ErrSetErrorCode(ERR_NS_NOT_FOUND);
-	return (ERR_NS_NOT_FOUND);
+	return (0);
 
 }
 

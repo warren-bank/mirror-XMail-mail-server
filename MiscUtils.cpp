@@ -662,10 +662,11 @@ char *MscFGets(char *pszLine, int iLineSize, FILE * pFile)
 	if (fgets(pszLine, iLineSize, pFile) == NULL)
 		return (NULL);
 
-	int iLineLength = strlen(pszLine) - 1;
-
-	if (iLineLength >= 0)
-		pszLine[iLineLength] = '\0';
+	int ii;
+	
+	for (ii = strlen(pszLine); (ii > 0) && ((pszLine[ii - 1] == '\r') ||
+						(pszLine[ii - 1] == '\n')); ii--);
+	pszLine[ii] = '\0';
 
 	return (pszLine);
 

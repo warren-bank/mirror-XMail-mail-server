@@ -1131,7 +1131,7 @@ int SvrMain(int iArgCount, char *pszArgs[])
 
 	if (SysInitLibrary() < 0) {
 		ErrorPush();
-		SysEventLog("%s\n", ErrGetErrorString());
+		SysEventLog(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 		return (ErrorPop());
 	}
 

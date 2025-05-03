@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.21
+Version: 1.22
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,13 @@ fi
 
 
 %changelog
+
+* Wed Oct 12 2005 Davide Libenzi <davidel@xmailserver.org>
+    The POP3 before SMTP authentication is now correctly interpreted as real SMTP
+    authentication, by the mean of @@USERAUTH.
+    ATTENTION: Fixed a possible cause of buffer overflow in the XMail's sendmail binary.
+    Changed the DNS MX resolution to allow better handling of partially broken DNS
+    servers configuations.
 
 * Sun Jan 9 2005 Davide Libenzi <davidel@xmailserver.org>
     Added a fix for 64 bits porting compatibility.

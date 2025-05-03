@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.21
+    1.22
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    Jan 9, 2005
+    Oct 12, 2005
 
   project by
 
@@ -3831,6 +3831,9 @@ sendmail
         Set the extended sender of the email.
 
     -t  Extract recipients from the 'To:'/'Cc:'/'Bcc:' header tags.
+
+    -i  Read the input until the End Of Stream, instead of stopping at the
+        "\n.\n" sequence.
 
     The syntax is:
 

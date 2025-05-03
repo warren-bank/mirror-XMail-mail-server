@@ -35,12 +35,12 @@ endif
 ifeq ($(OSTYPE),OpenBSD)
 	SYSTYPE = openbsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__OPENBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -pthread -lc_r
+	LDFLAGS = -lkvm -pthread
 else
 ifeq ($(OSTYPE),NetBSD)
 	SYSTYPE = netbsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__NETBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
-	LDFLAGS = -lkvm -pthread -lc_r
+	LDFLAGS = -lkvm -pthread
 else
 ifeq ($(OSTYPE),Darwin)
 	SYSTYPE = darwin
@@ -52,6 +52,10 @@ else
 	LDFLAGS = -lkvm -lcrypt -pthread -lc_r
 endif
 endif
+endif
+
+ifeq ($(NEED_LCR),1)
+	LDFLAGS := -lc_r
 endif
 
 

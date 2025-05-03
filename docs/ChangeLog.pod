@@ -1,11 +1,31 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.21
+XMail Change Log as of Version 1.22
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
+
+=head2 Oct 12, 2005 v 1.22
+
+=over 4
+
+=item *
+
+The POP3 before SMTP authentication is now correctly interpreted as real SMTP authentication,
+by the mean of @@USERAUTH.
+
+=item *
+
+'B<ATTENTION>': Fixed a possible cause of buffer overflow in the XMail's sendmail binary.
+
+=item *
+
+Changed the DNS MX resolution to allow better handling of partially broken DNS servers
+configuations.
+
+=back
 
 =head2 Jan 9, 2005 v 1.21
 

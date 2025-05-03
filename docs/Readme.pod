@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.21
+1.22
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-Jan 9, 2005
+Oct 12, 2005
 
 =head2 project by
 
@@ -4631,6 +4631,11 @@ Set the extended sender of the email.
 =item -t
 
 Extract recipients from the 'To:'/'Cc:'/'Bcc:' header tags.
+
+=item -i
+
+Read the input until the End Of Stream, instead of stopping at the "\n.\n"
+sequence.
 
 =back
 

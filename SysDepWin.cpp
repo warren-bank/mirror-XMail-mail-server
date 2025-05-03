@@ -1688,7 +1688,7 @@ void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 
 }
 
-int SysEventLogV(char const *pszFormat, va_list Args)
+int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 {
 
 	HANDLE hEventSource = RegisterEventSource(NULL, szServerName);
@@ -1705,7 +1705,9 @@ int SysEventLogV(char const *pszFormat, va_list Args)
 	pszStrings[0] = szBuffer;
 
 	ReportEvent(hEventSource,
-		    EVENTLOG_ERROR_TYPE, 0, 0, NULL, 1, 0, (const char **) pszStrings, NULL);
+		    iLogLevel == LOG_LEV_ERROR ? EVENTLOG_ERROR_TYPE:
+		    iLogLevel == LOG_LEV_WARNING ? EVENTLOG_WARNING_TYPE:
+		    EVENTLOG_INFORMATION_TYPE, 0, 0, NULL, 1, 0, (const char **) pszStrings, NULL);
 
 	DeregisterEventSource(hEventSource);
 
@@ -1713,14 +1715,14 @@ int SysEventLogV(char const *pszFormat, va_list Args)
 
 }
 
-int SysEventLog(char const *pszFormat, ...)
+int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 {
 
 	va_list Args;
 
 	va_start(Args, pszFormat);
 
-	int iLogResult = SysEventLogV(pszFormat, Args);
+	int iLogResult = SysEventLogV(iLogLevel, pszFormat, Args);
 
 	va_end(Args);
 
@@ -1751,7 +1753,7 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 		case (LOG_LEV_WARNING):
 		case (LOG_LEV_ERROR):
 
-			SysEventLogV(pszFormat, Args);
+			SysEventLogV(iLogLevel, pszFormat, Args);
 
 			break;
 		}

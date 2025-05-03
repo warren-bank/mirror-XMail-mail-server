@@ -1945,7 +1945,7 @@ void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 
 }
 
-int SysEventLogV(char const *pszFormat, va_list Args)
+int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 {
 
 	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
@@ -1962,14 +1962,14 @@ int SysEventLogV(char const *pszFormat, va_list Args)
 
 }
 
-int SysEventLog(char const *pszFormat, ...)
+int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 {
 
 	va_list Args;
 
 	va_start(Args, pszFormat);
 
-	int iLogResult = SysEventLogV(pszFormat, Args);
+	int iLogResult = SysEventLogV(iLogLevel, pszFormat, Args);
 
 	va_end(Args);
 
@@ -2000,7 +2000,7 @@ int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
 		case (LOG_LEV_WARNING):
 		case (LOG_LEV_ERROR):
 
-			SysEventLogV(pszFormat, Args);
+			SysEventLogV(iLogLevel, pszFormat, Args);
 
 			break;
 		}

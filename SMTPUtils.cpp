@@ -764,15 +764,14 @@ static int USmtpGetResultCode(const char *pszResult)
 	int ii;
 	char szResCode[64] = "";
 
-	for (ii = 0; isdigit(pszResult[ii]); ii++)
+	for (ii = 0; (ii < sizeof(szResCode)) && isdigit(pszResult[ii]); ii++)
 		szResCode[ii] = pszResult[ii];
 
-	szResCode[ii] = '\0';
-
-	if (ii == 0) {
+	if ((ii == 0) || (ii == sizeof(szResCode))) {
 		ErrSetErrorCode(ERR_BAD_SMTP_RESPONSE);
 		return (ERR_BAD_SMTP_RESPONSE);
 	}
+	szResCode[ii] = '\0';
 
 	return (atoi(szResCode));
 

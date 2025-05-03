@@ -338,7 +338,8 @@ static FILE *SafeOpenFile(char const *pszFilePath, char const *pszMode)
 
 }
 
-static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase, char *pszAddress)
+static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase, char *pszAddress,
+				    int iSize)
 {
 
 	char const *pszStart = pszAt;
@@ -352,7 +353,7 @@ static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase, char
 
 	for (; (*pszEnd != '\0') && (strchr("<> \t,\":;'\r\n", *pszEnd) == NULL); pszEnd++);
 
-	int iAddrLength = (int) (pszEnd - pszStart);
+	int iAddrLength = Min((int) (pszEnd - pszStart), iSize - 1);
 
 	strncpy(pszAddress, pszStart, iAddrLength);
 	pszAddress[iAddrLength] = '\0';
@@ -375,7 +376,8 @@ static int EmitRecipients(FILE * pMailFile, char const *pszAddrList)
 
 		char szAddress[256] = "";
 
-		if ((pszCurr = AddressFromAtPtr(pszAt, pszAddrList, szAddress)) != NULL) {
+		if ((pszCurr = AddressFromAtPtr(pszAt, pszAddrList, szAddress,
+						sizeof(szAddress))) != NULL) {
 			fprintf(pMailFile, "rcpt to:<%s>\r\n", szAddress);
 
 			++iRcptCount;
@@ -825,7 +827,8 @@ int main(int iArgCount, char *pszArgs[])
 
 			char szRecipient[MAX_ADDR_NAME] = "";
 
-			if (AddressFromAtPtr(pszAt, szBuffer, szRecipient) != NULL) {
+			if (AddressFromAtPtr(pszAt, szBuffer, szRecipient,
+					     sizeof(szRecipient)) != NULL) {
 				fprintf(pMailFile, "rcpt to:<%s>\r\n", szRecipient);
 
 				++iRcptCount;
