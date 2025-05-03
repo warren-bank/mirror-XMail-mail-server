@@ -3,11 +3,7 @@
 
 XMail - Internet/Intranet mail server.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 LICENSE
 
@@ -26,11 +22,7 @@ you should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 OVERVIEW
 
@@ -72,17 +64,13 @@ The first code of XMail Server is started on Windows NT and Linux, and
 now, the FreeBSD and Solaris version ready. The compilers supported are gcc for
 Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 VERSION
 
 =head2 current
 
-1.15
+1.16
 
 =head2 release type
 
@@ -118,11 +106,7 @@ Beau E, Cox <beau@beaucox.com>
 
 =for html <p>See the <a href="./ChangeLog.html"><b>Change Log</b></a>.</p>
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 DOCUMENTATION CONVENTIONS
 
@@ -152,11 +136,7 @@ continued lines and indenting the continuation line(s):
 
 'B<DO NOT ENTER THE =E<gt> CHARACTERS. ENTER THE ENTIRE ENTRY AS ONE LINE.>'
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 FEATURES
 
@@ -264,22 +244,14 @@ Custom (external) POP3 authentication
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 PORTING STATUS
 
 Right now the Linux and NT ports are stable, while the Solaris, FreeBSD and OpenBSD
 ones have not been tested as well as the previous OSs.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 REQUIREMENTS
 
@@ -311,11 +283,7 @@ To build from source for Windows you need MS Visual C++ (project included).
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 OBTAINING THE SOURCE
 
@@ -330,11 +298,7 @@ directory contained inside
 the package itself is complete (look at the directory tree listed below) because
 some unzippers don't restore empty directories. 
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 BUILD
 
@@ -377,11 +341,7 @@ executing:
 
  XMail --debug [options]
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 CONFIGURATION
 
@@ -464,11 +424,7 @@ relaying of your server. 'B<THIS IS IMPORTANT!>'
 
 =back
 
-=begin html
-
 [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head2 NT/Win2K
 
@@ -557,11 +513,7 @@ relaying of your server. 'B<THIS IS IMPORTANT!>'
 
 =back
 
-=begin html
-
 [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head2 Environment variable
 
@@ -576,11 +528,7 @@ Windows:
 
  set MAIL_ROOT=C:\MailRoot
 
-=begin html
-
 [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head2 MailRoot structure
 
@@ -610,6 +558,7 @@ Mail root directory contain these files:
   finger.ipmap.tab    <file>
   filters.in.tab  <file>
   filters.out.tab <file>
+  smtp.ipprop.tab <file>
 
 and these directories:
 
@@ -671,11 +620,7 @@ for mailbox structure, while:
 
 for Maildir structure.
 
-=begin html
-
 [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head2 Configuration tables
 
@@ -685,8 +630,6 @@ TAB ('B<something.tab>') files are text files (in the sense meant by the OS in u
  "value1"[TAB]"value2"[TAB]...[NEWLINE]
 
 The following sections explain each file's structure and use.
-
-=begin html
 
 =over 4
 
@@ -740,13 +683,11 @@ The following sections explain each file's structure and use.
 
 =item L<"MAILPROC.TAB">
 
+=item L<"SMTP.IPPROP.TAB">
+
 =back end html
 
-=begin html
-
 [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 ALIASES.TAB
 
@@ -772,11 +713,7 @@ You can have widcard even in the domain field, as:
 
 You 'B<CANNOT>' edit this file while XMail is running because it is an indexed file.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 ALIASDOMAIN.TAB
 
@@ -792,11 +729,7 @@ all subdomains of 'B<homer.net>' to 'B<homer.net>'.
 
 You 'B<CANNOT>' edit this file while XMail is running because it is an indexed file.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 DOMAINS.TAB
 
@@ -804,11 +737,7 @@ You 'B<CANNOT>' edit this file while XMail is running because it is an indexed f
 
 defines domains handled by the server.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 DNSROOTS
 
@@ -817,11 +746,7 @@ defines domains handled by the server.
 This is a file that lists a root name server in each line (this is not a TAB file).
 This can be created from a query via nslookup for type=ns and host = '.'.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 EXTALIASES.TAB
 
@@ -838,18 +763,14 @@ If you are using a Mail client like Outlook, Eudora, KMail ... you have to confi
 your email address with the external account say 'dlibenziE<64>xmailserver.org'.
 When you post an internal message to 'fooE<64>home.bogus' the mail client puts your external
 email address ('dlibenziE<64>xmailserver.org') in the 'MAIL FROM: <...>' SMTP request.
-Now if the user 'foo' replies to this message, it replies to 'dlibenzimaticad.it',
+Now if the user 'foo' replies to this message, it replies to 'dlibenziE<64>xmailserver.org',
 and then is sent to the external mail server.
 With the entry above in 'B<EXTALIASES.TAB>' file the 'Return-Path: <...>' field is filled
 with 'dlibenziE<64>home.bogus' that leads to an internal mail reply.
 
 You 'B<CANNOT>' edit this file while XMail is running because it is an indexed file.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 MAILUSERS.TAB
 
@@ -884,22 +805,14 @@ file 'B<must>' contain an entry for each user handled by XMail.
 
 You 'B<CANNOT>' edit this file while XMail is running because it is an indexed file.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 MESSAGE.ID
 
 A file storing a sequential message number.
 Set it at 1 when you install the server and leave it be handled by the software.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 POP3LINKS.TAB
 
@@ -980,11 +893,7 @@ command line parameter (default 120).
 XMail also checks for the presence (inside MAIL_ROOT) of a file named '.psync-trigger' and,
 when this file is found, a PSYNC session starts and that file is removed.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SERVER.TAB
 
@@ -993,11 +902,7 @@ when this file is found, a PSYNC session starts and that file is removed.
 This file contains server configuration variables.
 See L<SERVER.TAB variables> below for details.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTPGW.TAB
 
@@ -1021,11 +926,7 @@ The 'B<smtp-gateway>' can be a complex routing also, for example:
 sends all mail for  "*'*.dummy.net'  through  'E<64>relay.xmailserver.org,E<64>mail.nowhere.org',
 in this way:  relay.xmailserver.org --> mail.nowhere.org --> E<64>DESTINATION.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTPFWD.TAB
 
@@ -1048,11 +949,7 @@ you can also enable XMail to random-select the order of the gateway list by spec
 
 using the character 'B<#>'  as the first char of the gateway list.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTPRELAY.TAB
 
@@ -1064,11 +961,7 @@ Example:
 
 allows all hosts of the class 'C' network '212.131.173.XXX' to use the server as relay.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTPAUTH.TAB
 
@@ -1114,11 +1007,7 @@ If the lookup succeed the 'B<SERVER.TAB>' variable 'B<DefaultSmtpPerms>' is used
 user SMTP permissions (default MR).
 If the lookup fails then 'B<SMTPAUTH.TAB>' lookup is done.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTPEXTAUTH.TAB
 
@@ -1162,11 +1051,7 @@ If it finds a match, it must return zero and overwrite 'B<@@FSECRT>' with the ma
 (username + ':' + password).
 If a match is not found, the program must return a value other than zero.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 USERDEF.TAB
 
@@ -1196,11 +1081,7 @@ It also contains a file named 'B<USER.TAB>' that stores"account" variabiles, exa
  "HomePage"  "http://www.xmailserver.org/davide.html"
  "MaxMBSize" "30000"
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 CTRLACCOUNTS.TAB
 
@@ -1213,11 +1094,7 @@ The password is encrypted with  the 'B<XMCrypt>'  program supplied with the sour
 USE CTRL.IPMAP.TAB TO RESTRICT IP ACCESS!
 REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM THIS FILE!>'
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SPAMMERS.TAB
 
@@ -1230,11 +1107,7 @@ Example:
 register all hosts of the class 'C' network '212.131.173.XXX' as spammers,
 and block them the use of XMail SMTP server.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SPAM-ADDRESS.TAB
 
@@ -1248,11 +1121,7 @@ Example:
 blocks mails coming from the entire domain 'B<rude.net>' and coming from all
 addresses that end with 'B<-adminE<64>'even.more.rude.net>.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 POP3.IPMAP.TAB
 
@@ -1272,11 +1141,7 @@ class 'C' network '212.131.173.XXX'.
 
 Higher precedences win over lower ones.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 SMTP.IPMAP.TAB
 
@@ -1294,11 +1159,7 @@ class 'C' network '212.131.173.XXX'.
 
 Higher precedences win over lower ones.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 CTRL.IPMAP.TAB
 
@@ -1314,11 +1175,7 @@ This configuration deny access to all IPs except the ones of the
 class 'C' network '212.131.173.XXX'.
 Higher precedences win over lower ones.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 FINGER.IPMAP.TAB
 
@@ -1334,11 +1191,7 @@ This configuration denies access to all IPs except the ones of the
 class 'C' network '212.131.173.XXX'.
 Higher precedences win over lower ones.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 USER.TAB
 
@@ -1353,11 +1206,7 @@ store user information such as:
 
 Please refer to L<"USER.TAB variables"> below.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 MLUSERS.TAB
 
@@ -1405,11 +1254,7 @@ Example:
 If the 'B<USER.TAB>' file defines the 'B<ClosedML>' variable as 'B<1>' then a client can post
 to this mailing list only if it's listed in 'B<MLUSERS.TAB>' with RW permissions.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
-
-=end html
 
 =head3 MAILPROC.TAB
 
@@ -1502,7 +1347,9 @@ Redirect message to internal or external addresses.
  "lredirect"[TAB]"address"[TAB]...[NEWLINE]
 
 Redirect message to internal or external addresses impersonating local domain
-during message delivery.
+during message delivery. The difference between "redirect" and "lredirect" is the
+following. Suppose A@B sends a message to C@D, that has a redirect to E@F. With
+"redirect" E@F will see A@B has sender while with "lredirect" he will see C@D.
 
 [SMTPRELAY]
 
@@ -1515,11 +1362,30 @@ Otherwise You can use this syntax:
 
 to have XMail random-select the order the specified relays.
 
-=begin html
-
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
 
-=end html
+=head3 SMTP.IPPROP.TAB
+
+ "ip-addr"[TAB]"var0=value0"...[TAB]"varN=valueN"[NEWLINE]
+
+Example:
+
+ "192.168.0.7/32"   "WhiteList=1"
+
+Address selection mask are formed by an IP address (network) plus the number of
+valid bits inside the network mask. No space are allowed between the variable name
+and the '=' sign and between the '=' sign and the value. These are the currently
+defined variables:
+
+=over 4
+
+=item WhiteList
+
+If set to 1 and if the peer IP matches the address mask, all peer IP based checks will be skipped.
+
+=back
+
+[L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
 
 =head1 EXTERNAL AUTHENTICATION
 
@@ -1605,11 +1471,7 @@ If none of this file's id are found, then usual authentication is performed ('B<
 The use of external authentication does not avoid the presence of the user entry in
 'B<mailusers.tab>'.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 SMTP CLIENT AUTHENTICATION
 
@@ -1691,11 +1553,7 @@ to send to the SMTP server.
 The external program must return zero upon success and must put the response into
 the file  @@RFILE (without new line termination).
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 CUSTOM DOMAIN MAIL PROCESSING
 
@@ -1820,7 +1678,10 @@ While the line:
 
  "redirect"  "user@target-domain.org"
 
-redirects the message to 'B<userE<64>target-domain.org>'.
+redirects the message to 'B<userE<64>target-domain.org>'. The difference between
+"redirect" and "lredirect" is the following. Suppose A@B sends a message to C@D,
+that has a redirect to E@F. With "redirect" E@F will see A@B has sender while with
+"lredirect" he will see C@D.
 
 =item [SMTPRELAY]
 
@@ -1842,11 +1703,7 @@ Do SMTP delivery.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 CMD ALIASES
 
@@ -1873,11 +1730,7 @@ system, must be lower case.
 The use of the command 'B<[SMTP]>' must be implemented with great care because it could create
 mail loops within the server.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 SERVER.TAB VARIABLES
 
@@ -1979,6 +1832,14 @@ Verbose (client IP shown , server IP shown)
 =item '2'
 
 Strict (no IP shown)
+
+=item '3'
+
+Same as 0 but the client IP is not shown if the client authenticate itself.
+
+=item '4'
+
+Same as 1 but the client IP is not shown if the client authenticate itself.
 
 =back
 
@@ -2170,11 +2031,7 @@ even for sending to local domains, and this is probably not what you want.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 MESSAGE FILTERS
 
@@ -2187,9 +2044,9 @@ This feature offers the ability to inspect and modify messages, giving a way
 to reject messages based on content, alter messages (address rewriting)
 and so on.
 
-If this filters returns 'B<97, 98 or 99>' the message is rejected and
+If this filters returns 'B<4, 5 or 6>' the message is rejected and
 is stopped in its travel.
-If the filter modifies the message it must return 'B<100>'.
+If the filter modifies the message it must return 'B<7>'.
 
 Additional flags are allowed to be returned to XMail as a result of filter processing
 by adding the flags value to the exits code above listed. The currently defined
@@ -2197,7 +2054,7 @@ flags are :
 
 =over
 
-=item '8'
+=item '16'
 
 Stop selected filter list processing.
 
@@ -2209,11 +2066,11 @@ to return extra flags B<FILTER-SUM>, the final return code B<FRC> must be :
 
 B<FRC> = B<RC> + B<FILTER-SUM>
 
-Example. Suppose a filter modified the message and hence needs to return B<100> as return code.
+Example. Suppose a filter modified the message and hence needs to return B<7> as return code.
 Suppose also that a filter wants to block the filter selection list processing by
-specifying a flags value of B<8>, the value to be returned will be :
+specifying a flags value of B<16>, the value to be returned will be :
 
-B<FRC> = B<100> + B<8> = B<108>
+B<FRC> = B<7> + B<16> = B<23>
 
 Filter selection is driven by two files 'B<FILTERS.IN.TAB>' and 'B<FILTERS.OUT.TAB>'
 that have the following format:
@@ -2272,8 +2129,8 @@ local IP address and port where the message has been accepted
 
 =item @@FILE
 
-the message file path (the external command may modify
-the file if it returns 'B<100>' as command exit value.)
+the message file path (the external command may modify the file if it returns 'B<7>'
+as command exit value.)
 
 =item @@MSGID
 
@@ -2286,17 +2143,20 @@ the reference SMTP message id
 =back
 
 Here 'B<command>' is the name of an external program that processes the message and
-returns its processing result. If it returns 'B<99>' the message is rejected and a notification
-message is sent to the sender. By returning 'B<98>' the message is rejected
+returns its processing result. If it returns 'B<6>' the message is rejected and a notification
+message is sent to the sender. By returning 'B<5>' the message is rejected
 without notification.
-While returning 'B<97>' the message is rejected without notification and without being frozen
-(a 'B<98>' response could lead to a frozen message if the L<"SERVER.TAB"> configuration enables this).
-If all filters return values different from 'B<99, 98 and 97>' the message continues its trip.
+While returning 'B<4>' the message is rejected without notification and without being frozen
+(a 'B<5>' response could lead to a frozen message if the L<"SERVER.TAB"> configuration enables this).
+If all filters return values different from 'B<6, 5 and 4>' the message continues its trip.
 The filter command may also modify the file
-(AV scanning, content filter, message rewriting, etc) by returning 'B<100>'.
-The filter 'B<MUST>' return 'B<100>' in case it modifies the message.
+(AV scanning, content filter, message rewriting, etc) by returning 'B<7>'.
+The filter 'B<MUST>' return 'B<7>' in case it modifies the message.
 If the filter changes the message file it 'B<MUST>' keep the message structure and
-it 'B<MUST>' terminate all line with <CR><LF>.
+it 'B<MUST>' terminate all line with <CR><LF>. The filter has also the ability to return
+a one-line custom return message by creating a file named @@FILE.rej holding the message
+in the very first line. This file should be created 'B<ONLY>' when the filter returns a
+rejection code ('B<6, 5 and 4>')and 'B<NEVER>' in case of passthru code ('B<7>') or modify code.
 
 The spool files has this structure:
 
@@ -2311,13 +2171,11 @@ The spool files has this structure:
 After the 'B<E<lt>E<lt>MAIL-DATAE<gt>E<gt>>' tag (5th line) the message follows. The message is composed
 of a headers section and, after the first empty line, the message body.
 'B<EXTREME>' care must be used when modifying the message because the filter will be working
-on the real message, and a badly reformatted file will lead to message loss.
-
-=begin html
+on the real message, and a badly reformatted file will lead to message loss. The spool file
+header (any data before <<MAIL-DATA>>) 'B<MUST>' be preserved as is by the filter in case of
+message rewrite happens.
 
 [L<top|"__index__">]
-
-=end html
 
 =head1 USER.TAB VARIABLES
 
@@ -2387,11 +2245,7 @@ the SERVER.TAB one when present.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 MAIL ROUTING THROUGH ADDRESSES
 
@@ -2406,11 +2260,7 @@ The message is then sent to 'B<E<64>'hostc> using
 'B<MAIL FROM: <E<64>hostb,E<64>hosta:xuserE<64>hostz>>'
 and 'B<RCPT TO: <foouserE<64>hostc>>'.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 XMAIL SPOOL DESIGN
 
@@ -2447,11 +2297,7 @@ subdirectory (with the same name of the message file).
 If the message has permanent delivery errors or is expired and if the option 'B<RemoveSpoolErrors>'
 of the 'B<SERVER.TAB>' file is off, the message file is moved into the 'B<froz>' subdirectory.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 SMTP COMMANDS
 
@@ -2485,11 +2331,7 @@ These are commands understood by ESMTP server:
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 POP3 COMMANDS
 
@@ -2525,11 +2367,7 @@ These are commands understood by POP3 server:
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 COMMAND LINE
 
@@ -2695,7 +2533,8 @@ Timeout value for filters commands in seconds. Default 90.
 
 =item -Yi interval
 
-Set external POP3 accounts sync interval. Default 120.
+Set external POP3 accounts sync interval. Setting this to zero will disable
+the PSYNC task. Default 120.
 
 =item -Yt nthreads
 
@@ -2768,19 +2607,13 @@ Enable local mail logging.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 XMAIL ADMIN PROTOCOL
 
 It's possible to remote admin XMail due to the existence of a 'controller server'
 that runs with XMail and waits for TCP/IP connections on a port (6017 or tunable
 via a '-Cp nport') command line option.
-
-=begin html
 
 Admin protocol details:
 
@@ -2872,8 +2705,6 @@ Admin protocol details:
 
 =back
 
-=end html
-
 =head2 Description
 
 The XMail admin server 'speaks' a given protocol that can be used by external GUI
@@ -2942,11 +2773,7 @@ The result of the authentication send is a RESSTRING.
 If the user does not receive a positive authentication response, the connection is
 closed by the server.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding a user
 
@@ -2976,11 +2803,7 @@ user password.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting a user
  
@@ -3002,11 +2825,7 @@ username to delete.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Changing a user's password
 
@@ -3032,11 +2851,7 @@ new password.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Authenticate user
 
@@ -3062,11 +2877,7 @@ password.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Retrieve user statistics
 
@@ -3115,15 +2926,11 @@ last user login IP address.
 
 =back
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding an alias
 
- "aliasadd"[TAB]"domain"[TAB]"alias"[TAB]"username"<CR><LF>
+ "aliasadd"[TAB]"domain"[TAB]"alias"[TAB]"account"<CR><LF>
 
 where:
 
@@ -3137,19 +2944,16 @@ domain name (must be handled by the server).
 
 alias to add.
 
-=item username
+=item account
 
-real email account (locally handled).
+real email account (locally handled). This can be a fully qualified email address
+or a username inside the same domain.
 
 =back
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting an alias
 
@@ -3171,15 +2975,11 @@ alias to delete.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing aliases
 
- "aliaslist"[TAB]"domain"[TAB]"alias"[TAB]"username"<CR><LF>
+ "aliaslist"[TAB]"domain"[TAB]"alias"[TAB]"account"<CR><LF>
 
 or
 
@@ -3203,11 +3003,11 @@ domain name, optional (can contain wild cards).
 
 =item alias
 
-alias name, optional (can contain wildcats).
+alias name, optional (can contain wildcards).
 
-=item username
+=item account
 
-username, optional (can contain wildcats).
+account, optional (can contain wildcards).
 
 =back
 
@@ -3224,11 +3024,7 @@ This is the format of the listing:
 
  "domain"[TAB]"alias"[TAB]"username"<CR><LF>
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing user vars
 
@@ -3255,11 +3051,7 @@ This is the format of the listing:
 
  "varname"[TAB]"varvalue"<CR><LF>
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Setting user vars
 
@@ -3291,11 +3083,7 @@ There can be multiple variable assignments with a single call.
 If 'B<varvalue>' is the string 'B<.|rm>' the variable 'B<varname>' is deleted.
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing users
 
@@ -3336,11 +3124,7 @@ This is the format of the listing:
 
  "domain"[TAB]"username"[TAB]"password"[TAB]"usertype"<CR><LF>
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Getting mailproc.tab file
 
@@ -3370,11 +3154,7 @@ The result is a RESSTRING.
 In successful cases (00100) the mailproc.tab file is listed line by line, terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Setting mailproc.tab file
 
@@ -3407,11 +3187,7 @@ If a line of the file begins with a dot, another dot must be added at the beginn
 If the file has zero length the mailproc.tab is deleted.
 The client then gets another RESSTRING indicating the final command result.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding a mailing list user
 
@@ -3446,11 +3222,7 @@ When 'B<perms>' is not specified the default is RW.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting a mailing list user
 
@@ -3476,11 +3248,7 @@ mail address to delete from the mailing list 'mlusernameE<64>domain'.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing mailing list users
 
@@ -3504,11 +3272,7 @@ The result is a RESSTRING.
 If successful (00100), a formatted list of mailing list users follows terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding a domain
 
@@ -3526,11 +3290,7 @@ domain name to add.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting a domain
 
@@ -3549,11 +3309,7 @@ domain name to delete.
 The result is a RESSTRING.
 This is not always a safe operation.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing handled domains
 
@@ -3568,11 +3324,7 @@ The wild match versions simply returns a filtered list of domains.
 If successful (00100), a formatted list of handled domains follows, terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding a domain alias
 
@@ -3588,11 +3340,7 @@ defines 'B<xmailserver.com>' as an alias of 'B<xmailserver.org>', or:
 
 defines all subdomains of 'B<xmailserver.org>' as alises of 'B<xmailserver.org>'.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting a domain alias
 
@@ -3604,11 +3352,7 @@ Example:
 
 removes the 'B<*.xmailserver.org>' domain alias.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing alias domains
 
@@ -3623,11 +3367,7 @@ The wild match version simply returns a filtered list of alias domains.
 If successful (00100), a formatted list of alias domains follows, terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Getting custom domain file
 
@@ -3653,11 +3393,7 @@ The result is a RESSTRING.
 If successful (00100), the custom domain file is listed line by line terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Setting custom domain file
 
@@ -3686,11 +3422,7 @@ If a line of the file begins with a dot, another dot must be added at the begin 
 If the file has zero length the custom domain file is deleted.
 The client then gets another RESSTRING indicating the final command result.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing custom domains
 
@@ -3700,11 +3432,7 @@ The result is a RESSTRING.
 If successful (00100), a formatted list of custom domains follows, terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Adding a POP3 external link
 
@@ -3747,11 +3475,7 @@ travel on the network; if you're not sure about it, specify 'B<CLR>' as authtype
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting a POP3 external link
 
@@ -3782,11 +3506,7 @@ external username.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing POP3 external links
 
@@ -3808,11 +3528,7 @@ The format of the listing is:
  "loc-domain"[TAB]"loc-username"[TAB]"extrn-domain"[TAB]"extrn-username"=>
    [TAB]"extrn-password"[TAB]"authtype"[TAB]"on-off"<CR><LF>
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Enabling a POP3 external link
 
@@ -3853,11 +3569,7 @@ In the second format all users, links are affected by the enable operation.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing files
 
@@ -3883,11 +3595,7 @@ containing a single dot (<CR><LF>.<CR><LF>). The listing format is:
 
 "filename"[TAB]"filesize"<CR><LF>
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Getting configuration file
 
@@ -3912,11 +3620,7 @@ If successful (00100), the file is listed line by line, terminated by a line
 containing a single dot (<CR><LF>.<CR><LF>).
 You CANNOT use this command with indexed files !
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Setting configuration file
 
@@ -3946,11 +3650,7 @@ Remember that configuration files have a strict syntax and that pushing a incorr
 can make XMail not work properly.
 You CANNOT use this command with indexed files!
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Listing frozen messages
 
@@ -3997,11 +3697,7 @@ message size in bytes.
 
 =back
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Rescheduling frozen message
 
@@ -4029,11 +3725,7 @@ You can get this information from the L<frozlist|"Listing frozen messages"> comm
 After a message has been successfully rescheduled it is deleted from the frozen fs path.
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Deleting frozen message
 
@@ -4060,11 +3752,7 @@ queue fs level 1 (second level directory index).
 You can get this information from the L<frozlist|"Listing frozen messages"> command.
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Getting frozen message log file
 
@@ -4093,11 +3781,7 @@ The result is a RESSTRING.
 If successful (00100), the frozen message log file follows,
 terminated by a line containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Getting frozen message
 
@@ -4126,11 +3810,7 @@ The result is a RESSTRING.
 If successful (00100), the frozen message file follows,
 terminated by a line containing a single dot (<CR><LF>.<CR><LF>).
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Starting a queue flush
 
@@ -4152,11 +3832,7 @@ Example:
 
 starts queueing all messages with a matching destination address.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Do nothing command
 
@@ -4164,11 +3840,7 @@ starts queueing all messages with a matching destination address.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Quit the connection
 
@@ -4176,11 +3848,7 @@ The result is a RESSTRING.
 
 The result is a RESSTRING.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head2 Do you want...?
 
@@ -4189,11 +3857,7 @@ languages (Java, TCL/Tk, etc) and XMail controller protocol?
 Do you want to build Web configuration tools?
 Please let me know <davidel@xmailserver.org>.
 
-=begin html
-
 [L<admin protocol|"XMail admin protocol">] [L<top|"__index__">]
-
-=end html
 
 =head1 XMAIL LOCAL MAILER
 
@@ -4247,11 +3911,7 @@ directory watching for locally generated mail files.
 You can tune this number of threads with the 'B<-Ln nthreads>' command line option.
 The suggested number ranges from three to seven.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 CtrlClnt (XMAIL ADMINISTRATION)
 
@@ -4301,11 +3961,7 @@ executes the command  useradd  with parameters 'B<home.bogus foouser foopasswd U
 CtrlClnt returns 0 if the command is successful and != 0 if not.
 If the command is a query, then the result is printed to  stdout.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 SERVER SHUTDOWN
 
@@ -4342,11 +3998,7 @@ with that name into MAIL_ROOT.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 MkUsers
 
@@ -4446,11 +4098,7 @@ Remember that you have to add new domains in the 'B<domains.tab>' file by hand.
 MkUsers is intended as a bulk-mode utility, not to create single user; for this
 CtrlClnt (or other GUI/Web configuration utilities) is better suited.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 sendmail
 
@@ -4517,11 +4165,7 @@ or
 
  sendmail -fxmailuser@smartdomain --input-file msg.txt user1@dom1 user2@dom2
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 MISCELLANEOUS
 
@@ -4624,11 +4268,7 @@ Please report XMail errors and errors in this document.
 If you successfully build and run XMail please let me know at davidel@xmailserver.org,
 I don't want money ;)
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 KNOWN BUGS
 
@@ -4654,11 +4294,7 @@ that support TCP and recursion.
 
 =back
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 =head1 THANKS
 
@@ -4670,11 +4306,7 @@ All of the free source community, for giving me code and knowledge.
 
 My company, Network Associates, for giving me my wage.
 
-=begin html
-
 [L<top|"__index__">]
-
-=end html
 
 
 

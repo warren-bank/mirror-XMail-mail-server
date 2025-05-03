@@ -72,8 +72,6 @@ int             main(int iArgCount, char *pszArgs[])
 
 
 
-#define SZSERVICENAME               _T(APP_NAME_STR)
-#define SZSERVICEDISPLAYNAME        _T(APP_NAME_STR " Server")
 #define SZDEPENDENCIES              _T("Tcpip\0")
 #define SERVER_START_WAIT           8000
 #define SERVER_STOP_WAIT            4000
@@ -95,7 +93,7 @@ static BOOL     ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode,
                                     DWORD dwWaitHint);
 static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize);
 static VOID     AddToMessageLog(LPCTSTR lpszMsg);
-
+static int      GetServiceNameFromModule(LPCTSTR pszModule, LPTSTR pszName, int iSize);
 
 
 
@@ -106,7 +104,9 @@ static SERVICE_STATUS_HANDLE sshStatusHandle = NULL;
 static DWORD    dwErr = 0;
 static BOOL     bDebug = FALSE;
 static TCHAR    szErr[2048] = _T("");
-
+static TCHAR    szServicePath[MAX_PATH] = _T("");
+static TCHAR    szServiceName[128] = _T("");
+static TCHAR    szServiceDispName[256] = _T("");
 
 
 
@@ -166,11 +166,22 @@ static int      MnSetupStdHandles(void)
 int             _tmain(int argc, TCHAR *argv[])
 {
 
+    if (GetModuleFileName(NULL, szServicePath, CountOf(szServicePath)) == 0)
+    {
+        _tprintf(_T("Unable to get module name - %s\n"),
+                 GetLastErrorText(szErr, CountOf(szErr)));
+        return (1);
+    }
+    GetServiceNameFromModule(szServicePath, szServiceName, CountOf(szServiceName));
+    _stprintf(szServiceDispName, _T("%s Server"), szServiceName);
+
+
     SERVICE_TABLE_ENTRY DispTable[] =
         {
-            {SZSERVICENAME, (LPSERVICE_MAIN_FUNCTION) ServiceMain},
+            {szServiceName, (LPSERVICE_MAIN_FUNCTION) ServiceMain},
             {NULL, NULL}
         };
+
 
     if (argc > 1)
     {
@@ -228,7 +239,7 @@ int             _tmain(int argc, TCHAR *argv[])
 static void WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[])
 {
 
-    if ((sshStatusHandle = RegisterServiceCtrlHandler(SZSERVICENAME, ServiceCtrl)) != NULL)
+    if ((sshStatusHandle = RegisterServiceCtrlHandler(szServiceName, ServiceCtrl)) != NULL)
     {
         ZeroData(ssStatus);
 
@@ -345,13 +356,13 @@ static VOID     AddToMessageLog(LPCTSTR lpszMsg)
 
         GetLastErrorText(szErr, CountOf(szErr));
 
-        _stprintf(szMsg, _T("%s error: %d"), SZSERVICENAME, dwErr);
+        _stprintf(szMsg, _T("%s error: %d"), szServiceName, dwErr);
         _stprintf(szErrMsg, _T("{%s}: %s"), lpszMsg, szErr);
 
         lpszStrings[0] = szMsg;
         lpszStrings[1] = szErrMsg;
 
-        if ((hEventSource = RegisterEventSource(NULL, SZSERVICENAME)) != NULL)
+        if ((hEventSource = RegisterEventSource(NULL, szServiceName)) != NULL)
         {
             ReportEvent(hEventSource,   // handle of event source
                         EVENTLOG_ERROR_TYPE,    // event type
@@ -377,26 +388,18 @@ static BOOL     CmdInstallService(DWORD dwStartType)
 
     SC_HANDLE       schService = NULL;
     SC_HANDLE       schSCManager = NULL;
-    TCHAR           szPath[MAX_PATH] = _T("");
-
-    if (GetModuleFileName(NULL, szPath, CountOf(szPath)) == 0)
-    {
-        _tprintf(_T("Unable to install %s - %s\n"), SZSERVICEDISPLAYNAME,
-                 GetLastErrorText(szErr, CountOf(szErr)));
-        return (FALSE);
-    }
 
     if ((schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) != NULL)
     {
         schService = CreateService(
             schSCManager,   // SCManager database
-            SZSERVICENAME,  // name of service
-            SZSERVICEDISPLAYNAME,   // name to display
+            szServiceName,  // name of service
+            szServiceDispName,   // name to display
             SERVICE_ALL_ACCESS, // desired access
             SERVICE_WIN32_OWN_PROCESS,  // service type
             dwStartType,    // start type
             SERVICE_ERROR_NORMAL,   // error control type
-            szPath,         // service's binary
+            szServicePath,         // service's binary
             NULL,           // no load ordering group
             NULL,           // no tag identifier
             SZDEPENDENCIES, // dependencies
@@ -405,7 +408,7 @@ static BOOL     CmdInstallService(DWORD dwStartType)
 
         if (schService != NULL)
         {
-            _tprintf(_T("%s installed.\n"), SZSERVICEDISPLAYNAME);
+            _tprintf(_T("%s installed.\n"), szServiceDispName);
             CloseServiceHandle(schService);
             CloseServiceHandle(schSCManager);
 
@@ -435,13 +438,13 @@ static BOOL     CmdRemoveService(void)
 
     if ((schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) != NULL)
     {
-        schService = OpenService(schSCManager, SZSERVICENAME, SERVICE_ALL_ACCESS);
+        schService = OpenService(schSCManager, szServiceName, SERVICE_ALL_ACCESS);
 
         if (schService != NULL)
         {
             if (ControlService(schService, SERVICE_CONTROL_STOP, &ssStatus))
             {
-                _tprintf(_T("Stopping %s."), SZSERVICEDISPLAYNAME);
+                _tprintf(_T("Stopping %s."), szServiceDispName);
                 Sleep(1000);
 
                 while (QueryServiceStatus(schService, &ssStatus))
@@ -456,15 +459,15 @@ static BOOL     CmdRemoveService(void)
                 }
 
                 if (ssStatus.dwCurrentState == SERVICE_STOPPED)
-                    _tprintf(_T("\n%s stopped.\n"), SZSERVICEDISPLAYNAME);
+                    _tprintf(_T("\n%s stopped.\n"), szServiceDispName);
                 else
-                    _tprintf(_T("\n%s failed to stop.\n"), SZSERVICEDISPLAYNAME);
+                    _tprintf(_T("\n%s failed to stop.\n"), szServiceDispName);
 
             }
 
             if (DeleteService(schService))
             {
-                _tprintf(_T("%s removed.\n"), SZSERVICEDISPLAYNAME);
+                _tprintf(_T("%s removed.\n"), szServiceDispName);
                 CloseServiceHandle(schService);
                 CloseServiceHandle(schSCManager);
 
@@ -493,7 +496,7 @@ static BOOL     CmdRemoveService(void)
 static int      CmdDebugService(int argc, LPTSTR argv[])
 {
 
-    _tprintf(_T("Debugging %s.\n"), SZSERVICEDISPLAYNAME);
+    _tprintf(_T("Debugging %s.\n"), szServiceDispName);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Run server
@@ -534,6 +537,25 @@ static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)
 
     return (lpszBuf);
 
+}
+
+
+
+static int      GetServiceNameFromModule(LPCTSTR pszModule, LPTSTR pszName, int iSize)
+{
+    LPCTSTR         pszSlash;
+    LPCTSTR         pszDot;
+
+    if ((pszSlash = _tcsrchr(pszModule, (TCHAR) '\\')) == NULL)
+        pszSlash = pszModule;
+    else
+        pszSlash++;
+    if ((pszDot = _tcschr(pszSlash, (TCHAR) '.')) == NULL)
+        pszDot = pszSlash + _tcslen(pszSlash);
+    iSize = Min(iSize - 1, (int) (pszDot - pszSlash));
+    Cpy2Sz(pszName, pszSlash, iSize);
+
+    return (0);
 }
 
 

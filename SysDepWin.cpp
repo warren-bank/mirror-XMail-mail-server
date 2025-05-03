@@ -94,6 +94,7 @@ static void     SysInitTlsKeyEntries(void);
 static void     SysInitTlsKeys(void);
 static void     SysCleanupTlsKeys(void);
 static char const *SysGetLastError(void);
+static int      SysSetServerName(void);
 static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff);
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD);
 static int      SysRecvLL(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize);
@@ -113,6 +114,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData);
 
 
 
+static char     szServerName[SYS_MAX_PATH];
 static CRITICAL_SECTION csTLS;
 static bool     bSetupEntries = true;
 static TlsKeyEntry TlsKeyEntries[MAX_TLS_KEYS];
@@ -209,6 +211,32 @@ static char const *SysGetLastError(void)
 
 
 
+static int      SysSetServerName(void)
+{
+
+    int             iSize;
+    char           *pszSlash;
+    char           *pszDot;
+    char            szPath[SYS_MAX_PATH] = APP_NAME_STR;
+
+    GetModuleFileName(NULL, szPath, CountOf(szPath));
+
+    if ((pszSlash = strrchr(szPath, '\\')) == NULL)
+        pszSlash = szPath;
+    else
+        pszSlash++;
+
+    if ((pszDot = strchr(pszSlash, '.')) == NULL)
+        pszDot = pszSlash + strlen(pszSlash);
+
+    iSize = Min(sizeof(szServerName) - 1, (int) (pszDot - pszSlash));
+    Cpy2Sz(szServerName, pszSlash, iSize);
+
+    return (0);
+
+}
+
+
 
 int             SysInitLibrary(void)
 {
@@ -228,6 +256,11 @@ int             SysInitLibrary(void)
     _tzset();
     time(&tSysStart);
     uSRandBase = (unsigned int) tSysStart;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set the server name
+///////////////////////////////////////////////////////////////////////////////
+    SysSetServerName();
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup sockets
@@ -1016,7 +1049,6 @@ int             SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned
         pszBuffer += iCurrSend;
         ullCurrOffset += (SYS_UINT64) iCurrSend;
     }
-
 
     UnmapViewOfFile(pAddress);
     CloseHandle(hFileMap);
@@ -1998,7 +2030,7 @@ void           *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 int             SysEventLogV(char const *pszFormat, va_list Args)
 {
 
-    HANDLE          hEventSource = RegisterEventSource(NULL, APP_NAME_STR);
+    HANDLE          hEventSource = RegisterEventSource(NULL, szServerName);
 
     if (hEventSource == NULL)
     {
@@ -2354,7 +2386,7 @@ char           *SysGetEnv(const char *pszVarName)
     char            szRKeyPath[256] = "";
 
     SysSNPrintf(szRKeyPath, sizeof(szRKeyPath) - 1, "SOFTWARE\\%s\\%s",
-                APP_PRODUCER, APP_NAME_STR);
+                APP_PRODUCER, szServerName);
 
     HKEY            hKey;
 
@@ -2539,19 +2571,19 @@ char           *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize
 
 
 
-unsigned long   SysGetTimeZone(void)
+long            SysGetTimeZone(void)
 {
 
-    return ((unsigned long) _timezone);
+    return ((long) _timezone);
 
 }
 
 
 
-unsigned long   SysGetDayLight(void)
+long            SysGetDayLight(void)
 {
 
-    return ((unsigned long) _daylight);
+    return ((long) _daylight);
 
 }
 

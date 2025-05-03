@@ -2,11 +2,13 @@ NAME
 
     XMail - Internet/Intranet mail server.
 
+    [top]
+
 LICENSE
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
-    Free Software Foundation (http://www.gnu.org); either version 2 of the
+    Free Software Foundation (<http://www.gnu.org>); either version 2 of the
     License, or (at your option) any later version.
 
     This program is distributed in the hope that it will be useful, but
@@ -17,6 +19,8 @@ LICENSE
     you should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+    [top]
 
 OVERVIEW
 
@@ -59,15 +63,17 @@ OVERVIEW
     now, the FreeBSD and Solaris version ready. The compilers supported are
     gcc for Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
+    [top]
+
 VERSION
 
   current
 
-    1.15
+    1.16
 
   release type
 
-    Gnu Public License http://www.gnu.org
+    Gnu Public License <http://www.gnu.org>
 
   release date
 
@@ -75,7 +81,7 @@ VERSION
 
   project by
 
-    Davide Libenzi <davidel@xmailserver.org> http://www.xmailserver.org/
+    Davide Libenzi <davidel@xmailserver.org> <http://www.xmailserver.org/>
 
   credits
 
@@ -95,6 +101,8 @@ VERSION
      *  strongly suggested that you read all the ChangeLog.txt  *
      *  notes that range from existing version to the new one.  *
      ************************************************************
+
+    [top]
 
 DOCUMENTATION CONVENTIONS
 
@@ -124,6 +132,8 @@ DOCUMENTATION CONVENTIONS
        "account-type"[NEWLINE]
 
     'DO NOT ENTER THE => CHARACTERS. ENTER THE ENTIRE ENTRY AS ONE LINE.'
+
+    [top]
 
 FEATURES
 
@@ -177,10 +187,14 @@ FEATURES
 
     *   Custom (external) POP3 authentication
 
+    [top]
+
 PORTING STATUS
 
     Right now the Linux and NT ports are stable, while the Solaris, FreeBSD
     and OpenBSD ones have not been tested as well as the previous OSs.
+
+    [top]
 
 REQUIREMENTS
 
@@ -199,10 +213,12 @@ REQUIREMENTS
     *   -or- any other working compiler that provides support for the Win32
         SDK.
 
+    [top]
+
 OBTAINING THE SOURCE
 
     Always get the latest sources at the XMail home page
-    http://www.xmailserver.org/ because otherwise you may be using an old
+    <http://www.xmailserver.org/> because otherwise you may be using an old
     version.
 
     Use the correct distribution for your system and don't mix Unix files
@@ -213,6 +229,8 @@ OBTAINING THE SOURCE
     directory contained inside the package itself is complete (look at the
     directory tree listed below) because some unzippers don't restore empty
     directories.
+
+    [top]
 
 BUILD
 
@@ -256,6 +274,8 @@ BUILD
     by executing:
 
      XMail --debug [options]
+
+    [top]
 
 CONFIGURATION
 
@@ -306,6 +326,8 @@ CONFIGURATION
     15. Setup the file 'smtprelay.tab' (and/or 'smtp.ipmap.tab' if
         necessary) to restrict mail relaying of your server. 'THIS IS
         IMPORTANT!'
+
+    [configuration] [top]
 
   NT/Win2K
 
@@ -361,6 +383,8 @@ CONFIGURATION
         necessary) to restrict mail relaying of your server. 'THIS IS
         IMPORTANT!'
 
+    [configuration] [top]
+
   Environment variable
 
     If you want to start XMail as a simple test you must setup an
@@ -374,6 +398,8 @@ CONFIGURATION
     Windows:
 
      set MAIL_ROOT=C:\MailRoot
+
+    [configuration] [top]
 
   MailRoot structure
 
@@ -403,6 +429,7 @@ CONFIGURATION
       finger.ipmap.tab    <file>
       filters.in.tab  <file>
       filters.out.tab <file>
+      smtp.ipprop.tab <file>
 
     and these directories:
 
@@ -464,6 +491,8 @@ CONFIGURATION
 
     for Maildir structure.
 
+    [configuration] [top]
+
   Configuration tables
 
     TAB ('something.tab') files are text files (in the sense meant by the OS
@@ -472,6 +501,35 @@ CONFIGURATION
      "value1"[TAB]"value2"[TAB]...[NEWLINE]
 
     The following sections explain each file's structure and use.
+
+    "ALIASES.TAB"
+    "ALIASDOMAIN.TAB"
+    "DOMAINS.TAB"
+    "DNSROOTS"
+    "EXTALIASES.TAB"
+    "MAILUSERS.TAB"
+    "MESSAGE.ID"
+    "POP3LINKS.TAB"
+    "SERVER.TAB"
+    "SMTPGW.TAB"
+    "SMTPFWD.TAB"
+    "SMTPRELAY.TAB"
+    "SMTPAUTH.TAB"
+    "SMTPEXTAUTH.TAB"
+    "USERDEF.TAB"
+    "CTRLACCOUNTS.TAB"
+    "SPAMMERS.TAB"
+    "SPAM-ADDRESS.TAB"
+    "POP3.IPMAP.TAB"
+    "SMTP.IPMAP.TAB"
+    "CTRL.IPMAP.TAB"
+    "FINGER.IPMAP.TAB"
+    "USER.TAB"
+    "MLUSERS.TAB"
+    "MAILPROC.TAB"
+    "SMTP.IPPROP.TAB"
+
+    [configuration] [top]
 
    ALIASES.TAB
 
@@ -499,6 +557,8 @@ CONFIGURATION
     You 'CANNOT' edit this file while XMail is running because it is an
     indexed file.
 
+    [table index] [configuration] [top]
+
    ALIASDOMAIN.TAB
 
      "aliasdomain"[TAB]"realdomain"[NEWLINE]
@@ -514,11 +574,15 @@ CONFIGURATION
     You 'CANNOT' edit this file while XMail is running because it is an
     indexed file.
 
+    [table index] [configuration] [top]
+
    DOMAINS.TAB
 
      "domain"[NEWLINE]
 
     defines domains handled by the server.
+
+    [table index] [configuration] [top]
 
    DNSROOTS
 
@@ -527,6 +591,8 @@ CONFIGURATION
     This is a file that lists a root name server in each line (this is not a
     TAB file). This can be created from a query via nslookup for type=ns and
     host = '.'.
+
+    [table index] [configuration] [top]
 
    EXTALIASES.TAB
 
@@ -545,13 +611,15 @@ CONFIGURATION
     internal message to 'foo@home.bogus' the mail client puts your external
     email address ('dlibenzi@xmailserver.org') in the 'MAIL FROM: <...>'
     SMTP request. Now if the user 'foo' replies to this message, it replies
-    to 'dlibenzimaticad.it', and then is sent to the external mail server.
-    With the entry above in 'EXTALIASES.TAB' file the 'Return-Path: <...>'
-    field is filled with 'dlibenzi@home.bogus' that leads to an internal
-    mail reply.
+    to 'dlibenzi@xmailserver.org', and then is sent to the external mail
+    server. With the entry above in 'EXTALIASES.TAB' file the 'Return-Path:
+    <...>' field is filled with 'dlibenzi@home.bogus' that leads to an
+    internal mail reply.
 
     You 'CANNOT' edit this file while XMail is running because it is an
     indexed file.
+
+    [table index] [configuration] [top]
 
    MAILUSERS.TAB
 
@@ -583,17 +651,21 @@ CONFIGURATION
      "M" = Mailing list account
 
     The encrypted password is generated by 'XMCrypt' whose source is
-    'XMCrypt.cpp'. Even if external authentication is used (see the External
-    Authentication entry elsewhere in this document) this file 'must'
-    contain an entry for each user handled by XMail.
+    'XMCrypt.cpp'. Even if external authentication is used (see "External
+    Authentication") this file 'must' contain an entry for each user handled
+    by XMail.
 
     You 'CANNOT' edit this file while XMail is running because it is an
     indexed file.
+
+    [table index] [configuration] [top]
 
    MESSAGE.ID
 
     A file storing a sequential message number. Set it at 1 when you install
     the server and leave it be handled by the software.
+
+    [table index] [configuration] [top]
 
    POP3LINKS.TAB
 
@@ -670,12 +742,16 @@ CONFIGURATION
     '.psync-trigger' and, when this file is found, a PSYNC session starts
     and that file is removed.
 
+    [table index] [configuration] [top]
+
    SERVER.TAB
 
      "varname"[TAB]"varvalue"[NEWLINE]
 
-    This file contains server configuration variables. See the SERVER.TAB
-    variables entry elsewhere in this document below for details.
+    This file contains server configuration variables. See "SERVER.TAB
+    variables" below for details.
+
+    [table index] [configuration] [top]
 
    SMTPGW.TAB
 
@@ -700,6 +776,8 @@ CONFIGURATION
     '@relay.xmailserver.org,@mail.nowhere.org', in this way:
     relay.xmailserver.org --> mail.nowhere.org --> @DESTINATION.
 
+    [table index] [configuration] [top]
+
    SMTPFWD.TAB
 
      "domain"[TAB]"smtp-mx-list"[NEWLINE]
@@ -722,6 +800,8 @@ CONFIGURATION
 
     using the character '#' as the first char of the gateway list.
 
+    [table index] [configuration] [top]
+
    SMTPRELAY.TAB
 
      "ipaddr"[TAB]"netmask"[NEWLINE]
@@ -732,6 +812,8 @@ CONFIGURATION
 
     allows all hosts of the class 'C' network '212.131.173.XXX' to use the
     server as relay.
+
+    [table index] [configuration] [top]
 
    SMTPAUTH.TAB
 
@@ -764,15 +846,16 @@ CONFIGURATION
     'DefaultSmtpPerms' is used to assign user SMTP permissions (default MR).
     If the lookup fails then 'SMTPAUTH.TAB' lookup is done.
 
+    [table index] [configuration] [top]
+
    SMTPEXTAUTH.TAB
 
     Besides internal SMTP authentication methods a user (XMail
     administrator) can define custom authentication procedures by setting up
-    this file properly. The section the section on "SMTP Client
-    Authentication" explains the client part of custom authentication when
-    we put an 'external' line inside the configuration file. The file
-    'SMTPEXTAUTH.TAB' is the server part of the custom authentication which
-    has the given format:
+    this file properly. The section "SMTP Client Authentication" explains
+    the client part of custom authentication when we put an 'external' line
+    inside the configuration file. The file 'SMTPEXTAUTH.TAB' is the server
+    part of the custom authentication which has the given format:
 
      "auth-name"[TAB]"base-challenge"[TAB]"program-path"[TAB]"arg-or-macro"...[NEWLINE]
 
@@ -799,6 +882,8 @@ CONFIGURATION
     match, it must return zero and overwrite '@@FSECRT' with the matching
     secret (username + ':' + password). If a match is not found, the program
     must return a value other than zero.
+
+    [table index] [configuration] [top]
 
    USERDEF.TAB
 
@@ -830,6 +915,8 @@ CONFIGURATION
      "HomePage"  "http://www.xmailserver.org/davide.html"
      "MaxMBSize" "30000"
 
+    [table index] [configuration] [top]
+
    CTRLACCOUNTS.TAB
 
      "username"[TAB]"password"[NEWLINE]
@@ -842,6 +929,8 @@ CONFIGURATION
     USERNAMES AND PASSWORDS AND USE CTRL.IPMAP.TAB TO RESTRICT IP ACCESS!
     REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM THIS FILE!'
 
+    [table index] [configuration] [top]
+
    SPAMMERS.TAB
 
      "ipaddr"[TAB]"netmask"[NEWLINE]
@@ -852,6 +941,8 @@ CONFIGURATION
 
     register all hosts of the class 'C' network '212.131.173.XXX' as
     spammers, and block them the use of XMail SMTP server.
+
+    [table index] [configuration] [top]
 
    SPAM-ADDRESS.TAB
 
@@ -864,6 +955,8 @@ CONFIGURATION
 
     blocks mails coming from the entire domain 'rude.net' and coming from
     all addresses that end with '-admin@'even.more.rude.net.
+
+    [table index] [configuration] [top]
 
    POP3.IPMAP.TAB
 
@@ -883,6 +976,8 @@ CONFIGURATION
 
     Higher precedences win over lower ones.
 
+    [table index] [configuration] [top]
+
    SMTP.IPMAP.TAB
 
      "ipaddr"[TAB]"netmask"[TAB]"permission"[TAB]"precedence"[NEWLINE]
@@ -899,6 +994,8 @@ CONFIGURATION
 
     Higher precedences win over lower ones.
 
+    [table index] [configuration] [top]
+
    CTRL.IPMAP.TAB
 
      "ipaddr"[TAB]"netmask"[TAB]"permission"[TAB]"precedence"[NEWLINE]
@@ -910,6 +1007,8 @@ CONFIGURATION
 
     This configuration deny access to all IPs except the ones of the class
     'C' network '212.131.173.XXX'. Higher precedences win over lower ones.
+
+    [table index] [configuration] [top]
 
    FINGER.IPMAP.TAB
 
@@ -923,6 +1022,8 @@ CONFIGURATION
     This configuration denies access to all IPs except the ones of the class
     'C' network '212.131.173.XXX'. Higher precedences win over lower ones.
 
+    [table index] [configuration] [top]
+
    USER.TAB
 
      "variable"[TAB]"value"[NEWLINE]
@@ -934,7 +1035,9 @@ CONFIGURATION
      "MaxMBSize" "30000"
      "ClosedML"  "0"
 
-    Please refer to the section on "USER.TAB variables" below.
+    Please refer to "USER.TAB variables" below.
+
+    [table index] [configuration] [top]
 
    MLUSERS.TAB
 
@@ -969,6 +1072,8 @@ CONFIGURATION
     If the 'USER.TAB' file defines the 'ClosedML' variable as '1' then a
     client can post to this mailing list only if it's listed in
     'MLUSERS.TAB' with RW permissions.
+
+    [table index] [configuration] [top]
 
    MAILPROC.TAB
 
@@ -1046,7 +1151,10 @@ CONFIGURATION
      "lredirect"[TAB]"address"[TAB]...[NEWLINE]
 
     Redirect message to internal or external addresses impersonating local
-    domain during message delivery.
+    domain during message delivery. The difference between "redirect" and
+    "lredirect" is the following. Suppose A@B sends a message to C@D, that
+    has a redirect to E@F. With "redirect" E@F will see A@B has sender while
+    with "lredirect" he will see C@D.
 
     [SMTPRELAY]
 
@@ -1058,6 +1166,27 @@ CONFIGURATION
      "smtprelay"[TAB]"#server[:port],server[:port],..."[NEWLINE]
 
     to have XMail random-select the order the specified relays.
+
+    [table index] [configuration] [top]
+
+   SMTP.IPPROP.TAB
+
+     "ip-addr"[TAB]"var0=value0"...[TAB]"varN=valueN"[NEWLINE]
+
+    Example:
+
+     "192.168.0.7/32"   "WhiteList=1"
+
+    Address selection mask are formed by an IP address (network) plus the
+    number of valid bits inside the network mask. No space are allowed
+    between the variable name and the '=' sign and between the '=' sign and
+    the value. These are the currently defined variables:
+
+    WhiteList
+        If set to 1 and if the peer IP matches the address mask, all peer IP
+        based checks will be skipped.
+
+    [table index] [configuration] [top]
 
 EXTERNAL AUTHENTICATION
 
@@ -1127,6 +1256,8 @@ EXTERNAL AUTHENTICATION
     If none of this file's id are found, then usual authentication is
     performed ('mailusers.tab'). The use of external authentication does not
     avoid the presence of the user entry in 'mailusers.tab'.
+
+    [top]
 
 SMTP CLIENT AUTHENTICATION
 
@@ -1200,6 +1331,8 @@ SMTP CLIENT AUTHENTICATION
     to get the response to send to the SMTP server. The external program
     must return zero upon success and must put the response into the file
     @@RFILE (without new line termination).
+
+    [top]
 
 CUSTOM DOMAIN MAIL PROCESSING
 
@@ -1307,7 +1440,10 @@ CUSTOM DOMAIN MAIL PROCESSING
 
          "redirect"  "user@target-domain.org"
 
-        redirects the message to 'user@target-domain.org'.
+        redirects the message to 'user@target-domain.org'. The difference
+        between "redirect" and "lredirect" is the following. Suppose A@B
+        sends a message to C@D, that has a redirect to E@F. With "redirect"
+        E@F will see A@B has sender while with "lredirect" he will see C@D.
 
     [SMTPRELAY]
          "smtprelay"[TAB]"server[:port],server[:port],..."[NEWLINE]
@@ -1326,13 +1462,15 @@ CUSTOM DOMAIN MAIL PROCESSING
 
         Do SMTP delivery.
 
+    [top]
+
 CMD ALIASES
 
     CmdAliases implement aliases that are handled only through commands and
     can be thought of as a user level implementation of custom domain
     processing commands. The command set is the same of the one that is
-    described above (the section on "Custom domain mail processing") and
-    won't be explained again here.
+    described above ("Custom domain mail processing") and won't be explained
+    again here.
 
     For every handled domain (listed inside 'domains.tab') a directory with
     the same domain name is created inside the 'cmdaliases' subdirectory.
@@ -1351,10 +1489,12 @@ CMD ALIASES
     The use of the command '[SMTP]' must be implemented with great care
     because it could create mail loops within the server.
 
+    [top]
+
 SERVER.TAB VARIABLES
 
-    The following variables are for use int the the section on "SERVER.TAB"
-    configuration file.
+    The following variables are for use int the "SERVER.TAB" configuration
+    file.
 
     [RootDomain]
         Indicate the primary domain for the server.
@@ -1434,11 +1574,17 @@ SERVER.TAB VARIABLES
 
         '2'     Strict (no IP shown)
 
+        '3'     Same as 0 but the client IP is not shown if the client
+                authenticate itself.
+
+        '4'     Same as 1 but the client IP is not shown if the client
+                authenticate itself.
+
     [FetchHdrTags]
         Set the list of headers tags to be used to extract addresses from
-        POP3 fetched messages (the section on "POP3LINKS.TAB"). This is a
-        comma delimited list (no extra space or TABs must be included inside
-        the list) as in:
+        POP3 fetched messages ("POP3LINKS.TAB"). This is a comma delimited
+        list (no extra space or TABs must be included inside the list) as
+        in:
 
          "+X-Deliver-To,To,Cc"
 
@@ -1504,10 +1650,9 @@ SERVER.TAB VARIABLES
         the server.
 
     [DefaultSmtpPerms]
-        This list SMTP permissions assigned to users looked up inside the
-        section on "MAILUSERS.TAB" during SMTP authentication. It also
-        defines the permissions for users authenticated with SMTP after
-        POP3.
+        This list SMTP permissions assigned to users looked up inside
+        "MAILUSERS.TAB" during SMTP authentication. It also defines the
+        permissions for users authenticated with SMTP after POP3.
 
     [CustMapsList]
         This is a list a user can use to set custom maps checking. The list
@@ -1596,6 +1741,8 @@ SERVER.TAB VARIABLES
                 authentication, even for sending to local domains, and this
                 is probably not what you want.
 
+    [top]
+
 MESSAGE FILTERS
 
     This feature offers a way to filter messages by providing the ability to
@@ -1607,15 +1754,16 @@ MESSAGE FILTERS
     way to reject messages based on content, alter messages (address
     rewriting) and so on.
 
-    If this filters returns '97, 98 or 99' the message is rejected and is
+    If this filters returns '4, 5 or 6' the message is rejected and is
     stopped in its travel. If the filter modifies the message it must return
-    '100'.
+    '7'.
 
     Additional flags are allowed to be returned to XMail as a result of
     filter processing by adding the flags value to the exits code above
     listed. The currently defined flags are :
 
-    '8' Stop selected filter list processing.
+    '16'
+        Stop selected filter list processing.
 
     Filter flags are additive and if more than one flag need to be
     specified, their values must be added together. If a filter "raw" exit
@@ -1625,11 +1773,11 @@ MESSAGE FILTERS
     FRC = RC + FILTER-SUM
 
     Example. Suppose a filter modified the message and hence needs to return
-    100 as return code. Suppose also that a filter wants to block the filter
-    selection list processing by specifying a flags value of 8, the value to
-    be returned will be :
+    7 as return code. Suppose also that a filter wants to block the filter
+    selection list processing by specifying a flags value of 16, the value
+    to be returned will be :
 
-    FRC = 100 + 8 = 108
+    FRC = 7 + 16 = 23
 
     Filter selection is driven by two files 'FILTERS.IN.TAB' and
     'FILTERS.OUT.TAB' that have the following format:
@@ -1683,7 +1831,7 @@ MESSAGE FILTERS
 
     @@FILE
         the message file path (the external command may modify the file if
-        it returns '100' as command exit value.)
+        it returns '7' as command exit value.)
 
     @@MSGID
         with the (XMail unique) message id
@@ -1692,18 +1840,22 @@ MESSAGE FILTERS
         the reference SMTP message id
 
     Here 'command' is the name of an external program that processes the
-    message and returns its processing result. If it returns '99' the
-    message is rejected and a notification message is sent to the sender. By
-    returning '98' the message is rejected without notification. While
-    returning '97' the message is rejected without notification and without
-    being frozen (a '98' response could lead to a frozen message if the the
-    section on "SERVER.TAB" configuration enables this). If all filters
-    return values different from '99, 98 and 97' the message continues its
-    trip. The filter command may also modify the file (AV scanning, content
-    filter, message rewriting, etc) by returning '100'. The filter 'MUST'
-    return '100' in case it modifies the message. If the filter changes the
-    message file it 'MUST' keep the message structure and it 'MUST'
-    terminate all line with <CR><LF>.
+    message and returns its processing result. If it returns '6' the message
+    is rejected and a notification message is sent to the sender. By
+    returning '5' the message is rejected without notification. While
+    returning '4' the message is rejected without notification and without
+    being frozen (a '5' response could lead to a frozen message if the
+    "SERVER.TAB" configuration enables this). If all filters return values
+    different from '6, 5 and 4' the message continues its trip. The filter
+    command may also modify the file (AV scanning, content filter, message
+    rewriting, etc) by returning '7'. The filter 'MUST' return '7' in case
+    it modifies the message. If the filter changes the message file it
+    'MUST' keep the message structure and it 'MUST' terminate all line with
+    <CR><LF>. The filter has also the ability to return a one-line custom
+    return message by creating a file named @@FILE.rej holding the message
+    in the very first line. This file should be created 'ONLY' when the
+    filter returns a rejection code ('6, 5 and 4')and 'NEVER' in case of
+    passthru code ('7') or modify code.
 
     The spool files has this structure:
 
@@ -1719,12 +1871,16 @@ MESSAGE FILTERS
     message is composed of a headers section and, after the first empty
     line, the message body. 'EXTREME' care must be used when modifying the
     message because the filter will be working on the real message, and a
-    badly reformatted file will lead to message loss.
+    badly reformatted file will lead to message loss. The spool file header
+    (any data before <<MAIL-DATA>>) 'MUST' be preserved as is by the filter
+    in case of message rewrite happens.
+
+    [top]
 
 USER.TAB VARIABLES
 
-    The following variables are for use in the the section on "USER.TAB"
-    configuration file.
+    The following variables are for use in the "USER.TAB" configuration
+    file.
 
     [RealName]
         Full user name, ie.:
@@ -1779,6 +1935,8 @@ USER.TAB VARIABLES
         (emission enabled). This variable overrides the SERVER.TAB one when
         present.
 
+    [top]
+
 MAIL ROUTING THROUGH ADDRESSES
 
     A full implementation of SMTP protocol allows the ability to perform
@@ -1788,6 +1946,8 @@ MAIL ROUTING THROUGH ADDRESSES
     '@hostb' using 'MAIL FROM: <@hosta:xuser@hostz>' and 'RCPT TO:
     <@hostb:foouser@hostc>'. The message is then sent to '@'hostc using
     'MAIL FROM: <@hostb,@hosta:xuser@hostz>' and 'RCPT TO: <foouser@hostc>'.
+
+    [top]
 
 XMAIL SPOOL DESIGN
 
@@ -1824,6 +1984,8 @@ XMAIL SPOOL DESIGN
     or is expired and if the option 'RemoveSpoolErrors' of the 'SERVER.TAB'
     file is off, the message file is moved into the 'froz' subdirectory.
 
+    [top]
+
 SMTP COMMANDS
 
     These are commands understood by ESMTP server:
@@ -1840,6 +2002,9 @@ SMTP COMMANDS
     NOOP
     HELP
     QUIT
+
+    [top]
+
 POP3 COMMANDS
 
     These are commands understood by POP3 server:
@@ -1857,12 +2022,16 @@ POP3 COMMANDS
     NOOP
     LAST
     RSET
+
+    [top]
+
 COMMAND LINE
 
     Most of XMail configuration settings are command line tunables. These
     are command line switches organized by server.
 
     [XMAIL]
+
         -Ms pathname
                 Mail root path (also settable with MAIL_ROOT environment).
 
@@ -1893,6 +2062,7 @@ COMMAND LINE
                 files storage ( default 101 ).
 
     [POP3]
+
         -Pp port
                 Set POP3 server port (if you change this you must know what
                 you're doing).
@@ -1917,6 +2087,7 @@ COMMAND LINE
                 Set the maximum number of threads for POP3 server.
 
     [SMTP]
+
         -Sp port
                 Set SMTP server port (if you change this you must know what
                 you're doing).
@@ -1943,6 +2114,7 @@ COMMAND LINE
                 900).
 
     [SMAIL]
+
         -Qn nthreads
                 Set the number of mailer threads.
 
@@ -1970,13 +2142,16 @@ COMMAND LINE
                 Timeout value for filters commands in seconds. Default 90.
 
     [PSYNC]
+
         -Yi interval
-                Set external POP3 accounts sync interval. Default 120.
+                Set external POP3 accounts sync interval. Setting this to
+                zero will disable the PSYNC task. Default 120.
 
         -Yt nthreads
                 Set the number of POP3 sync threads.
 
     [FINGER]
+
         -Fp port
                 Set FINGER server port (if you change this you must know
                 what you're doing).
@@ -1988,6 +2163,7 @@ COMMAND LINE
                 (can be multiple).
 
     [CTRL]
+
         -Cp port
                 Set CTRL server port (if you change this you must know what
                 you're doing).
@@ -2006,6 +2182,7 @@ COMMAND LINE
                 Set the maximum number of threads for CTRL server.
 
     [LMAIL]
+
         -Ln nthreads
                 Set the number of local mailer threads.
 
@@ -2015,12 +2192,59 @@ COMMAND LINE
 
         -Ll     Enable local mail logging.
 
+    [top]
+
 XMAIL ADMIN PROTOCOL
 
     It's possible to remote admin XMail due to the existence of a
     'controller server' that runs with XMail and waits for TCP/IP
     connections on a port (6017 or tunable via a '-Cp nport') command line
     option.
+
+    Admin protocol details:
+
+    "Description"
+    "Adding a user"
+    "Deleting a user"
+    "Changing a user's password"
+    "Authenticate user"
+    "Retrieve user statistics"
+    "Adding an alias"
+    "Deleting an alias"
+    "Listing aliases"
+    "Listing user vars"
+    "Setting user vars"
+    "Listing users"
+    "Getting mailproc.tab file"
+    "Setting mailproc.tab file"
+    "Adding a mailing list user"
+    "Deleting a mailing list user"
+    "Listing mailing list users"
+    "Adding a domain"
+    "Deleting a domain"
+    "Listing handled domains"
+    "Adding a domain alias"
+    "Deleting a domain alias"
+    "Listing alias domains"
+    "Getting custom domain file"
+    "Setting custom domain file"
+    "Listing custom domains"
+    "Adding a POP3 external link"
+    "Deleting a POP3 external link"
+    "Listing POP3 external links"
+    "Enabling a POP3 external link"
+    "Listing files"
+    "Getting configuration file"
+    "Setting configuration file"
+    "Listing frozen messages"
+    "Rescheduling frozen message"
+    "Deleting frozen message"
+    "Getting frozen message log file"
+    "Getting frozen message"
+    "Starting a queue flush"
+    "Do nothing command"
+    "Quit the connection"
+    "Do you want...?"
 
   Description
 
@@ -2090,6 +2314,8 @@ XMAIL ADMIN PROTOCOL
     user does not receive a positive authentication response, the connection
     is closed by the server.
 
+    [admin protocol] [top]
+
   Adding a user
 
      "useradd"[TAB]"domain"[TAB]"username"[TAB]"password"[TAB]"usertype"<CR><LF>
@@ -2110,6 +2336,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Deleting a user
 
      "userdel"[TAB]"domain"[TAB]"username"<CR><LF>
@@ -2123,6 +2351,8 @@ XMAIL ADMIN PROTOCOL
         username to delete.
 
     The result is a RESSTRING.
+
+    [admin protocol] [top]
 
   Changing a user's password
 
@@ -2141,6 +2371,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Authenticate user
 
      "userauth"[TAB]"domain"[TAB]"username"[TAB]"password"<CR><LF>
@@ -2157,6 +2389,8 @@ XMAIL ADMIN PROTOCOL
         password.
 
     The result is a RESSTRING.
+
+    [admin protocol] [top]
 
   Retrieve user statistics
 
@@ -2190,9 +2424,11 @@ XMAIL ADMIN PROTOCOL
     LastLoginIP
         last user login IP address.
 
+    [admin protocol] [top]
+
   Adding an alias
 
-     "aliasadd"[TAB]"domain"[TAB]"alias"[TAB]"username"<CR><LF>
+     "aliasadd"[TAB]"domain"[TAB]"alias"[TAB]"account"<CR><LF>
 
     where:
 
@@ -2202,10 +2438,13 @@ XMAIL ADMIN PROTOCOL
     alias
         alias to add.
 
-    username
-        real email account (locally handled).
+    account
+        real email account (locally handled). This can be a fully qualified
+        email address or a username inside the same domain.
 
     The result is a RESSTRING.
+
+    [admin protocol] [top]
 
   Deleting an alias
 
@@ -2221,9 +2460,11 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Listing aliases
 
-     "aliaslist"[TAB]"domain"[TAB]"alias"[TAB]"username"<CR><LF>
+     "aliaslist"[TAB]"domain"[TAB]"alias"[TAB]"account"<CR><LF>
 
     or
 
@@ -2243,10 +2484,10 @@ XMAIL ADMIN PROTOCOL
         domain name, optional (can contain wild cards).
 
     alias
-        alias name, optional (can contain wildcats).
+        alias name, optional (can contain wildcards).
 
-    username
-        username, optional (can contain wildcats).
+    account
+        account, optional (can contain wildcards).
 
     Example:
 
@@ -2259,6 +2500,8 @@ XMAIL ADMIN PROTOCOL
     dot (<CR><LF>.<CR><LF>). This is the format of the listing:
 
      "domain"[TAB]"alias"[TAB]"username"<CR><LF>
+
+    [admin protocol] [top]
 
   Listing user vars
 
@@ -2277,6 +2520,8 @@ XMAIL ADMIN PROTOCOL
     (<CR><LF>.<CR><LF>). This is the format of the listing:
 
      "varname"[TAB]"varvalue"<CR><LF>
+
+    [admin protocol] [top]
 
   Setting user vars
 
@@ -2299,6 +2544,8 @@ XMAIL ADMIN PROTOCOL
     There can be multiple variable assignments with a single call. If
     'varvalue' is the string '.|rm' the variable 'varname' is deleted. The
     result is a RESSTRING.
+
+    [admin protocol] [top]
 
   Listing users
 
@@ -2332,6 +2579,8 @@ XMAIL ADMIN PROTOCOL
 
      "domain"[TAB]"username"[TAB]"password"[TAB]"usertype"<CR><LF>
 
+    [admin protocol] [top]
+
   Getting mailproc.tab file
 
      "usergetmproc"[TAB]"domain"[TAB]"username"<CR><LF>
@@ -2353,6 +2602,8 @@ XMAIL ADMIN PROTOCOL
     The result is a RESSTRING. In successful cases (00100) the mailproc.tab
     file is listed line by line, terminated by a line containing a single
     dot (<CR><LF>.<CR><LF>).
+
+    [admin protocol] [top]
 
   Setting mailproc.tab file
 
@@ -2379,6 +2630,8 @@ XMAIL ADMIN PROTOCOL
     zero length the mailproc.tab is deleted. The client then gets another
     RESSTRING indicating the final command result.
 
+    [admin protocol] [top]
+
   Adding a mailing list user
 
      "mluseradd"[TAB]"domain"[TAB]"mlusername"[TAB]"mailaddress"[TAB]"perms"<CR><LF>
@@ -2404,6 +2657,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Deleting a mailing list user
 
      "mluserdel"[TAB]"domain"[TAB]"mlusername"[TAB]"mailaddress"<CR><LF>
@@ -2421,6 +2676,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Listing mailing list users
 
      "mluserlist"[TAB]"domain"[TAB]"mlusername"<CR><LF>
@@ -2437,6 +2694,8 @@ XMAIL ADMIN PROTOCOL
     mailing list users follows terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>).
 
+    [admin protocol] [top]
+
   Adding a domain
 
      "domainadd"[TAB]"domain"<CR><LF>
@@ -2448,6 +2707,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Deleting a domain
 
      "domaindel"[TAB]"domain"<CR><LF>
@@ -2458,6 +2719,8 @@ XMAIL ADMIN PROTOCOL
         domain name to delete.
 
     The result is a RESSTRING. This is not always a safe operation.
+
+    [admin protocol] [top]
 
   Listing handled domains
 
@@ -2471,6 +2734,8 @@ XMAIL ADMIN PROTOCOL
     filtered list of domains. If successful (00100), a formatted list of
     handled domains follows, terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>).
+
+    [admin protocol] [top]
 
   Adding a domain alias
 
@@ -2487,6 +2752,8 @@ XMAIL ADMIN PROTOCOL
     defines all subdomains of 'xmailserver.org' as alises of
     'xmailserver.org'.
 
+    [admin protocol] [top]
+
   Deleting a domain alias
 
      "aliasdomaindel"[TAB]"aliasdomain"<CR><LF>
@@ -2496,6 +2763,8 @@ XMAIL ADMIN PROTOCOL
      "aliasdomaindel"[TAB]"*.xmailserver.org"<CR><LF>
 
     removes the '*.xmailserver.org' domain alias.
+
+    [admin protocol] [top]
 
   Listing alias domains
 
@@ -2509,6 +2778,8 @@ XMAIL ADMIN PROTOCOL
     filtered list of alias domains. If successful (00100), a formatted list
     of alias domains follows, terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>).
+
+    [admin protocol] [top]
 
   Getting custom domain file
 
@@ -2528,6 +2799,8 @@ XMAIL ADMIN PROTOCOL
     The result is a RESSTRING. If successful (00100), the custom domain file
     is listed line by line terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>).
+
+    [admin protocol] [top]
 
   Setting custom domain file
 
@@ -2551,6 +2824,8 @@ XMAIL ADMIN PROTOCOL
     length the custom domain file is deleted. The client then gets another
     RESSTRING indicating the final command result.
 
+    [admin protocol] [top]
+
   Listing custom domains
 
      "custdomlist"<CR><LF>
@@ -2558,6 +2833,8 @@ XMAIL ADMIN PROTOCOL
     The result is a RESSTRING. If successful (00100), a formatted list of
     custom domains follows, terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>).
+
+    [admin protocol] [top]
 
   Adding a POP3 external link
 
@@ -2591,6 +2868,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Deleting a POP3 external link
 
      "poplnkdel"[TAB]"loc-domain"[TAB]"loc-username"[TAB]"extrn-domain"=>
@@ -2612,6 +2891,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Listing POP3 external links
 
      "poplnklist"[TAB]"loc-domain"[TAB]"loc-username"<CR><LF>
@@ -2630,6 +2911,8 @@ XMAIL ADMIN PROTOCOL
 
      "loc-domain"[TAB]"loc-username"[TAB]"extrn-domain"[TAB]"extrn-username"=>
        [TAB]"extrn-password"[TAB]"authtype"[TAB]"on-off"<CR><LF>
+
+    [admin protocol] [top]
 
   Enabling a POP3 external link
 
@@ -2662,6 +2945,8 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Listing files
 
      "filelist"[TAB]"relative-dir-path"[TAB]"match-string"<CR><LF>
@@ -2680,6 +2965,8 @@ XMAIL ADMIN PROTOCOL
 
     "filename"[TAB]"filesize"<CR><LF>
 
+    [admin protocol] [top]
+
   Getting configuration file
 
      "cfgfileget"[TAB]"relative-file-path"<CR><LF>
@@ -2696,6 +2983,8 @@ XMAIL ADMIN PROTOCOL
     The result is a RESSTRING. If successful (00100), the file is listed
     line by line, terminated by a line containing a single dot
     (<CR><LF>.<CR><LF>). You CANNOT use this command with indexed files !
+
+    [admin protocol] [top]
 
   Setting configuration file
 
@@ -2719,6 +3008,8 @@ XMAIL ADMIN PROTOCOL
     configuration files have a strict syntax and that pushing a incorrect
     one can make XMail not work properly. You CANNOT use this command with
     indexed files!
+
+    [admin protocol] [top]
 
   Listing frozen messages
 
@@ -2752,6 +3043,8 @@ XMAIL ADMIN PROTOCOL
     size
         message size in bytes.
 
+    [admin protocol] [top]
+
   Rescheduling frozen message
 
      "frozsubmit"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
@@ -2771,6 +3064,8 @@ XMAIL ADMIN PROTOCOL
     has been successfully rescheduled it is deleted from the frozen fs path.
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Deleting frozen message
 
      "frozdel"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
@@ -2788,6 +3083,8 @@ XMAIL ADMIN PROTOCOL
 
     You can get this information from the frozlist command. The result is a
     RESSTRING.
+
+    [admin protocol] [top]
 
   Getting frozen message log file
 
@@ -2808,6 +3105,8 @@ XMAIL ADMIN PROTOCOL
     RESSTRING. If successful (00100), the frozen message log file follows,
     terminated by a line containing a single dot (<CR><LF>.<CR><LF>).
 
+    [admin protocol] [top]
+
   Getting frozen message
 
      "frozgetmsg"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
@@ -2827,6 +3126,8 @@ XMAIL ADMIN PROTOCOL
     RESSTRING. If successful (00100), the frozen message file follows,
     terminated by a line containing a single dot (<CR><LF>.<CR><LF>).
 
+    [admin protocol] [top]
+
   Starting a queue flush
 
      "etrn"[TAB]"email-match0"...<CR><LF>
@@ -2842,11 +3143,15 @@ XMAIL ADMIN PROTOCOL
 
     starts queueing all messages with a matching destination address.
 
+    [admin protocol] [top]
+
   Do nothing command
 
     "noop"<CR><LF>
 
     The result is a RESSTRING.
+
+    [admin protocol] [top]
 
   Quit the connection
 
@@ -2854,12 +3159,16 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING.
 
+    [admin protocol] [top]
+
   Do you want...?
 
     Do you want to build GUI configuration tools using common scripting
     languages (Java, TCL/Tk, etc) and XMail controller protocol? Do you want
     to build Web configuration tools? Please let me know
     <davidel@xmailserver.org>.
+
+    [admin protocol] [top]
 
 XMAIL LOCAL MAILER
 
@@ -2903,11 +3212,13 @@ XMAIL LOCAL MAILER
     can tune this number of threads with the '-Ln nthreads' command line
     option. The suggested number ranges from three to seven.
 
+    [top]
+
 CtrlClnt (XMAIL ADMINISTRATION)
 
     You can use CtrlClnt to send administration commands to XMail. These
-    commands are defined in the previous section (the section on "XMAIL
-    ADMIN PROTOCOL"). The syntax of CtrlClnt is:
+    commands are defined in the previous section ("XMAIL ADMIN PROTOCOL").
+    The syntax of CtrlClnt is:
 
      CtrlClnt  [-snuptf]  ...
 
@@ -2943,6 +3254,8 @@ CtrlClnt (XMAIL ADMINISTRATION)
     CtrlClnt returns 0 if the command is successful and != 0 if not. If the
     command is a query, then the result is printed to stdout.
 
+    [top]
+
 SERVER SHUTDOWN
 
     [Linux]
@@ -2970,6 +3283,8 @@ SERVER SHUTDOWN
         file named '.shutdown' in its main directory (MAIL_ROOT). You can
         initiate XMail shutdown process by creating (or copying) a file with
         that name into MAIL_ROOT.
+
+    [top]
 
 MkUsers
 
@@ -3054,6 +3369,8 @@ MkUsers
     intended as a bulk-mode utility, not to create single user; for this
     CtrlClnt (or other GUI/Web configuration utilities) is better suited.
 
+    [top]
+
 sendmail
 
     When building XMail, an executable called 'sendmail' is created. This is
@@ -3108,6 +3425,8 @@ sendmail
 
      sendmail -fxmailuser@smartdomain --input-file msg.txt user1@dom1 user2@dom2
 
+    [top]
+
 MISCELLANEOUS
 
     1.  To handle multiple POP3 domains, the server makes a reverse lookup
@@ -3136,11 +3455,10 @@ MISCELLANEOUS
          username@pop3domain@hostname
 
         You can use the optional configuration variable 'POP3Domain' (see
-        the section on "SERVER.TAB VARIABLES" above) to set the default
-        domain for POP3 clients connections. This means that users of
-        'POP3Domain' can use only the name part of their email address as
-        POP3 login, while users of other hosted domains must use their
-        entire email as POP3 login.
+        "SERVER.TAB VARIABLES" above) to set the default domain for POP3
+        clients connections. This means that users of 'POP3Domain' can use
+        only the name part of their email address as POP3 login, while users
+        of other hosted domains must use their entire email as POP3 login.
 
     2.  Important!
 
@@ -3184,6 +3502,8 @@ MISCELLANEOUS
     successfully build and run XMail please let me know at
     davidel@xmailserver.org, I don't want money ;)
 
+    [top]
+
 KNOWN BUGS
 
     Version 0.1 (Alpha-1):
@@ -3198,11 +3518,13 @@ KNOWN BUGS
         WS2_32.DLL linked to MS Proxy 2.0). I don't know if more recent
         versions of MS Proxy fixes this bug. To makes XMail work in such
         environment you can use 'DefaultSMTPGateways' option in 'SERVER.TAB'
-        (see the section on "SERVER.TAB VARIABLES" above) to use smart SMTP
-        hosts. Or better still, strip away MS Proxy server and setup a cheap
-        PC running Linux + IP-Masquerading that cost exactly 0.0 $ and works
+        (see "SERVER.TAB VARIABLES" above) to use smart SMTP hosts. Or
+        better still, strip away MS Proxy server and setup a cheap PC
+        running Linux + IP-Masquerading that cost exactly 0.0 $ and works
         great. Or use 'SmartDNSHost' configuration to redirect recursion
         queries to a DNS smart host that support TCP and recursion.
+
+    [top]
 
 THANKS
 
@@ -3213,4 +3535,6 @@ THANKS
     All of the free source community, for giving me code and knowledge.
 
     My company, Network Associates, for giving me my wage.
+
+    [top]
 

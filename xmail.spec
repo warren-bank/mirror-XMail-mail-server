@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.15
+Version: 1.16
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,25 @@ fi
 
 
 %changelog
+
+* Tue Jul 08 2003 Davide Libenzi <davidel@xmailserver.org>
+    Added a new configuration file "smtp.ipprop.tab" to be able to specify peer IP based
+    configuration option, like for example IP white listing against IP checks.
+    ATTENTION: The filter return code has been changed and new return codes are
+    expected to be returned by filters. Please che the documentation and update your
+    filters before starting to use the new version.
+    Added the ability to specify a custom error message for filters.
+    Fixed a bug in the string quoting function that showed up when the string was empty ("").
+    Changed the order used by XMail to check the mailer domain. Now MX check is performed
+    first, then A record check. This caused a slow down for domains having MX records but
+    not A records.
+    Added two new Received: types to give the ability to hide client information if
+    the SMTP client does authenticate with the server.
+    Added the rejection map name inside the SMTP log file in case of SNDRIP=EIPMAP error.
+    Modified XMail's sendmail to add the RFC822 Date: header if missing.
+    XMail now uses the name of the executable ( without .exe ) to both register the service
+    name and fetch registry variables.
+    The POP3 server now picks up messages even from the Maildir's "cur" subdirectory.
 
 * Sat May 03 2003 Davide Libenzi <davidel@xmailserver.org>
     Implemented a new filters feature that enable the user to stop the

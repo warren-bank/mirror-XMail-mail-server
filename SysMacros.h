@@ -51,6 +51,7 @@
 #define StrNCpy(t, s, n)        do { strncpy(t, s, n); (t)[(n) - 1] = '\0'; } while (0)
 #define StrSNCpy(t, s)          StrNCpy(t, s, sizeof(t))
 #define StrSNCat(t, s)          StrNCat(t, s, sizeof(t))
+#define Cpy2Sz(d, s, n)         do { memcpy(d, s, (n) * sizeof(*(s))); (d)[n] = 0; } while (0)
 #define StrAppend(s)            ((char *) (s) + strlen(s))
 #define CheckRemoveFile(fp)     ((SysExistFile(fp)) ? SysRemove(fp) : 0)
 #define ErrorPush()             int __iPushedError = ErrGetErrorCode()

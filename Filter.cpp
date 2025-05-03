@@ -55,11 +55,11 @@
 #define FILTER_DB_LINE_MAX          512
 #define FILTER_LINE_MAX             1024
 #define FILTER_PRIORITY             SYS_PRIORITY_NORMAL
-#define FILTER_OUT_NNF_EXITCODE     97
-#define FILTER_OUT_NN_EXITCODE      98
-#define FILTER_OUT_EXITCODE         99
-#define FILTER_MODIFY_EXITCODE      100
-#define FILTER_FLAGS_BREAK          (1 << 3)
+#define FILTER_OUT_NNF_EXITCODE     4
+#define FILTER_OUT_NN_EXITCODE      5
+#define FILTER_OUT_EXITCODE         6
+#define FILTER_MODIFY_EXITCODE      7
+#define FILTER_FLAGS_BREAK          (1 << 4)
 #define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
 
@@ -70,6 +70,7 @@ struct FilterMsgInfo
     char            szRecipient[MAX_ADDR_NAME];
     SYS_INET_ADDR   LocalAddr;
     SYS_INET_ADDR   RemoteAddr;
+    char            szSpoolFile[SYS_MAX_PATH];
 };
 
 
@@ -78,6 +79,7 @@ struct FilterMsgInfo
 
 static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI);
 static void     FilFreeMsgInfo(FilterMsgInfo &FMI);
+static char    *FilGetFilterRejMessage(FilterMsgInfo const &FMI);
 static int      FilGetFilePath(char const *pszMode, char *pszFilePath, int iMaxPath);
 static int      FilAddFilter(char **ppszFilters, int &iNumFilters, char const *pszFilterName);
 static int      FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
@@ -103,6 +105,7 @@ static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI)
     char const     *const * ppszInfo = USmlGetInfo(hFSpool);
     char const     *const * ppszFrom = USmlGetMailFrom(hFSpool);
     char const     *const * ppszRcpt = USmlGetRcptTo(hFSpool);
+    char const     *pszSpoolFile = USmlGetSpoolFilePath(hFSpool);
     int             iFromDomains = StrStringsCount(ppszFrom);
     int             iRcptDomains = StrStringsCount(ppszRcpt);
     char            szUser[MAX_ADDR_NAME] = "";
@@ -147,6 +150,8 @@ static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI)
         return (ErrGetErrorCode());
 
 
+    StrSNCpy(FMI.szSpoolFile, pszSpoolFile);
+
     return (0);
 
 }
@@ -158,6 +163,29 @@ static void     FilFreeMsgInfo(FilterMsgInfo &FMI)
 {
 
 
+
+}
+
+
+
+
+static char    *FilGetFilterRejMessage(FilterMsgInfo const &FMI)
+{
+
+    FILE           *pFile;
+    char            szRejFilePath[SYS_MAX_PATH] = "";
+    char            szRejMsg[512] = "";
+
+    SysSNPrintf(szRejFilePath, sizeof(szRejFilePath) - 1, "%s.rej", FMI.szSpoolFile);
+    if ((pFile = fopen(szRejFilePath, "rb")) == NULL)
+        return NULL;
+
+    MscFGets(szRejMsg, sizeof(szRejMsg) - 1, pFile);
+
+    fclose(pFile);
+    SysRemove(szRejFilePath);
+
+    return (SysStrDup(szRejMsg));
 
 }
 
@@ -373,13 +401,19 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter out message
 ///////////////////////////////////////////////////////////////////////////////
+                    char            *pszRejMsg = FilGetFilterRejMessage(FMI);
+
                     if (iExitCode == FILTER_OUT_EXITCODE)
                         QueUtCleanupNotifyErrDelivery(hQueue, hMessage, NULL,
+                                                      (pszRejMsg != NULL) ? pszRejMsg:
                                                       ErrGetErrorString(ERR_FILTERED_MESSAGE), NULL);
                     else if (iExitCode == FILTER_OUT_NN_EXITCODE)
                         QueCleanupMessage(hQueue, hMessage, !QueUtRemoveSpoolErrors());
                     else
                         QueCleanupMessage(hQueue, hMessage, false);
+
+                    if (pszRejMsg != NULL)
+                        SysFree(pszRejMsg);
 
                     ErrSetErrorCode(ERR_FILTERED_MESSAGE);
                     return (ERR_FILTERED_MESSAGE);
@@ -428,7 +462,11 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 //  Filter list processing break required ?
 ///////////////////////////////////////////////////////////////////////////////
         if (iExitFlags & FILTER_FLAGS_BREAK)
-            break;
+        {
+            fclose(pFiltFile);
+            RLckUnlockSH(hResLock);
+            return (1);
+        }
     }
 
     fclose(pFiltFile);
@@ -480,17 +518,24 @@ int             FilFilterMessage(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
 ///////////////////////////////////////////////////////////////////////////////
     for (int ii = 0; ii < iNumFilters; ii++)
     {
+        int             iFilterResult;
         char            szFilterPath[SYS_MAX_PATH] = "";
 
         FilGetFilterPath(pszFilters[ii], szFilterPath, sizeof(szFilterPath));
 
-        if (FilApplyFilter(szFilterPath, hFSpool, hQueue, hMessage, FMI) < 0)
+        if ((iFilterResult = FilApplyFilter(szFilterPath, hFSpool, hQueue, hMessage, FMI)) < 0)
         {
             ErrorPush();
             FilFreeFilters(pszFilters, iNumFilters);
             FilFreeMsgInfo(FMI);
             return (ErrorPop());
         }
+
+///////////////////////////////////////////////////////////////////////////////
+//  A return code greater than zero means exit filter processing loop soon
+///////////////////////////////////////////////////////////////////////////////
+        if (iFilterResult > 0)
+            break;
     }
 
     FilFreeFilters(pszFilters, iNumFilters);

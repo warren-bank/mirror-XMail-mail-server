@@ -2000,20 +2000,19 @@ static int      USmtpGetDomainMX(SVRCFG_HANDLE hSvrConfig, const char *pszDomain
 int             USmtpCheckMailDomain(SVRCFG_HANDLE hSvrConfig, char const *pszDomain)
 {
 
+    char           *pszMXDomains = NULL;
     NET_ADDRESS     NetAddr;
 
-    if (SysGetHostByName(pszDomain, NetAddr) < 0)
+    if (USmtpGetDomainMX(hSvrConfig, pszDomain, pszMXDomains) < 0)
     {
-        char           *pszMXDomains = NULL;
-
-        if (USmtpGetDomainMX(hSvrConfig, pszDomain, pszMXDomains) < 0)
+        if (SysGetHostByName(pszDomain, NetAddr) < 0)
         {
             ErrSetErrorCode(ERR_INVALID_MAIL_DOMAIN);
             return (ERR_INVALID_MAIL_DOMAIN);
         }
-
-        SysFree(pszMXDomains);
     }
+    else
+        SysFree(pszMXDomains);
 
     return (0);
 
@@ -2390,8 +2389,8 @@ int             USmtpWriteInfoLine(FILE *pSpoolFile, char const *pszClientAddr,
 
 
 
-char           *USmtpGetReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
-                                 char const *pszRcptTo, char const *pszMessageID)
+char           *USmtpGetReceived(int iType, char const *pszAuth, char const *const *ppszMsgInfo,
+                                 char const *pszMailFrom, char const *pszRcptTo, char const *pszMessageID)
 {
 
     char            szFrom[MAX_SMTP_ADDRESS] = "";
@@ -2400,6 +2399,22 @@ char           *USmtpGetReceived(int iType, char const *const *ppszMsgInfo, char
     if ((USmlParseAddress(pszMailFrom, NULL, 0, szFrom, sizeof(szFrom) - 1) < 0) ||
         (USmlParseAddress(pszRcptTo, NULL, 0, szRcpt, sizeof(szRcpt) - 1) < 0))
         return (NULL);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Parse special types to hide client info
+///////////////////////////////////////////////////////////////////////////////
+    bool            bHideClient = false;
+
+    if (iType == RECEIVED_TYPE_AUTHSTD)
+    {
+        bHideClient = (pszAuth != NULL) && !IsEmptyString(pszAuth);
+        iType = RECEIVED_TYPE_STD;
+    }
+    else if (iType == RECEIVED_TYPE_AUTHVERBOSE)
+    {
+        bHideClient = (pszAuth != NULL) && !IsEmptyString(pszAuth);
+        iType = RECEIVED_TYPE_VERBOSE;
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Return "Received:" tag
@@ -2418,24 +2433,41 @@ char           *USmtpGetReceived(int iType, char const *const *ppszMsgInfo, char
         break;
 
     case (RECEIVED_TYPE_VERBOSE):
-        pszReceived = StrSprint(
-            "Received: from %s (%s)\r\n"
-            "\tby %s (%s) with %s\r\n"
-            "\tid <%s> for <%s> from <%s>;\r\n"
-            "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientAddr],
-            ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiServerAddr],
-            ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+        if (!bHideClient)
+            pszReceived = StrSprint(
+                "Received: from %s (%s)\r\n"
+                "\tby %s (%s) with %s\r\n"
+                "\tid <%s> for <%s> from <%s>;\r\n"
+                "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientAddr],
+                ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiServerAddr],
+                ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+        else
+            pszReceived = StrSprint(
+                "Received: from %s\r\n"
+                "\tby %s (%s) with %s\r\n"
+                "\tid <%s> for <%s> from <%s>;\r\n"
+                "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiServerDomain],
+                ppszMsgInfo[smsgiServerAddr], ppszMsgInfo[smsgiSeverName], pszMessageID,
+                szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
         break;
 
     case (RECEIVED_TYPE_STD):
     default:
-        pszReceived = StrSprint(
-            "Received: from %s (%s)\r\n"
-            "\tby %s with %s\r\n"
-            "\tid <%s> for <%s> from <%s>;\r\n"
-            "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientAddr],
-            ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverName], pszMessageID,
-            szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+        if (!bHideClient)
+            pszReceived = StrSprint(
+                "Received: from %s (%s)\r\n"
+                "\tby %s with %s\r\n"
+                "\tid <%s> for <%s> from <%s>;\r\n"
+                "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientAddr],
+                ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverName], pszMessageID,
+                szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+        else
+            pszReceived = StrSprint(
+                "Received: from %s\r\n"
+                "\tby %s with %s\r\n"
+                "\tid <%s> for <%s> from <%s>;\r\n"
+                "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiServerDomain],
+                ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
         break;
     }
 

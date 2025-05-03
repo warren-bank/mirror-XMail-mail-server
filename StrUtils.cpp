@@ -409,21 +409,15 @@ char           *StrConcat(char const *const *ppszStrings, char const *pszCStr)
 char           *StrDeQuote(char *pszString, int iChar)
 {
 
-    int             ii;
-    int             jj;
-
-    for (ii = 0, jj = 0; pszString[ii] != '\0'; ii++)
+    if (*pszString == iChar)
     {
-        if ((int) pszString[ii] == iChar)
-        {
-            if ((int) pszString[ii + 1] == iChar)
-                pszString[jj++] = pszString[ii++];
-        }
-        else
-            pszString[jj++] = pszString[ii];
-    }
+        int             ii;
 
-    pszString[jj] = '\0';
+        for (ii = 1; (pszString[ii] != '\0') && (pszString[ii] != iChar); ii++)
+            pszString[ii - 1] = pszString[ii];
+
+        pszString[ii - 1] = '\0';
+    }
 
     return (pszString);
 
@@ -434,32 +428,16 @@ char           *StrDeQuote(char *pszString, int iChar)
 char           *StrQuote(const char *pszString, int iChar)
 {
 
-    int             iQuotes = 0;
-
-    for (int qq = 0; pszString[qq] != '\0'; qq++)
-        if ((int) pszString[qq] == iChar)
-            ++iQuotes;
-
-    char           *pszBuffer = (char *) SysAlloc(3 + strlen(pszString) + iQuotes);
+    int             iStrLen = strlen(pszString);
+    char           *pszBuffer = (char *) SysAlloc(3 + iStrLen);
 
     if (pszBuffer == NULL)
         return (NULL);
 
     pszBuffer[0] = (char) iChar;
-
-    int             ii;
-    int             jj;
-
-    for (ii = 0, jj = 1; pszString[ii] != '\0'; ii++)
-    {
-        if ((int) pszString[ii] == iChar)
-            pszBuffer[jj++] = (char) iChar;
-
-        pszBuffer[jj++] = pszString[ii];
-    }
-
-    pszBuffer[jj++] = (char) iChar;
-    pszBuffer[jj] = '\0';
+    memcpy(pszBuffer + 1, pszString, iStrLen);
+    pszBuffer[iStrLen + 1] = (char) iChar;
+    pszBuffer[iStrLen + 2] = '\0';
 
     return (pszBuffer);
 

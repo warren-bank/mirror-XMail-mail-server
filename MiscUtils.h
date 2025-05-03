@@ -104,6 +104,7 @@ int             MscLoadAddressFilter(char const *const *ppszFilter, int iNumToke
 bool            MscAddressMatch(AddressFilter const & AF, NET_ADDRESS const & TestAddr);
 int             MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR & PeerInfo,
                                   bool bDefault);
+char          **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR & PeerInfo);
 int             MscMD5Authenticate(const char *pszPassword, const char *pszTimeStamp,
                                    const char *pszDigest);
 char           *MscExtractServerTimeStamp(char const *pszResponse, char *pszTimeStamp,

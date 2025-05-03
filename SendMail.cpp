@@ -38,6 +38,11 @@
 #define SYS_SLASH_STR               "\\"
 #define SYS_MAX_PATH                256
 
+#define Sign(v)                     (((v) < 0) ? -1: +1)
+#define Min(a, b)                   (((a) < (b)) ? (a): (b))
+#define Max(a, b)                   (((a) > (b)) ? (a): (b))
+#define Abs(v)                      (((v) > 0) ? (v): -(v))
+
 
 
 
@@ -169,6 +174,11 @@ char           *SysGetEnv(const char *pszVarName)
 
 #define stricmp                     strcasecmp
 #define strnicmp                    strncasecmp
+
+#define Sign(v)                     (((v) < 0) ? -1: +1)
+#define Min(a, b)                   (((a) < (b)) ? (a): (b))
+#define Max(a, b)                   (((a) > (b)) ? (a): (b))
+#define Abs(v)                      (((v) > 0) ? (v): -(v))
 
 
 
@@ -354,9 +364,75 @@ static int      EmitRecipients(FILE *pMailFile, char const *pszAddrList)
 }
 
 
+static int      GetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
+                        time_t tCurr)
+{
+
+    if (tCurr == 0)
+        time(&tCurr);
+
+    tmLocal = *localtime(&tCurr);
+
+
+    struct tm       tmTimeLOC = tmLocal;
+    struct tm       tmTimeGM;
+
+    tmTimeGM = *gmtime(&tCurr);
+
+    tmTimeLOC.tm_isdst = 0;
+    tmTimeGM.tm_isdst = 0;
+
+    time_t          tLocal = mktime(&tmTimeLOC);
+    time_t          tGM = mktime(&tmTimeGM);
+
+    int             iSecsDiff = (int) difftime(tLocal, tGM);
+    int             iSignDiff = Sign(iSecsDiff);
+    int             iMinutes = Abs(iSecsDiff) / 60;
+
+    iDiffMins = iMinutes % 60;
+    iDiffHours = iSignDiff * (iMinutes / 60);
+
+
+    return (0);
+
+}
+
+
+static int      GetTimeStr(char *pszTimeStr, int iStringSize, time_t tCurr)
+{
+
+    int             iDiffHours = 0;
+    int             iDiffMins = 0;
+    struct tm       tmTime;
+
+    GetTime(tmTime, iDiffHours, iDiffMins, tCurr);
+
+
+    char            szDiffTime[128] = "";
+
+    if (iDiffHours > 0)
+        sprintf(szDiffTime, " +%02d%02d", iDiffHours, iDiffMins);
+    else
+        sprintf(szDiffTime, " -%02d%02d", -iDiffHours, iDiffMins);
+
+
+    strftime(pszTimeStr, iStringSize - strlen(szDiffTime) - 1, "%a, %d %b %Y %H:%M:%S", &tmTime);
+
+    strcat(pszTimeStr, szDiffTime);
+
+    return (0);
+
+}
+
+
 
 int             main(int iArgCount, char *pszArgs[])
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Initialize time
+///////////////////////////////////////////////////////////////////////////////
+    tzset();
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Get the mail root path
 ///////////////////////////////////////////////////////////////////////////////
@@ -584,6 +660,7 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
     bool            bInHeaders = true;
     bool            bHasFrom = false;
+    bool            bHasDate = false;
     bool            bRcptSource = false;
     char            szBuffer[1536] = "";
 
@@ -622,15 +699,27 @@ int             main(int iArgCount, char *pszArgs[])
             {
                 bInHeaders = false;
 
-                if (!bHasFrom)
-                {
 ///////////////////////////////////////////////////////////////////////////////
 //  Add mail from ( if not present )
 ///////////////////////////////////////////////////////////////////////////////
+                if (!bHasFrom)
+                {
                     if (strlen(szExtMailFrom) != 0)
                         fprintf(pDataFile, "From: %s\r\n", szExtMailFrom);
                     else
                         fprintf(pDataFile, "From: <%s>\r\n", szMailFrom);
+                }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Add date ( if not present )
+///////////////////////////////////////////////////////////////////////////////
+                if (!bHasDate)
+                {
+                    char        szDate[128] = "";
+
+                    GetTimeStr(szDate, sizeof(szDate) - 1, time(NULL));
+
+                    fprintf(pDataFile, "Date: %s\r\n", szDate);
                 }
             }
 
@@ -661,6 +750,9 @@ int             main(int iArgCount, char *pszArgs[])
 
                 if (!bHasFrom && (strnicmp(szBuffer, "From:", 5) == 0))
                     bHasFrom = true;
+
+                if (!bHasDate && (strnicmp(szBuffer, "Date:", 5) == 0))
+                    bHasDate = true;
             }
         }
 

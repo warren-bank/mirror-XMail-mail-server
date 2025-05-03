@@ -41,6 +41,8 @@
 
 
 
+#define IPPROP_LINE_MAX             1024
+
 
 
 
@@ -900,12 +902,12 @@ char           *MscLogFilePath(char const *pszLogFile, char *pszLogFilePath)
 
     time(&tCurrent);
 
-    unsigned long   ulRotStep = (unsigned long) (3600L * iLogRotateHours);
-    unsigned long   ulTimeZone = SysGetTimeZone();
-    unsigned long   ulDayLight = SysGetDayLight() * 3600L;
-    time_t          tLogFileTime = (time_t) (NbrFloor((unsigned long) tCurrent -
-                                                      ulTimeZone + ulDayLight,
-                                                      ulRotStep) + ulTimeZone - ulDayLight);
+    long            lRotStep = (unsigned long) (3600L * iLogRotateHours);
+    long            lTimeZone = SysGetTimeZone();
+    long            lDayLight = SysGetDayLight() * 3600L;
+    time_t          tLogFileTime = (time_t) (NbrFloor((SYS_INT64) tCurrent -
+                                                      lTimeZone + lDayLight,
+                                                      lRotStep) + lTimeZone - lDayLight);
     struct tm       tmLogFileTime;
     char            szLogsDir[SYS_MAX_PATH] = "";
 
@@ -1343,6 +1345,55 @@ int             MscCheckAllowedIP(char const *pszMapFile, const SYS_INET_ADDR & 
     }
 
     return (0);
+
+}
+
+
+
+
+char          **MscGetIPProperties(char const *pszFileName, const SYS_INET_ADDR & PeerInfo)
+{
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get peer IP addresses
+///////////////////////////////////////////////////////////////////////////////
+    NET_ADDRESS     PeerAddr;
+
+    SysGetAddrAddress(PeerInfo, PeerAddr);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Open the IP properties database. Fail smootly if the file does not exist
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pFile = fopen(pszFileName, "rt");
+
+    if (pFile == NULL)
+        return (NULL);
+
+    char            szLine[IPPROP_LINE_MAX] = "";
+
+    while (MscGetConfigLine(szLine, sizeof(szLine) - 1, pFile) != NULL)
+    {
+        char          **ppszTokens = StrGetTabLineStrings(szLine);
+
+        if (ppszTokens == NULL)
+            continue;
+
+        int             iFieldsCount = StrStringsCount(ppszTokens);
+        AddressFilter   AFPeer;
+
+        if ((iFieldsCount >= 1) && (MscLoadAddressFilter(&ppszTokens[0], 1, AFPeer) == 0) &&
+            MscAddressMatch(AFPeer, PeerAddr))
+        {
+            fclose(pFile);
+            return (ppszTokens);
+        }
+
+        StrFreeStrings(ppszTokens);
+    }
+
+    fclose(pFile);
+
+    return (NULL);
 
 }
 

@@ -35,6 +35,8 @@
 #define RECEIVED_TYPE_STD           0
 #define RECEIVED_TYPE_VERBOSE       1
 #define RECEIVED_TYPE_STRICT        2
+#define RECEIVED_TYPE_AUTHSTD       3
+#define RECEIVED_TYPE_AUTHVERBOSE   4
 
 #define SMTP_ERROR_VARNAME          "SMTP-Error"
 #define DEFAULT_SMTP_ERR            "417 Temporary delivery error"
@@ -124,9 +126,8 @@ int             USmtpAddMessageInfo(FILE *pMsgFile, char const *pszClientDomain,
                                     SYS_INET_ADDR const & SockInfo, char const *pszSmtpServerLogo);
 int             USmtpWriteInfoLine(FILE *pSpoolFile, char const *pszClientAddr,
                                    char const *pszServerAddr, char const *pszTime);
-char           *USmtpGetReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
-                                 char const *pszRcptTo, char const *pszMessageID);
-
+char           *USmtpGetReceived(int iType, char const *pszAuth, char const *const *ppszMsgInfo,
+                                 char const *pszMailFrom, char const *pszRcptTo, char const *pszMessageID);
 
 
 

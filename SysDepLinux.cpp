@@ -29,6 +29,7 @@
 
 
 
+#define SYS_INT_CALL()              (!iShutDown && (errno == EINTR))
 
 #define SHUTDOWN_RECV_TIMEOUT       2
 #define SAIN_Addr(s)                (s).sin_addr.s_addr
@@ -135,7 +136,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData);
 
 
 
-
+static volatile int iShutDown = 0;
 static unsigned int uSRandBase;
 static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
@@ -165,7 +166,6 @@ static char const *SysGetLastError(void)
 
 
 
-
 static void     SysIgnoreProc(int iSignal)
 {
 
@@ -178,6 +178,7 @@ static void     SysIgnoreProc(int iSignal)
 int             SysInitLibrary(void)
 {
 
+    iShutDown = 0;
     tzset();
     uSRandBase = (unsigned int) time(NULL);
 
@@ -203,6 +204,8 @@ void            SysCleanupLibrary(void)
 
 int             SysShutdownLibrary(int iMode)
 {
+
+    iShutDown++;
 
     kill(0, SIGQUIT);
 
@@ -393,7 +396,7 @@ int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize,
     int             iRecvBytes;
 
     while (((iRecvBytes = recv((int) SockFD, pszBuffer, iBufferSize, 0)) == -1) &&
-           (errno == EINTR));
+           SYS_INT_CALL());
 
 
     if (iRecvBytes == -1)
@@ -462,7 +465,7 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int i
 
     while (((iRecvBytes = recvfrom((int) SockFD, pszBuffer, iBufferSize, 0,
                                    pFrom, &SockALen)) == -1) &&
-           (errno == EINTR));
+           SYS_INT_CALL());
 
 
     if (iRecvBytes == -1)
@@ -506,7 +509,7 @@ int             SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBuffe
     int             iSendBytes;
 
     while (((iSendBytes = send((int) SockFD, pszBuffer, iBufferSize, 0)) == -1) &&
-           (errno == EINTR));
+           SYS_INT_CALL());
 
 
     if (iSendBytes == -1)
@@ -573,7 +576,7 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
     int             iSendBytes;
 
     while (((iSendBytes = sendto((int) SockFD, pszBuffer, iBufferSize, 0, pTo, iToLen)) == -1) &&
-           (errno == EINTR));
+           SYS_INT_CALL());
 
 
     if (iSendBytes == -1)
@@ -2758,19 +2761,19 @@ char           *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize
 
 
 
-unsigned long   SysGetTimeZone(void)
+long            SysGetTimeZone(void)
 {
 
-    return ((unsigned long) timezone);
+    return ((long) timezone);
 
 }
 
 
 
-unsigned long   SysGetDayLight(void)
+long            SysGetDayLight(void)
 {
 
-    return ((unsigned long) daylight);
+    return ((long) daylight);
 
 }
 

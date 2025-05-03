@@ -324,7 +324,8 @@ static int      UPopBuildMessageList(UserInfo *pUI, HSLIST & hMessageList,
     }
     else
     {
-        if (UPopFillMessageList(szMBPath, "new", hMessageList, iMsgCount, ulMBSize) < 0)
+        if ((UPopFillMessageList(szMBPath, "new", hMessageList, iMsgCount, ulMBSize) < 0) ||
+            (UPopFillMessageList(szMBPath, "cur", hMessageList, iMsgCount, ulMBSize) < 0))
         {
             ErrorPush();
             UPopFreeMessageList(hMessageList);

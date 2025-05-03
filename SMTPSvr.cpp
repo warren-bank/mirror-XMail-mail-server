@@ -57,6 +57,7 @@
 #define SMTP_WAIT_SLEEP         2
 #define MAX_CLIENTS_WAIT        300
 #define SMTP_IPMAP_FILE         "smtp.ipmap.tab"
+#define SMTP_IPPROP_FILE        "smtp.ipprop.tab"
 #define SMTP_LOG_FILE           "smtp"
 #define SMTP_SERVER_NAME        "[" APP_NAME_VERSION_OS_STR " ESMTP Server]"
 #define PLAIN_AUTH_PARAM_SIZE   1024
@@ -79,8 +80,9 @@
 #define SMTPF_NORDNS_IP         (1 << 6)
 #define SMTPF_ETRN_ENABLED      (1 << 7)
 #define SMTPF_NOEMIT_AUTH       (1 << 8)
+#define SMTPF_WHITE_LISTED      (1 << 9)
 
-#define SMTPF_STATIC_MASK       (SMTPF_MAPPED_IP | SMTPF_NORDNS_IP)
+#define SMTPF_STATIC_MASK       (SMTPF_MAPPED_IP | SMTPF_NORDNS_IP | SMTPF_WHITE_LISTED)
 #define SMTPF_AUTH_MASK         (SMTPF_RELAY_ENABLED | SMTPF_MAIL_UNLOCKED | SMTPF_AUTHENTICATED | \
                                         SMTPF_VRFY_ENABLED | SMTPF_ETRN_ENABLED)
 #define SMTPF_RESET_MASK        (SMTPF_AUTH_MASK | SMTPF_STATIC_MASK | SMTPF_NOEMIT_AUTH)
@@ -131,7 +133,7 @@ struct SMTPSession
     unsigned long   ulSetupFlags;
     unsigned long   ulFlags;
     char           *pszCustMsg;
-
+    char            szRejMapName[256];
 };
 
 enum SmtpAuthFields
@@ -159,6 +161,8 @@ static unsigned int SMTPClientThread(void *pThreadData);
 static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const *pszMapList,
                                   char *pszMapName, int iMaxMapName, int & iMapCode);
+static int      SMTPApplyIPProps(SMTPSession & SMTPS);
+static int      SMTPDoIPBasedInit(SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                                 SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const *pszSvrConfig);
@@ -189,8 +193,9 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
 static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
-static int      SMTPAddReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
-                                char const *pszRcptTo, char const *pszMessageID, FILE *pMailFile);
+static int      SMTPAddReceived(int iType, char const *pszAuth, char const *const *ppszMsgInfo,
+                                char const *pszMailFrom, char const *pszRcptTo, char const *pszMessageID,
+                                FILE *pMailFile);
 static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile);
 static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
@@ -587,44 +592,50 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const *ps
 
 
 
-static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
-                                SMTPSession & SMTPS, char *&pszSMTPError)
+static int      SMTPApplyIPProps(SMTPSession & SMTPS)
 {
 
-    ZeroData(SMTPS);
-    SMTPS.iSMTPState = stateInit;
-    SMTPS.hShbSMTP = hShbSMTP;
-    SMTPS.hSvrConfig = INVALID_SVRCFG_HANDLE;
-    SMTPS.pSMTPCfg = NULL;
-    SMTPS.pMsgFile = NULL;
-    SMTPS.pszFrom = NULL;
-    SMTPS.pszRcpt = NULL;
-    SMTPS.pszSendRcpt = NULL;
-    SMTPS.iRcptCount = 0;
-    SMTPS.iCmdDelay = 0;
-    SMTPS.ulMaxMsgSize = 0;
-    SetEmptyString(SMTPS.szMessageID);
-    SetEmptyString(SMTPS.szDestDomain);
-    SetEmptyString(SMTPS.szClientFQDN);
-    SetEmptyString(SMTPS.szClientDomain);
-    SetEmptyString(SMTPS.szLogonUser);
-    SMTPS.ulFlags = 0;
-    SMTPS.ulSetupFlags = 0;
-    SMTPS.pszCustMsg = NULL;
+    char            szIPPropFile[SYS_MAX_PATH] = "";
 
-    SysGetTmpFile(SMTPS.szMsgFile);
+    CfgGetRootPath(szIPPropFile, sizeof(szIPPropFile));
+    StrNCat(szIPPropFile, SMTP_IPPROP_FILE, sizeof(szIPPropFile));
 
-    if ((SMTPS.hSvrConfig = SvrGetConfigHandle()) == INVALID_SVRCFG_HANDLE)
-        return (ErrGetErrorCode());
 
-    if ((SMTPCheckSysResources(SMTPS.hSvrConfig) < 0) ||
-        (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), SMTPS.PeerInfo) < 0) ||
-        (SysGetSockInfo(BSckGetAttachedSocket(hBSock), SMTPS.SockInfo) < 0))
+    int             ii;
+    char          **ppszProps;
+
+    if ((ppszProps = MscGetIPProperties(szIPPropFile, SMTPS.PeerInfo)) == NULL)
+        return (0);
+
+    for (ii = 1; ppszProps[ii] != NULL; ii++)
     {
-        ErrorPush();
-        SvrReleaseConfigHandle(SMTPS.hSvrConfig);
-        return (ErrorPop());
+        int             iNameLen;
+        char           *pszName = ppszProps[ii];
+        char           *pszVal = strchr(pszName, '=');
+
+        if (!pszVal)
+            continue;
+
+        iNameLen = pszVal - pszName;
+        pszVal++;
+
+        if (strncmp(pszName, "WhiteList", CStringSize("WhiteList")) == 0)
+        {
+            if (atoi(pszVal))
+                SMTPS.ulFlags |= SMTPF_WHITE_LISTED;
+        }
     }
+
+    StrFreeStrings(ppszProps);
+
+    return (0);
+
+}
+
+
+
+static int      SMTPDoIPBasedInit(SMTPSession & SMTPS, char *&pszSMTPError)
+{
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if SMTP client is in "spammers.tab" file
@@ -638,7 +649,6 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 
         pszSMTPError = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpMsgIPBanSpammers");
 
-        SvrReleaseConfigHandle(SMTPS.hSvrConfig);
         return (ErrorPop());
     }
 
@@ -651,30 +661,35 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     {
         int             iMapCode = 0;
         char           *pszCfgError = NULL;
-        char            szMapName[256] = "";
 
-        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, szMapName, sizeof(szMapName) - 1,
-                              iMapCode) < 0)
+        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, SMTPS.szRejMapName,
+                              sizeof(SMTPS.szRejMapName) - 1, iMapCode) < 0)
         {
             if (iMapCode == 1)
             {
                 ErrorPush();
 
                 if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                    SMTPLogSession(SMTPS, "", "", "SNDRIP=EIPMAP", 0);
+                {
+                    char           *pszError = StrSprint("SNDRIP=EIPMAP (%s)", SMTPS.szRejMapName);
+
+                    SMTPLogSession(SMTPS, "", "", (pszError != NULL) ? pszError: "SNDRIP=EIPMAP", 0);
+
+                    if (pszError != NULL)
+                        SysFree(pszError);
+                }
 
                 if ((pszCfgError = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpMsgIPBanMaps")) != NULL)
                 {
-                    pszSMTPError = StrSprint("%s (%s)", pszCfgError, szMapName);
+                    pszSMTPError = StrSprint("%s (%s)", pszCfgError, SMTPS.szRejMapName);
 
                     SysFree(pszCfgError);
                 }
                 else
                     pszSMTPError = StrSprint("550 Denied due inclusion of your IP inside (%s)",
-                                             szMapName);
+                                             SMTPS.szRejMapName);
 
                 SysFree(pszMapsList);
-                SvrReleaseConfigHandle(SMTPS.hSvrConfig);
                 return (ErrorPop());
             }
 
@@ -699,6 +714,64 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
             SMTPS.ulFlags |= SMTPF_NORDNS_IP;
         else
             SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
+    }
+
+    return (0);
+
+}
+
+
+
+static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
+                                SMTPSession & SMTPS, char *&pszSMTPError)
+{
+
+    ZeroData(SMTPS);
+    SMTPS.iSMTPState = stateInit;
+    SMTPS.hShbSMTP = hShbSMTP;
+    SMTPS.hSvrConfig = INVALID_SVRCFG_HANDLE;
+    SMTPS.pSMTPCfg = NULL;
+    SMTPS.pMsgFile = NULL;
+    SMTPS.pszFrom = NULL;
+    SMTPS.pszRcpt = NULL;
+    SMTPS.pszSendRcpt = NULL;
+    SMTPS.iRcptCount = 0;
+    SMTPS.iCmdDelay = 0;
+    SMTPS.ulMaxMsgSize = 0;
+    SetEmptyString(SMTPS.szMessageID);
+    SetEmptyString(SMTPS.szDestDomain);
+    SetEmptyString(SMTPS.szClientFQDN);
+    SetEmptyString(SMTPS.szClientDomain);
+    SetEmptyString(SMTPS.szLogonUser);
+    SetEmptyString(SMTPS.szRejMapName);
+    SMTPS.ulFlags = 0;
+    SMTPS.ulSetupFlags = 0;
+    SMTPS.pszCustMsg = NULL;
+
+    SysGetTmpFile(SMTPS.szMsgFile);
+
+    if ((SMTPS.hSvrConfig = SvrGetConfigHandle()) == INVALID_SVRCFG_HANDLE)
+        return (ErrGetErrorCode());
+
+    if ((SMTPCheckSysResources(SMTPS.hSvrConfig) < 0) ||
+        (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), SMTPS.PeerInfo) < 0) ||
+        (SysGetSockInfo(BSckGetAttachedSocket(hBSock), SMTPS.SockInfo) < 0) ||
+        (SMTPApplyIPProps(SMTPS) < 0))
+    {
+        ErrorPush();
+        SvrReleaseConfigHandle(SMTPS.hSvrConfig);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  If the remote IP is not white-listed, do all IP based checks
+///////////////////////////////////////////////////////////////////////////////
+    if (((SMTPS.ulFlags & SMTPF_WHITE_LISTED) == 0) &&
+        (SMTPDoIPBasedInit(SMTPS, pszSMTPError) < 0))
+    {
+        ErrorPush();
+        SvrReleaseConfigHandle(SMTPS.hSvrConfig);
+        return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1441,8 +1514,19 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
     if (SMTPS.ulFlags & (SMTPF_MAPPED_IP | SMTPF_NORDNS_IP))
     {
         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-            SMTPLogSession(SMTPS, SMTPS.pszFrom, "",
-                           (SMTPS.ulFlags & SMTPF_MAPPED_IP) ? "SNDRIP=EIPMAP": "SNDRIP=ERDNS", 0);
+        {
+            if (SMTPS.ulFlags & SMTPF_MAPPED_IP)
+            {
+                char           *pszError = StrSprint("SNDRIP=EIPMAP (%s)", SMTPS.szRejMapName);
+
+                SMTPLogSession(SMTPS, SMTPS.pszFrom, "", (pszError != NULL) ? pszError: "SNDRIP=EIPMAP", 0);
+
+                if (pszError != NULL)
+                    SysFree(pszError);
+            }
+            else
+                SMTPLogSession(SMTPS, SMTPS.pszFrom, "", "SNDRIP=ERDNS", 0);
+        }
 
         SMTPResetSession(SMTPS);
 
@@ -1665,7 +1749,7 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                             SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0],
                                            "RCPT=EFULL", 0);
 
-                        pszSMTPError = StrSprint("452 Mailbox full <%s@%s>",
+                        pszSMTPError = StrSprint("552 Requested mail action aborted: exceeded storage allocation - <%s@%s>",
                                                  szDestUser, szDestDomain);
 
                         return (ErrorPop());
@@ -2043,11 +2127,12 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPAddReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
-                                char const *pszRcptTo, char const *pszMessageID, FILE *pMailFile)
+static int      SMTPAddReceived(int iType, char const *pszAuth, char const *const *ppszMsgInfo,
+                                char const *pszMailFrom, char const *pszRcptTo, char const *pszMessageID,
+                                FILE *pMailFile)
 {
 
-    char           *pszReceived = USmtpGetReceived(iType, ppszMsgInfo, pszMailFrom, pszRcptTo,
+    char           *pszReceived = USmtpGetReceived(iType, pszAuth, ppszMsgInfo, pszMailFrom, pszRcptTo,
                                                    pszMessageID);
 
     if (pszReceived == NULL)
@@ -2236,8 +2321,8 @@ static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "Received:" tag
 ///////////////////////////////////////////////////////////////////////////////
-        SMTPAddReceived(iReceivedType, ppszMsgInfo, szMailFrom, szSpoolLine,
-                        szMessageID, pSpoolFile);
+        SMTPAddReceived(iReceivedType, IsEmptyString(SMTPS.szLogonUser) ? NULL: SMTPS.szLogonUser,
+                        ppszMsgInfo, szMailFrom, szSpoolLine, szMessageID, pSpoolFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write mail data, saving and restoring the current file pointer

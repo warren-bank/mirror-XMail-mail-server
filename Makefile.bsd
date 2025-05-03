@@ -26,8 +26,8 @@ endif
 O = o
 A = a
 CPP = cpp
-CC = c++
-LD = gcc
+CC = g++
+LD = g++
 
 ifeq ($(OSTYPE),OpenBSD)
 	CFLAGS = -O2 -I. -D__UNIX__ -D__BSD__ -D__OPENBSD__ -DXMAIL_X86 -D_REENTRANT=1 -D_THREAD_SAFE=1

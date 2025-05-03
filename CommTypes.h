@@ -21,10 +21,8 @@
  */
 
 
-#ifndef _COMMTYPES_H
-#define _COMMTYPES_H
-
-
+#ifndef _XMCOMMTYPES_H
+#define _XMCOMMTYPES_H
 
 
 
@@ -34,8 +32,6 @@ struct FileSection
     unsigned long   ulStartOffset;
     unsigned long   ulEndOffset;
 };
-
-
 
 
 
