@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.74
+Version      : 1.0
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 10-06-2001
+Date         : 04-09-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -452,7 +452,7 @@ Date 08-04-2001	 0.70
 	Added the message ID to the received tag and extended the SMTP log file with the username of
 	the authenticated user ( if any ).
 	Fixed a bug in external authentication ( POP3 ).
-	The USERDEF.TAB file is now checked inside $MAIL_ROOT/DOMAIN before and then in $MAIL_ROOT.
+	The USERDEF.TAB file is now checked inside $MAIL_ROOT/domains/DOMAIN before and then in $MAIL_ROOT.
 	This permit per domain user default configuration.
 	Added a new CTRL server command "frozsubmit" to reschedule a frozen message.
 	Added a new CTRL server command "frozdel" to delete a frozen message.
@@ -520,7 +520,14 @@ Date 10-06-2001	0.74
 	A new SERVER.TAB variable has been added  "CustMapsList"  to enable the user to enter custom maps checking
 	( look at the section "SERVER.TAB variables" ).
 	Fixed a bug in "frozdel" CTRL command.
-	
+Date 04-09-2001	1.0
+	Added wildcard matching in the domain part of ALIASES.TAB ( see ALIASES.TAB section ).
+	Changed the PSYNC scheduling behaviour to allow sync interval equal to zero ( disabled ) and
+	let the file .psync-trigger to schedule syncs.
+	Solaris on Intel support added.
+	A new filter return code ( 98 ) has been added to give the ability to reject message without notify the sender.
+
+
 
 
 
@@ -1006,6 +1013,10 @@ Part 7			Configuration
 	"home.bogus"	"??trips"	"travels"
 
 	define an alias for all users whose name start with any two chars and end with trips.
+	You can have widcard even in the domain field, like :
+	
+	"*"	"postmaster"	"postmaster@domain.net"
+	
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
 
 
@@ -1103,7 +1114,7 @@ Part 7			Configuration
 
 	"@home.bogus.com"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
-	This entry is used to syncronize the external account "dlibenzi@home.bogus.com" with encrypted
+	This entry is used to syncronize the external account "dlibenzi@xmailserver.org" with encrypted
 	password "XYZ..." with the account "dlibenzi@home.bogus.com" using  CLR  authentication.
 	The message will be pushed into the spool having as destination  dlibenzi@home.bogus.com  ,
 	so You've to have some kind of processing for that user or domain in Your XMail configuration
@@ -1119,7 +1130,8 @@ Part 7			Configuration
 		the masquerade domain name ( the name following '?' )
 	4) The message is spooled with the above built destination address
 	
-	Obviously the masquerade domain ( 'home.bogus.com' ) MUST be handled by the server.
+	Obviously the masquerade domain ( 'home.bogus.com' ) MUST be handled by the server or MUST be
+	a valid external mail domain.
   	So if a message having as To: address  graycat@felins.net  is fetched by the previous line a
 	message is pushed into the spool with address  graycat@home.bogus.com.
 	Particular attention is to be taken about at not creating mail loops.
@@ -1270,8 +1282,8 @@ Part 7			Configuration
 	"MaxMBSize"	"10000"
 
 	contain user default values for new users that are not set during the new account creation.
-	This file is looked up in two different places, first in $MAIL_ROOT/DOMAIN then in $MAIL_ROOT, where DOMAIN is the
-	name of the domain where We're going to create the new user.
+	This file is looked up in two different places, first in $MAIL_ROOT/domains/DOMAIN then in $MAIL_ROOT,
+	where DOMAIN is the name of the domain where We're going to create the new user.
 
 
 	For each "domain" handled by the server We'll create a directory "domain" inside $MAIL_ROOT.
@@ -1939,7 +1951,7 @@ Part 12			Domain message filters
 	This feature offer the ability to inspect and modify messages, giving a way
 	to reject messages based on its content, alter messages ( address rewriting )
 	and so on.
-	If this filters returns  99  means that the message is rejected and must be stopped
+	If this filters returns  98 or 99  means that the message is rejected and must be stopped
 	in its travel.
 	If the filter modify the message it must return  100  as its result.
 	When a message is received by the SMTP server for user  foo@xyzw.abc  then XMail
@@ -1972,9 +1984,9 @@ Part 12			Domain message filters
 			It's external program responsibility to delete the temporary file.
 
 	Here  "command"  is the name of an external program that must process the message and
-	return its processing result. If it return  99  the message is rejected and pushed
-	into  froz  subdirectory.
-	If all filters return values different from 99 the message can continue its trip.
+	return its processing result. If it return  99  the message is rejected and a notification
+	message is sent to the sender. By returning  98  the message will be rejected without notification.
+	If all filters return values different from 99 and 98 the message can continue its trip.
 	The filter command may also modify the file and return 100, having in this way the ability
 	to change the file content ( AV scanning, content filter, message rewriting, etc ).
 	If the filter will change the message file it MUST keep the message structure and
@@ -3310,6 +3322,7 @@ Part 27			Thanks
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
 	My company, NAI.com, to give me my wage.
+
 
 
 

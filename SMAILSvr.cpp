@@ -57,6 +57,7 @@
 #define FILTER_LINE_MAX             1024
 #define FILTER_TIMEOUT              60
 #define FILTER_PRIORITY             SYS_PRIORITY_NORMAL
+#define FILTER_OUT_NN_EXITCODE      98
 #define FILTER_OUT_EXITCODE         99
 #define MODIFY_EXITCODE             100
 
@@ -1638,7 +1639,7 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
             if (SysExec(ppszCmdTokens[0], &ppszCmdTokens[0], FILTER_TIMEOUT,
                             FILTER_PRIORITY, &iExitCode) == 0)
             {
-                if (iExitCode == FILTER_OUT_EXITCODE)
+                if ((iExitCode == FILTER_OUT_EXITCODE) || (iExitCode == FILTER_OUT_NN_EXITCODE))
                 {
                     StrFreeStrings(ppszCmdTokens);
                     fclose(pFiltFile);
@@ -1647,9 +1648,11 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter out message
 ///////////////////////////////////////////////////////////////////////////////
-                    QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
-                            ErrGetErrorString(ERR_FILTERED_MESSAGE));
-
+                    if (iExitCode == FILTER_OUT_EXITCODE)
+                        QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
+                                ErrGetErrorString(ERR_FILTERED_MESSAGE));
+                    else
+                        QueCleanupMessage(hQueue, hMessage, !QueUtRemoveSpoolErrors());
 
                     ErrSetErrorCode(ERR_FILTERED_MESSAGE);
                     return (ERR_FILTERED_MESSAGE);

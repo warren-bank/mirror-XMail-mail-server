@@ -22,8 +22,8 @@ SYSTYPE = linux
 O = o
 A = a
 CPP = cpp
-CC = c++
-LD = gcc
+CC = g++
+LD = g++
 
 #
 # Swap comments on these two lines to build the Maildir version of XMail.

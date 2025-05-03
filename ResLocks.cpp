@@ -156,9 +156,10 @@ int             RLckCleanupLockers(void)
 
     for (int ii = 0; ii < STD_WAIT_GATES; ii++)
     {
-        SysListHead    *pLLink;
+        SysListHead    *pHead = &RLGates[ii].ResList,
+                       *pLLink;
 
-        while ((pLLink = SYS_LIST_FIRST(&RLGates[ii].ResList)) != NULL)
+        while ((pLLink = SYS_LIST_FIRST(pHead)) != NULL)
         {
             ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
@@ -207,9 +208,10 @@ static int      RLckGetWaitGate(char const * pszResourceName)
 static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName)
 {
 
-    SysListHead    *pLLink;
+    SysListHead    *pHead = &RLGates[iWaitGate].ResList,
+                   *pLLink;
 
-    SYS_LIST_FOR_EACH(pLLink, &RLGates[iWaitGate].ResList)
+    SYS_LIST_FOR_EACH(pLLink, pHead)
     {
         ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
@@ -229,9 +231,10 @@ static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName)
 static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE)
 {
 
-    SysListHead    *pLLink;
+    SysListHead    *pHead = &RLGates[iWaitGate].ResList,
+                   *pLLink;
 
-    SYS_LIST_FOR_EACH(pLLink, &RLGates[iWaitGate].ResList)
+    SYS_LIST_FOR_EACH(pLLink, pHead)
     {
         ResLockEntry   *pCurrRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
@@ -449,8 +452,10 @@ static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int,
 
             SysUnlockMutex(hRLMutex);
 
+
             if (SysWaitSemaphore(SemID, SYS_INFINITE_TIMEOUT) < 0)
                 return (INVALID_RLCK_HANDLE);
+
         }
         else if (iLockResult == 0)
         {

@@ -1255,9 +1255,12 @@ static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const ch
         return (ErrGetErrorCode());
     }
 
+    int             iLineLength = 0;
+
     for (;;)
     {
-        if (BSckGetString(hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 1, STD_POP3_TIMEOUT) == NULL)
+        if (BSckGetString(hBSock, szRTXBuffer, sizeof(szRTXBuffer) - 3,
+                STD_POP3_TIMEOUT, &iLineLength) == NULL)
         {
             fclose(pMsgFile);
 
@@ -1268,7 +1271,19 @@ static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const ch
         if (strcmp(szRTXBuffer, ".") == 0)
             break;
 
-        fprintf(pMsgFile, "%s\r\n", szRTXBuffer);
+
+        memcpy(szRTXBuffer + iLineLength, "\r\n", 3);
+
+        iLineLength += 2;
+
+
+        if (!fwrite(szRTXBuffer, iLineLength, 1, pMsgFile))
+        {
+            fclose(pMsgFile);
+
+            ErrSetErrorCode(ERR_FILE_WRITE, pszFileName);
+            return (ERR_FILE_WRITE);
+        }
     }
 
     fclose(pMsgFile);

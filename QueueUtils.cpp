@@ -59,7 +59,6 @@
 
 
 static int      QueUtDumpFrozen(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FILE * pListFile);
-static bool     QueUtRemoveSpoolErrors(void);
 static char    *QueUtGetReplyAddress(SPLF_HANDLE hFSpool);
 static int      QueUtTXErrorNotifySender(char const * pszMessFilePath, char const * pszReason);
 static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason);
@@ -382,7 +381,7 @@ int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
 
 
 
-static bool     QueUtRemoveSpoolErrors(void)
+bool            QueUtRemoveSpoolErrors(void)
 {
 
     return (SvrTestConfigFlag("RemoveSpoolErrors", false));

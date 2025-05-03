@@ -190,8 +190,8 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
             break;
         }
 
-        if ((pPSYNCCfg->iSyncInterval == 0) ||
-                ((iElapsedTime < pPSYNCCfg->iSyncInterval) && !PSYNCNeedSync()))
+        if (((pPSYNCCfg->iSyncInterval == 0) || (iElapsedTime < pPSYNCCfg->iSyncInterval)) &&
+                !PSYNCNeedSync())
         {
             SysFree(pPSYNCCfg);
             continue;

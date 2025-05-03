@@ -2537,9 +2537,25 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
     unsigned int    uValue;
 
+#if defined(XMAIL_SPARC)
+
     __asm__ __volatile__("ldstub %1,%0":
             "=r"(uValue), "=m"(*pSpinLock):
             "m"(*pSpinLock));
+
+#elif defined(XMAIL_X86)
+
+    __asm__  __volatile__(
+            "xchgl %0, %1":
+            "=r"(uValue), "=m"(*pSpinLock):
+            "0"(1), "m"(*pSpinLock):
+            "memory");
+
+#else
+
+#error CPU type not defined
+
+#endif
 
     return (uValue);
 
@@ -2721,6 +2737,7 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
     uResult = pProc(pData);
 
 #else
+#if defined(XMAIL_SPARC)
 
     __asm__ __volatile__(
             "sub %%sp, %0, %%sp\n":
@@ -2736,6 +2753,27 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
             :
             "r"(uStkDisp));
 
+#elif defined(XMAIL_X86)
+
+    __asm__ __volatile__(
+            "sub %0, %%esp\n":
+            :
+            "r"(uStkDisp));
+
+
+    uResult = pProc(pData);
+
+
+    __asm__ __volatile__(
+            "add %0, %%esp\n":
+            :
+            "r"(uStkDisp));
+
+#else
+
+#error CPU type not defined
+
+#endif
 #endif
 
     return (uResult);

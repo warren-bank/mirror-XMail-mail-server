@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 0.74
+Version: 1.0
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -41,6 +41,7 @@ install -m 755 XMCrypt $RPM_BUILD_ROOT/var/MailRoot/bin/XMCrypt
 install -m 755 CtrlClnt $RPM_BUILD_ROOT/var/MailRoot/bin/CtrlClnt
 install -m 755 MkUsers $RPM_BUILD_ROOT/var/MailRoot/bin/MkUsers
 install -m 755 sendmail $RPM_BUILD_ROOT/var/MailRoot/bin/sendmail
+install -m 755 sendmail.sh $RPM_BUILD_ROOT/var/MailRoot/bin/sendmail.sh
 
 install -m 644 Readme.txt $RPM_BUILD_ROOT/var/MailRoot/bin/Readme.txt
 
@@ -99,6 +100,7 @@ fi
 /var/MailRoot/bin/CtrlClnt
 /var/MailRoot/bin/MkUsers
 /var/MailRoot/bin/sendmail
+/var/MailRoot/bin/sendmail.sh
 
 /var/MailRoot/bin/Readme.txt
 
@@ -115,6 +117,13 @@ fi
 
 
 %changelog
+* Tue Sep 4 2001 Davide Libenzi <davidel@xmailserver.org>
+    Added wildcard matching in the domain part of ALIASES.TAB ( see ALIASES.TAB section ).
+    Changed the PSYNC scheduling behaviour to allow sync interval equal to zero ( disabled ) and
+    let the file .psync-trigger to schedule syncs.
+    Solaris on Intel support added.
+    A new filter return code ( 98 ) has been added to give the ability to reject message without notify the sender.
+    It's finally time, after about 70 releases, to go 1.0 !!
 * Mon Jul 2 2001 Davide Libenzi <davidel@xmailserver.org>
     A stack shifting call method has been implemented to make virtually impossible for attackers
     to guess the stack frame pointer.

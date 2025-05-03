@@ -375,7 +375,7 @@ int             main(int argc, char *argv[])
 
             case ('m'):
                 bMaildir = true;
-                return (0);
+                break;
 
             case ('h'):
                 ShowUsage(argv[0]);

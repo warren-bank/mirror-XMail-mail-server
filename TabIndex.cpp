@@ -101,6 +101,7 @@ static char   **TbixLoadRecord(FILE * pTabFile, IndexRecord const & IR);
 
 
 
+
 char           *TbixGetIndexFile(char const * pszTabFilePath, int const * piFieldsIdx,
                         char *pszIndexFile)
 {
