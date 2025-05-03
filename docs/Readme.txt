@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.19
+    1.20
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    05-29-2004
+    05-30-2004
 
   project by
 

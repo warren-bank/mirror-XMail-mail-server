@@ -25,7 +25,13 @@ CPP = cpp
 CC = g++
 LD = g++
 
-CFLAGS = -O2 -I. -D__UNIX__ -D__SOLARIS__ -D_THREAD_SAFE=1 -D_REENTRANT=1 -DHAS_SYSMACHINE
+ifeq ($(XMAIL_DEBUG), 1)
+CFLAGS = -g
+else
+CFLAGS = -O2
+endif
+
+CFLAGS := $(CFLAGS)  -I. -D__UNIX__ -D__SOLARIS__ -D_THREAD_SAFE=1 -D_REENTRANT=1 -DHAS_SYSMACHINE
 
 # LDFLAGS = -ldl -lsocket -lpthread -lrt
 LDFLAGS = -ldl -lsocket -lnsl -lpthread -lrt
@@ -85,7 +91,6 @@ ${MKMACHDEPINC}: ${MKMACHDEP}
 
 ${MKMACHDEP}: ${MKMACHDEPOBJS}
 	${LD} -o ${MKMACHDEP} ${MKMACHDEPOBJS} ${LDFLAGS}
-	strip ${MKMACHDEP}
 
 ${MAILSVR}: ${SVROBJS}
 	${LD} -o ${MAILSVR} ${SVROBJS} ${LDFLAGS}

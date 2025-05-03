@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.19
+Version: 1.20
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,9 @@ fi
 
 
 %changelog
+
+* Sun May 30 2004 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a possible memory leak and a possible source of crashes.
 
 * Sat May 29 2004 Davide Libenzi <davidel@xmailserver.org>
     Implemented the "filter" command for custom mail processing (MAILPROC.TAB, cmdaliases

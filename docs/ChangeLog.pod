@@ -1,13 +1,23 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.19
+XMail Change Log as of Version 1.20
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
 
-=head2 Mar 31, 2004 v 1.19
+=head2 May 30, 2004 v 1.20
+
+=over 4
+
+=item *
+
+Fixed a possible memory leak and a possible source of crashes.
+
+=back
+
+=head2 May 29, 2004 v 1.19
 
 =over 4
 

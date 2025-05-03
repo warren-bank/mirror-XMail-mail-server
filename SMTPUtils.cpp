@@ -793,6 +793,7 @@ static int USmtpGetResponse(BSOCK_HANDLE hBSock, char *pszResponse, int iMaxResp
 	int iResponseLenght = 0;
 	char szPartial[1024] = "";
 
+	SetEmptyString(pszResponse);
 	do {
 		int iLineLength = 0;
 
@@ -800,7 +801,7 @@ static int USmtpGetResponse(BSOCK_HANDLE hBSock, char *pszResponse, int iMaxResp
 				  &iLineLength) == NULL)
 			return (ErrGetErrorCode());
 
-		if (iResponseLenght < iMaxResponse) {
+		if ((iResponseLenght + 2) < iMaxResponse) {
 			if (iResponseLenght > 0)
 				strcat(pszResponse, "\r\n"), iResponseLenght += 2;
 
@@ -1402,7 +1403,6 @@ SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain, S
 	if (!USmtpResponseClass(iSvrReponse = USmtpGetResponse(pSmtpCh->hBSock, szRTXBuffer,
 							       sizeof(szRTXBuffer) - 1), 200)) {
 		BSckDetach(pSmtpCh->hBSock, 1);
-		SysFree(pSmtpCh);
 
 		if (iSvrReponse > 0) {
 			if (pSMTPE != NULL)
@@ -1411,6 +1411,9 @@ SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain, S
 
 			ErrSetErrorCode(ERR_BAD_SERVER_RESPONSE, szRTXBuffer);
 		}
+
+		SysFree(pSmtpCh->pszServer);
+		SysFree(pSmtpCh);
 
 		return (INVALID_SMTPCH_HANDLE);
 	}
@@ -1427,6 +1430,7 @@ SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain, S
 ///////////////////////////////////////////////////////////////////////////////
 		if (USmtpParseEhloResponse(pSmtpCh, szRTXBuffer) < 0) {
 			BSckDetach(pSmtpCh->hBSock, 1);
+			SysFree(pSmtpCh->pszServer);
 			SysFree(pSmtpCh);
 			return (INVALID_SMTPCH_HANDLE);
 		}
@@ -1442,7 +1446,6 @@ SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain, S
 		     USmtpSendCommand(pSmtpCh->hBSock, szRTXBuffer, szRTXBuffer,
 				      sizeof(szRTXBuffer) - 1), 200)) {
 			BSckDetach(pSmtpCh->hBSock, 1);
-			SysFree(pSmtpCh);
 
 			if (iSvrReponse > 0) {
 				if (pSMTPE != NULL)
@@ -1451,6 +1454,9 @@ SMTPCH_HANDLE USmtpCreateChannel(const char *pszServer, const char *pszDomain, S
 
 				ErrSetErrorCode(ERR_BAD_SERVER_RESPONSE, szRTXBuffer);
 			}
+
+			SysFree(pSmtpCh->pszServer);
+			SysFree(pSmtpCh);
 
 			return (INVALID_SMTPCH_HANDLE);
 		}
@@ -1487,8 +1493,6 @@ int USmtpCloseChannel(SMTPCH_HANDLE hSmtpCh, int iHardClose, SMTPError * pSMTPE)
 					200)) {
 			BSckDetach(pSmtpCh->hBSock, 1);
 
-			SysFree(pSmtpCh);
-
 			if (iSvrReponse > 0) {
 				if (pSMTPE != NULL)
 					USmtpSetError(pSMTPE, iSvrReponse, szRTXBuffer,
@@ -1496,6 +1500,9 @@ int USmtpCloseChannel(SMTPCH_HANDLE hSmtpCh, int iHardClose, SMTPError * pSMTPE)
 
 				ErrSetErrorCode(ERR_BAD_SERVER_RESPONSE, szRTXBuffer);
 			}
+
+			SysFree(pSmtpCh->pszServer);
+			SysFree(pSmtpCh);
 
 			return (ErrGetErrorCode());
 		}
