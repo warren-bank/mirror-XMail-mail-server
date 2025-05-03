@@ -1704,7 +1704,7 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);
@@ -1751,7 +1751,7 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);
@@ -2483,7 +2483,7 @@ int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszM
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);

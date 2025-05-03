@@ -547,7 +547,7 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-            if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+            if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
             {
                 ErrorPush();
                 SysRemove(szSpoolTmpFile);
@@ -1343,7 +1343,7 @@ static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDoma
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);
@@ -1403,7 +1403,7 @@ static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDom
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);

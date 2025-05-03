@@ -109,6 +109,7 @@ struct SMTPSession
     char            szClientFQDN[MAX_ADDR_NAME];
     char            szClientDomain[MAX_ADDR_NAME];
     char            szDestDomain[MAX_ADDR_NAME];
+    char            szLogonUser[128];
     char            szMsgFile[SYS_MAX_PATH];
     FILE           *pMsgFile;
     char           *pszFrom;
@@ -169,7 +170,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
 static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
-                        char const * pszRcptTo, FILE * pMailFile);
+                        char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile);
 static int      SMTPSubmitPackedFile(const char *pszPkgFile);
 static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
@@ -505,6 +506,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     SetEmptyString(SMTPS.szDestDomain);
     SetEmptyString(SMTPS.szClientFQDN);
     SetEmptyString(SMTPS.szClientDomain);
+    SetEmptyString(SMTPS.szLogonUser);
     SMTPS.ulSetupFlags = 0;
 
     SysGetTmpFile(SMTPS.szMsgFile);
@@ -713,9 +715,10 @@ static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
             "\t\"%s\""
             "\t\"%s\""
             "\t\"%s\""
+            "\t\"%s\""
             "\n", SMTPS.szSvrFQDN, SMTPS.szSvrDomain, SysInetNToA(SMTPS.PeerInfo),
             szTime, SMTPS.szClientDomain, SMTPS.szDestDomain, pszSender, pszRecipient,
-            SMTPS.szMessageID, pszStatus);
+            SMTPS.szMessageID, pszStatus, SMTPS.szLogonUser);
 
 
     RLckUnlockEX(hResLock);
@@ -1523,10 +1526,10 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
-                        char const * pszRcptTo, FILE * pMailFile)
+                        char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile)
 {
 
-    char           *pszReceived = USmtpGetReceived(ppszMsgInfo, pszMailFrom, pszRcptTo);
+    char           *pszReceived = USmtpGetReceived(ppszMsgInfo, pszMailFrom, pszRcptTo, pszMessageID);
 
     if (pszReceived == NULL)
         return (ErrGetErrorCode());
@@ -1693,7 +1696,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "Received:" tag
 ///////////////////////////////////////////////////////////////////////////////
-        SMTPAddReceived(ppszMsgInfo, szMailFrom, szSpoolLine, pSpoolFile);
+        SMTPAddReceived(ppszMsgInfo, szMailFrom, szSpoolLine, szMessageID, pSpoolFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write mail data, saving and restoring the current file pointer
@@ -1710,6 +1713,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
             return (ErrorPop());
         }
 
+        SysFileSync(pSpoolFile);
         fclose(pSpoolFile);
 
         fseek(pPkgFile, ulCurrOffset, SEEK_SET);
@@ -1717,7 +1721,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             StrFreeStrings(ppszMsgInfo);
@@ -2189,12 +2193,18 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
         return (ErrorPop());
     }
 
-    StrFreeStrings(ppszTokens);
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Apply user perms to SMTP config
 ///////////////////////////////////////////////////////////////////////////////
     SMTPApplyPerms(SMTPS, szPerms);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set the logon user
+///////////////////////////////////////////////////////////////////////////////
+    StrSNCpy(SMTPS.szLogonUser, ppszTokens[0]);
+
+
+    StrFreeStrings(ppszTokens);
 
 
     SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
@@ -2321,6 +2331,11 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 //  Apply user perms to SMTP config
 ///////////////////////////////////////////////////////////////////////////////
     SMTPApplyPerms(SMTPS, szPerms);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set the logon user
+///////////////////////////////////////////////////////////////////////////////
+    StrSNCpy(SMTPS.szLogonUser, pszUsername);
 
 
     SMTPS.ulFlags |= SMTPF_AUTHENTICATED;
@@ -2763,6 +2778,11 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 //  Apply user perms to SMTP config
 ///////////////////////////////////////////////////////////////////////////////
     SMTPApplyPerms(SMTPS, szPerms);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set the logon user
+///////////////////////////////////////////////////////////////////////////////
+    StrSNCpy(SMTPS.szLogonUser, pszUsername);
 
 
     SMTPS.ulFlags |= SMTPF_AUTHENTICATED;

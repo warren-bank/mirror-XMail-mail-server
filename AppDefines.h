@@ -29,7 +29,7 @@
 
 #define APP_PRODUCER            "GNU"
 #define APP_NAME_STR            "XMail"
-#define APP_VERSION_STR         "0.69"
+#define APP_VERSION_STR         "0.70"
 #define APP_NAME_VERSION_STR    APP_NAME_STR " " APP_VERSION_STR
 #define APP_NAME_VERSION_OS_STR APP_NAME_VERSION_STR " (" SYS_OS_PORT ")"
 

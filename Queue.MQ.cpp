@@ -869,7 +869,7 @@ int             QueGetFrozenList(char const * pszRootPath, char const * pszListF
 
 
 
-int             QueCommitTempMessage(char const * pszFilePath)
+int             QueCommitStoredMessage(char const * pszFilePath)
 {
 
     char const     *pszFileName = NULL,
@@ -1528,7 +1528,7 @@ int             QueCloseNewStream(NQS_HANDLE hQSHandle, bool bCommit)
 
     if (bCommit)
     {
-        if (QueCommitTempMessage(pQS->szMessFile) < 0)
+        if (QueCommitStoredMessage(pQS->szMessFile) < 0)
         {
             ErrorPush();
             CheckRemoveFile(pQS->szMessFile);
@@ -2154,7 +2154,7 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
 ///////////////////////////////////////////////////////////////////////////////
 //  Send error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCommitTempMessage(szResponseFile) < 0)
+    if (QueCommitStoredMessage(szResponseFile) < 0)
     {
         ErrorPush();
         SysRemove(szResponseFile);
@@ -2237,7 +2237,7 @@ static int      QueTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason
 ///////////////////////////////////////////////////////////////////////////////
 //  Send error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCommitTempMessage(szResponseFile) < 0)
+    if (QueCommitStoredMessage(szResponseFile) < 0)
     {
         ErrorPush();
         SysRemove(szResponseFile);

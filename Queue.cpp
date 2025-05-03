@@ -37,6 +37,7 @@
 #include "AppDefines.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
+#include "SMTPUtils.h"
 #include "SMAILUtils.h"
 #include "Queue.h"
 
@@ -46,9 +47,9 @@
 
 
 #define MAX_ACTIVE_QUEUES           32
+#define QUEUE_LOCKFILE_EXT          ""
 #define QUEUE_FILE_INFO_EXT         ".#info#"
 #define QUEUE_FROZEN_SLOG_EXT       ".#slog#"
-#define QUEUE_LOCKFILE_EXT          ""
 #define MAX_QUEUE_LOCK_TIME         (18 * 60 * 60)
 #define QUE_SMTP_MAILER_ERROR_HDR   "X-MailerError"
 #define QUE_MAILER_HDR              "X-MailerServer"
@@ -107,7 +108,10 @@ static int      QueUnregister(SHB_HANDLE hShbQueue);
 static SHB_HANDLE QueGetShared(char const * pszBasePath);
 static int      QueCreateStruct(char const * pszRootPath);
 static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * pszRootPath);
+static int      QueBuildBasePath(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char * pszBasePath);
 static int      QueDumpFrozen(char const * pszFrozFilePath, FILE * pListFile);
+static int      QueGetMessageFileSS(char const * pszFilePath, char const * pszOutFile);
 static int      QueBasePathIndexes(char const * pszBasePath, int &iLevel1, int &iLevel2);
 static int      QueFullPathIndexes(char const * pszFilePath, int &iLevel1, int &iLevel2);
 static int      QueNotifyInsert(char const * pszBasePath, char const * pszMessFile);
@@ -124,6 +128,7 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
 static int      QueTXErrorNotifySender(char const * pszMessFilePath, char const * pszReason);
 static int      QueTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason);
 static int      QueTXErrorNotifyRoot(char const * pszMessFilePath, char const * pszReason);
+static char    *QueGetReplyAddress(SPLF_HANDLE hFSpool);
 static int      QueBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE hFSpool,
                         char const * pszFrom, char const * pszTo, char const * pszResponseFile,
                         char const * pszReason);
@@ -587,6 +592,9 @@ int             QueGetBasePath(char const * pszFilePath, char *pszBasePath,
         return (ERR_INVALID_QUEUE_PATH);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Copy BasePath directory : $ROOT/$LEV1/$LEV2/
+///////////////////////////////////////////////////////////////////////////////
     int             iBaseLength = (int) (pszSlash - pszFilePath);
 
     strncpy(pszBasePath, pszFilePath, iBaseLength);
@@ -594,6 +602,22 @@ int             QueGetBasePath(char const * pszFilePath, char *pszBasePath,
 
     if (ppszQueueDir != NULL)
         *ppszQueueDir = pszSlash + 1;
+
+    return (0);
+
+}
+
+
+
+static int      QueBuildBasePath(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char * pszBasePath)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Build BasePath directory : $ROOT/$LEV1/$LEV2/
+///////////////////////////////////////////////////////////////////////////////
+    sprintf(pszBasePath, "%s%s%d%s%d%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR);
+
 
     return (0);
 
@@ -800,7 +824,224 @@ int             QueGetFrozenList(char const * pszRootPath, char const * pszListF
 
 
 
-int             QueCommitTempMessage(char const * pszFilePath)
+int             QueUnFreezeMessage(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Default to spool dir if pszRootPath is NULL
+///////////////////////////////////////////////////////////////////////////////
+    char            szSpoolDir[SYS_MAX_PATH] = "";
+
+    if (pszRootPath == NULL)
+    {
+        SvrGetSpoolDir(szSpoolDir);
+
+        pszRootPath = szSpoolDir;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to re-commit the frozen message
+///////////////////////////////////////////////////////////////////////////////
+    char            szFilePath[SYS_MAX_PATH] = "";
+
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile);
+
+    if (QueCommitStoredMessage(szFilePath) < 0)
+        return (ErrGetErrorCode());
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Remove slog file
+///////////////////////////////////////////////////////////////////////////////
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile, QUEUE_FROZEN_SLOG_EXT);
+
+    CheckRemoveFile(szFilePath);
+
+
+    return (0);
+
+}
+
+
+
+int             QueDeleteFrozenMessage(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Default to spool dir if pszRootPath is NULL
+///////////////////////////////////////////////////////////////////////////////
+    char            szSpoolDir[SYS_MAX_PATH] = "";
+
+    if (pszRootPath == NULL)
+    {
+        SvrGetSpoolDir(szSpoolDir);
+
+        pszRootPath = szSpoolDir;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build base path for locking
+///////////////////////////////////////////////////////////////////////////////
+    char            szBasePath[SYS_MAX_PATH] = "";
+
+    QueBuildBasePath(pszRootPath, iLevel1, iLevel2, szBasePath);
+
+
+    char            szResLock[SYS_MAX_PATH] = "";
+    RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szBasePath, szResLock));
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+        return (ErrGetErrorCode());
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Delete the frozen message
+///////////////////////////////////////////////////////////////////////////////
+    char            szFilePath[SYS_MAX_PATH] = "";
+
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile);
+
+    if (SysRemove(szFilePath) < 0)
+    {
+        ErrorPush();
+        RLckUnlockEX(hResLock);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Delete slog file
+///////////////////////////////////////////////////////////////////////////////
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile, QUEUE_FROZEN_SLOG_EXT);
+
+    CheckRemoveFile(szFilePath);
+
+
+    RLckUnlockEX(hResLock);
+
+    return (0);
+
+}
+
+
+
+int             QueGetFrozenMsgFile(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile, char const * pszOutFile)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Default to spool dir if pszRootPath is NULL
+///////////////////////////////////////////////////////////////////////////////
+    char            szSpoolDir[SYS_MAX_PATH] = "";
+
+    if (pszRootPath == NULL)
+    {
+        SvrGetSpoolDir(szSpoolDir);
+
+        pszRootPath = szSpoolDir;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get message file snapshot
+///////////////////////////////////////////////////////////////////////////////
+    char            szFilePath[SYS_MAX_PATH] = "";
+
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile);
+
+    if (QueGetMessageFileSS(szFilePath, pszOutFile) < 0)
+        return (ErrGetErrorCode());
+
+
+
+    return (0);
+
+}
+
+
+
+int             QueGetFrozenLogFile(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile, char const * pszOutFile)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Default to spool dir if pszRootPath is NULL
+///////////////////////////////////////////////////////////////////////////////
+    char            szSpoolDir[SYS_MAX_PATH] = "";
+
+    if (pszRootPath == NULL)
+    {
+        SvrGetSpoolDir(szSpoolDir);
+
+        pszRootPath = szSpoolDir;
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get log file snapshot
+///////////////////////////////////////////////////////////////////////////////
+    char            szFilePath[SYS_MAX_PATH] = "";
+
+    sprintf(szFilePath, "%s%s%d%s%d%s%s%s%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+            QUEUE_FROZ_DIR, SYS_SLASH_STR, pszMessageFile, QUEUE_FROZEN_SLOG_EXT);
+
+    if (QueGetMessageFileSS(szFilePath, pszOutFile) < 0)
+        return (ErrGetErrorCode());
+
+
+
+    return (0);
+
+}
+
+
+
+static int      QueGetMessageFileSS(char const * pszFilePath, char const * pszOutFile)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Extract base path due resource locking
+///////////////////////////////////////////////////////////////////////////////
+    char const     *pszFileName = NULL,
+                   *pszActQueueDir = NULL;
+    char            szBasePath[SYS_MAX_PATH] = "";
+
+    if (QueGetBasePath(pszFilePath, szBasePath, &pszFileName, &pszActQueueDir) < 0)
+        return (ErrGetErrorCode());
+
+
+    char            szResLock[SYS_MAX_PATH] = "";
+    RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szBasePath, szResLock));
+
+    if (hResLock == INVALID_RLCK_HANDLE)
+        return (ErrGetErrorCode());
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Create message file snapshot
+///////////////////////////////////////////////////////////////////////////////
+    if (MscCopyFile(pszOutFile, pszFilePath) < 0)
+    {
+        ErrorPush();
+        RLckUnlockSH(hResLock);
+        return (ErrorPop());
+    }
+
+
+    RLckUnlockSH(hResLock);
+
+    return (0);
+
+}
+
+
+
+int             QueCommitStoredMessage(char const * pszFilePath)
 {
 
     char const     *pszFileName = NULL,
@@ -1392,7 +1633,7 @@ int             QueCloseNewStream(NQS_HANDLE hQSHandle, bool bCommit)
 
     if (bCommit)
     {
-        if (QueCommitTempMessage(pQS->szMessFile) < 0)
+        if (QueCommitStoredMessage(pQS->szMessFile) < 0)
         {
             ErrorPush();
             CheckRemoveFile(pQS->szMessFile);
@@ -1934,7 +2175,7 @@ int             QueSpoolRemoveNotifyRoot(const char *pszMessFilePath, char const
 
 
 
-static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReason)
+static char    *QueGetReplyAddress(SPLF_HANDLE hFSpool)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract the sender
@@ -1945,10 +2186,38 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
     if (iFromDomains == 0)
     {
         ErrSetErrorCode(ERR_NULL_SENDER);
-        return (ERR_NULL_SENDER);
+        return (NULL);
     }
 
-    char const     *pszReplyTo = ppszFrom[iFromDomains - 1];
+    char const     *pszSender = ppszFrom[iFromDomains - 1];
+    char            szSenderDomain[MAX_ADDR_NAME] = "",
+                    szSenderName[MAX_ADDR_NAME] = "";
+
+    if (USmtpSplitEmailAddr(pszSender, szSenderName, szSenderDomain) < 0)
+        return (SysStrDup(pszSender));
+
+///////////////////////////////////////////////////////////////////////////////
+//  Lookup special reply-to header tags
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+
+    return (SysStrDup(pszSender));
+
+}
+
+
+
+static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReason)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Extract the sender
+///////////////////////////////////////////////////////////////////////////////
+    char           *pszReplyTo = QueGetReplyAddress(hFSpool);
+
+    if (pszReplyTo == NULL)
+        return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Load configuration handle
@@ -1956,7 +2225,11 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
     SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
 
     if (hSvrConfig == INVALID_SVRCFG_HANDLE)
-        return (ErrGetErrorCode());
+    {
+        ErrorPush();
+        SysFree(pszReplyTo);
+        return (ErrorPop());
+    }
 
 
     char            szPMAddress[MAX_ADDR_NAME] = "",
@@ -1966,6 +2239,7 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
             (SvrConfigVar("RootDomain", szMailDomain, sizeof(szMailDomain), hSvrConfig) < 0))
     {
         SvrReleaseConfigHandle(hSvrConfig);
+        SysFree(pszReplyTo);
 
         ErrSetErrorCode(ERR_INCOMPLETE_CONFIG);
         return (ERR_INCOMPLETE_CONFIG);
@@ -1980,6 +2254,7 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
     {
         ErrorPush();
         SvrReleaseConfigHandle(hSvrConfig);
+        SysFree(pszReplyTo);
         return (ErrorPop());
     }
 
@@ -1989,16 +2264,19 @@ static int      QueTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReas
         ErrorPush();
         CheckRemoveFile(szResponseFile);
         SvrReleaseConfigHandle(hSvrConfig);
+        SysFree(pszReplyTo);
         return (ErrorPop());
     }
 
     SvrReleaseConfigHandle(hSvrConfig);
 
+    SysFree(pszReplyTo);
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCommitTempMessage(szResponseFile) < 0)
+    if (QueCommitStoredMessage(szResponseFile) < 0)
     {
         ErrorPush();
         SysRemove(szResponseFile);
@@ -2081,7 +2359,7 @@ static int      QueTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason
 ///////////////////////////////////////////////////////////////////////////////
 //  Send error response mail file
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCommitTempMessage(szResponseFile) < 0)
+    if (QueCommitStoredMessage(szResponseFile) < 0)
     {
         ErrorPush();
         SysRemove(szResponseFile);

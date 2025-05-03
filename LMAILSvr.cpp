@@ -620,6 +620,7 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
             return (ErrorPop());
         }
 
+        SysFileSync(pSpoolFile);
         fclose(pSpoolFile);
 
         fseek(pMailFile, ulCurrOffset, SEEK_SET);
@@ -627,7 +628,7 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer file to the spool
 ///////////////////////////////////////////////////////////////////////////////
-        if (QueCommitTempMessage(szSpoolTmpFile) < 0)
+        if (QueCommitStoredMessage(szSpoolTmpFile) < 0)
         {
             ErrorPush();
             fclose(pMailFile);

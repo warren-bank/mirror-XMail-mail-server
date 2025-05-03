@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.69
+Version      : 0.70
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 22-02-2001
+Date         : 08-04-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -448,6 +448,18 @@ Date 22-02-2001	 0.69
 	Fixed a bug that caused XMail to break the header when an headers tag is made by "tag-name:[CR][LF]tag-string".
 	Added the delete functionality to the CTRL command "uservarsset" by giving the string value
 	".|rm" the delete capability.
+Date 08-04-2001	 0.70
+	Added the message ID to the received tag and extended the SMTP log file with the username of
+	the authenticated user ( if any ).
+	Fixed a bug in external authentication ( POP3 ).
+	The USERDEF.TAB file is now checked inside $MAIL_ROOT/DOMAIN before and then in $MAIL_ROOT.
+	This permit per domain user default configuration.
+	Added a new CTRL server command "frozsubmit" to reschedule a frozen message.
+	Added a new CTRL server command "frozdel" to delete a frozen message.
+	Added a new CTRL server command "frozgetlog" to retrieve the frozen file log file.
+	Added a new CTRL server command "frozgetmsg" to retrieve the frozen message file.
+	
+	
 	
 
 
@@ -884,6 +896,7 @@ Part 7			Configuration
 	and for each domain DOMAIN handled a directory ( inside  domains  ) :
 
 			DOMAIN		<dir>
+			userdef.tab	<file>
 
 	inside which reside, for each account ACCOUNT ( inside  domains/ACCOUNT ) :
 
@@ -1182,6 +1195,8 @@ Part 7			Configuration
 	"MaxMBSize"	"10000"
 
 	contain user default values for new users that are not set during the new account creation.
+	This file is looked up in two different places, first in $MAIL_ROOT/DOMAIN then in $MAIL_ROOT, where DOMAIN is the
+	name of the domain where We're going to create the new user.
 
 
 	For each "domain" handled by the server We'll create a directory "domain" inside $MAIL_ROOT.
@@ -1408,7 +1423,7 @@ Part 8			External Authentication
 
 	else :
 
-	defaultauth.tab
+	.tab
 
 	If one of this files is found, XMail authenticate  USERNAME - DOMAIN using such file.
 	Authentication file is a TAB file ( see at the proper section in this doc ) which has
@@ -2632,6 +2647,65 @@ Part 19			XMail admin protocol
 	to		= message destination
 	time		= message time ( "YYYY-MM-DD HH:MM:SS" )
 	size		= message size in bytes
+
+
+	*) Rescheduling frozen message
+	
+	"frozsubmit"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
+	
+	Where :
+	
+	msgfile		= message name or id
+	lev0		= queue fs level 0 ( first level directory index )
+	lev1		= queue fs level 1 ( second level directory index )
+	
+	You can get these info from the "frozlist" command.
+	After a message has been successfully rescheduled it'll be deleted from the frozen fs path.
+	The result will be a RESSTRING.
+
+
+	*) Deleting frozen message
+	
+	"frozdel"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
+	
+	Where :
+	
+	msgfile		= message name or id
+	lev0		= queue fs level 0 ( first level directory index )
+	lev1		= queue fs level 1 ( second level directory index )
+	
+	You can get these info from the "frozlist" command.
+	The result will be a RESSTRING.
+
+
+	*) Getting frozen message log file
+	
+	"frozgetlog"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
+	
+	Where :
+	
+	msgfile		= message name or id
+	lev0		= queue fs level 0 ( first level directory index )
+	lev1		= queue fs level 1 ( second level directory index )
+	
+	You can get these info from the "frozlist" command.
+	The result will be a RESSTRING.
+	In success case ( 00100 ) the frozen message log file will follow, until a line containing a single dot ( <CR><LF>.<CR><LF> ).
+
+
+	*) Getting frozen message
+
+	"frozgetmsg"[TAB]"lev0"[TAB]"lev1"[TAB]"msgfile"<CR><LF>
+	
+	Where :
+	
+	msgfile		= message name or id
+	lev0		= queue fs level 0 ( first level directory index )
+	lev1		= queue fs level 1 ( second level directory index )
+	
+	You can get these info from the "frozlist" command.
+	The result will be a RESSTRING.
+	In success case ( 00100 ) the frozen message file will follow, until a line containing a single dot ( <CR><LF>.<CR><LF> ).
 
 
 	*) Do nothing command

@@ -172,6 +172,14 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
 
 
 
@@ -910,6 +918,14 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_cfgfileset(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "frozlist") == 0)
         iCmdResult = CTRLDo_frozlist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "frozsubmit") == 0)
+        iCmdResult = CTRLDo_frozsubmit(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "frozdel") == 0)
+        iCmdResult = CTRLDo_frozdel(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "frozgetlog") == 0)
+        iCmdResult = CTRLDo_frozgetlog(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "frozgetmsg") == 0)
+        iCmdResult = CTRLDo_frozgetmsg(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "noop") == 0)
         iCmdResult = CTRLDo_noop(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "quit") == 0)
@@ -2657,6 +2673,194 @@ static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
     SysRemove(szListFile);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 4)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to defroze frozen message
+///////////////////////////////////////////////////////////////////////////////
+    int             iLevel1 = atoi(ppszTokens[1]),
+                    iLevel2 = atoi(ppszTokens[2]);
+    char            szMessageFile[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szMessageFile, ppszTokens[3]);
+
+    if (QueUnFreezeMessage(NULL, iLevel1, iLevel2, szMessageFile) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 4)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to delete frozen message
+///////////////////////////////////////////////////////////////////////////////
+    int             iLevel1 = atoi(ppszTokens[1]),
+                    iLevel2 = atoi(ppszTokens[2]);
+    char            szMessageFile[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szMessageFile, ppszTokens[3]);
+
+    if (QueDeleteFrozenMessage(NULL, iLevel1, iLevel2, szMessageFile) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, 0);
+
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 4)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to delete frozen message
+///////////////////////////////////////////////////////////////////////////////
+    int             iLevel1 = atoi(ppszTokens[1]),
+                    iLevel2 = atoi(ppszTokens[2]);
+    char            szMessageFile[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szMessageFile, ppszTokens[3]);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get log file snapshot
+///////////////////////////////////////////////////////////////////////////////
+    char            szFileSS[SYS_MAX_PATH] = "";
+
+    SysGetTmpFile(szFileSS);
+
+    if (QueGetFrozenLogFile(NULL, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
+    {
+        ErrorPush();
+        CheckRemoveFile(szFileSS);
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Send client target file
+///////////////////////////////////////////////////////////////////////////////
+    if (MscSendTextFile(szFileSS, hBSock, pCTRLCfg->iTimeout) < 0)
+    {
+        ErrorPush();
+        SysRemove(szFileSS);
+        return (ErrorPop());
+    }
+
+    SysRemove(szFileSS);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 4)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to delete frozen message
+///////////////////////////////////////////////////////////////////////////////
+    int             iLevel1 = atoi(ppszTokens[1]),
+                    iLevel2 = atoi(ppszTokens[2]);
+    char            szMessageFile[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szMessageFile, ppszTokens[3]);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get log file snapshot
+///////////////////////////////////////////////////////////////////////////////
+    char            szFileSS[SYS_MAX_PATH] = "";
+
+    SysGetTmpFile(szFileSS);
+
+    if (QueGetFrozenMsgFile(NULL, iLevel1, iLevel2, szMessageFile, szFileSS) < 0)
+    {
+        ErrorPush();
+        CheckRemoveFile(szFileSS);
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+
+///////////////////////////////////////////////////////////////////////////////
+//  Send client target file
+///////////////////////////////////////////////////////////////////////////////
+    if (MscSendTextFile(szFileSS, hBSock, pCTRLCfg->iTimeout) < 0)
+    {
+        ErrorPush();
+        SysRemove(szFileSS);
+        return (ErrorPop());
+    }
+
+    SysRemove(szFileSS);
 
     return (0);
 

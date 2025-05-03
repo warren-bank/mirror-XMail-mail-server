@@ -855,17 +855,16 @@ int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iN
     bool            bSendingMsg = false;
     char            szMsgLine[2048] = "";
 
-    while ((iNumLines >= 0) &&
-            (MscGetString(pMsgFile, szMsgLine, sizeof(szMsgLine) - 1) != NULL))
+    while (MscGetString(pMsgFile, szMsgLine, sizeof(szMsgLine) - 1) != NULL)
     {
+        if (bSendingMsg && (--iNumLines < 0))
+            break;
+
         if (BSckSendString(hBSock, szMsgLine, pPOPSD->iTimeout) < 0)
         {
             fclose(pMsgFile);
             return (ErrGetErrorCode());
         }
-
-        if (bSendingMsg)
-            --iNumLines;
 
         if (!bSendingMsg && (strlen(szMsgLine) == 0))
             bSendingMsg = true;

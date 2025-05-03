@@ -325,6 +325,8 @@ int             TacsAuthenticate(char const * pszDomain, char const * pszUsernam
             return (ERR_TACACS_AUTH_FAILED);
         }
 
+
+
         SysCloseSocket(SockFD);
 
         return (0);

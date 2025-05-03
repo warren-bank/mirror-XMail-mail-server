@@ -99,7 +99,7 @@ int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomai
                         SYS_INET_ADDR const & PeerInfo, char const * pszServerDomain,
                         SYS_INET_ADDR const & SockInfo, char const * pszSmtpServerLogo);
 char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
-                        char const * pszRcptTo);
+                        char const * pszRcptTo, char const * pszMessageID);
 
 
 

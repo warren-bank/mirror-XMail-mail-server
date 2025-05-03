@@ -4,8 +4,7 @@
 #		This file should be used to construct scripts for /etc/init.d.
 #
 #		Written by Miquel van Smoorenburg <miquels@cistron.nl>.
-#		Modified for Debian GNU/Linux
-#		by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+#		Modified by Davide Libenzi <davidel@xmailserver.org>
 #
 # Version:	@(#)skeleton  1.8  03-Mar-1998  miquels@cistron.nl
 #

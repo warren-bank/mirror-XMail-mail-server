@@ -65,7 +65,15 @@ int             QueGetBasePath(char const * pszFilePath, char *pszBasePath,
 int             QueGetQueuePath(char const * pszFilePath, char const * pszQueueDir,
                         char * pszQueuePath);
 int             QueGetFrozenList(char const * pszRootPath, char const * pszListFile);
-int             QueCommitTempMessage(char const * pszFilePath);
+int             QueUnFreezeMessage(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile);
+int             QueDeleteFrozenMessage(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile);
+int             QueGetFrozenMsgFile(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile, char const * pszOutFile);
+int             QueGetFrozenLogFile(char const * pszRootPath, int iLevel1, int iLevel2,
+                        char const * pszMessageFile, char const * pszOutFile);
+int             QueCommitStoredMessage(char const * pszFilePath);
 int             QueLockMessage(char const * pszFilePath);
 int             QueUnlockMessage(char const * pszFilePath);
 int             QueResendMessage(char const * pszFilePath);

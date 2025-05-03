@@ -132,7 +132,8 @@ static void     UsrFreeInfoList(HSLIST & InfoList);
 static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName);
 static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile);
 static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList);
+static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile);
+static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain = NULL);
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
                         const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
 static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI);
@@ -354,7 +355,7 @@ UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszNam
 ///////////////////////////////////////////////////////////////////////////////
     ListInit(pUI->InfoList);
 
-    UsrLoadUserDefaultInfo(pUI->InfoList);
+    UsrLoadUserDefaultInfo(pUI->InfoList, pszDomain);
 
     return (pUI);
 
@@ -674,14 +675,57 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 
 
 
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList)
+static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile)
+{
+
+    CfgGetRootPath(pszInfoFile);
+
+    if (pszDomain != NULL)
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Try to lookup domain specific configuration
+///////////////////////////////////////////////////////////////////////////////
+        char            szLoDomain[SYS_MAX_PATH] = "";
+
+        StrSNCpy(szLoDomain, pszDomain);
+        StrLower(szLoDomain);
+
+        strcat(pszInfoFile, szLoDomain);
+        AppendSlash(pszInfoFile);
+        strcat(pszInfoFile, DEFAULT_USER_PROFILE_FILE);
+
+        if (SysExistFile(pszInfoFile))
+            return (0);
+
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Try to lookup global configuration
+///////////////////////////////////////////////////////////////////////////////
+    CfgGetRootPath(pszInfoFile);
+
+    strcat(pszInfoFile, DEFAULT_USER_PROFILE_FILE);
+
+    if (!SysExistFile(pszInfoFile))
+    {
+        ErrSetErrorCode(ERR_NO_USER_DEFAULT_PRFILE);
+        return (ERR_NO_USER_DEFAULT_PRFILE);
+    }
+
+
+    return (0);
+
+}
+
+
+
+static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain)
 {
 
     char            szUserDefFilePath[SYS_MAX_PATH] = "";
 
-    CfgGetRootPath(szUserDefFilePath);
-
-    strcat(szUserDefFilePath, DEFAULT_USER_PROFILE_FILE);
+    if (UsrGetDefaultInfoFile(pszDomain, szUserDefFilePath) < 0)
+        return (ErrGetErrorCode());
 
 
     char            szResLock[SYS_MAX_PATH] = "";

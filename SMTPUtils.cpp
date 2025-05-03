@@ -2264,7 +2264,7 @@ int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomai
 
 
 char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
-                        char const * pszRcptTo)
+                        char const * pszRcptTo, char const * pszMessageID)
 {
 
     char            szFrom[MAX_SMTP_ADDRESS] = "",
@@ -2280,9 +2280,9 @@ char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * 
     return (StrSprint(
                     "Received: from %s (%s)\r\n"
                     "\tby %s (%s) with %s\r\n"
-                    "\tfor <%s> from <%s>;\r\n"
+                    "\tid <%s> for <%s> from <%s>;\r\n"
                     "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientIP],
                     ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverIP],
-                    ppszMsgInfo[smsgiSeverName], szRcpt, szFrom, ppszMsgInfo[smsgiTime]));
+                    ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]));
 
 }

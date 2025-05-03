@@ -49,6 +49,7 @@
 #define SYS_THREAD_ONCE_INIT    0
 
 #define SysSNPrintf             _snprintf
+#define SysFileSync(fp)         do { fflush(fp); _commit(_fileno(fp)); } while (0)
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO

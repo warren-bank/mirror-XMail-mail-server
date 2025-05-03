@@ -43,7 +43,6 @@
 
 
 #define USER_AUTH_DIR               "userauth"
-#define USER_AUTH_DEFAULT_CONFIG    "defaultauth.tab"
 #define AUTH_LINE_MAX               1024
 #define AUTH_AUTHENTICATE_CONFIG    "userauth"
 #define AUTH_ADD_CONFIG             "useradd"
@@ -124,7 +123,7 @@ static int      UAthGetConfigPath(char const * pszService, char const * pszDomai
 ///////////////////////////////////////////////////////////////////////////////
 //  Check default config
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszConfigPath, "%s%s", szAuthPath, USER_AUTH_DEFAULT_CONFIG);
+    sprintf(pszConfigPath, "%s.tab", szAuthPath);
 
     if (SysExistFile(pszConfigPath))
         return (0);
@@ -169,7 +168,7 @@ static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
 
         int             iFieldsCount = StrStringsCount(ppszCmdTokens);
 
-        if ((iFieldsCount > 1) && (stricmp(ppszCmdTokens[0], AUTH_ADD_CONFIG) == 0))
+        if ((iFieldsCount > 1) && (stricmp(ppszCmdTokens[0], pszAuthOp) == 0))
         {
 ///////////////////////////////////////////////////////////////////////////////
 //  Do auth line macro substitution

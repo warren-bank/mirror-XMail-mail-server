@@ -76,7 +76,7 @@ int             QueGetBasePath(char const * pszFilePath, char *pszBasePath,
 int             QueGetQueuePath(char const * pszFilePath, char const * pszQueueDir,
                         char * pszQueuePath);
 int             QueGetFrozenList(char const * pszRootPath, char const * pszListFile);
-int             QueCommitTempMessage(char const * pszFilePath);
+int             QueCommitStoredMessage(char const * pszFilePath);
 int             QueLockMessage(char const * pszFilePath);
 int             QueUnlockMessage(char const * pszFilePath);
 int             QueResendMessage(char const * pszFilePath);
