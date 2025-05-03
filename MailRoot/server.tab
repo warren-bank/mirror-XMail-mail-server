@@ -19,7 +19,6 @@
 #"SMTP-RDNSCheck"	"1"
 #"RBL-MAPSCheck"	"1"
 #"RSS-MAPSCheck"	"1"
-#"ORBS-MAPSCheck"	"1"
 #"DUL-MAPSCheck"	"-8"
 #"CheckMailerDomain"	"1"
 #"SmartDNSHost"	"dns.home.bogus.net:tcp,192.168.1.1:udp"

@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.2
+Version      : 1.3
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 09-10-2001
+Date         : 19-12-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -553,12 +553,21 @@ Date 12-11-2001	1.2
 	Fixed a bug in the XMail's  sendmail  implementation that made it to skip cascaded command line
 	parameters ( -Ooet ).
 	Implemented a new XMail's  sendmail  switch -i to relax the <CR><LF>.<CR><LF> ond of message indicator.
-
-
-
-
-
-
+Date 19-12-2001	1.3
+	 ORBS maps test removed due old ORBS dead, the SERVER.TAB variable "CustMapsList" can be used
+	 to setup new ORBS ( and other ) maps.
+	 Fixed a bug in XMail's  sendmail  that was introduced in version 1.2 and made it to incorrectly
+	 interpret command line parameters.
+	 Fixed a bug that made XMail to not correctly recognize user type characters when lowercase.
+	 Fixed a bug that caused XMail to not start is the MAIL_ROOT environment variable had
+	 a final slash on Windows.
+	 Added a new filter return code ( 97 ) to reject messages without notification and without frozen processing.
+	 Added two new command line options  -MR  and  -MS  to set the I/O socket buffers sizes in bytes
+	 ( do not use them if You don't know what You're doing ).
+	 Changed system library to have a better performace, expecially on the Windows platform.
+	 Users that are using XMail mainly inside their local LAN are strongly encouraged to switch to this version.
+	 Fixed a bug that enabled insertion of aliases that overlapped real accounts.
+	 
 
 
 
@@ -813,12 +822,13 @@ Part 5			Getting sources
 
 Part 6			Build
 
-	In Windows NT I give You a project that can be loaded from Visual C++ while
-	in Linux ( and other Unixes ) I give You a Makefile.lnx ( for now ) :
+	In Windows NT I give You a project that can be loaded from Visual C++ while in *nixes :
 
 	# make -f Makefile.lnx		( Linux )
-	# make -f Makefile.sso		( Sun/Solaris - You need GCC to build on Solaris )
+	# make -f Makefile.slx		( Linux on SPARC )
 	# gmake -f Makefile.bsd		( FreeBSD - You need GCC and GMAKE to build on FreeBSD )
+	# make -f Makefile.sso		( Sun/Solaris on SPARC - You need GCC to build on Solaris )
+	# make -f Makefile.ssx		( Sun/Solaris on Intel - You need GCC to build on Solaris )
 
 	will build XMail and tools executables.
 	As soon as the project reach a higher maturity I plan to supply a configure script.
@@ -2007,7 +2017,12 @@ Part 12			SERVER.TAB variables
 	The variable value is a comma separated sequence of configuration tokens whose
 	meaning is :
 
-	mail-auth	= authentication required to send mail through the server
+	mail-auth	= authentication required to send mail to the server.
+				  Please note that by setting this value will require authentication
+				  even for sending to local domains, and this is not what you're
+				  probably wishing
+				  
+				  
 
 
 
@@ -2032,8 +2047,8 @@ Part 13			Domain message filters
 	This feature offer the ability to inspect and modify messages, giving a way
 	to reject messages based on its content, alter messages ( address rewriting )
 	and so on.
-	If this filters returns  98 or 99  means that the message is rejected and must be stopped
-	in its travel.
+	If this filters returns  97, 98 or 99  means that the message is rejected and
+	must be stopped in its travel.
 	If the filter modify the message it must return  100  as its result.
 	When a message is received by the SMTP server for user  foo@xyzw.abc  then XMail
 	search inside the  filters  subdirectory to find a file named ( user processing ) :
@@ -2064,8 +2079,10 @@ Part 13			Domain message filters
 
 	Here  "command"  is the name of an external program that must process the message and
 	return its processing result. If it return  99  the message is rejected and a notification
-	message is sent to the sender. By returning  98  the message will be rejected without notification.
-	If all filters return values different from 99 and 98 the message can continue its trip.
+	message is sent to the sender. By returning  98  the message will be rejected without notification
+	while by returning 97 the message is rejected without notification and without being frozen
+	( a 98 response could lead to a frozen message is the SERVER.TAB configuration enable this ).
+	If all filters return values different from 99, 98 and 97 the message can continue its trip.
 	The filter command may also modify the file and return 100, having in this way the ability
 	to change the file content ( AV scanning, content filter, message rewriting, etc ).
 	If the filter will change the message file it MUST keep the message structure and
@@ -2302,6 +2319,8 @@ Part 19			Command line
 	-Mr hours	= Set log rotate hours step
 	-Mx split-level	= Set the queue split level. The value You set here is rounded to the lower
 				prime number higher or equal than the value You've set
+	-MR	bytes	= Set the size of the socket's receive buffer in bytes ( rounded up to 1024 )
+	-MS bytes	= Set the size of the socket's send buffer in bytes ( rounded up to 1024 )
 
 	[POP3]
 	-Pp port	= Set POP3 server port ( if You change this You must know what You're doing )

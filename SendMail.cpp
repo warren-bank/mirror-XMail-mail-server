@@ -406,8 +406,9 @@ int             main(int iArgCount, char *pszArgs[])
         if (pszArgs[ii][1] != '-')
         {
             int             iSkipParam = 0;
+            bool            bEatAll = false;
 
-            for (int jj = 1; pszArgs[ii][jj] != '\0'; jj++)
+            for (int jj = 1; !bEatAll && (pszArgs[ii][jj] != '\0'); jj++)
             {
                 switch (pszArgs[ii][jj])
                 {
@@ -430,6 +431,8 @@ int             main(int iArgCount, char *pszArgs[])
 
                     case ('f'):
                         StrSNCpy(szMailFrom, pszArgs[ii] + jj + 1);
+
+                        bEatAll = true;
                         break;
 
                     case ('F'):
@@ -449,6 +452,8 @@ int             main(int iArgCount, char *pszArgs[])
                                 if (pszClose != NULL)
                                     *pszClose = '\0';
                             }
+
+                            bEatAll = true;
                         }
                         break;
                 }
@@ -515,10 +520,10 @@ int             main(int iArgCount, char *pszArgs[])
 
     SysGetHostName(szHostName, sizeof(szHostName) - 1);
 
-    sprintf(szDataFile, "%s%s%lu.%lu.%s",
+    sprintf(szDataFile, "%s%s%lu000.%lu.%s",
             szMailRoot,
             LOCAL_TEMP_SUBPATH,
-            (unsigned long) time(NULL) * 1000,
+            (unsigned long) time(NULL),
             SysGetProcessId(),
             szHostName);
 
@@ -755,10 +760,10 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
     char            szDropFile[SYS_MAX_PATH] = "";
 
-    sprintf(szDropFile, "%s%s%lu.%lu.%s",
+    sprintf(szDropFile, "%s%s%lu000.%lu.%s",
             szMailRoot,
             LOCAL_SUBPATH,
-            (unsigned long) time(NULL) * 1000,
+            (unsigned long) time(NULL),
             SysGetProcessId(),
             szHostName);
 

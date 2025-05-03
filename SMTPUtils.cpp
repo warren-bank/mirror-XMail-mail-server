@@ -61,7 +61,6 @@
 #define MAX_MX_RECORDS          32
 #define RBL_MAPS_DOMAIN         "rbl.maps.vix.com."
 #define RSS_MAPS_DOMAIN         "relays.mail-abuse.org."
-#define ORBS_MAPS_DOMAIN        "relays.orbs.org."
 #define DUL_MAPS_DOMAIN         "dialups.mail-abuse.org."
 #define SMTP_SPAMMERS_FILE      "spammers.tab"
 #define SMTP_SPAM_ADDRESS_FILE  "spam-address.tab"
@@ -1872,10 +1871,8 @@ int             USmtpSendMail(SMTPCH_HANDLE hSmtpCh, const char *pszFrom, const 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send file
 ///////////////////////////////////////////////////////////////////////////////
-    time_t          tCheckPoint = time(NULL);
-
     if (SysSendFile(BSckGetAttachedSocket(pSmtpCh->hBSock), pFS->szFilePath, pFS->ulStartOffset,
-                    pFS->ulEndOffset, STD_SMTP_TIMEOUT, SvrShutdownCB, &tCheckPoint) < 0)
+                    pFS->ulEndOffset, STD_SMTP_TIMEOUT) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2212,23 +2209,6 @@ int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo)
 
         ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo, szIP));
         return (ERR_RSS_SPAMMER);
-    }
-
-    return (0);
-
-}
-
-
-
-int             USmtpORBSCheck(SYS_INET_ADDR const & PeerInfo)
-{
-
-    if (USmtpDnsMapsContained(PeerInfo, ORBS_MAPS_DOMAIN))
-    {
-        char            szIP[128] = "???.???.???.???";
-
-        ErrSetErrorCode(ERR_ORBS_SPAMMER, SysInetNToA(PeerInfo, szIP));
-        return (ERR_ORBS_SPAMMER);
     }
 
     return (0);

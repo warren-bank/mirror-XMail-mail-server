@@ -240,6 +240,7 @@
 #define ERR_ADOMAIN_EXIST           (-220)
 #define ERR_ADOMAIN_NOT_FOUND       (-221)
 #define ERR_NOT_A_CMD_ALIAS         (-222)
+#define ERR_GETSOCKOPT              (-223)
 
 
 

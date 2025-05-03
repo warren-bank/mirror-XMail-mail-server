@@ -459,6 +459,11 @@ static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
             SysLogMessage(LOG_LEV_ERROR, "LMAIL [%02ld] error ( \"%s\" ): %s\n",
                     lThreadId, ErrGetErrorString(), szSpoolFilePath);
 
+        }
+        else
+        {
+            SysLogMessage(LOG_LEV_MESSAGE, "LMAIL [%02ld] file processed: %s\n",
+                    lThreadId, szSpoolFilePath);
 
         }
 
@@ -480,7 +485,7 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
 
     if (pMailFile == NULL)
     {
-        ErrSetErrorCode(ERR_FILE_OPEN, pszMailFile);
+        ErrSetErrorCode(ERR_FILE_OPEN);
         return (ERR_FILE_OPEN);
     }
 

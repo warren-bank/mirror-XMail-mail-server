@@ -84,6 +84,37 @@ inline char    *AppendSlash(char *pszPath)
 
 
 
+inline char    *DelFinalSlash(char *pszPath)
+{
+
+    int             iPathLength = strlen(pszPath);
+
+    if ((iPathLength > 0) && (pszPath[iPathLength - 1] == SYS_SLASH_CHAR))
+        pszPath[iPathLength - 1] = '\0';
+
+    return (pszPath);
+
+};
+
+
+
+inline int      ToUpper(int iChar)
+{
+
+    return (((iChar >= 'a') && (iChar <= 'z')) ? ('A' + (iChar - 'a')): iChar);
+
+};
+
+
+
+inline int      ToLower(int iChar)
+{
+
+    return (((iChar >= 'A') && (iChar <= 'Z')) ? ('a' + (iChar - 'A')): iChar);
+
+};
+
+
 
 inline bool     IsPrimeNumber(int iNumber)
 {

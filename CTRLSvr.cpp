@@ -1165,6 +1165,19 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     UsrFreeUserInfo(pUI);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Check if we're overlapping an existing users with the new alias
+///////////////////////////////////////////////////////////////////////////////
+    if ((pUI = UsrGetUserByName(ppszTokens[1], ppszTokens[2])) != NULL)
+    {
+        UsrFreeUserInfo(pUI);
+
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_USER_EXIST);
+
+        ErrSetErrorCode(ERR_USER_EXIST);
+        return (ERR_USER_EXIST);
+    }
+
 
     AliasInfo      *pAI = UsrAllocAlias(ppszTokens[1], ppszTokens[2], ppszTokens[3]);
 

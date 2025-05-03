@@ -141,6 +141,7 @@ int             iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
 //  Local visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
 static char     szShutdownFile[SYS_MAX_PATH];
+static bool     bServerShutdown = false;
 static int      iNumSMAILThreads;
 static int      iNumLMAILThreads;
 static SYS_THREAD hCTRLThread,
@@ -164,6 +165,8 @@ static void     SvrShutdownCleanup(void)
 
     CheckRemoveFile(szShutdownFile);
 
+    bServerShutdown = false;
+
 }
 
 
@@ -171,6 +174,13 @@ static void     SvrShutdownCleanup(void)
 
 static int      SvrSetShutdown(void)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Set the shutdown flag and shutdown the library
+///////////////////////////////////////////////////////////////////////////////
+    bServerShutdown = true;
+
+    SysShutdownLibrary();
+
 
     FILE           *pFile = fopen(szShutdownFile, "wt");
 
@@ -1009,6 +1019,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
     if (pszValue != NULL)
     {
         strcpy(szMailPath, pszValue);
+        DelFinalSlash(szMailPath);
 
         SysFree(pszValue);
     }
@@ -1016,6 +1027,9 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
     bServerDebug = false;
 
+
+    int             iSndBufSize = -1,
+                    iRcvBufSize = -1;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -1026,7 +1040,10 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
         {
             case ('s'):
                 if (++ii < iArgCount)
+                {
                     strcpy(szMailPath, pszArgs[ii]);
+                    DelFinalSlash(szMailPath);
+                }
                 break;
 
             case ('d'):
@@ -1048,6 +1065,22 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
                 }
                 break;
 
+            case ('R'):
+                if (++ii < iArgCount)
+                {
+                    iRcvBufSize = atoi(pszArgs[ii]);
+                    iRcvBufSize = NbrCeil(iRcvBufSize, 1024);
+                }
+                break;
+
+            case ('S'):
+                if (++ii < iArgCount)
+                {
+                    iSndBufSize = atoi(pszArgs[ii]);
+                    iSndBufSize = NbrCeil(iSndBufSize, 1024);
+                }
+                break;
+
         }
     }
 
@@ -1058,6 +1091,12 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
     }
 
     AppendSlash(szMailPath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Setup library socket buffers
+///////////////////////////////////////////////////////////////////////////////
+    SysSetupSocketBuffers((iSndBufSize > 0) ? &iSndBufSize: NULL,
+            (iRcvBufSize > 0) ? &iRcvBufSize: NULL);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup shutdown file name ( must be called before any shutdown function )
@@ -1396,31 +1435,18 @@ bool            SvrInShutdown(bool bForceCheck)
     {
         tLastCheck = tNow;
 
+        if (bServerShutdown)
+            bShutdown = true;
+        else if (SysExistFile(szShutdownFile))
+        {
+            bServerShutdown = true;
 
-        bShutdown = (SysExistFile(szShutdownFile)) ? true : false;
+            SysShutdownLibrary();
+
+            bShutdown = true;
+        }
     }
 
     return (bShutdown);
-
-}
-
-
-
-
-int             SvrShutdownCB(void *pData)
-{
-
-    time_t         *ptLastCheck = (time_t *) pData;
-    time_t          tCurr = time(NULL);
-
-    if ((tCurr - *ptLastCheck) > SHUTDOWN_CHECK_TIME)
-    {
-        *ptLastCheck = tCurr;
-
-        if (SvrInShutdown(true))
-            return (-1);
-    }
-
-    return (0);
 
 }

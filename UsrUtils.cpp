@@ -324,7 +324,7 @@ UserType        UsrGetUserType(UserInfo * pUI)
     if (pUI->pszType == NULL)
         return (usrTypeError);
 
-    switch (pUI->pszType[0])
+    switch (ToUpper(pUI->pszType[0]))
     {
         case ('U'):
             return (usrTypeUser);

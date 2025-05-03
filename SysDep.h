@@ -25,6 +25,7 @@
 #define _SYSDEP_H
 
 
+#define SYS_SHUTDOWN_SOFT           0
 
 #define LOG_LEV_DEBUG               0
 #define LOG_LEV_MESSAGE             1
@@ -45,7 +46,9 @@
 
 int             SysInitLibrary(void);
 void            SysCleanupLibrary(void);
+int             SysShutdownLibrary(int iMode = SYS_SHUTDOWN_SOFT);
 
+int             SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize);
 SYS_SOCKET      SysCreateSocket(int iAddressFamily, int iType, int iProtocol);
 void            SysCloseSocket(SYS_SOCKET SockFD);
 int             SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr * SockName, int iNameLen);
@@ -65,7 +68,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
 int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
                         int iTimeout);
 int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
-                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData);
+                        unsigned long ulEndOffset, int iTimeout);
 int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRESS NetAddr, int iPortNo);
 NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo);
 NET_ADDRESS     SysGetHostByName(char const * pszName);

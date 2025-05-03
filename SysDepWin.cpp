@@ -50,9 +50,7 @@
 
 #define SAIN_Addr(s)                    (s).sin_addr.S_un.S_addr
 
-#define MIN_TCP_SEND_SIZE               1024
-#define MAX_TCP_SEND_SIZE               (1024 * 8)
-#define MIN_BYTES_SEC_TIMEOUT           64
+#define TCP_SEND_SIZE                   (1024 * 128)
 
 #define MAX_STACK_SHIFT                 2048
 #define STACK_ALIGN_BYTES               8
@@ -123,8 +121,10 @@ static          __declspec(thread)
 static time_t   tSysStart;
 static SYS_INT64 PCFreq,
                 PCSysStart;
+static int      iSndBufSize = -1, iRcvBufSize = -1;
 static CRITICAL_SECTION csLog;
 static void     (*SysBreakHandler) (void) = NULL;
+static HANDLE   hShutdownEvent = NULL;
 
 
 
@@ -246,9 +246,18 @@ int             SysInitLibrary(void)
 
     InitializeCriticalSection(&csLog);
 
+    if ((hShutdownEvent = CreateEvent(NULL, TRUE, FALSE, NULL)) == NULL)
+    {
+        DeleteCriticalSection(&csLog);
+        DeleteCriticalSection(&csTLS);
+        ErrSetErrorCode(ERR_CREATEEVENT);
+        return (ERR_CREATEEVENT);
+    }
+
     if (SysThreadSetup() < 0)
     {
         ErrorPush();
+        CloseHandle(hShutdownEvent);
         DeleteCriticalSection(&csLog);
         DeleteCriticalSection(&csTLS);
         return (ErrorPop());
@@ -270,7 +279,35 @@ void            SysCleanupLibrary(void)
 
     DeleteCriticalSection(&csTLS);
 
+    CloseHandle(hShutdownEvent);
+
     WSACleanup();
+
+}
+
+
+
+int             SysShutdownLibrary(int iMode)
+{
+
+    SetEvent(hShutdownEvent);
+
+    return (0);
+
+}
+
+
+
+int             SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize)
+{
+
+    if (piSndBufSize != NULL)
+        iSndBufSize = *piSndBufSize;
+
+    if (piRcvBufSize != NULL)
+        iRcvBufSize = *piRcvBufSize;
+
+    return (0);
 
 }
 
@@ -320,6 +357,23 @@ static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff)
 
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Set socket buffer sizes
+///////////////////////////////////////////////////////////////////////////////
+    if (iSndBufSize > 0)
+    {
+        int             iSize = iSndBufSize;
+
+        setsockopt((int) SockFD, SOL_SOCKET, SO_SNDBUF, (const char *) &iSize, sizeof(iSize));
+    }
+
+    if (iRcvBufSize > 0)
+    {
+        int             iSize = iRcvBufSize;
+
+        setsockopt((int) SockFD, SOL_SOCKET, SO_RCVBUF, (const char *) &iSize, sizeof(iSize));
+    }
+
 
     int             iActivate = 1;
 
@@ -434,19 +488,26 @@ int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize,
     }
 
     int             iRecvBytes = 0;
+    HANDLE          hWaitEvents[2] = {hReadEvent, hShutdownEvent};
 
     for (;;)
     {
         WSAEventSelect(SockFD, (WSAEVENT) hReadEvent, FD_READ | FD_CLOSE);
 
 
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hReadEvent, TRUE,
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
 
         WSAEventSelect(SockFD, (WSAEVENT) hReadEvent, 0);
 
-        if (dwWaitResult != WSA_WAIT_EVENT_0)
+        if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+        {
+            CloseHandle(hReadEvent);
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+            return (ERR_SERVER_SHUTDOWN);
+        }
+        else if (dwWaitResult != WSA_WAIT_EVENT_0)
         {
             CloseHandle(hReadEvent);
             ErrSetErrorCode(ERR_TIMEOUT);
@@ -517,6 +578,7 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 
     DWORD           dwRtxBytes = 0;
     WSABUF          WSABuff;
+    HANDLE          hWaitEvents[2] = {hReadEvent, hShutdownEvent};
 
     ZeroData(WSABuff);
     WSABuff.len = iBufferSize;
@@ -527,18 +589,25 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
         WSAEventSelect(SockFD, (WSAEVENT) hReadEvent, FD_READ | FD_CLOSE);
 
 
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hReadEvent, TRUE,
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
 
         WSAEventSelect(SockFD, (WSAEVENT) hReadEvent, 0);
 
-        if (dwWaitResult != WSA_WAIT_EVENT_0)
+        if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+        {
+            CloseHandle(hReadEvent);
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+            return (ERR_SERVER_SHUTDOWN);
+        }
+        else if (dwWaitResult != WSA_WAIT_EVENT_0)
         {
             CloseHandle(hReadEvent);
             ErrSetErrorCode(ERR_TIMEOUT);
             return (ERR_TIMEOUT);
         }
+
 
         INT             FromLen = (INT) iFromlen;
         DWORD           dwRtxFlags = 0;
@@ -580,19 +649,26 @@ int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBuff
     }
 
     int             iSendBytes = 0;
+    HANDLE          hWaitEvents[2] = {hWriteEvent, hShutdownEvent};
 
     for (;;)
     {
         WSAEventSelect(SockFD, (WSAEVENT) hWriteEvent, FD_WRITE | FD_CLOSE);
 
 
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hWriteEvent, TRUE,
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
 
         WSAEventSelect(SockFD, (WSAEVENT) hWriteEvent, 0);
 
-        if (dwWaitResult != WSA_WAIT_EVENT_0)
+        if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+        {
+            CloseHandle(hWriteEvent);
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+            return (ERR_SERVER_SHUTDOWN);
+        }
+        else if (dwWaitResult != WSA_WAIT_EVENT_0)
         {
             CloseHandle(hWriteEvent);
             ErrSetErrorCode(ERR_TIMEOUT);
@@ -663,6 +739,7 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
 
     DWORD           dwRtxBytes = 0;
     WSABUF          WSABuff;
+    HANDLE          hWaitEvents[2] = {hWriteEvent, hShutdownEvent};
 
     ZeroData(WSABuff);
     WSABuff.len = iBufferSize;
@@ -673,18 +750,25 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
         WSAEventSelect(SockFD, (WSAEVENT) hWriteEvent, FD_WRITE | FD_CLOSE);
 
 
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hWriteEvent, TRUE,
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
 
         WSAEventSelect(SockFD, (WSAEVENT) hWriteEvent, 0);
 
-        if (dwWaitResult != WSA_WAIT_EVENT_0)
+        if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+        {
+            CloseHandle(hWriteEvent);
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+            return (ERR_SERVER_SHUTDOWN);
+        }
+        else if (dwWaitResult != WSA_WAIT_EVENT_0)
         {
             CloseHandle(hWriteEvent);
             ErrSetErrorCode(ERR_TIMEOUT);
             return (ERR_TIMEOUT);
         }
+
 
         DWORD           dwRtxFlags = 0;
 
@@ -733,11 +817,18 @@ int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, i
 
     if ((iConnectResult != 0) && (iConnectError == WSAEWOULDBLOCK))
     {
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hConnectEvent, TRUE,
+        HANDLE          hWaitEvents[2] = {hConnectEvent, hShutdownEvent};
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
         if (dwWaitResult == WSA_WAIT_EVENT_0)
             iConnectResult = 0;
+        else if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+        {
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+
+            iConnectResult = ERR_SERVER_SHUTDOWN;
+        }
         else
         {
             ErrSetErrorCode(ERR_TIMEOUT);
@@ -775,11 +866,14 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
 
     if ((SockFDAccept == INVALID_SOCKET) && (iConnectError == WSAEWOULDBLOCK))
     {
-        DWORD           dwWaitResult = WSAWaitForMultipleEvents(1, &hAcceptEvent, TRUE,
+        HANDLE          hWaitEvents[2] = {hAcceptEvent, hShutdownEvent};
+        DWORD           dwWaitResult = WSAWaitForMultipleEvents(2, hWaitEvents, FALSE,
                 (DWORD) (iTimeout * 1000), TRUE);
 
         if (dwWaitResult == WSA_WAIT_EVENT_0)
             SockFDAccept = WSAAccept(SockFD, (struct sockaddr *) & pSockName->Addr, iNameLen, NULL, 0);
+        else if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
+            ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
         else
             ErrSetErrorCode(ERR_TIMEOUT);
     }
@@ -836,7 +930,7 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
-                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData)
+                        unsigned long ulEndOffset, int iTimeout)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Open the source file
@@ -878,20 +972,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Setup the maximum data transfer size
-///////////////////////////////////////////////////////////////////////////////
-    int             iSndBuffSize = 0,
-                    iOptLenght = sizeof(iSndBuffSize);
-
-    if (getsockopt(SockFD, SOL_SOCKET, SO_SNDBUF, (char *) &iSndBuffSize, &iOptLenght) != 0)
-        iSndBuffSize = MIN_TCP_SEND_SIZE;
-    else
-        iSndBuffSize = Min(iSndBuffSize, MAX_TCP_SEND_SIZE);
-
-
-///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
+    int             iSndBuffSize = TCP_SEND_SIZE;
     SYS_UINT64      ullFileSize = (((SYS_UINT64) dwFileSizeHi) << 32) | (SYS_UINT64) dwFileSizeLo,
                     ullEndOffset = (ulEndOffset != (unsigned long) -1) ?
                             ((SYS_UINT64) ulEndOffset): ullFileSize,
@@ -902,23 +985,13 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
     {
         int             iCurrSend = (int) Min(iSndBuffSize, ullEndOffset - ullCurrOffset);
 
-        if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
-                                Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
+        if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend, iTimeout)) < 0)
         {
             ErrorPush();
             UnmapViewOfFile(pAddress);
             CloseHandle(hFileMap);
             CloseHandle(hFile);
             return (ErrorPop());
-        }
-
-        if ((pSendCB != NULL) && (pSendCB(pUserData) < 0))
-        {
-            UnmapViewOfFile(pAddress);
-            CloseHandle(hFileMap);
-            CloseHandle(hFile);
-            ErrSetErrorCode(ERR_USER_BREAK);
-            return (ERR_USER_BREAK);
         }
 
         pszBuffer += iCurrSend;

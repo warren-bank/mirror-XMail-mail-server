@@ -39,9 +39,7 @@
 #define MAX_SPIN_COUNT              64
 #define SPIN_SLEEP_TIME             (50 * 1000)
 
-#define MIN_TCP_SEND_SIZE           1024
-#define MAX_TCP_SEND_SIZE           (1024 * 8)
-#define MIN_BYTES_SEC_TIMEOUT       64
+#define TCP_SEND_SIZE               (1024 * 128)
 
 #define MAX_STACK_SHIFT             2048
 #define STACK_ALIGN_BYTES           8
@@ -135,7 +133,7 @@ static pthread_mutex_t LogMutex = PTHREAD_MUTEX_INITIALIZER;
 static void     (*SysBreakHandler) (void) = NULL;
 static SYS_SPINLOCK WaitPIDSpin = SYS_SPINLOCK_UNLOCKED;
 static          SYS_LIST_HEAD(WaitPIDList);
-
+static int      iSndBufSize = -1, iRcvBufSize = -1;
 
 
 
@@ -188,6 +186,32 @@ void            SysCleanupLibrary(void)
 
 
     SysThreadCleanup(NULL);
+
+}
+
+
+
+int             SysShutdownLibrary(int iMode)
+{
+
+    kill(0, SIGQUIT);
+
+    return (0);
+
+}
+
+
+
+int             SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize)
+{
+
+    if (piSndBufSize != NULL)
+        iSndBufSize = *piSndBufSize;
+
+    if (piRcvBufSize != NULL)
+        iRcvBufSize = *piRcvBufSize;
+
+    return (0);
 
 }
 
@@ -247,6 +271,23 @@ static int      SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay)
 
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
 {
+///////////////////////////////////////////////////////////////////////////////
+//  Set socket buffer sizes
+///////////////////////////////////////////////////////////////////////////////
+    if (iSndBufSize > 0)
+    {
+        int             iSize = iSndBufSize;
+
+        setsockopt((int) SockFD, SOL_SOCKET, SO_SNDBUF, (const char *) &iSize, sizeof(iSize));
+    }
+
+    if (iRcvBufSize > 0)
+    {
+        int             iSize = iRcvBufSize;
+
+        setsockopt((int) SockFD, SOL_SOCKET, SO_RCVBUF, (const char *) &iSize, sizeof(iSize));
+    }
+
 
     int             iActivate = 1;
 
@@ -659,7 +700,7 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
-                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData)
+                        unsigned long ulEndOffset, int iTimeout)
 {
 
     int             iFileID = open(pszFileName, O_RDONLY);
@@ -686,19 +727,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Setup the maximum data transfer size
-///////////////////////////////////////////////////////////////////////////////
-    int             iSndBuffSize = 0;
-    socklen_t       OptLenght = sizeof(iSndBuffSize);
-
-    if (getsockopt(SockFD, SOL_SOCKET, SO_SNDBUF, (char *) &iSndBuffSize, &OptLenght) != 0)
-        iSndBuffSize = MIN_TCP_SEND_SIZE;
-    else
-        iSndBuffSize = Min(iSndBuffSize, MAX_TCP_SEND_SIZE);
-
-///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
+    int             iSndBuffSize = TCP_SEND_SIZE;
     unsigned long   ulCurrOffset = ulBaseOffset,
                     ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
     char           *pszBuffer = (char *) pMapAddress + ulBaseOffset;
@@ -707,21 +738,12 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
     {
         int             iCurrSend = (int) Min(iSndBuffSize, ulSndEndOffset - ulCurrOffset);
 
-        if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
-                                Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
+        if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend, iTimeout)) < 0)
         {
             ErrorPush();
             munmap((char *) pMapAddress, (size_t) ulFileSize);
             close(iFileID);
             return (ErrorPop());
-        }
-
-        if ((pSendCB != NULL) && (pSendCB(pUserData) < 0))
-        {
-            munmap((char *) pMapAddress, (size_t) ulFileSize);
-            close(iFileID);
-            ErrSetErrorCode(ERR_USER_BREAK);
-            return (ERR_USER_BREAK);
         }
 
         pszBuffer += iCurrSend;
@@ -1500,14 +1522,20 @@ static int      SysThreadSetup(ThrData * pTD)
     sigemptyset(&SigMask);
     sigaddset(&SigMask, SIGALRM);
     sigaddset(&SigMask, SIGINT);
-    sigaddset(&SigMask, SIGQUIT);
     sigaddset(&SigMask, SIGHUP);
 
     pthread_sigmask(SIG_BLOCK, &SigMask, NULL);
 
 
-    signal(SIGPIPE, SysIgnoreProc);
+    sigemptyset(&SigMask);
+    sigaddset(&SigMask, SIGQUIT);
 
+    pthread_sigmask(SIG_UNBLOCK, &SigMask, NULL);
+
+
+    signal(SIGQUIT, SysIgnoreProc);
+
+    signal(SIGPIPE, SysIgnoreProc);
 
     signal(SIGCHLD, SysSigChildHandler);
 
@@ -1863,7 +1891,6 @@ void            SysSetBreakHandler(void (*BreakHandler) (void))
 //  Setup signal handlers and enable signals
 ///////////////////////////////////////////////////////////////////////////////
     signal(SIGINT, SysBreakHandlerRoutine);
-    signal(SIGQUIT, SysBreakHandlerRoutine);
     signal(SIGHUP, SysBreakHandlerRoutine);
 
 
@@ -1871,7 +1898,6 @@ void            SysSetBreakHandler(void (*BreakHandler) (void))
 
     sigemptyset(&SigMask);
     sigaddset(&SigMask, SIGINT);
-    sigaddset(&SigMask, SIGQUIT);
     sigaddset(&SigMask, SIGHUP);
 
     pthread_sigmask(SIG_UNBLOCK, &SigMask, NULL);

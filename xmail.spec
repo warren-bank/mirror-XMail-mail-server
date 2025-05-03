@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.2
+Version: 1.3
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,20 @@ fi
 
 
 %changelog
+* Wed Dec 19 2001 Davide Libenzi <davidel@xmailserver.org>
+    ORBS maps test removed due old ORBS dead, the SERVER.TAB variable "CustMapsList"
+    can be used to setup new ORBS ( and other ) maps. Fixed a bug in XMail's  sendmail
+    that was introduced in version 1.2 and made it to incorrectly interpret command line
+    parameters. Fixed a bug that made XMail to not correctly recognize user type
+    characters when lowercase. Fixed a bug that caused XMail to not start is the MAIL_ROOT
+    environment variable had a final slash on Windows. Added a new filter return code ( 97 )
+    to reject messages without notification and without frozen processing. Added two new
+    command line options  -MR  and  -MS  to set the I/O socket buffers sizes in bytes
+    ( do not use them if You don't know what You're doing ). Changed system library to have
+    a better performace, expecially on the Windows platform. Users that are using XMail
+    mainly inside their local LAN are strongly encouraged to switch to this version.
+    Fixed a bug that enabled insertion of aliases that overlapped real accounts.
+
 * Mon Nov 12 2001 Davide Libenzi <davidel@xmailserver.org>
     A problem with log file names generation has been fixed.
     Added a new CTRL command "userstat".

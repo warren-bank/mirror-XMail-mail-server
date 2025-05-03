@@ -696,22 +696,6 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  ORBS-MAPS client check (relays.orbs.org.)
-///////////////////////////////////////////////////////////////////////////////
-    if (((iCheckValue = SvrGetConfigInt("ORBS-MAPSCheck", 0, SMTPS.hSvrConfig)) != 0) &&
-            (USmtpORBSCheck(SMTPS.PeerInfo) < 0))
-    {
-        if (iCheckValue > 0)
-        {
-            ErrorPush();
-            SvrReleaseConfigHandle(SMTPS.hSvrConfig);
-            return (ErrorPop());
-        }
-
-        SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
 //  DUL-MAPS client check (dialups.mail-abuse.org.)
 ///////////////////////////////////////////////////////////////////////////////
     if (((iCheckValue = SvrGetConfigInt("DUL-MAPSCheck", 0, SMTPS.hSvrConfig)) != 0) &&
