@@ -1,0 +1,81 @@
+http://www.xmailserver.org/
+http://www.xmailserver.org/ChangeLog.html
+
+JS console script to generate data from changelog:
+==================================================
+
+{
+  const rows = []
+  const wget = []
+  const data = []
+  const wget_opt = '--no-check-certificate -nv -nc'
+  const data_dir = 'data/'
+
+  let $rows = document.querySelectorAll('body > div[name="index"] > ul > ul > li > a[href]')
+  const text_parser = /^\s*([^ ]+)\s+([\d]+),?\s+([\d]+)\s+v\s*([\d]+\.[\d]+)\s*$/
+  for (let $row of $rows) {
+    const text  = $row.textContent
+    const match = text_parser.exec(text)
+
+    if (!match || !match.length) {
+      console.log('could not parse row:', text)
+      continue
+    }
+
+    const txt_month   = match[1]
+    const txt_day     = match[2]
+    const txt_year    = match[3]
+    const txt_version = match[4]
+
+    const date = new Date([
+      txt_month.substring(0,3),
+      txt_day,
+      txt_year,
+      '00:00:00 GMT'
+    ].join(' '))
+
+    if (isNaN(date)) {
+      console.log('could not parse date:', text)
+      continue
+    }
+
+    rows.push({version: txt_version, date: date.toISOString().split('T')[0]})
+  }
+  $rows = null
+
+  rows.sort(function(a, b) {
+    return a.date.localeCompare(b.date) || a.version.localeCompare(b.version)
+  })
+
+  wget.push('#!/usr/bin/env bash')
+  wget.push('')
+  wget.push(`[ -d '${data_dir}' ] || mkdir '${data_dir}'`)
+  wget.push('')
+
+  for (let {version, date} of rows) {
+    const fname = `xmail-${version}.tar.gz`
+    const url = `http://www.xmailserver.org/${fname}`
+
+    wget.push(
+      `wget ${wget_opt} -O "${data_dir}${fname}" "${url}"`
+    )
+
+    data.push(
+      `${date} ${version} ${fname}`
+    )
+  }
+
+  console.log()
+  console.log('download_files.sh')
+  console.log('-----------------')
+  console.log(
+    wget.join("\n")
+  )
+
+  console.log()
+  console.log('data.txt')
+  console.log('--------')
+  console.log(
+    data.join("\n")
+  )
+}
