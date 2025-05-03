@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -59,7 +59,8 @@
 #define FILTER_OUT_NN_EXITCODE      98
 #define FILTER_OUT_EXITCODE         99
 #define FILTER_MODIFY_EXITCODE      100
-
+#define FILTER_FLAGS_BREAK          (1 << 3)
+#define FILTER_FLAGS_MASK           FILTER_FLAGS_BREAK
 
 
 
@@ -119,7 +120,7 @@ static int      FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo &FMI)
             UsrFreeUserInfo(pUI);
         }
         else
-            StrSNCpy(FMI.szSender, ppszRcpt[iFromDomains - 1]);
+            StrSNCpy(FMI.szSender, ppszFrom[iFromDomains - 1]);
     }
     else
         SetEmptyString(FMI.szSender);
@@ -340,6 +341,7 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
             continue;
 
         int             iFieldsCount = StrStringsCount(ppszCmdTokens);
+        int             iExitFlags = 0;
 
         if (iFieldsCount > 0)
         {
@@ -354,6 +356,13 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
             if (SysExec(ppszCmdTokens[0], &ppszCmdTokens[0], iFilterTimeout,
                         FILTER_PRIORITY, &iExitCode) == 0)
             {
+///////////////////////////////////////////////////////////////////////////////
+//  Separate code from flags
+///////////////////////////////////////////////////////////////////////////////
+                iExitFlags = iExitCode & FILTER_FLAGS_MASK;
+                iExitCode &= ~FILTER_FLAGS_MASK;
+
+
                 if ((iExitCode == FILTER_OUT_EXITCODE) || (iExitCode == FILTER_OUT_NN_EXITCODE) ||
                     (iExitCode == FILTER_OUT_NNF_EXITCODE))
                 {
@@ -414,6 +423,12 @@ static int      FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
         }
 
         StrFreeStrings(ppszCmdTokens);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Filter list processing break required ?
+///////////////////////////////////////////////////////////////////////////////
+        if (iExitFlags & FILTER_FLAGS_BREAK)
+            break;
     }
 
     fclose(pFiltFile);

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -902,8 +902,10 @@ char           *MscLogFilePath(char const *pszLogFile, char *pszLogFilePath)
 
     unsigned long   ulRotStep = (unsigned long) (3600L * iLogRotateHours);
     unsigned long   ulTimeZone = SysGetTimeZone();
-    time_t          tLogFileTime = (time_t) (NbrFloor((unsigned long) tCurrent - ulTimeZone,
-                                                      ulRotStep) + ulTimeZone);
+    unsigned long   ulDayLight = SysGetDayLight() * 3600L;
+    time_t          tLogFileTime = (time_t) (NbrFloor((unsigned long) tCurrent -
+                                                      ulTimeZone + ulDayLight,
+                                                      ulRotStep) + ulTimeZone - ulDayLight);
     struct tm       tmLogFileTime;
     char            szLogsDir[SYS_MAX_PATH] = "";
 

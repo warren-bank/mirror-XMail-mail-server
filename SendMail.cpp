@@ -1,6 +1,6 @@
 /*
  *  SendMail by Davide Libenzi ( sendmail replacement for XMail )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -51,14 +51,14 @@ int             SysFileSync(FILE *pFile)
 
 }
 
-int             SysPathExist(char const * pszPathName)
+int             SysPathExist(char const *pszPathName)
 {
 
     return ((_access(pszPathName, 0) == 0) ? 1 : 0);
 
 }
 
-int             SysMakeDir(char const * pszPathName)
+int             SysMakeDir(char const *pszPathName)
 {
 
     return ((_mkdir(pszPathName) == 0) ? 1 : 0);
@@ -86,7 +86,7 @@ unsigned long   SysGetProcessId(void)
 
 }
 
-int             SysMoveFile(char const * pszOldName, char const * pszNewName)
+int             SysMoveFile(char const *pszOldName, char const *pszNewName)
 {
 
     if (!MoveFileEx(pszOldName, pszNewName, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
@@ -96,7 +96,7 @@ int             SysMoveFile(char const * pszOldName, char const * pszNewName)
 
 }
 
-int             SysGetHostName(char * pszHostName, int iNameSize)
+int             SysGetHostName(char *pszHostName, int iNameSize)
 {
 
     DWORD           dwSize = (DWORD) iNameSize;
@@ -183,14 +183,14 @@ int             SysFileSync(FILE *pFile)
 
 }
 
-int             SysPathExist(char const * pszPathName)
+int             SysPathExist(char const *pszPathName)
 {
 
     return ((access(pszPathName, 0) == 0) ? 1 : 0);
 
 }
 
-int             SysMakeDir(char const * pszPathName)
+int             SysMakeDir(char const *pszPathName)
 {
 
     return ((mkdir(pszPathName, 0700) == 0) ? 1 : 0);
@@ -218,7 +218,7 @@ unsigned long   SysGetProcessId(void)
 
 }
 
-int             SysMoveFile(char const * pszOldName, char const * pszNewName)
+int             SysMoveFile(char const *pszOldName, char const *pszNewName)
 {
 
     if (rename(pszOldName, pszNewName) != 0)
@@ -228,7 +228,7 @@ int             SysMoveFile(char const * pszOldName, char const * pszNewName)
 
 }
 
-int             SysGetHostName(char * pszHostName, int iNameSize)
+int             SysGetHostName(char *pszHostName, int iNameSize)
 {
 
     gethostname(pszHostName, iNameSize);
@@ -279,7 +279,7 @@ char           *SysGetEnv(const char *pszVarName)
 
 
 
-static FILE    *SafeOpenFile(char const * pszFilePath, char const * pszMode)
+static FILE    *SafeOpenFile(char const *pszFilePath, char const *pszMode)
 {
 
     FILE           *pFile;
@@ -298,7 +298,7 @@ static FILE    *SafeOpenFile(char const * pszFilePath, char const * pszMode)
 
 
 
-static char const *AddressFromAtPtr(char const * pszAt, char const * pszBase,
+static char const *AddressFromAtPtr(char const *pszAt, char const *pszBase,
                                     char *pszAddress)
 {
 
@@ -323,7 +323,7 @@ static char const *AddressFromAtPtr(char const * pszAt, char const * pszBase,
 
 
 
-static int      EmitRecipients(FILE * pMailFile, char const * pszAddrList)
+static int      EmitRecipients(FILE *pMailFile, char const *pszAddrList)
 {
 
     int             iRcptCount = 0;

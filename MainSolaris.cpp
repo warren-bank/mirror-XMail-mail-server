@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@
 
 
 
-static int      MnEventLog(char const * pszFormat,...);
+static int      MnEventLog(char const *pszFormat,...);
 static int      MnSavePID(void);
 static int      MnRemovePID(void);
 static void     MnSIGCLD(int iSignal);
@@ -69,7 +69,7 @@ static int      MnDaemonStartup(int iArgCount, char *pszArgs[]);
 
 
 
-static int      MnEventLog(char const * pszFormat,...)
+static int      MnEventLog(char const *pszFormat,...)
 {
 
     openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);

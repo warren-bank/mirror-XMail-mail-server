@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -76,7 +76,7 @@ struct MLUsersScanData
 
 
 static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings);
-static int      UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const * pMLUI);
+static int      UsrMLWriteUser(FILE *pMLUFile, MLUserInfo const *pMLUI);
 
 
 
@@ -115,7 +115,7 @@ static MLUserInfo *UsrMLGetUserFromStrings(char **ppszStrings)
 
 
 
-MLUserInfo     *UsrMLAllocDefault(char const * pszAddress, char const * pszPerms)
+MLUserInfo     *UsrMLAllocDefault(char const *pszAddress, char const *pszPerms)
 {
 
     MLUserInfo     *pMLUI = (MLUserInfo *) SysAlloc(sizeof(MLUserInfo));
@@ -137,7 +137,7 @@ MLUserInfo     *UsrMLAllocDefault(char const * pszAddress, char const * pszPerms
 
 
 
-int             UsrMLFreeUser(MLUserInfo * pMLUI)
+int             UsrMLFreeUser(MLUserInfo *pMLUI)
 {
 
     if (pMLUI->pszPerms != NULL)
@@ -154,8 +154,8 @@ int             UsrMLFreeUser(MLUserInfo * pMLUI)
 
 
 
-int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser,
-                                   char const * pszLogonUser)
+int             UsrMLCheckUserPost(UserInfo *pUI, char const *pszUser,
+                                   char const *pszLogonUser)
 {
 
     char           *pszClosed = UsrGetUserInfoVar(pUI, "ClosedML");
@@ -208,7 +208,7 @@ int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser,
 
 
 
-static int      UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const * pMLUI)
+static int      UsrMLWriteUser(FILE *pMLUFile, MLUserInfo const *pMLUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  User email address
@@ -236,7 +236,7 @@ static int      UsrMLWriteUser(FILE * pMLUFile, MLUserInfo const * pMLUI)
 
 
 
-int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI)
+int             UsrMLAddUser(UserInfo *pUI, MLUserInfo const *pMLUI)
 {
 
     if (UsrGetUserType(pUI) != usrTypeML)
@@ -315,7 +315,7 @@ int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI)
 
 
 
-int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
+int             UsrMLRemoveUser(UserInfo *pUI, const char *pszMLUser)
 {
 
     if (UsrGetUserType(pUI) != usrTypeML)
@@ -427,7 +427,7 @@ int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser)
 
 
 
-int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName)
+int             UsrMLGetUsersFileSnapShot(UserInfo *pUI, const char *pszFileName)
 {
 
     char            szMLTablePath[SYS_MAX_PATH] = "";
@@ -459,7 +459,7 @@ int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileNam
 
 
 
-USRML_HANDLE    UsrMLOpenDB(UserInfo * pUI)
+USRML_HANDLE    UsrMLOpenDB(UserInfo *pUI)
 {
 
     MLUsersScanData *pMLUSD = (MLUsersScanData *) SysAlloc(sizeof(MLUsersScanData));

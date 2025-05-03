@@ -1,6 +1,6 @@
 <HTML>
 <HEAD>
-<TITLE>XMail Change Log v 1.14</TITLE>
+<TITLE>XMail Change Log v 1.15</TITLE>
 <LINK REL="stylesheet" HREF="./xmail.css" TYPE="text/css">
 <LINK REV="made" HREF="mailto:davide@blue1.dev.mcafeelabs.com">
 </HEAD>
@@ -16,6 +16,7 @@
 	<LI><A HREF="#change log">CHANGE LOG</A></LI>
 	<UL>
 
+		<LI><A HREF="#may 3, 2003 v 1.15">May 3, 2003 v 1.15</A></LI>
 		<LI><A HREF="#april 2, 2003 v 1.14">April 2, 2003 v 1.14</A></LI>
 		<LI><A HREF="#january 25, 2003 v 1.12">January 25, 2003 v 1.12</A></LI>
 		<LI><A HREF="#november 9, 2002 v 1.11">November 9, 2002 v 1.11</A></LI>
@@ -99,11 +100,35 @@
 <HR>
 <P>
 <H1><A NAME="name">NAME</A></H1>
-<P>XMail Change Log as of Version 1.14</P>
+<P>XMail Change Log as of Version 1.15</P>
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
 <H1><A NAME="change log">CHANGE LOG</A></H1>
+<P>
+<H2><A NAME="may 3, 2003 v 1.15">May 3, 2003 v 1.15</A></H2>
+<UL>
+<LI>
+Implemented a new filters feature that enable the user to stop the selected filters
+list processing upon receival of certain exit codes.
+<P></P>
+<LI>
+Fixed the wrong log file name generation when the daylight time is active.
+<P></P>
+<LI>
+Fixed a bug inside the DNS MX resolver.
+<P></P>
+<LI>
+Fixed a bug ( Windows OS bug ) that made XMail unable to create domains starting
+with reserved device names ( COM#, LPT, PRN, CON, ... ). So, for example, a domain
+named ``com4.domain.org'' couldn't be created because of this naming conflict.
+<P></P>
+<LI>
+Fixed a bug that made XMail to not apply filters for local mailing list.
+<P></P>
+<LI>
+Fixed a bug that made XMail to crash under certain conditions.
+<P></P></UL>
 <P>
 <H2><A NAME="april 2, 2003 v 1.14">April 2, 2003 v 1.14</A></H2>
 <UL>
@@ -122,13 +147,13 @@ Messages with non RFC822 conforming headers are now handled by the PSYNC code.
 <LI>
 '<STRONG>ATTENTION</STRONG>': The filter architecture has been completely changed. To correctly
 update to this version you have to create two empty files ``filters.in.tab'' and ``filters.out.tab''
-inside the $MAIL_ROOT directory. Please refer to the documentation for more informations
+inside the $MAIL_ROOT directory. Please refer to the documentation for more information
 about the new filter architecture. If you are not currently using filters, the simple
 creation of the two files listed above will be sufficent.
 <P></P>
 <LI>
 '<STRONG>ATTENTION</STRONG>': The internal spool file format is changed with the new line added
-( the 1st one ) that contain various message informations. Filters that rely on the
+( the 1st one ) that contain various message information. Filters that rely on the
 internal spool file format must be changed to match the new structure.
 <P></P>
 <LI>
@@ -761,7 +786,7 @@ Fixed a bug that caused XMail to drop the first character of the headers if ther
 between the colon and the header value.
 <P></P>
 <LI>
-Added extended SMTP log informations by adding an extra (last) field to the log file.
+Added extended SMTP log information by adding an extra (last) field to the log file.
 <P></P>
 <LI>
 Added a new SERVER.TAB variable 'AllowSmtpVRFY' (default off) to enable the SMTP VRFY command.

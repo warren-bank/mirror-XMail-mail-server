@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -826,15 +826,12 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
     pDNSQ->DNSH.ARCount = ntohs(pDNSQ->DNSH.ARCount);
 
 
-    FILE           *pMXFile = NULL;
+    FILE           *pMXFile = fopen(pszRespFile, "wb");
 
-    if (pDNSQ->DNSH.ANCount != 0)
+    if (pMXFile == NULL)
     {
-        if ((pMXFile = fopen(pszRespFile, "wb")) == NULL)
-        {
-            ErrSetErrorCode(ERR_FILE_CREATE, pszRespFile);
-            return (ERR_FILE_CREATE);
-        }
+        ErrSetErrorCode(ERR_FILE_CREATE, pszRespFile);
+        return (ERR_FILE_CREATE);
     }
 
 
@@ -855,8 +852,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
         if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
         {
             ErrorPush();
-            if (pMXFile != NULL)
-                fclose(pMXFile);
+            fclose(pMXFile);
+            SysRemove(pszRespFile);
             return (ErrorPop());
         }
 
@@ -867,6 +864,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
 ///////////////////////////////////////////////////////////////////////////////
 //  Scan answer data
 ///////////////////////////////////////////////////////////////////////////////
+    int             iMXRecords = 0;
     SYS_UINT32      TTL = 0;
 
     for (ii = 0; ii < (int) pDNSQ->DNSH.ANCount; ii++)
@@ -877,8 +875,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
         if (DNS_GetResourceRecord(pBaseData, pRespData, &RR, &iRRLenght) < 0)
         {
             ErrorPush();
-            if (pMXFile != NULL)
-                fclose(pMXFile);
+            fclose(pMXFile);
+            SysRemove(pszRespFile);
             return (ErrorPop());
         }
 
@@ -896,30 +894,38 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain
         if (DNS_GetName(pBaseData, pMXData, szMXDomain) < 0)
         {
             ErrorPush();
-            if (pMXFile != NULL)
-                fclose(pMXFile);
+            fclose(pMXFile);
+            SysRemove(pszRespFile);
             return (ErrorPop());
         }
 
-        if (ii == 0)
-            fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
-        else
-            fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
+        if (RR.Type == QTYPE_MX)
+        {
+            if (ii == 0)
+                fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
+            else
+                fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
 
-        if ((TTL == 0) || (RR.TTL < TTL))
-            TTL = RR.TTL;
+            if ((TTL == 0) || (RR.TTL < TTL))
+                TTL = RR.TTL;
+
+            ++iMXRecords;
+        }
     }
+
+    fclose(pMXFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Got answers ?
 ///////////////////////////////////////////////////////////////////////////////
-    if (pMXFile != NULL)
+    if (iMXRecords)
     {
-        fclose(pMXFile);
         if (pTTL != NULL)
             *pTTL = TTL;
         return (0);
     }
+
+    SysRemove(pszRespFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Scan name servers data
@@ -1080,18 +1086,28 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFi
             return (ErrorPop());
         }
 
-        if (ii == 0)
-            fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
-        else
-            fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
+        if (RR.Type == QTYPE_MX)
+        {
+            if (ii == 0)
+                fprintf(pMXFile, "%d:%s", (int) Preference, szMXDomain);
+            else
+                fprintf(pMXFile, ",%d:%s", (int) Preference, szMXDomain);
 
-        if ((TTL == 0) || (RR.TTL < TTL))
-            TTL = RR.TTL;
+            if ((TTL == 0) || (RR.TTL < TTL))
+                TTL = RR.TTL;
 
-        ++iMXRecords;
+            ++iMXRecords;
+        }
     }
 
     fclose(pMXFile);
+
+    if (iMXRecords == 0)
+    {
+        SysRemove(pszRespFile);
+        ErrSetErrorCode(ERR_EMPTY_DNS_RESPONSE);
+        return (ERR_EMPTY_DNS_RESPONSE);
+    }
 
     if (pTTL != NULL)
         *pTTL = TTL;
@@ -1195,12 +1211,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
             return (ErrorPop());
         }
 
-        fprintf(pNSFile, "%s\n", szNSName);
+        if (RR.Type == QTYPE_NS)
+        {
+            fprintf(pNSFile, "%s\n", szNSName);
 
-        if ((TTL == 0) || (RR.TTL < TTL))
-            TTL = RR.TTL;
+            if ((TTL == 0) || (RR.TTL < TTL))
+                TTL = RR.TTL;
 
-        ++iNSRecords;
+            ++iNSRecords;
+        }
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1245,12 +1264,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFi
             return (ErrorPop());
         }
 
-        fprintf(pNSFile, "%s\n", szNSName);
+        if (RR.Type == QTYPE_NS)
+        {
+            fprintf(pNSFile, "%s\n", szNSName);
 
-        if ((TTL == 0) || (RR.TTL < TTL))
-            TTL = RR.TTL;
+            if ((TTL == 0) || (RR.TTL < TTL))
+                TTL = RR.TTL;
 
-        ++iNSRecords;
+            ++iNSRecords;
+        }
     }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -66,17 +66,17 @@
 
 static int      FINGCheckPeerIP(SYS_SOCKET SockFD);
 static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING);
-static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg = NULL);
+static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig *pFINGCfg = NULL);
 static unsigned int FINGClientThread(void *pThreadData);
-static int      FINGLogSession(char const * pszSockHost, char const * pszSockDomain,
-                               SYS_INET_ADDR & PeerInfo, char const * pszQuery);
+static int      FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
+                               SYS_INET_ADDR & PeerInfo, char const *pszQuery);
 static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock);
-static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
-                                 FINGConfig * pFINGCfg, char const * pszSockDomain,
+static int      FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
+                                 FINGConfig *pFINGCfg, char const *pszSockDomain,
                                  SVRCFG_HANDLE hSvrConfig);
-static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
-                             BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg);
-static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg);
+static int      FINGDumpUser(char const *pszUser, char const *pszDomain,
+                             BSOCK_HANDLE hBSock, FINGConfig *pFINGCfg);
+static int      FINGDumpMailingList(UserInfo *pUI, BSOCK_HANDLE hBSock, FINGConfig *pFINGCfg);
 
 
 
@@ -134,7 +134,7 @@ static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING)
 
 
 
-static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg)
+static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig *pFINGCfg)
 {
 
     int             iDoUnlock = 0;
@@ -336,8 +336,8 @@ unsigned int    FINGThreadProc(void *pThreadData)
 
 
 
-static int      FINGLogSession(char const * pszSockHost, char const * pszSockDomain,
-                               SYS_INET_ADDR & PeerInfo, char const * pszQuery)
+static int      FINGLogSession(char const *pszSockHost, char const *pszSockDomain,
+                               SYS_INET_ADDR & PeerInfo, char const *pszQuery)
 {
 
     char            szTime[256] = "";
@@ -455,8 +455,8 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 
 
-static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
-                                 FINGConfig * pFINGCfg, char const * pszSockDomain,
+static int      FINGProcessQuery(char const *pszQuery, BSOCK_HANDLE hBSock,
+                                 FINGConfig *pFINGCfg, char const *pszSockDomain,
                                  SVRCFG_HANDLE hSvrConfig)
 {
 
@@ -564,8 +564,8 @@ static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
 
 
 
-static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
-                             BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
+static int      FINGDumpUser(char const *pszUser, char const *pszDomain,
+                             BSOCK_HANDLE hBSock, FINGConfig *pFINGCfg)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -624,7 +624,7 @@ static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
 
 
 
-static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
+static int      FINGDumpMailingList(UserInfo *pUI, BSOCK_HANDLE hBSock, FINGConfig *pFINGCfg)
 {
 
     USRML_HANDLE    hUsersDB = UsrMLOpenDB(pUI);
@@ -639,8 +639,8 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
 
     for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
-        char            szUser[MAX_ADDR_NAME] = "",
-            szDomain[MAX_ADDR_NAME] = "";
+        char            szUser[MAX_ADDR_NAME] = "";
+        char            szDomain[MAX_ADDR_NAME] = "";
 
         if (USmtpSplitEmailAddr(pMLUI->pszAddress, szUser, szDomain) < 0)
         {

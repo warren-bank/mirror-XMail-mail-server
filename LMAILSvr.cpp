@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -68,21 +68,21 @@
 
 static LMAILConfig *LMAILGetConfigCopy(SHB_HANDLE hShbLMAIL);
 static int      LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL,
-                                    LMAILConfig * pLMAILCfg = NULL);
-static int      LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg = NULL);
+                                    LMAILConfig *pLMAILCfg = NULL);
+static int      LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg = NULL);
 static int      LMAILProcessLocalSpool(SHB_HANDLE hShbLMAIL, long lThreadId);
-static int      LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId,
+static int      LMAILGetFilesSnapShot(LMAILConfig *pLMAILCfg, long lThreadId,
                                       char *pszSSFileName);
-static int      LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const * pszListFileName);
-static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
-                                 char const * pszSSFileName);
-static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile,
-                                     long lThreadId, char const * pszSMTPDomain);
-static int      LMAILAddReceived(FILE * pSpoolFile, char const * pszSMTPDomain,
-                                 char const * pszMailFrom, char const * pszRcptTo,
-                                 char const * pszTime);
-static int      LMAILLogMessage(char const * pszMailFile, char const * pszSMTPDomain,
-                                char const * pszMessageID);
+static int      LMAILRemoveProcessed(LMAILConfig *pLMAILCfg, char const *pszListFileName);
+static int      LMAILProcessList(LMAILConfig *pLMAILCfg, long lThreadId,
+                                 char const *pszSSFileName);
+static int      LMAILSubmitLocalFile(LMAILConfig *pLMAILCfg, const char *pszMailFile,
+                                     long lThreadId, char const *pszSMTPDomain);
+static int      LMAILAddReceived(FILE *pSpoolFile, char const *pszSMTPDomain,
+                                 char const *pszMailFrom, char const *pszRcptTo,
+                                 char const *pszTime);
+static int      LMAILLogMessage(char const *pszMailFile, char const *pszSMTPDomain,
+                                char const *pszMessageID);
 
 
 
@@ -131,7 +131,7 @@ static LMAILConfig *LMAILGetConfigCopy(SHB_HANDLE hShbLMAIL)
 
 
 static int      LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL,
-                                    LMAILConfig * pLMAILCfg)
+                                    LMAILConfig *pLMAILCfg)
 {
 
     int             iDoUnlock = 0;
@@ -155,7 +155,7 @@ static int      LMAILThreadCountAdd(long lCount, SHB_HANDLE hShbLMAIL,
 
 
 
-static int      LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig * pLMAILCfg)
+static int      LMAILLogEnabled(SHB_HANDLE hShbLMAIL, LMAILConfig *pLMAILCfg)
 {
 
     int             iDoUnlock = 0;
@@ -289,7 +289,7 @@ static int      LMAILProcessLocalSpool(SHB_HANDLE hShbLMAIL, long lThreadId)
 
 
 
-static int      LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId,
+static int      LMAILGetFilesSnapShot(LMAILConfig *pLMAILCfg, long lThreadId,
                                       char *pszSSFileName)
 {
 
@@ -364,7 +364,7 @@ static int      LMAILGetFilesSnapShot(LMAILConfig * pLMAILCfg, long lThreadId,
 
 
 
-static int      LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const * pszListFileName)
+static int      LMAILRemoveProcessed(LMAILConfig *pLMAILCfg, char const *pszListFileName)
 {
 
     char            szSpoolDir[SYS_MAX_PATH] = "";
@@ -413,8 +413,8 @@ static int      LMAILRemoveProcessed(LMAILConfig * pLMAILCfg, char const * pszLi
 
 
 
-static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
-                                 char const * pszSSFileName)
+static int      LMAILProcessList(LMAILConfig *pLMAILCfg, long lThreadId,
+                                 char const *pszSSFileName)
 {
 
     char            szSpoolDir[SYS_MAX_PATH] = "";
@@ -479,8 +479,8 @@ static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
 
 
 
-static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMailFile,
-                                     long lThreadId, char const * pszSMTPDomain)
+static int      LMAILSubmitLocalFile(LMAILConfig *pLMAILCfg, const char *pszMailFile,
+                                     long lThreadId, char const *pszSMTPDomain)
 {
 
     FILE           *pMailFile = fopen(pszMailFile, "rb");
@@ -682,13 +682,13 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
 
 
 
-static int      LMAILAddReceived(FILE * pSpoolFile, char const * pszSMTPDomain,
-                                 char const * pszMailFrom, char const * pszRcptTo,
-                                 char const * pszTime)
+static int      LMAILAddReceived(FILE *pSpoolFile, char const *pszSMTPDomain,
+                                 char const *pszMailFrom, char const *pszRcptTo,
+                                 char const *pszTime)
 {
 
-    char            szFrom[MAX_SMTP_ADDRESS] = "",
-        szRcpt[MAX_SMTP_ADDRESS] = "";
+    char            szFrom[MAX_SMTP_ADDRESS] = "";
+    char            szRcpt[MAX_SMTP_ADDRESS] = "";
 
     if ((USmlParseAddress(pszMailFrom, NULL, 0, szFrom, sizeof(szFrom) - 1) < 0) ||
         (USmlParseAddress(pszRcptTo, NULL, 0, szRcpt, sizeof(szRcpt) - 1) < 0))
@@ -710,8 +710,8 @@ static int      LMAILAddReceived(FILE * pSpoolFile, char const * pszSMTPDomain,
 
 
 
-static int      LMAILLogMessage(char const * pszMailFile, char const * pszSMTPDomain,
-                                char const * pszMessageID)
+static int      LMAILLogMessage(char const *pszMailFile, char const *pszSMTPDomain,
+                                char const *pszMessageID)
 {
 
     char            szTime[256] = "";
@@ -742,3 +742,4 @@ static int      LMAILLogMessage(char const * pszMailFile, char const * pszSMTPDo
     return (0);
 
 }
+

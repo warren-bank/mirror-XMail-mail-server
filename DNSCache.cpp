@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -55,11 +55,11 @@
 
 
 
-static int      CDNS_CleanupPath(char const * pszCachePath);
-static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSubDir,
+static int      CDNS_CleanupPath(char const *pszCachePath);
+static char    *CDNS_GetCacheFilePath(char const *pszDomain, char const *pszSubDir,
                                       char *pszFilePath);
-static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains);
-static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, SYS_UINT32 TTL);
+static int      CDNS_MxLoad(char const *pszDomain, char *&pszMXDomains);
+static int      CDNS_MxSave(char const *pszDomain, char const *pszMXDomains, SYS_UINT32 TTL);
 
 
 
@@ -77,7 +77,7 @@ static int      iNumCacheDirs = DNS_HASH_NUM_DIRS;
 
 
 
-static int      CDNS_CleanupPath(char const * pszCachePath)
+static int      CDNS_CleanupPath(char const *pszCachePath)
 {
 
 
@@ -150,7 +150,7 @@ int             CDNS_Initialize(int iCacheDirCount)
 
 
 
-static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSubDir,
+static char    *CDNS_GetCacheFilePath(char const *pszDomain, char const *pszSubDir,
                                       char *pszFilePath)
 {
 
@@ -188,7 +188,7 @@ static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSu
 
 
 
-static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains)
+static int      CDNS_MxLoad(char const *pszDomain, char *&pszMXDomains)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build cached file path
@@ -282,7 +282,7 @@ static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains)
 
 
 
-static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, SYS_UINT32 TTL)
+static int      CDNS_MxSave(char const *pszDomain, char const *pszMXDomains, SYS_UINT32 TTL)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build cached file path
@@ -333,8 +333,8 @@ static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, S
 
 
 
-int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
-                                 char const * pszSmartDNS)
+int             CDNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
+                                 char const *pszSmartDNS)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to get the cached copy

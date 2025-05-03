@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode);
 static VOID WINAPI ServiceMain(DWORD dwArgc, LPTSTR lpszArgv[]);
 static BOOL     CmdInstallService(DWORD dwStartType);
 static BOOL     CmdRemoveService(void);
-static int      CmdDebugService(int argc, TCHAR * argv[]);
+static int      CmdDebugService(int argc, TCHAR *argv[]);
 static BOOL     ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode,
                                     DWORD dwWaitHint);
 static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize);
@@ -163,7 +163,7 @@ static int      MnSetupStdHandles(void)
 
 
 
-int             _tmain(int argc, TCHAR * argv[])
+int             _tmain(int argc, TCHAR *argv[])
 {
 
     SERVICE_TABLE_ENTRY DispTable[] =

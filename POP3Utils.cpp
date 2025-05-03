@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -271,7 +271,7 @@ static int      UPopFillMessageList(char const *pszBasePath, char const *pszSubP
             ListAddTail(hMessageList, (PLISTLINK) pPOPMD);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Update mailbox informations
+//  Update mailbox information
 ///////////////////////////////////////////////////////////////////////////////
             ulMBSize += pPOPMD->ulMsgSize;
             ++iMsgCount;
@@ -305,7 +305,7 @@ static int      UPopBuildMessageList(UserInfo *pUI, HSLIST & hMessageList,
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Initialize list and mailbox size informations
+//  Initialize list and mailbox size information
 ///////////////////////////////////////////////////////////////////////////////
     ListInit(hMessageList);
 

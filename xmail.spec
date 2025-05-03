@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.14
+Version: 1.15
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -134,6 +134,18 @@ fi
 
 %changelog
 
+* Sat May 03 2003 Davide Libenzi <davidel@xmailserver.org>
+    Implemented a new filters feature that enable the user to stop the
+    selected filters list processing upon receival of certain exit codes.
+    Fixed the wrong log file name generation when the daylight time is active.
+    Fixed a bug inside the DNS MX resolver.
+    Fixed a bug ( Windows OS bug ) that made XMail unable to create
+    domains starting with reserved device names ( COM#, LPT, PRN, CON, ... ).
+    So, for example, a domain named "com4.domain.org" couldn't be created because
+    of this naming conflict. Fixed a bug that made XMail to not apply filters for
+    local mailing list.
+    Fixed a bug that made XMail to crash under certain conditions.
+
 * Wed Apr 02 2003 Davide Libenzi <davidel@xmailserver.org>
     Added a "Server:" field to the notification message. It'll report the remote SMTP server
     host name and IP that issued the error. It will not be present if the error does not
@@ -143,11 +155,11 @@ fi
     Messages with non RFC822 conforming headers are now handled by the PSYNC code.
     ATTENTION: The filter architecture has been completely changed. To correctly
     update to this version you have to create two empty files "filters.in.tab" and "filters.out.tab"
-    inside the $MAIL_ROOT directory. Please refer to the documentation for more informations
+    inside the $MAIL_ROOT directory. Please refer to the documentation for more information
     about the new filter architecture. If you are not currently using filters, the simple
     creation of the two files listed above will be sufficent.
     ATTENTION: The internal spool file format is changed with the new line added
-    ( the 1st one ) that contain various message informations. Filters that rely on the
+    ( the 1st one ) that contain various message information. Filters that rely on the
     internal spool file format must be changed to match the new structure.
     Fixed a bug that made XMail to not correctly report zero sized files inside the mailbox.
     Added file size to CTRL's "filelist" command.

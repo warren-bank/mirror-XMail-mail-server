@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,8 +35,8 @@
 
 
 int             CDNS_Initialize(int iCacheDirCount = DNS_HASH_NUM_DIRS);
-int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
-                                 char const * pszSmartDNS = NULL);
+int             CDNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains,
+                                 char const *pszSmartDNS = NULL);
 
 
 

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -49,14 +49,14 @@ typedef struct USRML_HANDLE_struct
 
 
 
-MLUserInfo     *UsrMLAllocDefault(char const * pszAddress, char const * pszPerms);
-int             UsrMLFreeUser(MLUserInfo * pMLUI);
-int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser,
-                                   char const * pszLogonUser);
-int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI);
-int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser);
-int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName);
-USRML_HANDLE    UsrMLOpenDB(UserInfo * pUI);
+MLUserInfo     *UsrMLAllocDefault(char const *pszAddress, char const *pszPerms);
+int             UsrMLFreeUser(MLUserInfo *pMLUI);
+int             UsrMLCheckUserPost(UserInfo *pUI, char const *pszUser,
+                                   char const *pszLogonUser);
+int             UsrMLAddUser(UserInfo *pUI, MLUserInfo const *pMLUI);
+int             UsrMLRemoveUser(UserInfo *pUI, const char *pszMLUser);
+int             UsrMLGetUsersFileSnapShot(UserInfo *pUI, const char *pszFileName);
+USRML_HANDLE    UsrMLOpenDB(UserInfo *pUI);
 void            UsrMLCloseDB(USRML_HANDLE hUsersDB);
 MLUserInfo     *UsrMLGetFirstUser(USRML_HANDLE hUsersDB);
 MLUserInfo     *UsrMLGetNextUser(USRML_HANDLE hUsersDB);
@@ -65,3 +65,4 @@ MLUserInfo     *UsrMLGetNextUser(USRML_HANDLE hUsersDB);
 
 
 #endif
+

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -639,15 +639,20 @@ char           *StrVSprint(char const *pszFormat, va_list Args)
 
     for (;;)
     {
+        int             iPSize;
         char           *pszMessage = (char *) SysAlloc(iCurrSize);
 
         if (pszMessage == NULL)
             return (NULL);
 
-        if (SysVSNPrintf(pszMessage, iCurrSize - 1, pszFormat, Args) >= 0)
+        if (((iPSize = SysVSNPrintf(pszMessage, iCurrSize - 1, pszFormat, Args)) >= 0) &&
+            iPSize < iCurrSize)
             return (pszMessage);
 
-        iCurrSize *= 2;
+        if (iPSize > 0)
+            iCurrSize = (4 * iPSize) / 3 + 2;
+        else
+            iCurrSize *= 2;
 
         SysFree(pszMessage);
     }

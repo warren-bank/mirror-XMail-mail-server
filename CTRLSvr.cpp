@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -487,7 +487,7 @@ static unsigned int CTRLClientThread(void *pThreadData)
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get client socket informations
+//  Get client socket information
 ///////////////////////////////////////////////////////////////////////////////
     SYS_INET_ADDR   PeerInfo;
 

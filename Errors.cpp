@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -61,7 +61,6 @@ static int      ErrGetErrorIndex(int iErrorCode);
 
 static SYS_THREAD_ONCE OnceSetup = SYS_THREAD_ONCE_INIT;
 static SYS_TLSKEY ErrTlsKey;
-static bool     bInitDone = false;
 static ErrorStrings Errors[] =
 {
     {ERR_SUCCESS, "Success"},
@@ -317,9 +316,6 @@ static void     ErrOnceSetup(void)
 
     SysCreateTlsKey(ErrTlsKey, ErrFreeEnv);
 
-
-    bInitDone = true;
-
 }
 
 
@@ -328,12 +324,6 @@ static ErrorEnv *ErrSetupEnv(void)
 {
 
     SysThreadOnce(&OnceSetup, ErrOnceSetup);
-
-///////////////////////////////////////////////////////////////////////////////
-//  We've to wait for ErrOnceSetup() completion
-///////////////////////////////////////////////////////////////////////////////
-    while (!bInitDone)
-        SysMsSleep(200);
 
 
     ErrorEnv       *pEV = (ErrorEnv *) SysGetTlsKeyData(ErrTlsKey);

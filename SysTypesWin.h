@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 
 #define SYS_SLASH_CHAR          '\\'
 #define SYS_SLASH_STR           "\\"
+#define SYS_BASE_FS_STR         "\\\\?\\"
 #define SYS_MAX_PATH            _MAX_PATH
 
 #define SYS_LLU_FMT             "%I64u"
@@ -46,7 +47,7 @@
 #define SYS_INVALID_THREAD      ((SYS_THREAD) 0)
 #define SYS_INVALID_NET_ADDRESS ((NET_ADDRESS) INADDR_NONE)
 
-#define SYS_THREAD_ONCE_INIT    0
+#define SYS_THREAD_ONCE_INIT    {0, 0}
 
 #define SysSNPrintf             _snprintf
 
@@ -73,7 +74,6 @@ typedef unsigned __int64 SYS_LONGLONG;
 typedef unsigned int SYS_PTRUINT;
 typedef unsigned long SYS_HANDLE;
 typedef int SYS_TLSKEY;
-typedef LONG    SYS_THREAD_ONCE;
 typedef SOCKET  SYS_SOCKET;
 typedef int     socklen_t;
 typedef HANDLE  SYS_SEMAPHORE;
@@ -84,8 +84,11 @@ typedef unsigned long SYS_THREAD;
 typedef unsigned long NET_ADDRESS;
 
 
-
-
+struct SYS_THREAD_ONCE
+{
+    LONG            lOnce;
+    LONG            lDone;
+};
 
 struct SYS_INET_ADDR
 {

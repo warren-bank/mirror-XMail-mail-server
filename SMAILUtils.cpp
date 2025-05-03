@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -940,7 +940,7 @@ int             USmlReloadHandle(SPLF_HANDLE hFSpool)
 
 ///////////////////////////////////////////////////////////////////////////////
 //  We don't have to call USmlFreeData() since its content has been tranfered
-//  to the original structure to replace the old informations
+//  to the original structure to replace the old information
 ///////////////////////////////////////////////////////////////////////////////
     SysFree(pNewSFD);
 

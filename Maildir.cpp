@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@
 
 
 
-int             MdirCreateStructure(char const * pszBasePath)
+int             MdirCreateStructure(char const *pszBasePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create Maildir directory
@@ -99,7 +99,7 @@ int             MdirCreateStructure(char const * pszBasePath)
 
 
 
-int             MdirGetTmpMaildirEntry(char const * pszMaildirPath, char *pszFilePath)
+int             MdirGetTmpMaildirEntry(char const *pszMaildirPath, char *pszFilePath)
 {
 
     char            szTmpPath[SYS_MAX_PATH] = "";
@@ -113,7 +113,7 @@ int             MdirGetTmpMaildirEntry(char const * pszMaildirPath, char *pszFil
 
 
 
-int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
+int             MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup Maildir/tmp/ subpath
@@ -153,8 +153,8 @@ int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
 
 
 
-int             MdirMoveMessage(char const * pszMaildirPath, const char *pszFileName,
-                                char const * pszMessageID)
+int             MdirMoveMessage(char const *pszMaildirPath, const char *pszFileName,
+                                char const *pszMessageID)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Allocate a Maildir/tmp entry

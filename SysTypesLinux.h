@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@
 
 #define SYS_SLASH_CHAR          '/'
 #define SYS_SLASH_STR           "/"
+#define SYS_BASE_FS_STR         ""
 #define SYS_MAX_PATH            256
 
 #define SYS_LLU_FMT             "%llu"

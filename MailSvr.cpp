@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1023,13 +1023,16 @@ static void     SvrCleanupLMAIL(void)
 static int      SvrSetup(int iArgCount, char *pszArgs[])
 {
 
-    SetEmptyString(szMailPath);
+    StrSNCpy(szMailPath, SYS_BASE_FS_STR);
 
     char           *pszValue = SysGetEnv(ENV_MAIN_PATH);
 
     if (pszValue != NULL)
     {
-        StrSNCpy(szMailPath, pszValue);
+        if (strncmp(szMailPath, pszValue, strlen(szMailPath)) == 0)
+            StrSNCpy(szMailPath, pszValue);
+        else
+            StrSNCat(szMailPath, pszValue);
         DelFinalSlash(szMailPath);
 
         SysFree(pszValue);

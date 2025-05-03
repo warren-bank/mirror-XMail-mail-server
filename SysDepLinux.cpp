@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1645,8 +1645,8 @@ SYS_THREAD      SysCreateServiceThread(unsigned int (*pThreadProc) (void *), SYS
 static void     SysSigChildHandler(int iSignal)
 {
 
-    int             iExitStatus,
-        iExitPid;
+    int             iExitStatus;
+    int             iExitPid;
 
     while ((iExitPid = waitpid(0, &iExitStatus, WUNTRACED | WNOHANG)) > 0)
     {
@@ -2762,6 +2762,15 @@ unsigned long   SysGetTimeZone(void)
 {
 
     return ((unsigned long) timezone);
+
+}
+
+
+
+unsigned long   SysGetDayLight(void)
+{
+
+    return ((unsigned long) daylight);
 
 }
 

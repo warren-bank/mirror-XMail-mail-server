@@ -82,7 +82,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.14
+1.15
 
 =head2 release type
 
@@ -90,7 +90,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-02-04-2003
+03-05-2003
 
 =head2 project by
 
@@ -1107,7 +1107,7 @@ disable mail size checking (bypass SERVER.TAB variable)
 =back
 
 When PLAIN, LOGIN or CRAM-MD5 authentication mode are used, first a lookup in 'B<MAILUSERS.TAB>'
-accounts is performed to avoid duplicating informations with 'B<SMTPAUTH.TAB>'.
+accounts is performed to avoid duplicating information with 'B<SMTPAUTH.TAB>'.
 Therefore when using these authentication modes a user must use as username the full email address
 (the : separator is permitted instead of @) and as password his POP3 password.
 If the lookup succeed the 'B<SERVER.TAB>' variable 'B<DefaultSmtpPerms>' is used to assign
@@ -1344,7 +1344,7 @@ Higher precedences win over lower ones.
 
  "variable"[TAB]"value"[NEWLINE]
 
-store user informations such as:
+store user information such as:
 
  "RealName"  "Davide Libenzi"
  "HomePage"  "http://www.xmailserver.org/davide.html"
@@ -2190,6 +2190,30 @@ and so on.
 If this filters returns 'B<97, 98 or 99>' the message is rejected and
 is stopped in its travel.
 If the filter modifies the message it must return 'B<100>'.
+
+Additional flags are allowed to be returned to XMail as a result of filter processing
+by adding the flags value to the exits code above listed. The currently defined
+flags are :
+
+=over
+
+=item '8'
+
+Stop selected filter list processing.
+
+=back
+
+Filter flags are additive and if more than one flag need to be specified, their values
+must be added together. If a filter "raw" exit code is B<RC> and the filter needs
+to return extra flags B<FILTER-SUM>, the final return code B<FRC> must be :
+
+B<FRC> = B<RC> + B<FILTER-SUM>
+
+Example. Suppose a filter modified the message and hence needs to return B<100> as return code.
+Suppose also that a filter wants to block the filter selection list processing by
+specifying a flags value of B<8>, the value to be returned will be :
+
+B<FRC> = B<100> + B<8> = B<108>
 
 Filter selection is driven by two files 'B<FILTERS.IN.TAB>' and 'B<FILTERS.OUT.TAB>'
 that have the following format:

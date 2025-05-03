@@ -63,7 +63,7 @@ VERSION
 
   current
 
-    1.14
+    1.15
 
   release type
 
@@ -71,7 +71,7 @@ VERSION
 
   release date
 
-    02-04-2003
+    03-05-2003
 
   project by
 
@@ -757,7 +757,7 @@ CONFIGURATION
 
     When PLAIN, LOGIN or CRAM-MD5 authentication mode are used, first a
     lookup in 'MAILUSERS.TAB' accounts is performed to avoid duplicating
-    informations with 'SMTPAUTH.TAB'. Therefore when using these
+    information with 'SMTPAUTH.TAB'. Therefore when using these
     authentication modes a user must use as username the full email address
     (the : separator is permitted instead of @) and as password his POP3
     password. If the lookup succeed the 'SERVER.TAB' variable
@@ -927,7 +927,7 @@ CONFIGURATION
 
      "variable"[TAB]"value"[NEWLINE]
 
-    store user informations such as:
+    store user information such as:
 
      "RealName"  "Davide Libenzi"
      "HomePage"  "http://www.xmailserver.org/davide.html"
@@ -1610,6 +1610,26 @@ MESSAGE FILTERS
     If this filters returns '97, 98 or 99' the message is rejected and is
     stopped in its travel. If the filter modifies the message it must return
     '100'.
+
+    Additional flags are allowed to be returned to XMail as a result of
+    filter processing by adding the flags value to the exits code above
+    listed. The currently defined flags are :
+
+    '8' Stop selected filter list processing.
+
+    Filter flags are additive and if more than one flag need to be
+    specified, their values must be added together. If a filter "raw" exit
+    code is RC and the filter needs to return extra flags FILTER-SUM, the
+    final return code FRC must be :
+
+    FRC = RC + FILTER-SUM
+
+    Example. Suppose a filter modified the message and hence needs to return
+    100 as return code. Suppose also that a filter wants to block the filter
+    selection list processing by specifying a flags value of 8, the value to
+    be returned will be :
+
+    FRC = 100 + 8 = 108
 
     Filter selection is driven by two files 'FILTERS.IN.TAB' and
     'FILTERS.OUT.TAB' that have the following format:

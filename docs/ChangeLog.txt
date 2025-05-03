@@ -1,8 +1,29 @@
 NAME
 
-    XMail Change Log as of Version 1.14
+    XMail Change Log as of Version 1.15
 
 CHANGE LOG
+
+  May 3, 2003 v 1.15
+
+    *   Implemented a new filters feature that enable the user to stop the
+        selected filters list processing upon receival of certain exit
+        codes.
+
+    *   Fixed the wrong log file name generation when the daylight time is
+        active.
+
+    *   Fixed a bug inside the DNS MX resolver.
+
+    *   Fixed a bug ( Windows OS bug ) that made XMail unable to create
+        domains starting with reserved device names ( COM#, LPT, PRN, CON,
+        ... ). So, for example, a domain named "com4.domain.org" couldn't be
+        created because of this naming conflict.
+
+    *   Fixed a bug that made XMail to not apply filters for local mailing
+        list.
+
+    *   Fixed a bug that made XMail to crash under certain conditions.
 
   April 2, 2003 v 1.14
 
@@ -20,15 +41,15 @@ CHANGE LOG
     *   'ATTENTION': The filter architecture has been completely changed. To
         correctly update to this version you have to create two empty files
         "filters.in.tab" and "filters.out.tab" inside the $MAIL_ROOT
-        directory. Please refer to the documentation for more informations
+        directory. Please refer to the documentation for more information
         about the new filter architecture. If you are not currently using
         filters, the simple creation of the two files listed above will be
         sufficent.
 
     *   'ATTENTION': The internal spool file format is changed with the new
-        line added ( the 1st one ) that contain various message
-        informations. Filters that rely on the internal spool file format
-        must be changed to match the new structure.
+        line added ( the 1st one ) that contain various message information.
+        Filters that rely on the internal spool file format must be changed
+        to match the new structure.
 
     *   Fixed a bug that made XMail to not correctly report zero sized files
         inside the mailbox.
@@ -568,7 +589,7 @@ CHANGE LOG
         headers if there was no space between the colon and the header
         value.
 
-    *   Added extended SMTP log informations by adding an extra (last) field
+    *   Added extended SMTP log information by adding an extra (last) field
         to the log file.
 
     *   Added a new SERVER.TAB variable 'AllowSmtpVRFY' (default off) to

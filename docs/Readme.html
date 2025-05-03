@@ -1,6 +1,6 @@
 <HTML>
 <HEAD>
-<TITLE>XMail mail server v 1.14</TITLE>
+<TITLE>XMail mail server v 1.15</TITLE>
 <LINK REL="stylesheet" HREF="./xmail.css" TYPE="text/css">
 <LINK REV="made" HREF="mailto:davide@blue1.dev.mcafeelabs.com">
 </HEAD>
@@ -202,13 +202,13 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</P>
 <H1><A NAME="version">VERSION</A></H1>
 <P>
 <H2><A NAME="current">current</A></H2>
-<P>1.14</P>
+<P>1.15</P>
 <P>
 <H2><A NAME="release type">release type</A></H2>
 <P>Gnu Public License <A HREF="http://www.gnu.org">http://www.gnu.org</A></P>
 <P>
 <H2><A NAME="release date">release date</A></H2>
-<P>02-04-2003</P>
+<P>03-05-2003</P>
 <P>
 <H2><A NAME="project by">project by</A></H2>
 <P>Davide Libenzi &lt;<A HREF="mailto:davidel@xmailserver.org">davidel@xmailserver.org</A>&gt; <A HREF="http://www.xmailserver.org/">http://www.xmailserver.org/</A></P>
@@ -945,7 +945,7 @@ ETRN command enabled (bypass SERVER.TAB variable)
 disable mail size checking (bypass SERVER.TAB variable)
 <P></P></DL>
 <P>When PLAIN, LOGIN or CRAM-MD5 authentication mode are used, first a lookup in '<STRONG>MAILUSERS.TAB</STRONG>'
-accounts is performed to avoid duplicating informations with '<STRONG>SMTPAUTH.TAB</STRONG>'.
+accounts is performed to avoid duplicating information with '<STRONG>SMTPAUTH.TAB</STRONG>'.
 Therefore when using these authentication modes a user must use as username the full email address
 (the : separator is permitted instead of @) and as password his POP3 password.
 If the lookup succeed the '<STRONG>SERVER.TAB</STRONG>' variable '<STRONG>DefaultSmtpPerms</STRONG>' is used to assign
@@ -1103,7 +1103,7 @@ Higher precedences win over lower ones.</P>
 <H3><A NAME="user.tab">USER.TAB</A></H3>
 <PRE>
  &quot;variable&quot;[TAB]&quot;value&quot;[NEWLINE]</PRE>
-<P>store user informations such as:</P>
+<P>store user information such as:</P>
 <PRE>
  &quot;RealName&quot;  &quot;Davide Libenzi&quot;
  &quot;HomePage&quot;  &quot;<A HREF="http://www.xmailserver.org/davide.html&quot">http://www.xmailserver.org/davide.html&quot</A>;
@@ -1774,6 +1774,22 @@ and so on.</P>
 <P>If this filters returns '<STRONG>97, 98 or 99</STRONG>' the message is rejected and
 is stopped in its travel.
 If the filter modifies the message it must return '<STRONG>100</STRONG>'.</P>
+<P>Additional flags are allowed to be returned to XMail as a result of filter processing
+by adding the flags value to the exits code above listed. The currently defined
+flags are :</P>
+<DL>
+<DT><STRONG><A NAME="item_%278%27">'8'</A></STRONG><BR>
+<DD>
+Stop selected filter list processing.
+<P></P></DL>
+<P>Filter flags are additive and if more than one flag need to be specified, their values
+must be added together. If a filter ``raw'' exit code is <STRONG>RC</STRONG> and the filter needs
+to return extra flags <STRONG>FILTER-SUM</STRONG>, the final return code <STRONG>FRC</STRONG> must be :</P>
+<P><STRONG>FRC</STRONG> = <STRONG>RC</STRONG> + <STRONG>FILTER-SUM</STRONG></P>
+<P>Example. Suppose a filter modified the message and hence needs to return <STRONG>100</STRONG> as return code.
+Suppose also that a filter wants to block the filter selection list processing by
+specifying a flags value of <STRONG>8</STRONG>, the value to be returned will be :</P>
+<P><STRONG>FRC</STRONG> = <STRONG>100</STRONG> + <STRONG>8</STRONG> = <STRONG>108</STRONG></P>
 <P>Filter selection is driven by two files '<STRONG>FILTERS.IN.TAB</STRONG>' and '<STRONG>FILTERS.OUT.TAB</STRONG>'
 that have the following format:</P>
 <PRE>

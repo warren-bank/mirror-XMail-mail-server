@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -3547,7 +3547,7 @@ static int      SMTPHandleCmd_HELP(const char *pszCommand, BSOCK_HANDLE hBSock,
     BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
                     "250-HELO EHLO MAIL RCPT DATA AUTH\r\n"
                     "250-RSET VRFY ETRN NOOP HELP QUIT\r\n"
-                    "250 For more informations please visit : %s", APP_URL);
+                    "250 For more information please visit : %s", APP_URL);
 
     return (0);
 

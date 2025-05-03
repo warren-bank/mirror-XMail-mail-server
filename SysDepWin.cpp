@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -56,8 +56,6 @@
 
 #define MAX_STACK_SHIFT                 2048
 #define STACK_ALIGN_BYTES               sizeof(int)
-
-
 
 
 
@@ -198,9 +196,9 @@ static char const *SysGetLastError(void)
     static char     szMessage[1024] = "";
 
     if (dwRet == 0)
-        _snprintf(szMessage, sizeof(szMessage) - 1, "(0x%lX) Unknown error", (unsigned long) dwError);
+        SysSNPrintf(szMessage, sizeof(szMessage) - 1, "(0x%lX) Unknown error", (unsigned long) dwError);
     else
-        _snprintf(szMessage, sizeof(szMessage) - 1, "(0x%lX) %s", (unsigned long) dwError, pszMessage);
+        SysSNPrintf(szMessage, sizeof(szMessage) - 1, "(0x%lX) %s", (unsigned long) dwError, pszMessage);
 
     if (pszMessage != NULL)
         LocalFree((HLOCAL) pszMessage);
@@ -1833,8 +1831,15 @@ void           *SysGetTlsKeyData(SYS_TLSKEY & TlsKey)
 void            SysThreadOnce(SYS_THREAD_ONCE *pThrOnce, void (*pOnceProc) (void))
 {
 
-    if (InterlockedExchange(pThrOnce, 1) == 0)
+    if (InterlockedExchange(&pThrOnce->lOnce, 1) == 0)
+    {
         pOnceProc();
+
+        pThrOnce->lDone++;
+    }
+
+    while (!pThrOnce->lDone)
+        Sleep(0);
 
 }
 
@@ -1884,7 +1889,7 @@ int             SysLockFile(const char *pszFileName, char const *pszLockExt)
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    _snprintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
+    SysSNPrintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to create lock file
@@ -1931,7 +1936,7 @@ int             SysUnlockFile(const char *pszFileName, char const *pszLockExt)
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    _snprintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
+    SysSNPrintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
     if (_unlink(szLockFile) != 0)
     {
@@ -2348,8 +2353,8 @@ char           *SysGetEnv(const char *pszVarName)
 
     char            szRKeyPath[256] = "";
 
-    _snprintf(szRKeyPath, sizeof(szRKeyPath) - 1, "SOFTWARE\\%s\\%s",
-              APP_PRODUCER, APP_NAME_STR);
+    SysSNPrintf(szRKeyPath, sizeof(szRKeyPath) - 1, "SOFTWARE\\%s\\%s",
+                APP_PRODUCER, APP_NAME_STR);
 
     HKEY            hKey;
 
@@ -2384,12 +2389,12 @@ char           *SysGetTmpFile(char *pszFileName)
 
     char            szTmpPath[SYS_MAX_PATH] = "";
 
-    GetTempPath(sizeof(szTmpPath), szTmpPath);
+    GetTempPath(sizeof(szTmpPath) - 1, szTmpPath);
 
     static unsigned int uFileSeqNr = 0;
-    SYS_LONGLONG    llFileID = (((SYS_LONGLONG) GetCurrentThreadId()) << 32) | (SYS_LONGLONG)++ uFileSeqNr;
+    SYS_LONGLONG    llFileID = (((SYS_LONGLONG) GetCurrentThreadId()) << 32) | (SYS_LONGLONG) ++uFileSeqNr;
 
-    sprintf(pszFileName, "%smsrv%I64x.tmp", szTmpPath, llFileID);
+    SysSNPrintf(pszFileName, SYS_MAX_PATH - 1, "%smsrv%I64x.tmp", szTmpPath, llFileID);
 
     return (pszFileName);
 
@@ -2538,6 +2543,15 @@ unsigned long   SysGetTimeZone(void)
 {
 
     return ((unsigned long) _timezone);
+
+}
+
+
+
+unsigned long   SysGetDayLight(void)
+{
+
+    return ((unsigned long) _daylight);
 
 }
 

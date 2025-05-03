@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.14
+XMail Change Log as of Version 1.15
 
 =begin html
 
@@ -10,6 +10,39 @@ XMail Change Log as of Version 1.14
 =end html
 
 =head1 CHANGE LOG
+
+=head2 May 3, 2003 v 1.15
+
+=over 4
+
+=item *
+
+Implemented a new filters feature that enable the user to stop the selected filters
+list processing upon receival of certain exit codes.
+
+=item *
+
+Fixed the wrong log file name generation when the daylight time is active.
+
+=item *
+
+Fixed a bug inside the DNS MX resolver.
+
+=item *
+
+Fixed a bug ( Windows OS bug ) that made XMail unable to create domains starting
+with reserved device names ( COM#, LPT, PRN, CON, ... ). So, for example, a domain
+named "com4.domain.org" couldn't be created because of this naming conflict.
+
+=item *
+
+Fixed a bug that made XMail to not apply filters for local mailing list.
+
+=item *
+
+Fixed a bug that made XMail to crash under certain conditions.
+
+=back
 
 =head2 April 2, 2003 v 1.14
 
@@ -34,14 +67,14 @@ Messages with non RFC822 conforming headers are now handled by the PSYNC code.
 
 'B<ATTENTION>': The filter architecture has been completely changed. To correctly
 update to this version you have to create two empty files "filters.in.tab" and "filters.out.tab"
-inside the $MAIL_ROOT directory. Please refer to the documentation for more informations
+inside the $MAIL_ROOT directory. Please refer to the documentation for more information
 about the new filter architecture. If you are not currently using filters, the simple
 creation of the two files listed above will be sufficent.
 
 =item *
 
 'B<ATTENTION>': The internal spool file format is changed with the new line added
-( the 1st one ) that contain various message informations. Filters that rely on the
+( the 1st one ) that contain various message information. Filters that rely on the
 internal spool file format must be changed to match the new structure.
 
 =item *
@@ -1110,7 +1143,7 @@ between the colon and the header value.
 
 =item *
 
-Added extended SMTP log informations by adding an extra (last) field to the log file.
+Added extended SMTP log information by adding an extra (last) field to the log file.
 
 
 =item *

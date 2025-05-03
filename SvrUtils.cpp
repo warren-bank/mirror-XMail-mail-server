@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,...,2002  Davide Libenzi
+ *  Copyright (C) 1999  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -82,10 +82,10 @@ struct ServerConfigData
 
 static char    *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath);
 static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue);
-static void     SvrFreeVar(ServerInfoVar * pSIV);
+static void     SvrFreeVar(ServerInfoVar *pSIV);
 static void     SvrFreeInfoList(HSLIST & hConfigList);
 static ServerInfoVar *SvrGetUserVar(HSLIST & hConfigList, const char *pszName);
-static int      SvrWriteInfoList(HSLIST & hConfigList, FILE * pProfileFile);
+static int      SvrWriteInfoList(HSLIST & hConfigList, FILE *pProfileFile);
 static int      SvrLoadServerConfig(HSLIST & hConfigList, const char *pszFilePath);
 
 
@@ -215,7 +215,7 @@ char           *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName,
 
 
 
-bool            SvrTestConfigFlag(char const * pszName, bool bDefault, SVRCFG_HANDLE hSvrConfig)
+bool            SvrTestConfigFlag(char const *pszName, bool bDefault, SVRCFG_HANDLE hSvrConfig)
 {
 
     char            szValue[64] = "";
@@ -229,7 +229,7 @@ bool            SvrTestConfigFlag(char const * pszName, bool bDefault, SVRCFG_HA
 
 
 
-int             SvrGetConfigInt(char const * pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
+int             SvrGetConfigInt(char const *pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
 {
 
     char            szValue[64] = "";
@@ -306,7 +306,7 @@ static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue)
 
 
 
-static void     SvrFreeVar(ServerInfoVar * pSIV)
+static void     SvrFreeVar(ServerInfoVar *pSIV)
 {
 
     SysFree(pSIV->pszName);
@@ -346,7 +346,7 @@ static ServerInfoVar *SvrGetUserVar(HSLIST & hConfigList, const char *pszName)
 
 
 
-static int      SvrWriteInfoList(HSLIST & hConfigList, FILE * pProfileFile)
+static int      SvrWriteInfoList(HSLIST & hConfigList, FILE *pProfileFile)
 {
 
     ServerInfoVar  *pSIV = (ServerInfoVar *) ListFirst(hConfigList);
@@ -438,7 +438,7 @@ static int      SvrLoadServerConfig(HSLIST & hConfigList, const char *pszFilePat
 
 
 
-int             SvrGetMessageID(SYS_UINT64 * pullMessageID)
+int             SvrGetMessageID(SYS_UINT64 *pullMessageID)
 {
 
     char            szMsgIDFile[SYS_MAX_PATH] = "";
@@ -526,8 +526,8 @@ char           *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 
 
 
-int             SvrConfigVar(char const * pszVarName, char *pszVarValue, int iMaxVarValue,
-                             SVRCFG_HANDLE hSvrConfig, char const * pszDefault)
+int             SvrConfigVar(char const *pszVarName, char *pszVarValue, int iMaxVarValue,
+                             SVRCFG_HANDLE hSvrConfig, char const *pszDefault)
 {
 
     int             iReleaseConfig = 0;
