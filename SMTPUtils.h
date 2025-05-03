@@ -78,9 +78,9 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
 int             USmtpCloseChannel(BSOCK_HANDLE hBSock, int iHardClose = 0, SMTPError * pSMTPE = NULL);
 int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE = NULL);
 int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const char *pszRcpt,
-                        const char *pszFileName, SMTPError * pSMTPE = NULL);
+                        FileSection const * pFS, SMTPError * pSMTPE = NULL);
 int             USmtpSendMail(const char *pszServer, const char *pszDomain,
-                        const char *pszFrom, const char *pszRcpt, const char *pszFileName,
+                        const char *pszFrom, const char *pszRcpt, FileSection const * pFS,
                         SMTPError * pSMTPE = NULL);
 char           *USmtpBuildRcptPath(char const * const * ppszRcptTo, SVRCFG_HANDLE hSvrConfig);
 char          **USmtpGetMailExchangers(SVRCFG_HANDLE hSvrConfig, const char *pszDomain);

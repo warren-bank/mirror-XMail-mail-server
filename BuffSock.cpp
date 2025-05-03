@@ -178,7 +178,8 @@ int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
 
 
 
-char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout)
+char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+                        int *pLineLength)
 {
 
     for (int ii = 0; ii < iMaxChars; ii++)
@@ -194,6 +195,11 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
 
             pszBuffer[ii] = '\0';
 
+
+            if (pLineLength != NULL)
+                *pLineLength = ii;
+
+
             return (pszBuffer);
         }
         else
@@ -205,6 +211,85 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
     ErrSetErrorCode(ERR_LINE_TOO_LONG);
 
     return (NULL);
+
+}
+
+
+
+char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+                        int *pLineLength)
+{
+
+    BuffSocketData     *pBSD = (BuffSocketData *) hBSock;
+
+    int                 ii = 0;
+
+    for (--iMaxChars; ii < iMaxChars;)
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  Verify to have something to read
+///////////////////////////////////////////////////////////////////////////////
+        if ((pBSD->iBytesInBuffer == 0) && (BSckReadData(pBSD, iTimeout) <= 0))
+            return (NULL);
+
+
+        for (int jj = 0; jj < 2; jj++)
+        {
+            int             iBytesLookup = Min(Min(pBSD->iBytesInBuffer,
+                                    pBSD->iBufferSize - pBSD->iReadIndex), iMaxChars - ii);
+
+            if (iBytesLookup > 0)
+            {
+                char           *pszNL = (char *) memchr(pBSD->pszBuffer + pBSD->iReadIndex, '\n', iBytesLookup);
+
+                if (pszNL != NULL)
+                {
+                    int             iCopySize = (int) (pszNL - (pBSD->pszBuffer + pBSD->iReadIndex));
+
+                    memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iCopySize);
+                    ii += iCopySize;
+
+                    pBSD->iReadIndex += iCopySize + 1;
+
+                    if (pBSD->iReadIndex == pBSD->iBufferSize)
+                        pBSD->iReadIndex = 0;
+
+                    pBSD->iBytesInBuffer -= iCopySize + 1;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Line cleanup
+///////////////////////////////////////////////////////////////////////////////
+                    for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
+
+                    pszBuffer[ii] = '\0';
+
+
+                    if (pLineLength != NULL)
+                        *pLineLength = ii;
+
+
+                    return (pszBuffer);
+                }
+                else
+                {
+                    memcpy(pszBuffer + ii, pBSD->pszBuffer + pBSD->iReadIndex, iBytesLookup);
+                    ii += iBytesLookup;
+
+                    pBSD->iReadIndex += iBytesLookup;
+
+                    if (pBSD->iReadIndex == pBSD->iBufferSize)
+                        pBSD->iReadIndex = 0;
+
+                    pBSD->iBytesInBuffer -= iBytesLookup;
+                }
+            }
+        }
+    }
+
+
+    ErrSetErrorCode(ERR_LINE_TOO_LONG);
+
+	return (NULL);
 
 }
 
@@ -237,7 +322,6 @@ int             BSckSendString(BSOCK_HANDLE hBSock, char const * pszBuffer, int 
 
 
 
-
 int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * pszFormat,...)
 {
 
@@ -267,7 +351,6 @@ int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * 
 
 
 
-
 int             BSckSendData(BSOCK_HANDLE hBSock, char const * pszBuffer, int iSize, int iTimeout)
 {
 
@@ -279,7 +362,6 @@ int             BSckSendData(BSOCK_HANDLE hBSock, char const * pszBuffer, int iS
     return (iSize);
 
 }
-
 
 
 
@@ -324,7 +406,6 @@ int             BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, in
     return (iSize);
 
 }
-
 
 
 

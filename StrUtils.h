@@ -50,6 +50,8 @@ char          **StrBuildList(char const *pszString, ...);
 char          **StrTokenize(const char *pszString, const char *pszTokenizer);
 void            StrFreeStrings(char **ppszStrings);
 int             StrStringsCount(char const * const * ppszStrings);
+bool            StrStringsMatch(char const * const * ppszStrings, char const * pszMatch);
+bool            StrStringsIMatch(char const * const * ppszStrings, char const * pszMatch);
 char           *StrConcat(char const * const * ppszStrings, char const * pszCStr);
 char           *StrDeQuote(char *pszString, int iChar);
 char           *StrQuote(const char *pszString, int iChar);
@@ -72,7 +74,7 @@ int             StrDynFree(DynString * pDS);
 int             StrDynTruncate(DynString * pDS);
 char const     *StrDynGet(DynString * pDS);
 int             StrDynSize(DynString * pDS);
-int             StrDynAdd(DynString * pDS, char const * pszBuffer);
+int             StrDynAdd(DynString * pDS, char const * pszBuffer, int iStringSize = -1);
 
 
 

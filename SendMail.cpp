@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "AppDefines.h"
 
 
 
@@ -37,6 +38,7 @@
 #define SYS_SLASH_STR               "\\"
 #define SYS_MAX_PATH                256
 #define SysFileSync(fp)             do { fflush(fp); _commit(_fileno(fp)); } while (0)
+
 
 
 
@@ -97,9 +99,41 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 
 }
 
+char           *SysGetEnv(const char *pszVarName)
+{
+
+    char            szRKeyPath[256] = "";
+
+    sprintf(szRKeyPath, "SOFTWARE\\%s\\%s", APP_PRODUCER, APP_NAME_STR);
+
+    HKEY            hKey;
+
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, szRKeyPath, 0, KEY_QUERY_VALUE,
+                    &hKey) == ERROR_SUCCESS)
+    {
+        char            szKeyValue[2048] = "";
+        DWORD           dwSize = sizeof(szKeyValue),
+                        dwKeyType;
+
+        if (RegQueryValueEx(hKey, pszVarName, NULL, &dwKeyType, (u_char *) szKeyValue,
+                        &dwSize) == ERROR_SUCCESS)
+        {
+            RegCloseKey(hKey);
+
+            return (strdup(szKeyValue));
+        }
+
+        RegCloseKey(hKey);
+    }
+
+    const char     *pszValue = getenv(pszVarName);
+
+    return ((pszValue != NULL) ? strdup(pszValue) : NULL);
+
+}
 
 #else           // #if defined(WIN32)
-#if defined(__LINUX__) || defined(__SOLARIS__)
+#if defined(__LINUX__) || defined(__SOLARIS__) || defined(__FREEBSD__)
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -117,7 +151,18 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 #define SYS_SLASH_CHAR              '/'
 #define SYS_SLASH_STR               "/"
 #define SYS_MAX_PATH                256
+
+#if defined(__FREEBSD__)
+#define SysFileSync(fp)             do { fflush(fp); fsync(fileno(fp)); } while (0)
+#else           // #if defined(__FREEBSD__)
 #define SysFileSync(fp)             do { fflush(fp); fdatasync(fileno(fp)); } while (0)
+#endif          // #if defined(__FREEBSD__)
+
+#define stricmp                     strcasecmp
+#define strnicmp                    strncasecmp
+
+
+
 
 
 
@@ -175,6 +220,15 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 
 }
 
+char           *SysGetEnv(const char *pszVarName)
+{
+
+    const char     *pszValue = getenv(pszVarName);
+
+    return ((pszValue != NULL) ? strdup(pszValue) : NULL);
+
+}
+
 
 #else           // #if defined(__LINUX__) || defined(__SOLARIS__)
 
@@ -194,9 +248,60 @@ int             SysGetHostName(char * pszHostName, int iNameSize)
 
 
 
+static char const *AddressFromAtPtr(char const * pszAt, char const * pszBase,
+                        char *pszAddress)
+{
+
+    char const     *pszStart = pszAt;
+
+    for (; (pszStart >= pszBase) && (strchr("<> \t,\":;'\r\n", *pszStart) == NULL); pszStart--);
+
+    ++pszStart;
+
+    char const     *pszEnd = pszAt + 1;
+
+    for (; (*pszEnd != '\0') && (strchr("<> \t,\":;'\r\n", *pszEnd) == NULL); pszEnd++);
+
+    int             iAddrLength = (int) (pszEnd - pszStart);
+
+    strncpy(pszAddress, pszStart, iAddrLength);
+    pszAddress[iAddrLength] = '\0';
+
+    return (pszEnd);
+
+}
 
 
 
+static int      EmitRecipients(FILE * pMailFile, char const * pszAddrList)
+{
+
+    int             iRcptCount = 0;
+    char const     *pszCurr = pszAddrList;
+
+    for (; (pszCurr != NULL) && (*pszCurr != '\0');)
+    {
+        char const     *pszAt = strchr(pszCurr, '@');
+
+        if (pszAt == NULL)
+            break;
+
+
+        char            szAddress[256] = "";
+
+        if ((pszCurr = AddressFromAtPtr(pszAt, pszAddrList, szAddress)) != NULL)
+        {
+            fprintf(pMailFile, "rcpt to:<%s>\r\n", szAddress);
+
+            ++iRcptCount;
+        }
+
+    }
+
+
+    return (iRcptCount);
+
+}
 
 
 
@@ -206,11 +311,13 @@ int             main(int iArgCount, char *pszArgs[])
 //  Get the mail root path
 ///////////////////////////////////////////////////////////////////////////////
     int             iVarLength = 0;
-    char const     *pszMailRoot = getenv(ENV_MAIL_ROOT);
+    char           *pszMailRoot = SysGetEnv(ENV_MAIL_ROOT);
     char            szMailRoot[SYS_MAX_PATH] = "";
 
     if ((pszMailRoot == NULL) || ((iVarLength = strlen(pszMailRoot)) == 0))
     {
+        if (pszMailRoot != NULL)
+            free(pszMailRoot);
         fprintf(stderr, "cannot find environment variable: %s\n", ENV_MAIL_ROOT);
         return (1);
     }
@@ -220,11 +327,15 @@ int             main(int iArgCount, char *pszArgs[])
     if (szMailRoot[iVarLength - 1] != SYS_SLASH_CHAR)
         strcat(szMailRoot, SYS_SLASH_STR);
 
+    free(pszMailRoot);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Parse command line
 ///////////////////////////////////////////////////////////////////////////////
     int             ii;
-    char            szMailFrom[256] = "";
+    bool            bExtractRcpts = false;
+    char            szMailFrom[256] = "",
+                    szExtMailFrom[256] = "";
 
     for (ii = 1; ii < iArgCount; ii++)
     {
@@ -240,6 +351,13 @@ int             main(int iArgCount, char *pszArgs[])
             continue;
         }
 
+        if (strncmp(pszArgs[ii], "-t", 2) == 0)
+        {
+            bExtractRcpts = true;
+
+            continue;
+        }
+
         if (strncmp(pszArgs[ii], "-f", 2) == 0)
         {
             strcpy(szMailFrom, pszArgs[ii] + 2);
@@ -249,7 +367,10 @@ int             main(int iArgCount, char *pszArgs[])
 
         if (strncmp(pszArgs[ii], "-F", 2) == 0)
         {
-            char const     *pszOpen = strchr(pszArgs[ii], '<');
+            strcpy(szExtMailFrom, pszArgs[ii] + 2);
+
+
+            char const     *pszOpen = strchr(pszArgs[ii] + 2, '<');
 
             if (pszOpen == NULL)
                 strcpy(szMailFrom, pszArgs[ii] + 2);
@@ -270,34 +391,57 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if recipients are supplied
 ///////////////////////////////////////////////////////////////////////////////
-    if (ii == iArgCount)
+    if (!bExtractRcpts && (ii >= iArgCount))
     {
         fprintf(stderr, "empty recipient list\n");
         return (2);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Save recipients index
+///////////////////////////////////////////////////////////////////////////////
+    int             iRcptIndex = ii,
+                    iRcptCount = iArgCount - iRcptIndex;
+
+///////////////////////////////////////////////////////////////////////////////
 //  Create file name
 ///////////////////////////////////////////////////////////////////////////////
     char            szHostName[256] = "",
+                    szDataFile[SYS_MAX_PATH] = "",
                     szMailFile[SYS_MAX_PATH] = "";
 
     SysGetHostName(szHostName, sizeof(szHostName) - 1);
 
-    sprintf(szMailFile, "%s%s%lu.%lu.%s",
+    sprintf(szDataFile, "%s%s%lu.%lu.%s",
             szMailRoot,
             LOCAL_TEMP_SUBPATH,
             (unsigned long) time(NULL) * 1000,
             SysGetProcessId(),
             szHostName);
 
+    sprintf(szMailFile, "%s.mail", szDataFile);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Open raw data file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pDataFile = fopen(szDataFile, "w+b");
+
+    if (pDataFile == NULL)
+    {
+        perror(szDataFile);
+        return (3);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Open maildrop file
+///////////////////////////////////////////////////////////////////////////////
     FILE           *pMailFile = fopen(szMailFile, "wb");
 
     if (pMailFile == NULL)
     {
         perror(szMailFile);
-        return (3);
+        fclose(pDataFile), remove(szDataFile);
+        return (4);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -308,16 +452,16 @@ int             main(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit recipients
 ///////////////////////////////////////////////////////////////////////////////
-    for (; ii < iArgCount; ii++)
+    for (ii = iRcptIndex; ii < iArgCount; ii++)
         fprintf(pMailFile, "rcpt to:<%s>\r\n", pszArgs[ii]);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Emit empty line separator
+//  Emit message by reading from stdin
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pMailFile, "\r\n");
-
-
-    char            szBuffer[1024] = "";
+    bool            bInHeaders = true,
+                    bHasFrom = false,
+                    bRcptSource = false;
+    char            szBuffer[1536] = "";
 
     while (fgets(szBuffer, sizeof(szBuffer) - 1, stdin) != NULL)
     {
@@ -328,12 +472,102 @@ int             main(int iArgCount, char *pszArgs[])
 
         szBuffer[iLineLength] = '\0';
 
+
+///////////////////////////////////////////////////////////////////////////////
+//  Extract mail from
+///////////////////////////////////////////////////////////////////////////////
+        if (bInHeaders)
+        {
+            if (iLineLength == 0)
+            {
+                bInHeaders = false;
+
+                if (!bHasFrom)
+                {
+///////////////////////////////////////////////////////////////////////////////
+//  Add mail from ( if not present )
+///////////////////////////////////////////////////////////////////////////////
+                    if (strlen(szExtMailFrom) != 0)
+                        fprintf(pDataFile, "From: %s\r\n", szExtMailFrom);
+                    else
+                        fprintf(pDataFile, "From: <%s>\r\n", szMailFrom);
+                }
+            }
+
+
+            if ((szBuffer[0] == ' ') || (szBuffer[0] == '\t'))
+            {
+                if (bRcptSource)
+                {
+                    int             iRcptCurr = EmitRecipients(pMailFile, szBuffer);
+
+                    if (iRcptCurr > 0)
+                        iRcptCount += iRcptCurr;
+                }
+            }
+            else
+            {
+                bRcptSource = (strnicmp(szBuffer, "To:", 3) == 0) ||
+                        (strnicmp(szBuffer, "Cc:", 3) == 0) ||
+                        (strnicmp(szBuffer, "Bcc:", 4) == 0);
+
+                if (bRcptSource)
+                {
+                    int             iRcptCurr = EmitRecipients(pMailFile, szBuffer);
+
+                    if (iRcptCurr > 0)
+                        iRcptCount += iRcptCurr;
+                }
+
+                if (!bHasFrom && (strnicmp(szBuffer, "From:", 5) == 0))
+                    bHasFrom = true;
+            }
+        }
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit mail line
 ///////////////////////////////////////////////////////////////////////////////
-        fprintf(pMailFile, "%s\r\n", szBuffer);
+        fprintf(pDataFile, "%s\r\n", szBuffer);
 
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check the number of recipients
+///////////////////////////////////////////////////////////////////////////////
+    if (iRcptCount == 0)
+    {
+        fprintf(stderr, "empty recipient list\n");
+        fclose(pDataFile), remove(szDataFile);
+        fclose(pMailFile), remove(szMailFile);
+        return (5);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Empty line separator between maildrop header and data
+///////////////////////////////////////////////////////////////////////////////
+    fprintf(pMailFile, "\r\n");
+
+///////////////////////////////////////////////////////////////////////////////
+//  Append data file
+///////////////////////////////////////////////////////////////////////////////
+    rewind(pDataFile);
+
+    unsigned int    uReaded;
+
+    do
+    {
+        if (((uReaded = fread(szBuffer, 1, sizeof(szBuffer), pDataFile)) != 0) &&
+                (fwrite(szBuffer, 1, uReaded, pMailFile) != uReaded))
+        {
+            perror(szMailFile);
+            fclose(pDataFile), remove(szDataFile);
+            fclose(pMailFile), remove(szMailFile);
+            return (6);
+        }
+
+    } while (uReaded == sizeof(szBuffer));
+
+    fclose(pDataFile), remove(szDataFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync and close the mail file
@@ -349,7 +583,7 @@ int             main(int iArgCount, char *pszArgs[])
     sprintf(szDropFile, "%s%s%lu.%lu.%s",
             szMailRoot,
             LOCAL_SUBPATH,
-            (unsigned long) time(NULL),
+            (unsigned long) time(NULL) * 1000,
             SysGetProcessId(),
             szHostName);
 
@@ -357,7 +591,7 @@ int             main(int iArgCount, char *pszArgs[])
     {
         remove(szMailFile);
         fprintf(stderr, "cannot move file: %s\n", szMailFile);
-        return (4);
+        return (7);
     }
 
 

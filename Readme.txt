@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.71
+Version      : 0.72
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 29-04-2001
+Date         : 23-05-2001
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -487,9 +487,25 @@ Date 29-04-2001	0.71
 	Fixed a bug in filters selection that made XMail to case-sensitive compare user and domain filters.
 	Changed the name of the default filter to ".tab" instead of "defaultfilter.tab".
 	Finally, FreeBSD port added !!
-	
-	
-	
+Date 23-05-2001	0.72
+	Fixed build errors in MkUsers.cpp and SendMail.cpp ( FreeBSD version ).
+	Added the ability to specify a list of matching domains when using PSYNC with masquerading domains ( see POP3LINKS.TAB section ).
+	The auxiliary program  sendmail  now read the MAIL_ROOT environment from registry ( Win32 version ) and
+	if it fails it reads from the environment.
+	Fixed a bug that made XMail to crash if the first line of ALIASES.TAB was empty.
+	RPM packaging added.
+	Added a new feature to the custom domain commands "redirect" and "lredirect" that will accept
+	email addresses as redirection target.
+	Fixed a bug in MkUsers.
+	Added system resource checking before accepting SMTP connections (see "SmtpMinDiskSpace" and "SmtpMinVirtMemSpace"
+	SERVER.TAB variables ).
+	Added system resource checking before accepting POP3 connections ( see "Pop3MinVirtMemSpace" SERVER.TAB variable ).
+	A new command line param -t has been implemented in sendmail.
+	A new USER.TAB variable "SmtpPerms"  has been added	to enable account based SMTP permissions.
+	If "SmtpPerms" is not found the SERVER.TAB variable "DefaultSmtpPerms" is checked.
+	A new USER.TAB variable "ReceiveEnable" has been added to enable/disable the account from receiving emails.
+	A new USER.TAB variable "PopEnable" has been added to enable/disable the account from fetching emails.
+
 
 
 
@@ -593,7 +609,7 @@ Part 0			License
 Part 1			Overview
 
 	This server born due to the need of having a free and stable Mail Server
-	to be used inside my company, which at least now, use a Windows Network.
+	to be used inside my old company, which used a Windows Network.
 	I don't like to reinvent the wheel but the need of some special features
 	drive me to start a new project. Probably if I could use a Linux server
 	on my net, I would be able to satisfy my needs without write code, but
@@ -609,8 +625,8 @@ Part 1			Overview
 	With XMail You get an all-in-one package with a central administration that can
 	simplify the above common steps.
 	The first code of XMail Server is started on Windows NT and Linux, and
-	now, the Solaris version is ready. The compilers supported are gcc for
-	Linux and Solaris and M$ Visual C++ for NT/2K.
+	now, the FreeBSD and Solaris version ready. The compilers supported are gcc for
+	Linux, FreeBSD and Solaris and M$ Visual C++ for NT/2K.
 
 
 
@@ -671,6 +687,8 @@ Part 3			Porting status
 	Right now the Linux and NT ports are stable, while the Solaris and FreeBSD ones have
 	not been tested like the previous OSs.
 
+
+
 	
 
 
@@ -689,11 +707,10 @@ Part 3			Porting status
 
 Part 4			Requirements
 
-	Any version of Linux.
+	Any version of Linux that has glibc.
 	Windows NT with ws2_32.dll correctly installed.
 	A working DNS and gateway to the internet ( if You plan to use it ).
-	To build for Linux You need any version of gcc and libc or glibc ( better ) 
-	installed.
+	To build for Linux You need any version of gcc and glibc installed.
 	To build for Windows You need MS Visual C++ ( for which I give the project ) 
 	or any other working compiler that give support for Win32 SDK.
 
@@ -716,9 +733,11 @@ Part 4			Requirements
 
 Part 5			Getting sources
 
-	Get the latest sources at the XMail home page http://www.xmailserver.org/
-	Use the correct distribution for Your system and don't mix Linux files with
+	Always get the latest sources at the XMail home page http://www.xmailserver.org/
+	coz You're maybe using an old version.
+	Use the correct distribution for Your system and don't mix Unix files with
 	Windows ones coz this is one of the most common cause of XMail bad behaviour.
+	
 
 
 
@@ -947,7 +966,7 @@ Part 7			Configuration
 
 	"value1"[TAB]"value2"[TAB]...[NEWLINE]
 
-	Examine now the means of this files.
+	Let's examine now the means of this files.
 
 
 	ALIASES.TAB :
@@ -1072,21 +1091,28 @@ Part 7			Configuration
 	( for example custom domain processing ).
 	You can also have the option to setup a line like this one :
 
-	"?home.bogus.com"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
+	"?home.bogus.com,felins.net,pets.org"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
-	and the fetched messages will be pushed into the spool using, as name part the name contained
-	into the "To:" tag of the incoming message, and domain part the string after the  ?  character
-	( masquerade domain ).
-	So if a message having as To: address  graycat@felins.net  is fetched by the previous line a
+	and messages are dropped inside the spool by following these rules :
+	1) XMail parse the message headers by searching for To:, Cc: and Bcc: addresses
+	2) Each address's domain is compared with the list of valid domains ( felins.net, pets.org )
+	3) For each valid address the username part is taken and joined with the '@' and
+		the masquerade domain name ( the name following '?' )
+	4) The message is spooled with the above built destination address
+	
+	Obviously the masquerade domain ( 'home.bogus.com' ) MUST be handled by the server.
+  	So if a message having as To: address  graycat@felins.net  is fetched by the previous line a
 	message is pushed into the spool with address  graycat@home.bogus.com.
-	You've to be sure that the masquerade domain ( home.bogus.com ) is handled locally in a way or another.
 	Particular attention is to be taken about at not creating mail loops.
 	Another otion is :
 
-	"&.local"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
+	"&.local,felins.net,pets.org"	"dlibenzi"	"xmailserver.org"	"dlibenzi"	"XYZ..."	"CLR"
 
 	where a fetched message whose To: address is graycat@felins.net will be replaced with
 	graycat@felins.net.local.
+	You can avoid the matching domain list after the masquerading domain but, in that case,
+	You may have bad destination addresses inside the spool.
+	The list MUST be comma separated WITHOUT spaces.
 	XMail will start PSYNC session with a delay that You can specify with the -Yi nsec
 	command line parameter ( default 120 ).
 	XMail will also check for the presence ( inside MAIL_ROOT ) of a file named ".psync-trigger" and,
@@ -1645,27 +1671,39 @@ Part 10			Custom domain mail processing
 	from file processing.
 
 	[REDIRECT]
-	"redirect"[TAB]"domain"[TAB]...[NEWLINE]
+	"redirect"[TAB]"domain-or-emailaddress"[TAB]...[NEWLINE]
 
-	Redirect message to internal or external domain.
+	Redirect message to internal or external domain or email address.
 	If the message was for foo-user@custdomain.net and the file custdomain.net.tab
 	contain a line :
 
 	"redirect"	"target-domain.org"
 
-	the message is delivred to  foo-user@target-domain.org
+	the message is delivered to  foo-user@target-domain.org
+	While the line :
+	
+	"redirect"	"user@target-domain.org"
+	
+	will redirect the message to user@target-domain.org.
+	
 
 	[LREDIRECT]
-	"lredirect"[TAB]"domain"[TAB]...[NEWLINE]
+	"lredirect"[TAB]"domain-or-emailaddress"[TAB]...[NEWLINE]
 
-	Redirect message to internal or external domain impersonating local domain
+	Redirect message to internal or external domain ( or email address ) impersonating local domain
 	during messages delivery.
 	If the message was for foo-user@custdomain.net and the file custdomain.net.tab
 	contain a line :
 
 	"redirect"	"target-domain.org"
 
-	the message is delivred to  foo-user@target-domain.org
+	the message is delivered to  foo-user@target-domain.org
+	While the line :
+	
+	"redirect"	"user@target-domain.org"
+	
+	will redirect the message to user@target-domain.org.
+
 
 	[WAIT]
 	"wait"[TAB]"timeout"[NEWLINE]
@@ -1745,6 +1783,15 @@ Part 11			SERVER.TAB variables
 	
 	[AllowSmtpETRN]
 	Enable the use of ETRN SMTP command. This flag may be forced by SMTP authentication.
+
+	[SmtpMinDiskSpace]
+	Minimum disk space ( in Kb ) that is requested before accepting an SMTP connection.
+
+	[SmtpMinVirtMemSpace]
+	Minimum virtual memory ( in Kb ) that is requested before accepting an SMTP connection.
+
+	[Pop3MinVirtMemSpace]
+	Minimum virtual memory ( in Kb ) that is requested before accepting a POP3 connection.
 
 	[Pop3SyncErrorAccount]
 	This defines the email account ( MUST be handled locally ) that will receive all
@@ -1957,6 +2004,15 @@ Part 13			USER.TAB variables
 
 	This variable should be set to avoid delivery error notifications to reach the
 	original message senders.
+
+	[SmtpPerms]
+	User SMTP permissions ( see SMTPAUTH.TAB for info ).
+	
+	[ReceiveEnable]
+	It's "1" if the account can receive email, "0" if You want to disable the account from receiving messages.
+
+	[PopEnable]
+	It's "1" if You want to enable the account to fetch POP3 messages, "0" otherwise.
 
 
 
@@ -3066,10 +3122,11 @@ Part 24			sendmail
 	
 	-f{mail from}		= Set the sender of the email
 	-F{ext mail from}	= Set the extended sender of the email
+	-t					= Extract recipients from the "To:"/"Cc:"/"Bcc:" header tags
 	
 	The syntax is :
 	
-	sendmail [-f...] [-F...] recipient ...
+	sendmail [-t] [-f...] [-F...] recipient ...
 	
 	the message content is read from the standard input and must be RFC compliant.
 	To be RFC compliant means that the message MUST be :

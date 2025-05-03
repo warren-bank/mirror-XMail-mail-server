@@ -64,8 +64,8 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
                         int iTimeout);
 int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
                         int iTimeout);
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
-                        int (*pSendCB) (void *) = NULL, void *pUserData = NULL);
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
+                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData);
 int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRESS NetAddr, int iPortNo);
 NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo);
 NET_ADDRESS     SysGetHostByName(char const * pszName);
@@ -153,6 +153,10 @@ char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSiz
 
 int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock);
 int             SysSpinRelease(SYS_SPINLOCK * pSpinLock);
+
+int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree);
+int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
+                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree);
 
 
 

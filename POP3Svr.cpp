@@ -99,6 +99,7 @@ static int      POP3ThreadCountAdd(long lCount, SHB_HANDLE hShbPOP3,
 static int      POP3LogEnabled(SHB_HANDLE hShbPOP3, POP3Config * pPOP3Cfg = NULL);
 static int      POP3CheckPeerIP(SYS_SOCKET SockFD);
 static unsigned int POP3ClientThread(void *pThreadData);
+static int      POP3CheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock,
                         POP3Session & POP3S);
 static int      POP3LogSession(POP3Session & POP3S);
@@ -409,6 +410,23 @@ unsigned int    POP3ThreadProc(void *pThreadData)
 
 
 
+static int      POP3CheckSysResources(SVRCFG_HANDLE hSvrConfig)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check virtual memory
+///////////////////////////////////////////////////////////////////////////////
+    int             iMinValue = SvrGetConfigInt("Pop3MinVirtMemSpace", -1, hSvrConfig);
+
+    if ((iMinValue > 0) && (SvrCheckVirtMemSpace(1024 * (unsigned long) iMinValue) < 0))
+        return (ErrGetErrorCode());
+
+
+    return (0);
+
+}
+
+
+
 static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Session & POP3S)
 {
 
@@ -422,7 +440,8 @@ static int      POP3InitSession(SHB_HANDLE hShbPOP3, BSOCK_HANDLE hBSock, POP3Se
     if ((POP3S.hSvrConfig = SvrGetConfigHandle()) == INVALID_SVRCFG_HANDLE)
         return (ErrGetErrorCode());
 
-    if (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), POP3S.PeerInfo) < 0)
+    if ((POP3CheckSysResources(POP3S.hSvrConfig) < 0) ||
+            (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), POP3S.PeerInfo) < 0))
     {
         SvrReleaseConfigHandle(POP3S.hSvrConfig);
         return (ErrGetErrorCode());

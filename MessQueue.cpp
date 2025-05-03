@@ -639,7 +639,7 @@ static int      QueStatMessage(MessageQueue * pMQ, QueueMessage * pQM)
 
 
 
-QMSG_HANDLE     QueGetTempMsg(QUEUE_HANDLE hQueue)
+QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue)
 {
 
     MessageQueue   *pMQ = (MessageQueue *) hQueue;

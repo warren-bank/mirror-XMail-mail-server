@@ -41,7 +41,10 @@ typedef struct BSOCK_HANDLE_struct
 BSOCK_HANDLE    BSckAttach(SYS_SOCKET SockFD, int iBufferSize = STD_SOCK_BUFFER_SIZE);
 SYS_SOCKET      BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket = 0);
 int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout);
-char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout);
+char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+                        int *pLineLength = NULL);
+char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout,
+                        int *pLineLength = NULL);
 int             BSckSendString(BSOCK_HANDLE hBSock, char const * pszBuffer, int iTimeout);
 int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * pszFormat,...);
 int             BSckSendData(BSOCK_HANDLE hBSock, char const * pszBuffer, int iSize, int iTimeout);

@@ -50,6 +50,7 @@
 #define SMTP_SPOOL_DIR              "spool"
 #define MAX_MSG_FILENAME_LENGTH     80
 #define SVR_PROFILE_LINE_MAX        2048
+#define SYS_RES_CHECK_INTERVAL      8
 
 
 
@@ -553,6 +554,73 @@ int             SvrConfigVar(char const * pszVarName, char *pszVarValue, int iMa
 
     if (iReleaseConfig)
         SvrReleaseConfigHandle(hSvrConfig);
+
+    return (0);
+
+}
+
+
+
+int             SvrCheckDiskSpace(unsigned long ulMinSpace)
+{
+
+    time_t          tNow = time(NULL);
+    static SYS_INT64    FreeSpace = 0;
+    static time_t   tLastCheck = 0;
+
+    if (tNow > (tLastCheck + SYS_RES_CHECK_INTERVAL))
+    {
+        SYS_INT64       TotalSpace;
+        char            szRootDir[SYS_MAX_PATH] = "";
+
+        tLastCheck = tNow;
+
+        CfgGetRootPath(szRootDir);
+
+
+        if (SysGetDiskSpace(szRootDir, &TotalSpace, &FreeSpace) < 0)
+            return (ErrGetErrorCode());
+
+    }
+
+    if (FreeSpace < (SYS_INT64) ulMinSpace)
+    {
+        ErrSetErrorCode(ERR_LOW_DISK_SPACE);
+        return (ERR_LOW_DISK_SPACE);
+    }
+
+    return (0);
+
+}
+
+
+
+int             SvrCheckVirtMemSpace(unsigned long ulMinSpace)
+{
+
+    time_t          tNow = time(NULL);
+    static SYS_INT64    FreeSpace = 0;
+    static time_t   tLastCheck = 0;
+
+    if (tNow > (tLastCheck + SYS_RES_CHECK_INTERVAL))
+    {
+        tLastCheck = tNow;
+
+
+        SYS_INT64       RamTotal,
+                        RamFree,
+                        VirtTotal;
+
+        if (SysMemoryInfo(&RamTotal, &RamFree, &VirtTotal, &FreeSpace) < 0)
+            return (ErrGetErrorCode());
+
+    }
+
+    if (FreeSpace < (SYS_INT64) ulMinSpace)
+    {
+        ErrSetErrorCode(ERR_LOW_VM_SPACE);
+        return (ERR_LOW_VM_SPACE);
+    }
 
     return (0);
 

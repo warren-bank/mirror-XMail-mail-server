@@ -45,6 +45,7 @@
 #define MAX_TCP_SEND_SIZE           (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT       64
 
+#define MAX_SWAP_NAME_SIZE          256
 
 
 
@@ -121,6 +122,7 @@ static int      SysExitPID(pid_t PID, int iExitCode);
 static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
 static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
+static int      SysGetSwapInfo(SYS_INT64 * pSwapTotal, SYS_INT64 * pSwapFree);
 
 
 
@@ -648,15 +650,15 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
-                        int (*pSendCB) (void *), void *pUserData)
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
+                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData)
 {
 
     int             iFileID = open(pszFileName, O_RDONLY);
 
     if (iFileID == -1)
     {
-        ErrSetErrorCode(ERR_FILE_OPEN);
+        ErrSetErrorCode(ERR_FILE_OPEN, pszFileName);
         return (ERR_FILE_OPEN);
     }
 
@@ -689,12 +691,13 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulSentBytes = 0;
-    char           *pszBuffer = (char *) pMapAddress;
+    unsigned long   ulCurrOffset = ulBaseOffset,
+                    ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
+    char           *pszBuffer = (char *) pMapAddress + ulBaseOffset;
 
-    while (ulSentBytes < ulFileSize)
+    while (ulCurrOffset < ulSndEndOffset)
     {
-        int             iCurrSend = (int) Min(iSndBuffSize, ulFileSize - ulSentBytes);
+        int             iCurrSend = (int) Min(iSndBuffSize, ulSndEndOffset - ulCurrOffset);
 
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
                                 Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
@@ -714,10 +717,11 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
         }
 
         pszBuffer += iCurrSend;
-        ulSentBytes += (unsigned long) iCurrSend;
+        ulCurrOffset += (unsigned long) iCurrSend;
     }
 
     munmap((char *) pMapAddress, (size_t) ulFileSize);
+
 
     close(iFileID);
 
@@ -2561,6 +2565,125 @@ int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
 {
 
     *pSpinLock = 0;
+
+    return (0);
+
+}
+
+
+
+int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
+{
+
+    struct statvfs  SFS;
+	
+    if (statvfs(pszPath, &SFS) != 0)
+    {
+        ErrSetErrorCode(ERR_GET_DISK_SPACE_INFO);
+        return (ERR_GET_DISK_SPACE_INFO);
+    }
+
+
+    *pTotal = (SYS_INT64) SFS.f_bsize * (SYS_INT64) SFS.f_blocks;
+
+    *pFree = (SYS_INT64) SFS.f_bsize * (SYS_INT64) SFS.f_bavail;
+
+    return (0);
+
+}
+
+
+
+int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
+                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
+{
+
+    SYS_INT64       SwapTotal,
+                    SwapFree;
+
+    if (SysGetSwapInfo(&SwapTotal, &SwapFree) < 0)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+
+    SYS_INT64       PageSize = (SYS_INT64) sysconf(_SC_PAGESIZE);
+
+    *pRamTotal = (SYS_INT64) sysconf(_SC_PHYS_PAGES) * PageSize;
+
+    *pRamFree = (SYS_INT64) sysconf(_SC_AVPHYS_PAGES) * PageSize;
+
+    *pVirtTotal = SwapTotal + *pRamTotal;
+
+    *pVirtFree = SwapFree + *pRamFree;
+
+    return (0);
+
+}
+
+
+
+static int      SysGetSwapInfo(SYS_INT64 * pSwapTotal, SYS_INT64 * pSwapFree)
+{
+
+    *pSwapTotal = *pSwapFree = 0;
+
+    int             iNumSwaps = swapctl(SC_GETNSWP, 0);
+
+	if (iNumSwaps == -1)
+		return (-1);
+
+	if (iNumSwaps == 0)
+		return (0);
+
+
+    swaptbl_t      *pSwTab = (swaptbl_t *) malloc(iNumSwaps * sizeof(swapent_t) +
+                            sizeof(struct swaptable));
+
+    if (pSwTab == (void *) 0)
+        return (-1);
+
+    memset(pSwTab, 0, iNumSwaps * sizeof(swapent_t) + sizeof(struct swaptable));
+
+
+	char           *pszNameTab = (char *) malloc(iNumSwaps * MAX_SWAP_NAME_SIZE);
+
+    if (pszNameTab == (void *) 0)
+    {
+        free(pSwTab);
+        return (-1);
+    }
+
+	memset(pszNameTab, 0, iNumSwaps * MAX_SWAP_NAME_SIZE);
+
+
+    int             ii;
+
+    for (ii = 0; ii < iNumSwaps; ii++)
+        pSwTab->swt_ent[ii].ste_path = pszNameTab + (ii * MAX_SWAP_NAME_SIZE);
+
+    pSwTab->swt_n = iNumSwaps;
+
+    if ((iNumSwaps = swapctl(SC_LIST, pSwTab)) < 0)
+    {
+        free(pszNameTab);
+        free(pSwTab);
+        return (-1);
+    }
+
+
+    SYS_INT64       PageSize = (SYS_INT64) sysconf(_SC_PAGESIZE);
+
+    for (ii = 0; ii < iNumSwaps; ii++)
+    {
+        *pSwapTotal += (SYS_INT64) pSwTab->swt_ent[ii].ste_pages * PageSize;
+
+        *pSwapFree += (SYS_INT64) pSwTab->swt_ent[ii].ste_free * PageSize;
+    }
+
+    free(pszNameTab);
+    free(pSwTab);
 
     return (0);
 

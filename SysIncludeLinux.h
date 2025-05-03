@@ -34,6 +34,8 @@
 #include <sys/ioctl.h>
 #include <sys/sendfile.h>
 #include <sys/mman.h>
+#include <sys/vfs.h>
+#include <sys/sysinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>

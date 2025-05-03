@@ -227,6 +227,11 @@
 #define ERR_DUL_SPAMMER             (-207)
 #define ERR_NO_POP3_IP              (-208)
 #define ERR_NO_MESSAGE_FILE         (-209)
+#define ERR_GET_DISK_SPACE_INFO     (-210)
+#define ERR_GET_MEMORY_INFO         (-211)
+#define ERR_LOW_DISK_SPACE          (-212)
+#define ERR_LOW_VM_SPACE            (-213)
+#define ERR_USER_DISABLED           (-214)
 
 
 

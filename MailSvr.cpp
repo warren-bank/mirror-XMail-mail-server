@@ -68,8 +68,8 @@
 #define STD_PSYNC_NUM_THREADS       8
 #define MAX_PSYNC_NUM_THREADS       32
 #define STD_POP3_BADLOGIN_WAIT      5
-#define MAX_POP3_THREADS            512
-#define MAX_SMTP_THREADS            512
+#define MAX_POP3_THREADS            1024
+#define MAX_SMTP_THREADS            1024
 #define STD_SMTP_MAX_RCPTS          100
 #define MAX_CTRL_THREADS            512
 #define STD_LMAIL_THREADS           3
@@ -1320,7 +1320,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Server main loop
 ///////////////////////////////////////////////////////////////////////////////
-    for (; !SvrInShutdown();)
+    for (; !SvrInShutdown(true);)
     {
         SysSleep(SERVER_SLEEP_TIMESLICE);
 
@@ -1364,7 +1364,7 @@ int             SvrStopServer(bool bWait)
     {
         int             iWaitTime = 0;
 
-        for (; SvrInShutdown(); iWaitTime += SERVER_SLEEP_TIMESLICE)
+        for (; SvrInShutdown(true); iWaitTime += SERVER_SLEEP_TIMESLICE)
             SysSleep(SERVER_SLEEP_TIMESLICE);
     }
 
@@ -1375,10 +1375,22 @@ int             SvrStopServer(bool bWait)
 
 
 
-bool            SvrInShutdown(void)
+bool            SvrInShutdown(bool bForceCheck)
 {
 
-    return ((SysExistFile(szShutdownFile)) ? true : false);
+    time_t          tNow = time(NULL);
+    static time_t   tLastCheck = 0;
+    static bool     bShutdown = false;
+
+    if (bForceCheck || (tNow > (tLastCheck + SHUTDOWN_CHECK_TIME)))
+    {
+        tLastCheck = tNow;
+
+
+        bShutdown = (SysExistFile(szShutdownFile)) ? true : false;
+    }
+
+    return (bShutdown);
 
 }
 
@@ -1395,7 +1407,7 @@ int             SvrShutdownCB(void *pData)
     {
         *ptLastCheck = tCurr;
 
-        if (SvrInShutdown())
+        if (SvrInShutdown(true))
             return (-1);
     }
 

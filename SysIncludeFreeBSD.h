@@ -33,6 +33,11 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/param.h>
+#include <sys/mount.h>
+#include <sys/sysctl.h>
+#include <sys/vmmeter.h>
+#include <vm/vm_param.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -57,6 +62,7 @@
 #include <dlfcn.h>
 #include <sched.h>
 #include <pthread.h>
+#include <kvm.h>
 
 
 

@@ -53,7 +53,7 @@
 
 
 #define TACACS_TIMEOUT          15
-#define TACACS_SEND_RETRIES     4
+#define TACACS_SEND_RETRIES     3
 #define TACACS_DPORT            110
 #define TACACS_LPORT            0
 

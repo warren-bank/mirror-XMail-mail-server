@@ -24,6 +24,7 @@ A = a
 CPP = cpp
 CC = c++
 LD = gcc
+STRIP = strip
 
 #
 # Swap comments on these two lines to build the Maildir version of XMail.
@@ -33,8 +34,10 @@ LD = gcc
 CFLAGS = -O2 -I. -D__SOLARIS__ -DXMAIL_SPARC -D_THREAD_SAFE=1 -D_REENTRANT=1
 # CFLAGS = -O2 -I. -D__SOLARIS__ -DXMAIL_SPARC -DCONFIG_MAILDIR -D_THREAD_SAFE=1 -D_REENTRANT=1
 
+# Solaris 8 does not need -lnsl
 LDFLAGS = -ldl -lsocket -lpthread -lrt
 # LDFLAGS = -ldl -lsocket -lnsl -lpthread -lrt
+
 MAILSVR = XMail
 CRTLCLNT = CtrlClnt
 XMCRYPT = XMCrypt
@@ -76,23 +79,23 @@ all: ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS} ${SENDMAIL}
 
 ${MAILSVR}: ${SVROBJS}
 	${LD} -o ${MAILSVR} ${SVROBJS} ${LDFLAGS}
-	strip ${MAILSVR}
+	${STRIP} ${MAILSVR}
 
 ${CRTLCLNT}: ${CCLNOBJS}
 	${LD} -o ${CRTLCLNT} ${CCLNOBJS} ${LDFLAGS}
-	strip ${CRTLCLNT}
+	${STRIP} ${CRTLCLNT}
 
 ${XMCRYPT}: ${XMCOBJS}
 	${LD} -o ${XMCRYPT} ${XMCOBJS} ${LDFLAGS}
-	strip ${XMCRYPT}
+	${STRIP} ${XMCRYPT}
 
 ${MKUSERS}: ${MKUOBJS}
 	${LD} -o ${MKUSERS} ${MKUOBJS} ${LDFLAGS}
-	strip ${MKUSERS}
+	${STRIP} ${MKUSERS}
 
 ${SENDMAIL}: ${SENDMAILOBJS}
 	${LD} -o ${SENDMAIL} ${SENDMAILOBJS} ${LDFLAGS}
-	strip ${SENDMAIL}
+	${STRIP} ${SENDMAIL}
 
 distclean: clean
 

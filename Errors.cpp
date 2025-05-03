@@ -262,6 +262,11 @@ static ErrorStrings Errors[] =
     {ERR_DUL_SPAMMER, "DUL registered spammer (dialups.mail-abuse.org.)"},
     {ERR_NO_POP3_IP, "Invalid or not available POP3 connection IP"},
     {ERR_NO_MESSAGE_FILE, "Message file not existent"},
+    {ERR_GET_DISK_SPACE_INFO, "Error getting disk space info"},
+    {ERR_GET_MEMORY_INFO, "Error getting memory info"},
+    {ERR_LOW_DISK_SPACE, "System low in disk space"},
+    {ERR_LOW_VM_SPACE, "System low in virtual memory"},
+    {ERR_USER_DISABLED, "Account disabled"},
 
 };
 

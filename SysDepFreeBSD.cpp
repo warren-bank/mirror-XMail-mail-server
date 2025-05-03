@@ -42,7 +42,7 @@
 #define MIN_TCP_SEND_SIZE           1024
 #define MAX_TCP_SEND_SIZE           (1024 * 8)
 #define MIN_BYTES_SEC_TIMEOUT       64
-#define STD_SENDFILE_BLKSIZE        (4096 * 2)
+
 
 
 
@@ -645,15 +645,15 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
-                        int (*pSendCB) (void *), void *pUserData)
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
+                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData)
 {
 
     int             iFileID = open(pszFileName, O_RDONLY);
 
     if (iFileID == -1)
     {
-        ErrSetErrorCode(ERR_FILE_OPEN);
+        ErrSetErrorCode(ERR_FILE_OPEN, pszFileName);
         return (ERR_FILE_OPEN);
     }
 
@@ -686,12 +686,13 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulSentBytes = 0;
-    char           *pszBuffer = (char *) pMapAddress;
+    unsigned long   ulCurrOffset = ulBaseOffset,
+                    ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
+    char           *pszBuffer = (char *) pMapAddress + ulBaseOffset;
 
-    while (ulSentBytes < ulFileSize)
+    while (ulCurrOffset < ulSndEndOffset)
     {
-        int             iCurrSend = (int) Min(iSndBuffSize, ulFileSize - ulSentBytes);
+        int             iCurrSend = (int) Min(iSndBuffSize, ulSndEndOffset - ulCurrOffset);
 
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
                                 Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
@@ -711,7 +712,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
         }
 
         pszBuffer += iCurrSend;
-        ulSentBytes += (unsigned long) iCurrSend;
+        ulCurrOffset += (unsigned long) iCurrSend;
     }
 
     munmap((char *) pMapAddress, (size_t) ulFileSize);
@@ -2557,6 +2558,98 @@ int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
 {
 
     *pSpinLock = 0;
+
+    return (0);
+
+}
+
+
+
+int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
+{
+
+    struct statfs   SFS;
+	
+    if (statfs(pszPath, &SFS) != 0)
+    {
+        ErrSetErrorCode(ERR_GET_DISK_SPACE_INFO);
+        return (ERR_GET_DISK_SPACE_INFO);
+    }
+
+
+    *pTotal = (SYS_INT64) SFS.f_bsize * (SYS_INT64) SFS.f_blocks;
+
+    *pFree = (SYS_INT64) SFS.f_bsize * (SYS_INT64) SFS.f_bavail;
+
+    return (0);
+
+}
+
+
+
+int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
+                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
+{
+
+    int             iValue;
+    size_t          DataLen;
+
+    DataLen = sizeof(iValue);
+
+    if (sysctlbyname("vm.stats.vm.v_page_size", &iValue, &DataLen, NULL, 0) != 0)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+    SYS_INT64       PageSize = (SYS_INT64) iValue;
+
+
+    DataLen = sizeof(iValue);
+
+    if (sysctlbyname("vm.stats.vm.v_page_count", &iValue, &DataLen, NULL, 0) != 0)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+    *pVirtTotal = *pRamTotal = (SYS_INT64) iValue * PageSize;
+
+
+    DataLen = sizeof(iValue);
+
+    if (sysctlbyname("vm.stats.vm.v_free_count", &iValue, &DataLen, NULL, 0) != 0)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+    *pVirtFree = *pRamFree = (SYS_INT64) iValue * PageSize;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get swap infos through the kvm interface
+///////////////////////////////////////////////////////////////////////////////
+    char            szErrBuffer[_POSIX2_LINE_MAX] = "";
+    kvm_t          *pKD = kvm_openfiles(NULL, NULL, NULL, O_RDONLY, szErrBuffer);
+
+    if (pKD == NULL)
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+
+    struct kvm_swap KSwap[8];
+    int             iSwaps = kvm_getswapinfo(pKD, KSwap, CountOf(KSwap), SWIF_DEV_PREFIX);
+
+    for (int ii; ii < iSwaps; ii++)
+    {
+        *pVirtFree += (SYS_INT64) (KSwap[ii].ksw_total - KSwap[ii].ksw_used) * PageSize;
+
+        *pVirtTotal += (SYS_INT64) KSwap[ii].ksw_total * PageSize;
+    }
+
+    kvm_close(pKD);
 
     return (0);
 

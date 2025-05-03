@@ -1047,7 +1047,7 @@ static int      USmtpDoPlainAuth(BSOCK_HANDLE hBSock, char const * pszServer,
     SysSNPrintf(szAuthBuffer, sizeof(szAuthBuffer) - 1, "AUTH PLAIN %s", szEnc64Token);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 200))
+                            sizeof(szAuthBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1086,7 +1086,7 @@ static int      USmtpDoLoginAuth(BSOCK_HANDLE hBSock, char const * pszServer,
     sprintf(szAuthBuffer, "AUTH LOGIN");
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 300))
+                            sizeof(szAuthBuffer) - 1), 300))
     {
         if (iSvrReponse > 0)
         {
@@ -1108,7 +1108,7 @@ static int      USmtpDoLoginAuth(BSOCK_HANDLE hBSock, char const * pszServer,
             sizeof(szAuthBuffer), &uEnc64Length);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 300))
+                            sizeof(szAuthBuffer) - 1), 300))
     {
         if (iSvrReponse > 0)
         {
@@ -1128,7 +1128,7 @@ static int      USmtpDoLoginAuth(BSOCK_HANDLE hBSock, char const * pszServer,
             sizeof(szAuthBuffer), &uEnc64Length);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 200))
+                            sizeof(szAuthBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1167,7 +1167,7 @@ static int      USmtpDoCramMD5Auth(BSOCK_HANDLE hBSock, char const * pszServer,
     sprintf(szAuthBuffer, "AUTH CRAM-MD5");
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 300) ||
+                            sizeof(szAuthBuffer) - 1), 300) ||
             (strlen(szAuthBuffer) < 4))
     {
         if (iSvrReponse > 0)
@@ -1215,7 +1215,7 @@ static int      USmtpDoCramMD5Auth(BSOCK_HANDLE hBSock, char const * pszServer,
             sizeof(szAuthBuffer), &uEnc64Length);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 200))
+                            sizeof(szAuthBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1301,7 +1301,7 @@ static int      USmtpDoExternAuth(BSOCK_HANDLE hBSock, char const * pszServer,
     SysSNPrintf(szAuthBuffer, sizeof(szAuthBuffer) - 1, "AUTH %s", ppszAuthTokens[1]);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 300))
+                            sizeof(szAuthBuffer) - 1), 300))
     {
         if (iSvrReponse > 0)
         {
@@ -1387,7 +1387,7 @@ static int      USmtpDoExternAuth(BSOCK_HANDLE hBSock, char const * pszServer,
     SysFree(pAuthResp);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szAuthBuffer, szAuthBuffer,
-                            sizeof(szAuthBuffer)), 200))
+                            sizeof(szAuthBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1551,7 +1551,7 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
     char            szRTXBuffer[2048] = "";
 
     if (!USmtpResponseClass(iSvrReponse = USmtpGetResponse(hBSock, szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         BSckDetach(hBSock, 1);
 
@@ -1572,7 +1572,7 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
     SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "HELO %s", pszDomain);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         BSckDetach(hBSock, 1);
 
@@ -1590,7 +1590,7 @@ BSOCK_HANDLE    USmtpCreateChannel(const char *pszServer, const char *pszDomain,
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if We need authentication
 ///////////////////////////////////////////////////////////////////////////////
-    if (USmtpServerAuthenticate(hBSock, pszServer, pSMTPE) < 0)
+    if (USmtpServerAuthenticate(hBSock, szAddress, pSMTPE) < 0)
     {
         USmtpCloseChannel(hBSock, 0, pSMTPE);
 
@@ -1616,7 +1616,7 @@ int             USmtpCloseChannel(BSOCK_HANDLE hBSock, int iHardClose, SMTPError
         char            szRTXBuffer[2048] = "";
 
         if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, "QUIT", szRTXBuffer,
-                                sizeof(szRTXBuffer)), 200))
+                                sizeof(szRTXBuffer) - 1), 200))
         {
             BSckDetach(hBSock, 1);
 
@@ -1649,7 +1649,7 @@ int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE)
     char            szRTXBuffer[2048] = "";
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, "RSET", szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1669,7 +1669,7 @@ int             USmtpChannelReset(BSOCK_HANDLE hBSock, SMTPError * pSMTPE)
 
 
 int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const char *pszRcpt,
-                        const char *pszFileName, SMTPError * pSMTPE)
+                        FileSection const * pFS, SMTPError * pSMTPE)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Send MAIL FROM: and read result
@@ -1680,7 +1680,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
     SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "MAIL FROM:<%s>", pszFrom);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1699,7 +1699,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
     SysSNPrintf(szRTXBuffer, sizeof(szRTXBuffer) - 1, "RCPT TO:<%s>", pszRcpt);
 
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, szRTXBuffer, szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1716,7 +1716,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 //  Send DATA and read the "ready to receive"
 ///////////////////////////////////////////////////////////////////////////////
     if (!USmtpResponseClass(iSvrReponse = USmtpSendCommand(hBSock, "DATA", szRTXBuffer,
-                            sizeof(szRTXBuffer)), 300))
+                            sizeof(szRTXBuffer) - 1), 300))
     {
         if (iSvrReponse > 0)
         {
@@ -1734,8 +1734,8 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 ///////////////////////////////////////////////////////////////////////////////
     time_t          tCheckPoint = time(NULL);
 
-    if (SysSendFile(BSckGetAttachedSocket(hBSock), pszFileName, STD_SMTP_TIMEOUT,
-                    SvrShutdownCB, &tCheckPoint) < 0)
+    if (SysSendFile(BSckGetAttachedSocket(hBSock), pFS->szFilePath, pFS->ulStartOffset,
+                    pFS->ulEndOffset, STD_SMTP_TIMEOUT, SvrShutdownCB, &tCheckPoint) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1745,7 +1745,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
         return (ErrGetErrorCode());
 
     if (!USmtpResponseClass(iSvrReponse = USmtpGetResponse(hBSock, szRTXBuffer,
-                            sizeof(szRTXBuffer)), 200))
+                            sizeof(szRTXBuffer) - 1), 200))
     {
         if (iSvrReponse > 0)
         {
@@ -1766,7 +1766,7 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 
 
 int             USmtpSendMail(const char *pszServer, const char *pszDomain,
-                        const char *pszFrom, const char *pszRcpt, const char *pszFileName,
+                        const char *pszFrom, const char *pszRcpt, FileSection const * pFS,
                         SMTPError * pSMTPE)
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1778,8 +1778,7 @@ int             USmtpSendMail(const char *pszServer, const char *pszDomain,
         return (ErrGetErrorCode());
 
 
-    int             iResultCode = USmtpSendMail(hBSock, pszFrom, pszRcpt,
-            pszFileName, pSMTPE);
+    int             iResultCode = USmtpSendMail(hBSock, pszFrom, pszRcpt, pFS, pSMTPE);
 
 
     USmtpCloseChannel(hBSock, 0, pSMTPE);

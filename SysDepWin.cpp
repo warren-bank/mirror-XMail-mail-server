@@ -828,8 +828,8 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTimeout,
-                        int (*pSendCB) (void *), void *pUserData)
+int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
+                        unsigned long ulEndOffset, int iTimeout, int (*pSendCB) (void *), void * pUserData)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Open the source file
@@ -886,12 +886,14 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
     SYS_UINT64      ullFileSize = (((SYS_UINT64) dwFileSizeHi) << 32) | (SYS_UINT64) dwFileSizeLo,
-                    ullSentBytes = 0;
-    char           *pszBuffer = (char *) pAddress;
+                    ullEndOffset = (ulEndOffset != (unsigned long) -1) ?
+                            ((SYS_UINT64) ulEndOffset): ullFileSize,
+                    ullCurrOffset = (SYS_UINT64) ulBaseOffset;
+    char           *pszBuffer = (char *) pAddress + ulBaseOffset;
 
-    while (ullSentBytes < ullFileSize)
+    while (ullCurrOffset < ullEndOffset)
     {
-        int             iCurrSend = (int) Min(iSndBuffSize, ullFileSize - ullSentBytes);
+        int             iCurrSend = (int) Min(iSndBuffSize, ullEndOffset - ullCurrOffset);
 
         if ((iCurrSend = SysSendData(SockFD, pszBuffer, iCurrSend,
                                 Max(iTimeout, iCurrSend / MIN_BYTES_SEC_TIMEOUT))) < 0)
@@ -913,7 +915,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, int iTi
         }
 
         pszBuffer += iCurrSend;
-        ullSentBytes += (SYS_UINT64) iCurrSend;
+        ullCurrOffset += (SYS_UINT64) iCurrSend;
     }
 
 
@@ -2350,6 +2352,85 @@ int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
 {
 
     InterlockedExchange(pSpinLock, 0);
+
+    return (0);
+
+}
+
+
+
+int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
+{
+
+    ULARGE_INTEGER  BytesAvail,
+                    BytesOnDisk,
+                    BytesFree;
+    char            szXPath[SYS_MAX_PATH] = "";
+
+    StrSNCpy(szXPath, pszPath);
+    AppendSlash(szXPath);
+
+    if (!GetDiskFreeSpaceEx(szXPath, &BytesAvail, &BytesOnDisk, &BytesFree))
+    {
+        ErrSetErrorCode(ERR_GET_DISK_SPACE_INFO);
+        return (ERR_GET_DISK_SPACE_INFO);
+    }
+
+
+    *pTotal = *(SYS_INT64 *) &BytesOnDisk;
+
+    *pFree = *(SYS_INT64 *) &BytesAvail;
+
+    return (0);
+
+}
+
+
+
+int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
+                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
+{
+
+#if _WIN32_WINNT >= 0x0500
+
+    MEMORYSTATUSEX  MSEX;
+
+    ZeroData(MSEX);
+
+    if (!GlobalMemoryStatusEx(&MSEX))
+    {
+        ErrSetErrorCode(ERR_GET_MEMORY_INFO);
+        return (ERR_GET_MEMORY_INFO);
+    }
+
+
+    *pRamTotal = (SYS_INT64) MSEX.ullTotalPhys;
+
+    *pRamFree = (SYS_INT64) MSEX.ullAvailPhys;
+
+    *pVirtTotal = (SYS_INT64) MSEX.ullTotalVirtual;
+
+    *pVirtFree = (SYS_INT64) MSEX.ullAvailVirtual;
+
+#else           // #if defined(_WIN32_WINNT 0x0500)
+
+    MEMORYSTATUS    MS;
+
+    ZeroData(MS);
+
+    GlobalMemoryStatus(&MS);
+
+
+    *pRamTotal = (SYS_INT64) MS.dwTotalPhys;
+
+    *pRamFree = (SYS_INT64) MS.dwAvailPhys;
+
+    *pVirtTotal = (SYS_INT64) MS.dwTotalVirtual;
+
+    *pVirtFree = (SYS_INT64) MS.dwAvailVirtual;
+
+
+#endif          // #if defined(_WIN32_WINNT 0x0500)
 
     return (0);
 

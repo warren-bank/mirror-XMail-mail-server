@@ -152,6 +152,7 @@ static int      SMTPCheckPeerIP(SYS_SOCKET SockFD);
 static int      SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP,
                         SMTPConfig * pSMTPCfg = NULL);
 static unsigned int SMTPClientThread(void *pThreadData);
+static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
@@ -200,7 +201,7 @@ static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 static char    *SMTPGetAuthFilePath(char *pszFilePath);
 static char    *SMTPGetExtAuthFilePath(char *pszFilePath);
 static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char *pszPerms);
+                        char const * pszPassword, char * pszPerms);
 static int      SMTPCheckLocalCramMD5Auth(SVRCFG_HANDLE hSvrConfig, char const * pszChallenge,
                         char const * pszUsername, char const * pszDigest, char *pszPerms);
 static int      SMTPCheckUsrPwdAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
@@ -501,6 +502,30 @@ unsigned int    SMTPThreadProc(void *pThreadData)
 
 
 
+static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check disk space
+///////////////////////////////////////////////////////////////////////////////
+    int             iMinValue = SvrGetConfigInt("SmtpMinDiskSpace", -1, hSvrConfig);
+
+    if ((iMinValue > 0) && (SvrCheckDiskSpace(1024 * (unsigned long) iMinValue) < 0))
+        return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check virtual memory
+///////////////////////////////////////////////////////////////////////////////
+    if (((iMinValue = SvrGetConfigInt("SmtpMinVirtMemSpace", -1, hSvrConfig)) > 0) &&
+            (SvrCheckVirtMemSpace(1024 * (unsigned long) iMinValue) < 0))
+        return (ErrGetErrorCode());
+
+
+    return (0);
+
+}
+
+
+
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS)
 {
@@ -529,7 +554,8 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     if ((SMTPS.hSvrConfig = SvrGetConfigHandle()) == INVALID_SVRCFG_HANDLE)
         return (ErrGetErrorCode());
 
-    if ((SysGetPeerInfo(BSckGetAttachedSocket(hBSock), SMTPS.PeerInfo) < 0) ||
+    if ((SMTPCheckSysResources(SMTPS.hSvrConfig) < 0) ||
+            (SysGetPeerInfo(BSckGetAttachedSocket(hBSock), SMTPS.PeerInfo) < 0) ||
             (SysGetSockInfo(BSckGetAttachedSocket(hBSock), SMTPS.SockInfo) < 0))
     {
         ErrorPush();
@@ -1371,6 +1397,24 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                 return (ERR_USER_NOT_LOCAL);
             }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the account is enabled for receiving
+///////////////////////////////////////////////////////////////////////////////
+            if (!UsrGetUserInfoVarInt(pUI, "ReceiveEnable", 1))
+            {
+                UsrFreeUserInfo(pUI);
+
+                if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+                    SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EDSBL", 0);
+
+                pszSMTPError = StrSprint("550 Account disabled <%s@%s>",
+                        szDestUser, szDestDomain);
+
+                ErrSetErrorCode(ERR_USER_DISABLED);
+                return (ERR_USER_DISABLED);
+            }
+
+
             if (UsrGetUserType(pUI) == usrTypeUser)
             {
 ///////////////////////////////////////////////////////////////////////////////
@@ -1617,13 +1661,15 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Write data
 ///////////////////////////////////////////////////////////////////////////////
-    int             iErrorCode = 0;
+    int             iErrorCode = 0,
+                    iLineLength;
     unsigned long   ulMessageSize = 0;
-    char            szBuffer[SMTP_MAX_LINE_SIZE];
+    char            szBuffer[SMTP_MAX_LINE_SIZE + 4];
 
     for (;;)
     {
-        if (BSckGetString(hBSock, szBuffer, sizeof(szBuffer) - 1, SMTPS.pSMTPCfg->iTimeout) == NULL)
+        if (BSckGetString(hBSock, szBuffer, sizeof(szBuffer) - 3, SMTPS.pSMTPCfg->iTimeout,
+                &iLineLength) == NULL)
         {
             ErrorPush();
             fclose(SMTPS.pMsgFile), SMTPS.pMsgFile = NULL;
@@ -1637,10 +1683,29 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
         if (strcmp(szBuffer, ".") == 0)
             break;
 
-        if (iErrorCode == 0)
-            iErrorCode = StrWriteCRLFString(SMTPS.pMsgFile, szBuffer);
+///////////////////////////////////////////////////////////////////////////////
+//  Correctly terminate the line
+///////////////////////////////////////////////////////////////////////////////
+        memcpy(szBuffer + iLineLength, "\r\n", 3);
 
-        ulMessageSize += strlen(szBuffer) + 2;
+        iLineLength += 2;
+
+
+        if (iErrorCode == 0)
+        {
+///////////////////////////////////////////////////////////////////////////////
+//  Write data on disk
+///////////////////////////////////////////////////////////////////////////////
+            if (!fwrite(szBuffer, iLineLength, 1, SMTPS.pMsgFile))
+            {
+                ErrSetErrorCode(iErrorCode = ERR_FILE_WRITE, SMTPS.szMsgFile);
+
+            }
+
+        }
+
+
+        ulMessageSize += (unsigned long) iLineLength;
 
 
         if (SvrInShutdown())
@@ -1685,7 +1750,7 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
     SMTPResetSession(SMTPS);
 
-    return (0);
+    return (iErrorCode);
 
 }
 
@@ -1811,7 +1876,7 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+        QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
         if (hMessage == INVALID_QMSG_HANDLE)
         {
@@ -2642,7 +2707,7 @@ static char    *SMTPGetExtAuthFilePath(char *pszFilePath)
 
 
 static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUsername,
-                        char const * pszPassword, char *pszPerms)
+                        char const * pszPassword, char * pszPerms)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  First try to lookup  mailusers.tab
@@ -2654,33 +2719,49 @@ static int      SMTPCheckLocalAuth(SVRCFG_HANDLE hSvrConfig, char const * pszUse
                     szAccountDomain, sizeof(szAccountDomain)) < 0)
         return (ErrGetErrorCode());
 
+
     UserInfo       *pUI = UsrGetUserByName(szAccountDomain, szAccountUser);
 
     if (pUI != NULL)
     {
-        int             iPasswdCompare = strcmp(pUI->pszPassword, pszPassword);
-
-        UsrFreeUserInfo(pUI);
-
-
-        if (iPasswdCompare == 0)
+        if (strcmp(pUI->pszPassword, pszPassword) == 0)
         {
+            char           *pszUserPerms = UsrGetUserInfoVar(pUI, "SmtpPerms");
+
+            if (pszUserPerms != NULL)
+            {
+                strcpy(pszPerms, pszUserPerms);
+
+                SysFree(pszUserPerms);
+            }
+            else
+            {
 ///////////////////////////////////////////////////////////////////////////////
 //  Match found, get the default permissions
 ///////////////////////////////////////////////////////////////////////////////
-            char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig, "DefaultSmtpPerms", "MR");
+                char           *pszDefultPerms = SvrGetConfigVar(hSvrConfig,
+                                        "DefaultSmtpPerms", "MR");
 
-            if (pszDefultPerms != NULL)
-            {
-                strcpy(pszPerms, pszDefultPerms);
+                if (pszDefultPerms != NULL)
+                {
+                    strcpy(pszPerms, pszDefultPerms);
 
-                SysFree(pszDefultPerms);
+                    SysFree(pszDefultPerms);
+                }
+                else
+                    SetEmptyString(pszPerms);
+
             }
-            else
-                SetEmptyString(pszPerms);
+
+
+            UsrFreeUserInfo(pUI);
 
             return (0);
         }
+
+
+        UsrFreeUserInfo(pUI);
+
     }
 
 

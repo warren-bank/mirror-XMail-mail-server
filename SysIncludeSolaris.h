@@ -21,8 +21,8 @@
  */
 
 
-#ifndef _SYSINCLUDELINUX_H
-#define _SYSINCLUDELINUX_H
+#ifndef _SYSINCLUDESOLARIS_H
+#define _SYSINCLUDESOLARIS_H
 
 
 #include <sys/types.h>
@@ -33,6 +33,8 @@
 #include <sys/file.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/statvfs.h>
+#include <sys/swap.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdarg.h>

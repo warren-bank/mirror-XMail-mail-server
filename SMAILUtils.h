@@ -87,13 +87,14 @@ char const     *USmlSendMailFrom(SPLF_HANDLE hFSpool);
 char const     *const * USmlGetRcptTo(SPLF_HANDLE hFSpool);
 char const     *USmlRcptTo(SPLF_HANDLE hFSpool);
 char const     *USmlSendRcptTo(SPLF_HANDLE hFSpool);
-char const     *USmlGetMailFile(SPLF_HANDLE hFSpool);
+int             USmlSyncChanges(SPLF_HANDLE hFSpool);
+int             USmlGetMsgFileSection(SPLF_HANDLE hFSpool, FileSection & FS);
+int             USmlWriteMailFile(SPLF_HANDLE hFSpool, FILE * pMsgFile);
 char           *USmlGetTag(SPLF_HANDLE hFSpool, char const * pszTagName);
 int             USmlAddTag(SPLF_HANDLE hFSpool, char const * pszTagName,
                         char const * pszTagData, int iUpdate = 0);
 int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
                         char const * pszAddress);
-int             USmlFlushChanges(SPLF_HANDLE hFSpool);
 int             USmlMapAddress(char const * pszAddress, char *pszDomain, char *pszName);
 int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
                         SPLF_HANDLE hFSpool);

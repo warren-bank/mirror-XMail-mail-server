@@ -456,6 +456,9 @@ static int      LMAILProcessList(LMAILConfig * pLMAILCfg, long lThreadId,
 
         if (LMAILSubmitLocalFile(pLMAILCfg, szSpoolFilePath, lThreadId, szSMTPDomain) < 0)
         {
+            SysLogMessage(LOG_LEV_ERROR, "LMAIL [%02ld] error ( \"%s\" ): %s\n",
+                    lThreadId, ErrGetErrorString(), szSpoolFilePath);
+
 
         }
 
@@ -555,7 +558,7 @@ static int      LMAILSubmitLocalFile(LMAILConfig * pLMAILCfg, const char *pszMai
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+        QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
         if (hMessage == INVALID_QMSG_HANDLE)
         {

@@ -52,7 +52,7 @@ extern int      iQueueSplitLevel;
 
 int             SvrMain(int iArgCount, char *pszArgs[]);
 int             SvrStopServer(bool bWait = true);
-bool            SvrInShutdown(void);
+bool            SvrInShutdown(bool bForceCheck = false);
 int             SvrShutdownCB(void *pData);
 
 

@@ -42,6 +42,6 @@ Date 10-03-2000
 
 1) Documentation and file specifications
 2) Creation of "configure" script to enable a better platform porting
-3) Packages creation ( .deb & .rpm )
+3) Package creation ( .deb )
 4) Sure a lot of other features that I can't figure out for now
 

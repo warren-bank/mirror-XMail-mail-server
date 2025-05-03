@@ -165,7 +165,7 @@ int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpac
     {
         unsigned long   ulMaxMBSize = (unsigned long) atol(pszMaxMBSize) * 1024;
 
-        if (ulMBSize > ulMaxMBSize)
+        if (ulMBSize >= ulMaxMBSize)
         {
             SysFree(pszMaxMBSize);
 
@@ -440,6 +440,17 @@ POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
 
     if (pUI == NULL)
         return (INVALID_POP3_HANDLE);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the account is enabled for POP3 sessions
+///////////////////////////////////////////////////////////////////////////////
+    if (!UsrGetUserInfoVarInt(pUI, "PopEnable", 1))
+    {
+        UsrFreeUserInfo(pUI);
+
+        ErrSetErrorCode(ERR_USER_DISABLED);
+        return (INVALID_POP3_HANDLE);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check if peer is allowed to connect from its IP
@@ -786,8 +797,8 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
 
     time_t          tCheckPoint = time(NULL);
 
-    if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, pPOPSD->iTimeout,
-                    SvrShutdownCB, &tCheckPoint) < 0)
+    if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, 0, (unsigned long) -1,
+                    pPOPSD->iTimeout, SvrShutdownCB, &tCheckPoint) < 0)
         return (ErrGetErrorCode());
 
     if (BSckSendString(hBSock, ".", pPOPSD->iTimeout) < 0)
@@ -1129,7 +1140,7 @@ static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUser
     char            szTimeStamp[256] = "";
 
     if (!bTryAuthAPOP ||
-            (MscExtractServerTimeStamp(szRTXBuffer, szTimeStamp, sizeof(szTimeStamp)) == NULL))
+            (MscExtractServerTimeStamp(szRTXBuffer, szTimeStamp, sizeof(szTimeStamp) - 1) == NULL))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try clear text authentication

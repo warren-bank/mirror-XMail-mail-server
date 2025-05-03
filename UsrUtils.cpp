@@ -188,7 +188,9 @@ static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const *
 ///////////////////////////////////////////////////////////////////////////////
 //  This will group wild alias ( * ? )
 ///////////////////////////////////////////////////////////////////////////////
-    if (UsrIsWildAlias(ppszTabTokens[alsAlias]))
+    int             iFieldsCount = StrStringsCount(ppszTabTokens);
+
+    if ((iFieldsCount > alsAlias) && UsrIsWildAlias(ppszTabTokens[alsAlias]))
     {
         *puHashVal = WILD_ALIASES_HASH;
 
@@ -446,6 +448,17 @@ char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
         return (SysStrDup(pUIV->pszValue));
 
     return ((pszDefault != NULL) ? SysStrDup(pszDefault) : NULL);
+
+}
+
+
+
+int             UsrGetUserInfoVarInt(UserInfo * pUI, const char *pszName, int iDefault)
+{
+
+    UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
+
+    return ((pUIV != NULL) ? atoi(pUIV->pszValue): iDefault);
 
 }
 

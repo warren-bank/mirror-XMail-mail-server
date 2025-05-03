@@ -36,7 +36,11 @@
 
 
 #define RUNNING_PIDS_DIR            "/var/run"
+
+#if !defined(NOFILE)
 #define NOFILE                      64
+#endif          // #if !defined(NOFILE)
+
 #define XMAIL_DEBUG_OPTION          "-Md"
 
 

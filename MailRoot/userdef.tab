@@ -3,3 +3,6 @@
 "Address"	"??"
 "Telephone"	"??"
 "MaxMBSize"	"10000"
+"SmtpPerms"	"MR"
+"ReceiveEnable"	"1"
+"PopEnable"	"1"

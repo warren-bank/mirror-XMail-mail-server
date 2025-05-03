@@ -516,7 +516,7 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-    QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+    QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
     if (hMessage == INVALID_QMSG_HANDLE)
     {
@@ -570,7 +570,7 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        if ((hMessage = QueGetTempMsg(hSpoolQueue)) == INVALID_QMSG_HANDLE)
+        if ((hMessage = QueCreateMessage(hSpoolQueue)) == INVALID_QMSG_HANDLE)
         {
             ErrorPush();
             SvrReleaseConfigHandle(hSvrConfig);
@@ -660,7 +660,7 @@ static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReas
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-    QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+    QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
     if (hMessage == INVALID_QMSG_HANDLE)
     {
@@ -860,18 +860,36 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
 
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Write message header ( mail data )
+//  This function retrieve the spool file message section and sync the content.
+//  This is necessary before reading the file
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszMailFile = USmlGetMailFile(hFSpool);
-    FILE           *pMsgFile = fopen(pszMailFile, "rb");
+    FileSection     FS;
+
+    if (USmlGetMsgFileSection(hFSpool, FS) < 0)
+    {
+        ErrorPush();
+        fclose(pRespFile);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Open spool file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pMsgFile = fopen(FS.szFilePath, "rb");
 
     if (pMsgFile == NULL)
     {
         fclose(pRespFile);
 
-        ErrSetErrorCode(ERR_FILE_OPEN);
+        ErrSetErrorCode(ERR_FILE_OPEN, FS.szFilePath);
         return (ERR_FILE_OPEN);
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Seek at the beginning of the message ( headers section )
+///////////////////////////////////////////////////////////////////////////////
+    fseek(pMsgFile, FS.ulStartOffset, SEEK_SET);
+
 
     char            szBuffer[2048] = "";
 

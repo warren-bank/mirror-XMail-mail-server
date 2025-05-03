@@ -21,58 +21,21 @@
  */
 
 
-#ifndef _SYSINCLUDE_H
-#define _SYSINCLUDE_H
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  Load CPU defines
-///////////////////////////////////////////////////////////////////////////////
-#include "CPUDefines.h"
+#ifndef _COMMTYPES_H
+#define _COMMTYPES_H
 
 
 
 
-#ifdef WIN32
 
-#include "SysIncludeWin.h"
-
-#else           // #ifdef WIN32
-#ifdef __LINUX__
-
-#include "SysIncludeLinux.h"
-
-#else           // #ifdef __LINUX__
-#ifdef __SOLARIS__
-
-#include "SysIncludeSolaris.h"
-
-#else           // #ifdef __SOLARIS__
-#ifdef __FREEBSD__
-
-#include "SysIncludeFreeBSD.h"
-
-#else           // #ifdef __FREEBSD__
-
-#error System type not defined
-
-#endif          // #ifdef __FREEBSD__
-#endif          // #ifdef __SOLARIS__
-#endif          // #ifdef __LINUX__
-#endif          // #ifdef WIN32
+struct FileSection
+{
+    char            szFilePath[SYS_MAX_PATH];
+    unsigned long   ulStartOffset;
+    unsigned long   ulEndOffset;
+};
 
 
-
-#include "SysTypes.h"
-
-#include "SysMacros.h"
-
-#include "SysLists.h"
-
-#include "Errors.h"
-
-#include "CommTypes.h"
 
 
 

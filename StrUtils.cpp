@@ -325,6 +325,38 @@ int             StrStringsCount(char const * const * ppszStrings)
 
 
 
+bool            StrStringsMatch(char const * const * ppszStrings, char const * pszMatch)
+{
+
+    int             ii;
+
+    for (ii = 0; ppszStrings[ii] != NULL; ii++)
+        if (strcmp(ppszStrings[ii], pszMatch) == 0)
+            return (true);
+
+
+    return (false);
+
+}
+
+
+
+bool            StrStringsIMatch(char const * const * ppszStrings, char const * pszMatch)
+{
+
+    int             ii;
+
+    for (ii = 0; ppszStrings[ii] != NULL; ii++)
+        if (stricmp(ppszStrings[ii], pszMatch) == 0)
+            return (true);
+
+
+    return (false);
+
+}
+
+
+
 char           *StrConcat(char const * const * ppszStrings, char const * pszCStr)
 {
 
@@ -832,10 +864,12 @@ int             StrDynSize(DynString * pDS)
 
 
 
-int             StrDynAdd(DynString * pDS, char const * pszBuffer)
+int             StrDynAdd(DynString * pDS, char const * pszBuffer, int iStringSize)
 {
 
-    int	            iStringSize = strlen(pszBuffer);
+    if (iStringSize < 0)
+        iStringSize = strlen(pszBuffer);
+
 
     if ((pDS->iStringSize + iStringSize) >= pDS->iBufferSize)
     {
@@ -854,9 +888,11 @@ int             StrDynAdd(DynString * pDS, char const * pszBuffer)
         pDS->iBufferSize = iNewSize;
     }
 
-    strcpy(pDS->pszBuffer + pDS->iStringSize, pszBuffer);
+    memcpy(pDS->pszBuffer + pDS->iStringSize, pszBuffer, iStringSize);
 
     pDS->iStringSize += iStringSize;
+
+    pDS->pszBuffer[pDS->iStringSize] = '\0';
 
     return (0);
 

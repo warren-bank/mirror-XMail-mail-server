@@ -67,7 +67,7 @@ char const     *SysErrStr(void)
 
 
 #else           // #if defined(WIN32)
-#if defined(__LINUX__) || defined(__SOLARIS__)
+#if defined(__LINUX__) || defined(__SOLARIS__) || defined(__FREEBSD__)
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -331,8 +331,11 @@ int             main(int argc, char *argv[])
                     szAutoUsr[128] = "mkuser",
                     szUsrLine[1024] = "";
 
-    for (ii = 1; (ii < argc) && (argv[ii][0] == '-'); ii++)
+    for (ii = 1; ii < argc; ii++)
     {
+        if (argv[ii][0] != '-')
+            continue;
+
         switch (argv[ii][1])
         {
             case ('a'):

@@ -81,9 +81,9 @@ struct SpoolFileData
     char            szSMTPDomain[MAX_ADDR_NAME];
     char            szMessageID[128];
     char            szMessFilePath[SYS_MAX_PATH];
+    unsigned long   ulMessageOffset;
     unsigned long   ulMailDataOffset;
     char            szSpoolFile[SYS_MAX_PATH];
-    char            szMessageFile[SYS_MAX_PATH];
     HSLIST          hTagList;
     unsigned long   ulFlags;
 };
@@ -140,8 +140,9 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
                         int iMaxAddress);
 static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase,
                         char *pszAddress, int iMaxAddress);
-static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS);
-static char   **USmlGetAddressList(HSLIST & hTagList,...);
+static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
+                        char const * const * ppszMatchDomains = NULL);
+static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains, ...);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMaxAddress);
 static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList);
 static int      USmlCreateSpoolFile(FILE * pMailFile, char const * pszMailFrom,
@@ -492,8 +493,6 @@ static void     USmlFreeData(SpoolFileData * pSFD)
 
     USmlFreeTagsList(pSFD->hTagList);
 
-    CheckRemoveFile(pSFD->szMessageFile);
-
     if (pSFD->ppszFrom != NULL)
         StrFreeStrings(pSFD->ppszFrom);
 
@@ -662,7 +661,7 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
     pSFD->ulFlags = 0;
     ListInit(pSFD->hTagList);
 
-    strcpy(pSFD->szMessFilePath, pszMessFilePath);
+    StrSNCpy(pSFD->szMessFilePath, pszMessFilePath);
 
 
     char            szFName[SYS_MAX_PATH] = "",
@@ -671,9 +670,6 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
     MscSplitPath(pszMessFilePath, NULL, szFName, szExt);
 
     sprintf(pSFD->szSpoolFile, "%s%s", szFName, szExt);
-
-
-    SysGetTmpFile(pSFD->szMessageFile);
 
 
     FILE           *pSpoolFile = fopen(pszMessFilePath, "rb");
@@ -760,6 +756,11 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
         ErrSetErrorCode(ERR_INVALID_SPOOL_FILE);
         return (INVALID_SPLF_HANDLE);
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get real message position
+///////////////////////////////////////////////////////////////////////////////
+    pSFD->ulMessageOffset = (unsigned long) ftell(pSpoolFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Build address strings
@@ -950,25 +951,164 @@ char const     *USmlSendRcptTo(SPLF_HANDLE hFSpool)
 static int      USmlFlushMessageFile(SpoolFileData * pSFD)
 {
 
-    FILE           *pMsgFile = fopen(pSFD->szMessageFile, "wb");
+    char            szTmpMsgFile[SYS_MAX_PATH] = "";
+
+    SysSNPrintf(szTmpMsgFile, sizeof(szTmpMsgFile) - 1, "%s.flush", pSFD->szMessFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Create temporary file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pMsgFile = fopen(szTmpMsgFile, "wb");
 
     if (pMsgFile == NULL)
     {
-        ErrSetErrorCode(ERR_FILE_CREATE);
+        ErrSetErrorCode(ERR_FILE_CREATE, szTmpMsgFile);
         return (ERR_FILE_CREATE);
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Open message file
+///////////////////////////////////////////////////////////////////////////////
+    FILE           *pMessFile = fopen(pSFD->szMessFilePath, "rb");
+
+    if (pMessFile == NULL)
+    {
+        fclose(pMsgFile);
+        CheckRemoveFile(szTmpMsgFile);
+
+        ErrSetErrorCode(ERR_FILE_OPEN, pSFD->szMessFilePath);
+        return (ERR_FILE_OPEN);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump info section ( start = 0 - bytes = ulMessageOffset )
+///////////////////////////////////////////////////////////////////////////////
+    if (MscCopyFile(pMsgFile, pMessFile, 0, pSFD->ulMessageOffset) < 0)
+    {
+        ErrorPush();
+        fclose(pMessFile);
+        fclose(pMsgFile);
+        CheckRemoveFile(szTmpMsgFile);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump message headers
+///////////////////////////////////////////////////////////////////////////////
+    if (USmlDumpHeaders(pMsgFile, pSFD->hTagList) < 0)
+    {
+        ErrorPush();
+        fclose(pMessFile);
+        fclose(pMsgFile);
+        CheckRemoveFile(szTmpMsgFile);
+        return (ErrorPop());
+    }
+
+    fprintf(pMsgFile, "\r\n");
+
+///////////////////////////////////////////////////////////////////////////////
+//  Get the new message body offset
+///////////////////////////////////////////////////////////////////////////////
+    unsigned long       ulMailDataOffset = (unsigned long) ftell(pMsgFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump message data ( start = ulMailDataOffset - bytes = -1 [EOF] )
+///////////////////////////////////////////////////////////////////////////////
+    if (MscCopyFile(pMsgFile, pMessFile, pSFD->ulMailDataOffset, (unsigned long) -1) < 0)
+    {
+        ErrorPush();
+        fclose(pMessFile);
+        fclose(pMsgFile);
+        CheckRemoveFile(szTmpMsgFile);
+        return (ErrorPop());
+    }
+
+    fclose(pMessFile);
+
+    SysFileSync(pMsgFile);
+    fclose(pMsgFile);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Move the file
+///////////////////////////////////////////////////////////////////////////////
+    if ((SysRemove(pSFD->szMessFilePath) < 0) ||
+            (SysMoveFile(szTmpMsgFile, pSFD->szMessFilePath) < 0))
+    {
+        ErrorPush();
+        CheckRemoveFile(szTmpMsgFile);
+        return (ErrorPop());
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Set the new message body offset
+///////////////////////////////////////////////////////////////////////////////
+    pSFD->ulMailDataOffset = ulMailDataOffset;
+
+
+    return (0);
+
+}
+
+
+
+int             USmlSyncChanges(SPLF_HANDLE hFSpool)
+{
+
+    SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
+
+    if (pSFD->ulFlags & SFF_HEADER_MODIFIED)
+    {
+
+        if (USmlFlushMessageFile(pSFD) == 0)
+            pSFD->ulFlags &= ~SFF_HEADER_MODIFIED;
+
+    }
+
+    return (0);
+
+}
+
+
+
+int             USmlGetMsgFileSection(SPLF_HANDLE hFSpool, FileSection & FS)
+{
+
+    SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
+
+///////////////////////////////////////////////////////////////////////////////
+//  Sync message file
+///////////////////////////////////////////////////////////////////////////////
+    if (USmlSyncChanges(hFSpool) < 0)
+        return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
+//  Setup file section fields
+///////////////////////////////////////////////////////////////////////////////
+    ZeroData(FS);
+
+    StrSNCpy(FS.szFilePath, pSFD->szMessFilePath);
+
+    FS.ulStartOffset = pSFD->ulMessageOffset;
+
+    FS.ulEndOffset = (unsigned long) -1;
+
+
+    return (0);
+
+}
+
+
+
+int             USmlWriteMailFile(SPLF_HANDLE hFSpool, FILE * pMsgFile)
+{
+
+    SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Dump message tags
 ///////////////////////////////////////////////////////////////////////////////
     if (USmlDumpHeaders(pMsgFile, pSFD->hTagList) < 0)
-    {
-        ErrorPush();
-        fclose(pMsgFile);
-        CheckRemoveFile(pSFD->szMessageFile);
-
-        return (ErrorPop());
-    }
+        return (ErrGetErrorCode());
 
     fprintf(pMsgFile, "\r\n");
 
@@ -979,10 +1119,7 @@ static int      USmlFlushMessageFile(SpoolFileData * pSFD)
 
     if (pMessFile == NULL)
     {
-        fclose(pMsgFile);
-        CheckRemoveFile(pSFD->szMessageFile);
-
-        ErrSetErrorCode(ERR_FILE_OPEN);
+        ErrSetErrorCode(ERR_FILE_OPEN, pSFD->szMessFilePath);
         return (ERR_FILE_OPEN);
     }
 
@@ -990,35 +1127,12 @@ static int      USmlFlushMessageFile(SpoolFileData * pSFD)
     {
         ErrorPush();
         fclose(pMessFile);
-        fclose(pMsgFile);
-        CheckRemoveFile(pSFD->szMessageFile);
         return (ErrorPop());
     }
 
     fclose(pMessFile);
 
-    fclose(pMsgFile);
-
     return (0);
-
-}
-
-
-
-char const     *USmlGetMailFile(SPLF_HANDLE hFSpool)
-{
-
-    SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
-
-    if (!SysExistFile(pSFD->szMessageFile) || (pSFD->ulFlags & SFF_HEADER_MODIFIED))
-    {
-
-        if (USmlFlushMessageFile(pSFD) == 0)
-            pSFD->ulFlags &= ~SFF_HEADER_MODIFIED;
-
-    }
-
-    return (pSFD->szMessageFile);
 
 }
 
@@ -1070,63 +1184,61 @@ int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
 
         if (USmlAddTag(pSFD->hTagList, pszTagName, szTagData, 1) < 0)
             return (ErrGetErrorCode());
+
     }
     else
     {
         char           *pszOpen = strrchr(pszOldAddress, '<');
 
-        if (pszOpen == NULL)
+        if (pszOpen != NULL)
         {
+///////////////////////////////////////////////////////////////////////////////
+//  Case : NAME <ADDRESS>
+///////////////////////////////////////////////////////////////////////////////
+            char           *pszClose = strrchr(pszOpen + 1, '>');
+
+            if (pszClose == NULL)
+            {
+                SysFree(pszOldAddress);
+
+                ErrSetErrorCode(ERR_INVALID_MESSAGE_FORMAT);
+                return (ERR_INVALID_MESSAGE_FORMAT);
+            }
+
+
+            DynString       DS;
+
+            StrDynInit(&DS);
+
+            StrDynAdd(&DS, pszOldAddress, (int) (pszOpen - pszOldAddress) + 1);
+            StrDynAdd(&DS, pszAddress);
+            StrDynAdd(&DS, pszClose);
+
+
             SysFree(pszOldAddress);
 
-            ErrSetErrorCode(ERR_INVALID_MESSAGE_FORMAT);
-            return (ERR_INVALID_MESSAGE_FORMAT);
+            if (USmlAddTag(pSFD->hTagList, pszTagName, StrDynGet(&DS), 1) < 0)
+            {
+                ErrorPush();
+                StrDynFree(&DS);
+                return (ErrorPop());
+            }
+
+            StrDynFree(&DS);
+
         }
-
-        int             iBaseLength = (int) (pszOpen - pszOldAddress) + 1;
-        char            szTagData[2048] = "";
-
-        strncpy(szTagData, pszOldAddress, iBaseLength);
-        szTagData[iBaseLength] = '\0';
-
-        strcat(szTagData, pszAddress);
-
-        char           *pszClose = strrchr(pszOldAddress, '>');
-
-        if (pszClose == NULL)
+        else
         {
+///////////////////////////////////////////////////////////////////////////////
+//  Case : ADDRESS
+///////////////////////////////////////////////////////////////////////////////
             SysFree(pszOldAddress);
 
-            ErrSetErrorCode(ERR_INVALID_MESSAGE_FORMAT);
-            return (ERR_INVALID_MESSAGE_FORMAT);
+            if (USmlAddTag(pSFD->hTagList, pszTagName, pszAddress, 1) < 0)
+                return (ErrGetErrorCode());
+
         }
 
-        strcat(szTagData, pszClose);
-
-        SysFree(pszOldAddress);
-
-        if (USmlAddTag(pSFD->hTagList, pszTagName, szTagData, 1) < 0)
-            return (ErrGetErrorCode());
-    }
-
-    return (0);
-
-}
-
-
-
-int             USmlFlushChanges(SPLF_HANDLE hFSpool)
-{
-
-    SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
-
-    if (!SysExistFile(pSFD->szMessageFile) || (pSFD->ulFlags & SFF_HEADER_MODIFIED))
-    {
-
-        if (USmlFlushMessageFile(pSFD) < 0)
-            return (ErrGetErrorCode());
-
-        pSFD->ulFlags &= ~SFF_HEADER_MODIFIED;
     }
 
     return (0);
@@ -1174,7 +1286,7 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
 
     if (pMBFile == NULL)
     {
-        ErrSetErrorCode(ERR_FILE_CREATE);
+        ErrSetErrorCode(ERR_FILE_CREATE, pszFileName);
         return (ERR_FILE_CREATE);
     }
 
@@ -1240,27 +1352,16 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
         SysFree(pszReturnPath);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  After insert mail file
+//  Write mail file
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszMailFile = USmlGetMailFile(hFSpool);
-    FILE           *pMailFile = fopen(pszMailFile, "rb");
-
-    if (pMailFile == NULL)
-    {
-        fclose(pMBFile);
-        ErrSetErrorCode(ERR_FILE_OPEN);
-        return (ERR_FILE_OPEN);
-    }
-
-    if (MscCopyFile(pMBFile, pMailFile, 0, (unsigned long) -1) < 0)
+    if (USmlWriteMailFile(hFSpool, pMBFile) < 0)
     {
         ErrorPush();
-        fclose(pMailFile);
         fclose(pMBFile);
+        SysRemove(pszFileName);
         return (ErrorPop());
     }
 
-    fclose(pMailFile);
     fclose(pMBFile);
 
     return (0);
@@ -1322,27 +1423,14 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
 ///////////////////////////////////////////////////////////////////////////////
 //  Than write mail data
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszMailFile = USmlGetMailFile(hFSpool);
-    FILE           *pMailFile = fopen(pszMailFile, "rb");
-
-    if (pMailFile == NULL)
-    {
-        fclose(pSpoolFile);
-        SysRemove(pszFileName);
-        ErrSetErrorCode(ERR_FILE_OPEN);
-        return (ERR_FILE_OPEN);
-    }
-
-    if (MscCopyFile(pSpoolFile, pMailFile, 0, (unsigned long) -1) < 0)
+    if (USmlWriteMailFile(hFSpool, pSpoolFile) < 0)
     {
         ErrorPush();
-        fclose(pMailFile);
         fclose(pSpoolFile);
         SysRemove(pszFileName);
         return (ErrorPop());
     }
 
-    fclose(pMailFile);
     fclose(pSpoolFile);
 
     return (0);
@@ -1426,7 +1514,7 @@ static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool
 
     if (pMPFile == NULL)
     {
-        ErrSetErrorCode(ERR_FILE_OPEN);
+        ErrSetErrorCode(ERR_FILE_OPEN, pszMPFile);
         return (ERR_FILE_OPEN);
     }
 
@@ -1464,6 +1552,12 @@ static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool
             else if (stricmp(ppszCmdTokens[0], "lredirect") == 0)
                 USmlCmd_lredirect(ppszCmdTokens, iFieldsCount, pUI, hFSpool,
                         hQueue, hMessage, LMPC);
+            else
+            {
+                SysLogMessage(LOG_LEV_ERROR, "Invalid command \"%s\" in file \"%s\"\n",
+                        ppszCmdTokens[0], pszMPFile);
+
+            }
 
         }
 
@@ -1488,9 +1582,17 @@ static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
     char const     *const * ppszRcpt = USmlGetRcptTo(hFSpool);
     char const     *pszSmtpMessageID = USmlGetSmtpMessageID(hFSpool);
     char const     *pszMessageID = USmlGetSpoolFile(hFSpool);
-    char const     *pszMailFile = USmlGetMailFile(hFSpool);
     int             iFromDomains = StrStringsCount(ppszFrom),
                     iRcptDomains = StrStringsCount(ppszRcpt);
+    FileSection     FS;
+
+///////////////////////////////////////////////////////////////////////////////
+//  This function retrieve the spool file message section and sync the content.
+//  This is necessary before passing the file name to external commands.
+///////////////////////////////////////////////////////////////////////////////
+    if (USmlGetMsgFileSection(hFSpool, FS) < 0)
+        return (ErrGetErrorCode());
+
 
     for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++)
     {
@@ -1518,7 +1620,7 @@ static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
         }
         else if (strcmp(ppszCmdTokens[ii], "@@FILE") == 0)
         {
-            char           *pszNewValue = SysStrDup(pszMailFile);
+            char           *pszNewValue = SysStrDup(FS.szFilePath);
 
             if (pszNewValue == NULL)
                 return (ErrGetErrorCode());
@@ -1555,7 +1657,7 @@ static int      USmlCmdMacroSubstitutes(char **ppszCmdTokens, UserInfo * pUI,
 
             SysGetTmpFile(szTmpFile);
 
-            if (MscCopyFile(szTmpFile, pszMailFile) < 0)
+            if (MscCopyFile(szTmpFile, FS.szFilePath) < 0)
             {
                 ErrorPush();
                 CheckRemoveFile(szTmpFile);
@@ -1719,7 +1821,7 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
+        QMSG_HANDLE     hRedirMessage = QueCreateMessage(hSpoolQueue);
 
         if (hRedirMessage == INVALID_QMSG_HANDLE)
             return (ErrGetErrorCode());
@@ -1779,7 +1881,7 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        QMSG_HANDLE     hRedirMessage = QueGetTempMsg(hSpoolQueue);
+        QMSG_HANDLE     hRedirMessage = QueCreateMessage(hSpoolQueue);
 
         if (hRedirMessage == INVALID_QMSG_HANDLE)
             return (ErrGetErrorCode());
@@ -2281,7 +2383,8 @@ static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase
 
 
 
-static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
+static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
+                        char const * const * ppszMatchDomains)
 {
 
     char const     *pszCurr = pszAddrList;
@@ -2294,10 +2397,13 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
             break;
 
 
-        char            szAddress[MAX_SMTP_ADDRESS] = "";
+        char            szAddress[MAX_SMTP_ADDRESS] = "",
+                        szDomain[MAX_ADDR_NAME] = "";
 
-        if ((pszCurr = USmlAddressFromAtPtr(pszAt, pszAddrList, szAddress,
-                                sizeof(szAddress) - 1)) != NULL)
+        if (((pszCurr = USmlAddressFromAtPtr(pszAt, pszAddrList, szAddress,
+                                sizeof(szAddress) - 1)) != NULL) &&
+                (USmtpSplitEmailAddr(szAddress, NULL, szDomain) == 0) &&
+                ((ppszMatchDomains == NULL) || StrStringsIMatch(ppszMatchDomains, szDomain)))
         {
             if (StrDynSize(pAddrDS) > 0)
                 StrDynAdd(pAddrDS, ADDRESS_TOKENIZER);
@@ -2313,7 +2419,7 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS)
 
 
 
-static char   **USmlGetAddressList(HSLIST & hTagList,...)
+static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains, ...)
 {
 
     DynString       AddrDS;
@@ -2324,14 +2430,14 @@ static char   **USmlGetAddressList(HSLIST & hTagList,...)
     char const     *pszTag = NULL;
     va_list         Args;
 
-    va_start(Args, hTagList);
+    va_start(Args, ppszMatchDomains);
 
     while ((pszTag = va_arg(Args, char *)) != NULL)
     {
         MessageTagData *pMTD = USmlFindTag(hTagList, pszTag);
 
         if (pMTD != NULL)
-            USmlAddAddresses(pMTD->pszTagData, &AddrDS);
+            USmlAddAddresses(pMTD->pszTagData, &AddrDS, ppszMatchDomains);
 
     }
 
@@ -2381,7 +2487,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 //  If the recipient is NULL try to extract the "To:", "Cc:" and "Bcc:"
 //  addresses from the message
 ///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList,
+        if ((ppszRcptList = USmlGetAddressList(hTagList, NULL,
                                 "To", "Cc", "Bcc", NULL)) == NULL)
             return (NULL);
 
@@ -2390,12 +2496,25 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
     else if (*pszRcptTo == '?')
     {
 ///////////////////////////////////////////////////////////////////////////////
+//  Extract matching domains
+///////////////////////////////////////////////////////////////////////////////
+        char          **ppszDomains = StrTokenize(pszRcptTo, ",");
+
+        if (ppszDomains == NULL)
+            return (NULL);
+
+///////////////////////////////////////////////////////////////////////////////
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "?" + masquerade-domain
 ///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList,
+        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1],
                                 "To", "Cc", "Bcc", NULL)) == NULL)
+        {
+            StrFreeStrings(ppszDomains);
             return (NULL);
+        }
+
+        StrFreeStrings(ppszDomains);
 
 
         int             iAddrCount = StrStringsCount(ppszRcptList);
@@ -2420,12 +2539,25 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
     else if (*pszRcptTo == '&')
     {
 ///////////////////////////////////////////////////////////////////////////////
+//  Extract matching domains
+///////////////////////////////////////////////////////////////////////////////
+        char          **ppszDomains = StrTokenize(pszRcptTo, ",");
+
+        if (ppszDomains == NULL)
+            return (NULL);
+
+///////////////////////////////////////////////////////////////////////////////
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "&" + add-domain
 ///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList,
+        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1],
                                 "To", "Cc", "Bcc", NULL)) == NULL)
+        {
+            StrFreeStrings(ppszDomains);
             return (NULL);
+        }
+
+        StrFreeStrings(ppszDomains);
 
 
         int             iAddrCount = StrStringsCount(ppszRcptList);
@@ -2522,7 +2654,7 @@ int             USmlDeliverFetchedMsg(char const * pszSyncAddr, char const * psz
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
-        QMSG_HANDLE     hMessage = QueGetTempMsg(hSpoolQueue);
+        QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
         if (hMessage == INVALID_QMSG_HANDLE)
         {
