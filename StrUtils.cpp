@@ -675,3 +675,34 @@ char           *StrTrim(char *pszString)
     return (StrRTrim(StrLTrim(pszString)));
 
 }
+
+
+
+
+int             StrAdd(char *&pszString, int &iSize, char const *pszAdd)
+{
+
+    int             iStringLen = strlen(pszString),
+                    iAddLen = strlen(pszAdd);
+
+    if ((iStringLen + iAddLen + 1) >= iSize)
+    {
+        int             iNewSize = (iSize + iAddLen + 1) * 2;
+        char           *pszNew = (char *) SysAlloc(iNewSize);
+
+        if (pszNew == NULL)
+            return (ErrGetErrorCode());
+
+        strcpy(pszNew, pszString);
+
+        SysFree(pszString);
+
+        pszString = pszNew;
+        iSize = iNewSize;
+    }
+
+    strcat(pszString, pszAdd);
+
+    return (0);
+
+}

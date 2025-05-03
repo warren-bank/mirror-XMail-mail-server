@@ -214,6 +214,8 @@
 #define ERR_QUEUE_ENTRY_NOT_FOUND   (-187)
 #define ERR_NULL_SENDER             (-188)
 #define ERR_RCPTTO_UNKNOWN          (-189)
+#define ERR_LOADMODULE              (-190)
+#define ERR_LOADMODULESYMBOL        (-191)
 
 
 

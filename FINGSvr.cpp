@@ -619,19 +619,18 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
 ///////////////////////////////////////////////////////////////////////////////
 //  Mailing list scan
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszMLUser = UsrMLGetFirstUser(hUsersDB);
+    MLUserInfo     *pMLUI = UsrMLGetFirstUser(hUsersDB);
 
-    for (; pszMLUser != NULL; pszMLUser = UsrMLGetNextUser(hUsersDB))
+    for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
         char            szUser[MAX_ADDR_NAME] = "",
                         szDomain[MAX_ADDR_NAME] = "";
 
-        if (USmtpSplitEmailAddr(pszMLUser, szUser, szDomain) < 0)
+        if (USmtpSplitEmailAddr(pMLUI->pszAddress, szUser, szDomain) < 0)
         {
             ErrorPush();
-
+            UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
-
             return (ErrorPop());
         }
 
@@ -639,6 +638,9 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
 //  Dump user
 ///////////////////////////////////////////////////////////////////////////////
         FINGDumpUser(szUser, szDomain, hBSock, pFINGCfg);
+
+
+        UsrMLFreeUser(pMLUI);
     }
 
     UsrMLCloseDB(hUsersDB);

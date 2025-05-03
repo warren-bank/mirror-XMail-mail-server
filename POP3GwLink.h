@@ -68,7 +68,7 @@ int             GwLkLinkLock(POP3Link const * pPopLnk);
 void            GwLkLinkUnlock(POP3Link const * pPopLnk);
 int             GwLkClearLinkLocksDir(void);
 int             GwLkLocalDomain(POP3Link const * pPopLnk);
-int             GwLkAnonymousDomain(POP3Link const * pPopLnk);
+int             GwLkMasqueradeDomain(POP3Link const * pPopLnk);
 int             GwLkCheckEnabled(POP3Link const * pPopLnk);
 int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable);
 int             GwLkEnable(char const * pszDomain, char const * pszName,

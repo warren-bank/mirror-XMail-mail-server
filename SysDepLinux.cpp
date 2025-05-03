@@ -227,10 +227,7 @@ static int      SysSetupSemaphoresHandling(void)
 //  Create common access semaphore
 ///////////////////////////////////////////////////////////////////////////////
     if ((iSASemID = SysForcedSemGet(SASemIPCName, 1, 0600)) == -1)
-    {
-        ErrSetErrorCode(ERR_SEMGET);
-        return (ERR_SEMGET);
-    }
+        return (ErrGetErrorCode());
 
     if (SysSetSemaphore(iSASemID, 1, 0) < 0)
     {
@@ -281,6 +278,8 @@ static int      SysSetupSemaphoresHandling(void)
 ///////////////////////////////////////////////////////////////////////////////
         if ((pSUD[ii].iSemID = SysForcedSemGet(pSUD[ii].SemName, MAX_SEM_X_ID, 0600)) == -1)
         {
+            ErrorPush();
+
             for (--ii; ii >= 0; ii--)
                 SysSemKill(pSUD[ii].iSemID);
 
@@ -289,8 +288,7 @@ static int      SysSetupSemaphoresHandling(void)
             SysSemKill(iSASemID);
             SysShmKill(iSAShmID);
 
-            ErrSetErrorCode(ERR_SEMGET);
-            return (ERR_SEMGET);
+            return (ErrorPop());
         }
 
         for (int jj = 0; jj < MAX_SEM_X_ID; jj++)
@@ -527,7 +525,7 @@ static int      SysForcedSemGet(SYS_IPCNAME SemName, int iSemCount, int iFlags)
     if ((iSemID = semget(SemName, iSemCount, IPC_CREAT | IPC_EXCL | iFlags)) == -1)
     {
         ErrSetErrorCode(ERR_SEMGET);
-        return (ERR_SEMGET);
+        return (-1);
     }
 
     return (iSemID);
@@ -2163,6 +2161,51 @@ int             SysUnmapSharedMem(SYS_SHMEM ShMemID, void *pAddress)
     }
 
     return (0);
+
+}
+
+
+
+SYS_HANDLE      SysOpenModule(char const * pszFilePath)
+{
+
+    void           *pModule = dlopen(pszFilePath, RTLD_LAZY);
+
+    if (pModule == NULL)
+    {
+        ErrSetErrorCode(ERR_LOADMODULE, pszFilePath);
+        return (SYS_INVALID_HANDLE);
+    }
+
+    return ((SYS_HANDLE) pModule);
+
+}
+
+
+
+int             SysCloseModule(SYS_HANDLE hModule)
+{
+
+    dlclose((void *) hModule);
+
+    return (0);
+
+}
+
+
+
+void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol)
+{
+
+    void           *pSymbol = dlsym((void *) hModule, pszSymbol);
+
+    if (pSymbol == NULL)
+    {
+        ErrSetErrorCode(ERR_LOADMODULESYMBOL, pszSymbol);
+        return (NULL);
+    }
+
+    return (pSymbol);
 
 }
 

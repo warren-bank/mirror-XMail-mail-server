@@ -55,6 +55,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <syslog.h>
+#include <dlfcn.h>
 
 
 

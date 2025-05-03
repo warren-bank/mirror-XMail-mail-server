@@ -52,6 +52,7 @@ int             StrSplitString(char const * pszString, char const * pszSplitters
 char           *StrLTrim(char *pszString);
 char           *StrRTrim(char *pszString);
 char           *StrTrim(char *pszString);
+int             StrAdd(char *&pszString, int &iSize, char const *pszAdd);
 
 
 

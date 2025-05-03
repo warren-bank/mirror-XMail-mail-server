@@ -378,7 +378,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
                     "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
 
     }
-    else if (GwLkAnonymousDomain(pPopLnk))
+    else if (GwLkMasqueradeDomain(pPopLnk))
     {
         SysLogMessage(LOG_LEV_MESSAGE,
                 "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",

@@ -300,10 +300,10 @@ static int      SMAILTryProcessFile(char const * pszMessFilePath, SHB_HANDLE hSh
         char const     *pszSpoolFile = USmlGetSpoolFile(hFSpool);
 
         ErrLogMessage(LOG_LEV_MESSAGE,
-                "Message <%s> blocked by %s mail loop check !\n",
+                "Message <%s> blocked by mail loop check !\n",
                 pszSmtpMessageID);
         QueErrLogMessage(pszMessFilePath,
-                "Message <%s> blocked by %s mail loop check !\n",
+                "Message <%s> blocked by mail loop check !\n",
                 pszSmtpMessageID);
 
         QueSpoolRemoveNotifyRoot(pszMessFilePath, ErrGetErrorString(ErrorFetch()));
@@ -514,9 +514,9 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Mailing list scan
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszUser = UsrMLGetFirstUser(hUsersDB);
+    MLUserInfo     *pMLUI = UsrMLGetFirstUser(hUsersDB);
 
-    for (; pszUser != NULL; pszUser = UsrMLGetNextUser(hUsersDB))
+    for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get unique spool/tmp file path
@@ -526,6 +526,7 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
         if (QueGetTempFile(NULL, szSpoolTmpFile, iQueueSplitLevel) < 0)
         {
             ErrorPush();
+            UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
         }
@@ -533,9 +534,10 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Create spool file
 ///////////////////////////////////////////////////////////////////////////////
-        if (USmlCreateSpoolFile(hFSpool, NULL, pszUser, szSpoolTmpFile) < 0)
+        if (USmlCreateSpoolFile(hFSpool, NULL, pMLUI->pszAddress, szSpoolTmpFile) < 0)
         {
             ErrorPush();
+            UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
         }
@@ -547,9 +549,12 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
         {
             ErrorPush();
             SysRemove(szSpoolTmpFile);
+            UsrMLFreeUser(pMLUI);
             UsrMLCloseDB(hUsersDB);
             return (ErrorPop());
         }
+
+        UsrMLFreeUser(pMLUI);
     }
 
     UsrMLCloseDB(hUsersDB);

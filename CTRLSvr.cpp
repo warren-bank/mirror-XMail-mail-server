@@ -35,6 +35,7 @@
 #include "UsrUtils.h"
 #include "StrUtils.h"
 #include "POP3Utils.h"
+#include "Queue.h"
 #include "UsrMailList.h"
 #include "POP3GwLink.h"
 #include "MailDomains.h"
@@ -166,6 +167,8 @@ static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount);
+static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount);
 
 
@@ -934,6 +937,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         iCmdResult = CTRLDo_cfgfileget(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "cfgfileset") == 0)
         iCmdResult = CTRLDo_cfgfileset(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
+    else if (stricmp(ppszTokens[0], "frozlist") == 0)
+        iCmdResult = CTRLDo_frozlist(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "noop") == 0)
         iCmdResult = CTRLDo_noop(pCTRLCfg, hBSock, ppszTokens, iTokensCount);
     else if (stricmp(ppszTokens[0], "quit") == 0)
@@ -1679,7 +1684,7 @@ static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount)
 {
 
-    if (iTokensCount != 4)
+    if (iTokensCount < 4)
     {
         CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
         ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
@@ -1712,13 +1717,28 @@ static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_USER_NOT_MAILINGLIST);
     }
 
-    if (UsrMLAddUser(pUI, ppszTokens[3]) < 0)
+
+    char const     *pszPerms = (iTokensCount > 4) ? ppszTokens[4]: DEFAULT_MLUSER_PERMS;
+    MLUserInfo     *pMLUI = UsrMLAllocDefault(ppszTokens[3], pszPerms);
+
+    if (pMLUI == NULL)
     {
         ErrorPush();
         CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
         UsrFreeUserInfo(pUI);
         return (ErrorPop());
     }
+
+    if (UsrMLAddUser(pUI, pMLUI) < 0)
+    {
+        ErrorPush();
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
+        UsrMLFreeUser(pMLUI);
+        UsrFreeUserInfo(pUI);
+        return (ErrorPop());
+    }
+
+    UsrMLFreeUser(pMLUI);
 
     UsrFreeUserInfo(pUI);
 
@@ -1839,26 +1859,27 @@ static int      CTRLDo_mluserlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
     CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Mailing list scan
+///////////////////////////////////////////////////////////////////////////////
+    MLUserInfo     *pMLUI = UsrMLGetFirstUser(hUsersDB);
 
-    char const     *pszUser = UsrMLGetFirstUser(hUsersDB);
-
-    if (pszUser != NULL)
+    for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
-        do
+        char            szUserLine[512] = "";
+
+        sprintf(szUserLine, "\"%s\"\t\"%s\"", pMLUI->pszAddress, pMLUI->pszPerms);
+
+        if (BSckSendString(hBSock, szUserLine, pCTRLCfg->iTimeout) < 0)
         {
-            char            szUserLine[512] = "";
+            ErrorPush();
+            UsrMLFreeUser(pMLUI);
+            UsrFreeUserInfo(pUI);
+            UsrMLCloseDB(hUsersDB);
+            return (ErrorPop());
+        }
 
-            sprintf(szUserLine, "\"%s\"", pszUser);
-
-            if (BSckSendString(hBSock, szUserLine, pCTRLCfg->iTimeout) < 0)
-            {
-                ErrorPush();
-                UsrFreeUserInfo(pUI);
-                UsrMLCloseDB(hUsersDB);
-                return (ErrorPop());
-            }
-
-        } while ((pszUser = UsrMLGetNextUser(hUsersDB)) != NULL);
+        UsrMLFreeUser(pMLUI);
     }
 
     BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
@@ -2593,6 +2614,52 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
     SysRemove(szClientFile);
+
+    return (0);
+
+}
+
+
+
+static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
+                        char const * const * ppszTokens, int iTokensCount)
+{
+
+    if (iTokensCount < 1)
+    {
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
+        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
+        return (ERR_BAD_CTRL_COMMAND);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build frozen list file
+///////////////////////////////////////////////////////////////////////////////
+    char            szListFile[SYS_MAX_PATH] = "";
+
+    SysGetTmpFile(szListFile);
+
+    if (QueGetFrozenList(NULL, szListFile) < 0)
+    {
+        ErrorPush();
+        CheckRemoveFile(szListFile);
+        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrorFetch());
+        return (ErrorPop());
+    }
+
+    CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Send client target file
+///////////////////////////////////////////////////////////////////////////////
+    if (MscSendTextFile(szListFile, hBSock, pCTRLCfg->iTimeout) < 0)
+    {
+        ErrorPush();
+        SysRemove(szListFile);
+        return (ErrorPop());
+    }
+
+    SysRemove(szListFile);
 
     return (0);
 

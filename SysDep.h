@@ -109,6 +109,10 @@ int             SysKillSharedMem(SYS_SHMEM ShMemID);
 void           *SysMapSharedMem(SYS_SHMEM ShMemID);
 int             SysUnmapSharedMem(SYS_SHMEM ShMemID, void *pAddress);
 
+SYS_HANDLE      SysOpenModule(char const * pszFilePath);
+int             SysCloseModule(SYS_HANDLE hModule);
+void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol);
+
 int             SysEventLogV(char const * pszFormat, va_list Args);
 int             SysEventLog(char const * pszFormat,...);
 int             SysLogMessage(int iLogLevel, char const * pszFormat,...);

@@ -1,12 +1,14 @@
 
 			< XMail Server >
 
-Version      : 0.63 ( Beta-17 )
+Version      : 0.64 ( Beta-18 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 27-10-2000
+Date         : 02-11-2000
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
+             : Shawn Anderson <sanderson@eye-catcher.com>
+             : Dick van der Kaaden <dick@netrex.nl>
 
 
 
@@ -368,6 +370,22 @@ Date 27-10-2000		0.63
 	Added a feature that makes usable the new POP3LINKS.TAB fetching option by masquerading
 	incoming recipient. This can be done by replacing the domain part or by adding a constant
 	string to the To: address ( see  POP3LINKS.TAB section ).
+Date 02-11-2000		0.64
+	Added permissions to mailing list users ( see MLUSERS.TAB section ). This enable You to have
+	read only users as long as read/write users.
+	This is implemented by adding a new extra field to MLUSERS.TAB to store permissions ( "R" or "RW" ).
+	The lack of this extra field ( old MLUSERS.TAB files ) will be interpreted as "RW".
+	The command "mluseradd" has been extended to hold the new permission parameter
+	( see section "XMail admin protocol" ).
+	Added a new CTRL command  "frozlist"  to list files that are in frozen status ( see section
+	"XMail admin protocol" ).
+	Fixed a bug in the new masquerading feature of XMail ( POP3LINKS.TAB ).
+	Fixed a bug that makes XMail crashes when a mail loop condition is detected.
+	Removed the strict RFC compliant check on messages.
+
+
+
+
 
 
 
@@ -1180,15 +1198,21 @@ Part 7			Configuration
 	If the user is a mailing list this file must exist inside user account subdirectory
 	and contain a list of users subscribed to this list. The file format is :
 
-	"user"[NEWLINE]
+	"user"[TAB]"perms"[NEWLINE]
+
+	where :
+
+	user		= subscriber email address
+	perms		= subscriber permissions ( R = read  or  RW = read/write )
+
 
 	Ex:
 
-	"davide_libenzi@mycio.com"
-	"ghostuser@nightmare.net"
+	"davide_libenzi@mycio.com"	"RW"
+	"ghostuser@nightmare.net"	"R"
 
 	If the  USER.TAB  file defines a "ClosedML" variable as 1 then a client can post
-	to this mailing list only if It's listed in  MLUSERS.TAB
+	to this mailing list only if It's listed in  MLUSERS.TAB with RW permissions.
 
 
 	MAILPROC.TAB :
@@ -2216,6 +2240,10 @@ Part 19			XMail admin protocol
 
 	*) Adding a mailing list user
 
+	"mluseradd"[TAB]"domain"[TAB]"mlusername"[TAB]"mailaddress"[TAB]"perms"<CR><LF>
+
+	or
+
 	"mluseradd"[TAB]"domain"[TAB]"mlusername"[TAB]"mailaddress"<CR><LF>
 
 	where :
@@ -2223,7 +2251,9 @@ Part 19			XMail admin protocol
 	domain		= domain name ( must be handled by the server )
 	mlusername	= mailing list username
 	mailaddress	= mail address to add to the mailing list "mlusername@domain"
+	perms		= user permissions ( R or RW )
 
+	When  perms  is not specified the default is RW.
 	The result will be a RESSTRING.
 
 
@@ -2444,6 +2474,28 @@ Part 19			XMail admin protocol
 	Remember that configuration files has a strict syntax and that pushing a bad one
 	You can make XMail to not work properly.
 	You CANNOT use this command with indexed files !
+
+
+	*) Listing frozen messages
+
+	"frozlist"<CR><LF>
+
+	The result will be a RESSTRING.
+	In success case ( 00100 ) a formatted list of frozen messages will follow, until a line
+	containing a single dot ( <CR><LF>.<CR><LF> ).
+	The format of the listing is :
+
+	"msgfile"[tab]"lev0"[TAB]"lev1"[TAB]"from"[TAB]"to"[TAB]"time"[TAB]"size"<CR><LF>
+
+	Where :
+
+	msgfile		= message name or id
+	lev0		= queue fs level 0 ( first level directory index )
+	lev1		= queue fs level 1 ( second level directory index )
+	from		= message sender
+	to		= message destination
+	time		= message time ( "YYYY-MM-DD HH:MM:SS" )
+	size		= message size in bytes
 
 
 	*) Do nothing command

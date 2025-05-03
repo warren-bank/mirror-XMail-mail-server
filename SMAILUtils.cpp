@@ -49,6 +49,7 @@
 
 #define SFF_HEADER_MODIFIED             (1 << 0)
 
+#define STD_TAG_BUFFER_LENGTH           1024
 #define CUSTOM_CMD_LINE_MAX             512
 #define SMAIL_DOMAIN_PROC_DIR           "custdomains"
 #define SMAIL_DOMAIN_FILTER_DIR         "filters"
@@ -343,12 +344,16 @@ static void     USmlFreeTagsList(HSLIST & hTagList)
 static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
 {
 
-    char            szTagDataFile[SYS_MAX_PATH] = "";
+    int             iTagBufLen = STD_TAG_BUFFER_LENGTH;
+    char           *pszTagBuf = (char *) SysAlloc(iTagBufLen);
 
-    SysGetTmpFile(szTagDataFile);
+    if (pszTagBuf == NULL)
+        return (ErrGetErrorCode());
+
+    SetEmptyString(pszTagBuf);
 
 
-    FILE           *pTagFile = NULL;
+    unsigned long   ulFilePos = (unsigned long) ftell(pSpoolFile);
     char            szSpoolLine[MAX_SPOOL_LINE] = "",
                     szTagName[256] = "";
 
@@ -356,28 +361,19 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
     {
         if (strlen(szSpoolLine) == 0)
         {
-            if (pTagFile != NULL)
+            if (strlen(pszTagBuf) > 0)
             {
-                char           *pszTagData = StrLoadFile(pTagFile);
-
-                fclose(pTagFile), pTagFile = NULL;
-
-                if (pszTagData == NULL)
+                if (USmlAddTag(hTagList, szTagName, pszTagBuf) < 0)
                 {
                     ErrorPush();
-                    CheckRemoveFile(szTagDataFile);
+                    SysFree(pszTagBuf);
+                    fseek(pSpoolFile, ulFilePos, SEEK_SET);
                     return (ErrorPop());
                 }
 
-                if (USmlAddTag(hTagList, szTagName, pszTagData) < 0)
-                {
-                    ErrorPush();
-                    SysFree(pszTagData);
-                    CheckRemoveFile(szTagDataFile);
-                    return (ErrorPop());
-                }
+                SetEmptyString(pszTagBuf);
 
-                SysFree(pszTagData);
+                ulFilePos = (unsigned long) ftell(pSpoolFile);
             }
 
             break;
@@ -385,74 +381,69 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
 
         if ((szSpoolLine[0] == ' ') || (szSpoolLine[0] == '\t'))
         {
-            if (pTagFile == NULL)
+            if (strlen(pszTagBuf) == 0)
             {
-                CheckRemoveFile(szTagDataFile);
+                SysFree(pszTagBuf);
+                fseek(pSpoolFile, ulFilePos, SEEK_SET);
 
                 ErrSetErrorCode(ERR_INVALID_MESSAGE_FORMAT);
                 return (ERR_INVALID_MESSAGE_FORMAT);
             }
 
-            fprintf(pTagFile, "\r\n%s", szSpoolLine);
+            if ((StrAdd(pszTagBuf, iTagBufLen, "\r\n") < 0) ||
+                    (StrAdd(pszTagBuf, iTagBufLen, szSpoolLine) < 0))
+            {
+                ErrorPush();
+                SysFree(pszTagBuf);
+                fseek(pSpoolFile, ulFilePos, SEEK_SET);
+                return (ErrorPop());
+            }
         }
         else
         {
-            if (pTagFile != NULL)
+            if (strlen(pszTagBuf) > 0)
             {
-                char           *pszTagData = StrLoadFile(pTagFile);
-
-                fclose(pTagFile), pTagFile = NULL;
-
-                if (pszTagData == NULL)
+                if (USmlAddTag(hTagList, szTagName, pszTagBuf) < 0)
                 {
                     ErrorPush();
-                    CheckRemoveFile(szTagDataFile);
+                    SysFree(pszTagBuf);
+                    fseek(pSpoolFile, ulFilePos, SEEK_SET);
                     return (ErrorPop());
                 }
 
-                if (USmlAddTag(hTagList, szTagName, pszTagData) < 0)
-                {
-                    ErrorPush();
-                    SysFree(pszTagData);
-                    CheckRemoveFile(szTagDataFile);
-                    return (ErrorPop());
-                }
+                SetEmptyString(pszTagBuf);
 
-                SysFree(pszTagData);
+                ulFilePos = (unsigned long) ftell(pSpoolFile);
             }
-
 
             char           *pszEndTag = strchr(szSpoolLine, ':');
 
             if (pszEndTag == NULL)
             {
-                if (pTagFile != NULL)
-                    fclose(pTagFile);
-                CheckRemoveFile(szTagDataFile);
+                SysFree(pszTagBuf);
+                fseek(pSpoolFile, ulFilePos, SEEK_SET);
 
                 ErrSetErrorCode(ERR_INVALID_MESSAGE_FORMAT);
                 return (ERR_INVALID_MESSAGE_FORMAT);
             }
 
-            int             iNameLength = (int) (pszEndTag - szSpoolLine);
+            int             iNameLength = Min((int) (pszEndTag - szSpoolLine),
+                                    sizeof(szTagName) - 1);
 
             strncpy(szTagName, szSpoolLine, iNameLength);
             szTagName[iNameLength] = '\0';
 
-
-            if ((pTagFile = fopen(szTagDataFile, "w+b")) == NULL)
+            if (StrAdd(pszTagBuf, iTagBufLen, pszEndTag + 2) < 0)
             {
-                CheckRemoveFile(szTagDataFile);
-                ErrSetErrorCode(ERR_FILE_CREATE);
-                return (ERR_FILE_CREATE);
+                ErrorPush();
+                SysFree(pszTagBuf);
+                fseek(pSpoolFile, ulFilePos, SEEK_SET);
+                return (ErrorPop());
             }
-
-            fprintf(pTagFile, "%s", pszEndTag + 2);
-
         }
     }
 
-    CheckRemoveFile(szTagDataFile);
+    SysFree(pszTagBuf);
 
     return (0);
 
@@ -789,14 +780,13 @@ SPLF_HANDLE     USmlCreateHandle(const char *pszMessFilePath)
 //  Load message tags
 ///////////////////////////////////////////////////////////////////////////////
     if (USmlLoadTags(pSpoolFile, pSFD->hTagList) < 0)
-    {
-        fclose(pSpoolFile);
-        USmlFreeData(pSFD);
-        return (INVALID_SPLF_HANDLE);
-    }
+        SysLogMessage(LOG_LEV_MESSAGE, "Invalid headers section : %s\n",
+                pSFD->szSpoolFile);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Get spool file position
+///////////////////////////////////////////////////////////////////////////////
     pSFD->ulMailDataOffset = (unsigned long) ftell(pSpoolFile);
-
 
     fclose(pSpoolFile);
 

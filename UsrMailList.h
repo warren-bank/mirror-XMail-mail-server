@@ -29,8 +29,17 @@
 
 #define INVALID_USRML_HANDLE            ((USRML_HANDLE) 0)
 
+#define DEFAULT_MLUSER_PERMS        "RW"
 
 
+
+
+
+struct MLUserInfo
+{
+    char           *pszAddress;
+    char           *pszPerms;
+};
 
 typedef struct USRML_HANDLE_struct
 {
@@ -40,14 +49,16 @@ typedef struct USRML_HANDLE_struct
 
 
 
+MLUserInfo     *UsrMLAllocDefault(char const * pszAddress, char const * pszPerms);
+int             UsrMLFreeUser(MLUserInfo * pMLUI);
 int             UsrMLCheckUserPost(UserInfo * pUI, char const * pszUser);
-int             UsrMLAddUser(UserInfo * pUI, const char *pszMLUser);
+int             UsrMLAddUser(UserInfo * pUI, MLUserInfo const * pMLUI);
 int             UsrMLRemoveUser(UserInfo * pUI, const char *pszMLUser);
 int             UsrMLGetUsersFileSnapShot(UserInfo * pUI, const char *pszFileName);
 USRML_HANDLE    UsrMLOpenDB(UserInfo * pUI);
 void            UsrMLCloseDB(USRML_HANDLE hUsersDB);
-const char     *UsrMLGetFirstUser(USRML_HANDLE hUsersDB);
-const char     *UsrMLGetNextUser(USRML_HANDLE hUsersDB);
+MLUserInfo     *UsrMLGetFirstUser(USRML_HANDLE hUsersDB);
+MLUserInfo     *UsrMLGetNextUser(USRML_HANDLE hUsersDB);
 
 
 

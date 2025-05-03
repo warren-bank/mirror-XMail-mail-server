@@ -696,8 +696,9 @@ static int      QueDumpFrozen(char const * pszFrozFilePath, FILE * pListFile)
             "\"%d\"\t"
             "\"<%s>\"\t"
             "\"<%s>\"\t"
-            "\"%s\"\n",
-            szMessFile, iLevel1, iLevel2, pszFrom, pszRcpt, szTime);
+            "\"%s\"\t"
+            "\"%lu\"\n",
+            szMessFile, iLevel1, iLevel2, pszFrom, pszRcpt, szTime, FI.ulSize);
 
 
     SysFree(pszRcpt);
@@ -2303,12 +2304,17 @@ static int      QueBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE hFS
 ///////////////////////////////////////////////////////////////////////////////
 //  Write error message ( mail data )
 ///////////////////////////////////////////////////////////////////////////////
+    char const     *pszMailFrom = USmlMailFrom(hFSpool);
+    char const     *pszRcptTo = USmlRcptTo(hFSpool);
+
     fprintf(pRespFile, "Error sending message [%s] from [%s].\r\n\r\n"
+            "Mail From: <%s>\r\n"
+            "Rcpt To:   <%s>\r\n\r\n"
             "<Failure Reason>\r\n"
             "%s\r\n"
             "</Failure Reason>\r\n\r\n"
             "Below is reported the message header:\r\n"
-            "\r\n", pszSpoolFileName, pszSMTPDomain, pszReason);
+            "\r\n", pszSpoolFileName, pszSMTPDomain, pszMailFrom, pszRcptTo, pszReason);
 
 
 ///////////////////////////////////////////////////////////////////////////////

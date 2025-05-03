@@ -69,19 +69,19 @@ MKUOBJS = MkUsers.${O}
 all: ${MAILSVR} ${CRTLCLNT} ${XMCRYPT} ${MKUSERS}
 
 ${MAILSVR}: ${SVROBJS}
-	${LD} -o ${MAILSVR} ${SVROBJS}
+	${LD} -o ${MAILSVR} ${SVROBJS} -ldl
 	strip ${MAILSVR}
 
 ${CRTLCLNT}: ${CCLNOBJS}
-	${LD} -o ${CRTLCLNT} ${CCLNOBJS}
+	${LD} -o ${CRTLCLNT} ${CCLNOBJS} -ldl
 	strip ${CRTLCLNT}
 
 ${XMCRYPT}: ${XMCOBJS}
-	${LD} -o ${XMCRYPT} ${XMCOBJS}
+	${LD} -o ${XMCRYPT} ${XMCOBJS} -ldl
 	strip ${XMCRYPT}
 
 ${MKUSERS}: ${MKUOBJS}
-	${LD} -o ${MKUSERS} ${MKUOBJS}
+	${LD} -o ${MKUSERS} ${MKUOBJS} -ldl
 	strip ${MKUSERS}
 
 distclean: clean

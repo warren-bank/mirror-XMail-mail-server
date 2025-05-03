@@ -238,6 +238,8 @@ static THRDLS ErrorInfo Errors[] =
     {ERR_QUEUE_ENTRY_NOT_FOUND, "Queue entry not found", NULL},
     {ERR_NULL_SENDER, "Empty message sender", NULL},
     {ERR_RCPTTO_UNKNOWN, "Mail tag \"To:\" missing", NULL},
+    {ERR_LOADMODULE, "Error moading dynamic module", NULL},
+    {ERR_LOADMODULESYMBOL, "Error moading dynamic module symbol", NULL},
 
 };
 

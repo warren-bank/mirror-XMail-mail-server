@@ -853,7 +853,7 @@ int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iN
     bool            bSendingMsg = false;
     char            szMsgLine[2048] = "";
 
-    while ((iNumLines > 0) &&
+    while ((iNumLines >= 0) &&
             (MscGetString(pMsgFile, szMsgLine, sizeof(szMsgLine) - 1) != NULL))
     {
         if (BSckSendString(hBSock, szMsgLine, pPOPSD->iTimeout) < 0)

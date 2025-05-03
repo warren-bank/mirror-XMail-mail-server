@@ -1613,6 +1613,50 @@ int             SysUnmapSharedMem(SYS_SHMEM ShMemID, void *pAddress)
 
 
 
+SYS_HANDLE      SysOpenModule(char const * pszFilePath)
+{
+
+    HMODULE         hModule = LoadLibrary(pszFilePath);
+
+    if (hModule == NULL)
+    {
+        ErrSetErrorCode(ERR_LOADMODULE, pszFilePath);
+        return (SYS_INVALID_HANDLE);
+    }
+
+    return ((SYS_HANDLE) hModule);
+
+}
+
+
+
+int             SysCloseModule(SYS_HANDLE hModule)
+{
+
+    FreeLibrary((HMODULE) hModule);
+
+    return (0);
+
+}
+
+
+
+void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol)
+{
+
+    void           *pSymbol = (void *) GetProcAddress((HMODULE) hModule, pszSymbol);
+
+    if (pSymbol == NULL)
+    {
+        ErrSetErrorCode(ERR_LOADMODULESYMBOL, pszSymbol);
+        return (NULL);
+    }
+
+    return (pSymbol);
+
+}
+
+
 
 int             SysEventLogV(char const * pszFormat, va_list Args)
 {
