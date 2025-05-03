@@ -779,8 +779,10 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
     if (BSckSendString(hBSock, szResponse, pPOPSD->iTimeout) < 0)
         return (ErrGetErrorCode());
 
+    time_t          tCheckPoint = time(NULL);
+
     if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, pPOPSD->iTimeout,
-                    SvrShutdownCB, NULL) < 0)
+                    SvrShutdownCB, &tCheckPoint) < 0)
         return (ErrGetErrorCode());
 
     if (BSckSendString(hBSock, ".", pPOPSD->iTimeout) < 0)

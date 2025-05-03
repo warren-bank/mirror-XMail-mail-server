@@ -124,7 +124,12 @@ int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszC
                         int iDefPortNo);
 int             MscSplitAddressPort(char const * pszConnSpec, char * pszAddress,
                         int & iPortNo, int iDefPortNo);
-
+SYS_UINT16      MscReadUint16(void const * pData);
+SYS_UINT32      MscReadUint32(void const * pData);
+SYS_UINT64      MscReadUint64(void const * pData);
+void           *MscWriteUint16(void * pData, SYS_UINT16 uValue);
+void           *MscWriteUint32(void * pData, SYS_UINT32 uValue);
+void           *MscWriteUint64(void * pData, SYS_UINT64 uValue);
 
 
 

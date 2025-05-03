@@ -215,13 +215,16 @@ char          **StrTokenize(const char *pszString, const char *pszTokenizer)
         return (NULL);
 
     int             iTokenCount = 0;
-    char           *pszToken = strtok(pszBuffer, pszTokenizer);
+    char           *pszToken = NULL,
+                   *pszSavePtr = NULL;
+
+    pszToken = SysStrTok(pszBuffer, pszTokenizer, &pszSavePtr);
 
     while (pszToken != NULL)
     {
         ++iTokenCount;
 
-        pszToken = strtok(NULL, pszTokenizer);
+        pszToken = SysStrTok(NULL, pszTokenizer, &pszSavePtr);
     }
 
     char          **ppszTokens = (char **) SysAlloc((iTokenCount + 1) * sizeof(char *));
@@ -235,13 +238,13 @@ char          **StrTokenize(const char *pszString, const char *pszTokenizer)
     strcpy(pszBuffer, pszString);
 
     iTokenCount = 0;
-    pszToken = strtok(pszBuffer, pszTokenizer);
+    pszToken = SysStrTok(pszBuffer, pszTokenizer, &pszSavePtr);
 
     while (pszToken != NULL)
     {
         ppszTokens[iTokenCount++] = SysStrDup(pszToken);
 
-        pszToken = strtok(NULL, pszTokenizer);
+        pszToken = SysStrTok(NULL, pszTokenizer, &pszSavePtr);
     }
 
     ppszTokens[iTokenCount] = NULL;
@@ -564,9 +567,9 @@ char           *StrVSprint(char const * pszFormat, va_list Args)
 
         SysFree(pszMessage);
     }
-	
+
     return (NULL);
-	
+
 }
 
 
@@ -678,8 +681,22 @@ char           *StrTrim(char *pszString)
 
 
 
+char           *StrEOLTrim(char *pszString)
+{
 
-int             StrAdd(char *&pszString, int &iSize, char const *pszAdd)
+    int             iPos = strlen(pszString);
+
+    for (; (iPos > 0) && ((pszString[iPos - 1] == '\r') || (pszString[iPos - 1] == '\n')); iPos--);
+
+    pszString[iPos] = '\0';
+
+    return (pszString);
+
+}
+
+
+
+int             StrAdd(char *&pszString, int &iSize, char const * pszAdd)
 {
 
     int             iStringLen = strlen(pszString),

@@ -30,8 +30,14 @@
 #include "SysDepLinux.cpp"
 
 #else           // #ifdef __LINUX__
+#ifdef __SOLARIS__
+
+#include "SysDepSolaris.cpp"
+
+#else           // #ifdef __SOLARIS__
 
 #error System type not defined
 
+#endif          // #ifdef __SOLARIS__
 #endif          // #ifdef __LINUX__
 #endif          // #ifdef WIN32

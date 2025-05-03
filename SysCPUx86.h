@@ -27,9 +27,9 @@
 
 
 
-
-#define BIG_ENDIAN_CPU
-
+#define SYS_CPU_PORT                "Ix86"
+#define LITTLE_ENDIAN_CPU
+#define LITTLE_ENDIAN_BITFIELD
 
 
 

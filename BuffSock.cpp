@@ -181,8 +181,6 @@ int             BSckGetChar(BSOCK_HANDLE hBSock, int iTimeout)
 char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTimeout)
 {
 
-    int             iPrevChar = 0;
-
     for (int ii = 0; ii < iMaxChars; ii++)
     {
         int             iChar = BSckGetChar(hBSock, iTimeout);
@@ -192,18 +190,15 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
 
         if (iChar == '\n')
         {
-            if (iPrevChar == '\r')
-                pszBuffer[--ii] = '\0';
-            else
-                pszBuffer[ii] = '\0';
+            for (; (ii > 0) && (pszBuffer[ii - 1] == '\r'); ii--);
+
+            pszBuffer[ii] = '\0';
 
             return (pszBuffer);
         }
         else
             pszBuffer[ii] = (char) iChar;
 
-
-        iPrevChar = iChar;
     }
 
 

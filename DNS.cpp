@@ -39,12 +39,18 @@
 
 
 #define DNS_PORTNO              53
-#define DNS_SOCKET_TIMEOUT      20
+#define DNS_SOCKET_TIMEOUT      16
 #define DNS_QUERY_EXTRA         512
 #define DNS_MAX_RESP_PACKET     1024
-#define DNS_SEND_RETRIES        4
+#define DNS_SEND_RETRIES        3
 #define DNS_MAX_RR_DATA         256
+
+#if defined(LITTLE_ENDIAN_CPU)
 #define DNS_LABEL_LEN_MASK      0xff3f
+#else           // #if defined(LITTLE_ENDIAN_CPU)
+#define DNS_LABEL_LEN_MASK      0x3fff
+#endif          // #if defined(LITTLE_ENDIAN_CPU)
+
 #define DNS_LABEL_LEN_INVMASK   0xc0
 
 #define ROOTS_FILE              "dnsroots"
@@ -228,7 +234,7 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 //  Read type field
 ///////////////////////////////////////////////////////////////////////////////
     if (pRR != NULL)
-        pRR->Type = ntohs(*((SYS_UINT16 *) pRespData));
+        pRR->Type = ntohs(MscReadUint16(pRespData));
 
     pRespData += sizeof(SYS_UINT16);
     iRRLen += sizeof(SYS_UINT16);
@@ -237,7 +243,7 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 //  Read class field
 ///////////////////////////////////////////////////////////////////////////////
     if (pRR != NULL)
-        pRR->Class = ntohs(*((SYS_UINT16 *) pRespData));
+        pRR->Class = ntohs(MscReadUint16(pRespData));
 
     pRespData += sizeof(SYS_UINT16);
     iRRLen += sizeof(SYS_UINT16);
@@ -246,7 +252,7 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 //  Read TTL field
 ///////////////////////////////////////////////////////////////////////////////
     if (pRR != NULL)
-        pRR->TTL = ntohl(*((SYS_UINT32 *) pRespData));
+        pRR->TTL = ntohl(MscReadUint32(pRespData));
 
     pRespData += sizeof(SYS_UINT32);
     iRRLen += sizeof(SYS_UINT32);
@@ -254,7 +260,7 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 ///////////////////////////////////////////////////////////////////////////////
 //  Read lenght field
 ///////////////////////////////////////////////////////////////////////////////
-    SYS_UINT16      Lenght = ntohs(*((SYS_UINT16 *) pRespData));
+    SYS_UINT16      Lenght = ntohs(MscReadUint16(pRespData));
 
     if (pRR != NULL)
         pRR->Lenght = Lenght;
@@ -293,7 +299,7 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
     {
         if (*pRespData & DNS_LABEL_LEN_INVMASK)
         {
-            int             iLabelOffset = (int) ntohs(*((SYS_UINT16 *) pRespData) & DNS_LABEL_LEN_MASK);
+            int             iLabelOffset = (int) ntohs(MscReadUint16(pRespData) & DNS_LABEL_LEN_MASK);
 
             pRespData = pBaseData + iLabelOffset;
 
@@ -337,7 +343,7 @@ static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRes
 //  Read type field
 ///////////////////////////////////////////////////////////////////////////////
     if (pType != NULL)
-        *pType = ntohs(*((SYS_UINT16 *) pRespData));
+        *pType = ntohs(MscReadUint16(pRespData));
 
     pRespData += sizeof(SYS_UINT16);
     iQueryLen += sizeof(SYS_UINT16);
@@ -346,7 +352,7 @@ static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRes
 //  Read class field
 ///////////////////////////////////////////////////////////////////////////////
     if (pClass != NULL)
-        *pClass = ntohs(*((SYS_UINT16 *) pRespData));
+        *pClass = ntohs(MscReadUint16(pRespData));
 
     pRespData += sizeof(SYS_UINT16);
     iQueryLen += sizeof(SYS_UINT16);
@@ -366,7 +372,10 @@ static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
         return (ErrGetErrorCode());
 
     int             iNameLen = 0;
-    char           *pszToken = strtok(pszNameCopy, ".");
+    char           *pszToken = NULL,
+                   *pszSavePtr = NULL;
+
+    pszToken = SysStrTok(pszNameCopy, ".", &pszSavePtr);
 
     while (pszToken != NULL)
     {
@@ -379,7 +388,7 @@ static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
         pDNSQName += iTokLen + 1;
         iNameLen += iTokLen + 1;
 
-        pszToken = strtok(NULL, ".");
+        pszToken = SysStrTok(NULL, ".", &pszSavePtr);
     }
 
     *pDNSQName = 0;
@@ -435,13 +444,13 @@ static int      DNS_RequestSetup(DNSQuery & DNSQ, unsigned int uOpCode,
 ///////////////////////////////////////////////////////////////////////////////
 //  Set query type
 ///////////////////////////////////////////////////////////////////////////////
-    *((SYS_UINT16 *) pQueryData) = (SYS_UINT16) htons(uQType);
+    MscWriteUint16(pQueryData, (SYS_UINT16) htons(uQType));
     pQueryData += sizeof(SYS_UINT16);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Set query class
 ///////////////////////////////////////////////////////////////////////////////
-    *((SYS_UINT16 *) pQueryData) = (SYS_UINT16) htons(QCLASS_IN);
+    MscWriteUint16(pQueryData, (SYS_UINT16) htons(QCLASS_IN));
     pQueryData += sizeof(SYS_UINT16);
 
 
@@ -601,8 +610,7 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
 ///////////////////////////////////////////////////////////////////////////////
 //  Send packet
 ///////////////////////////////////////////////////////////////////////////////
-        if (SysSendDataTo(SockFD, (const struct sockaddr *) & SvrAddr, sizeof(SvrAddr),
-                        (char const *) &DNSQ, iQueryLenght, iTimeout) != iQueryLenght)
+        if (SysSendData(SockFD, (char const *) &DNSQ, iQueryLenght, iTimeout) != iQueryLenght)
             continue;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -617,7 +625,7 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
                 (char *) RespBuffer, sizeof(RespBuffer), iTimeout);
 
 
-        if (iPacketLenght < sizeof(DNS_HEADER))
+        if ((iPacketLenght < 0) || (iPacketLenght < sizeof(DNS_HEADER)))
             continue;
 
         DNS_HEADER     *pDNSH = (DNS_HEADER *) RespBuffer;
@@ -737,7 +745,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
 
         SYS_UINT8      *pMXData = RR.RespData;
-        SYS_UINT16      Preference = ntohs(*((SYS_UINT16 *) pMXData));
+        SYS_UINT16      Preference = ntohs(MscReadUint16(pMXData));
 
         pMXData += sizeof(SYS_UINT16);
 
@@ -889,7 +897,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
 
         SYS_UINT8      *pMXData = RR.RespData;
-        SYS_UINT16      Preference = ntohs(*((SYS_UINT16 *) pMXData));
+        SYS_UINT16      Preference = ntohs(MscReadUint16(pMXData));
 
         pMXData += sizeof(SYS_UINT16);
 

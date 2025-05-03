@@ -26,20 +26,14 @@
 
 
 
-#define SYS_OS_PORT             "Win32"
-
-#define BIG_ENDIAN_BITFIELD
-
-#define THRDLS                  __declspec(thread)
+#define SYS_OS_PORT             "Win32/" SYS_CPU_PORT
 
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
-#define SYS_DEFAULT_MAXCOUNT    512
+#define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
 
 #define SYS_SLASH_CHAR          '\\'
 #define SYS_SLASH_STR           "\\"
 #define SYS_MAX_PATH            _MAX_PATH
-
-#define SYS_IPC_COUNTER_BASE    16000
 
 #define SYS_LLU_FMT             "%I64u"
 #define SYS_LLX_FMT             "%I64X"
@@ -47,10 +41,12 @@
 #define SYS_INVALID_HANDLE      ((SYS_HANDLE) 0)
 #define SYS_INVALID_SOCKET      ((SYS_SOCKET) INVALID_SOCKET)
 #define SYS_INVALID_SEMAPHORE   ((SYS_SEMAPHORE) 0)
+#define SYS_INVALID_MUTEX       ((SYS_MUTEX) 0)
+#define SYS_INVALID_EVENT       ((SYS_EVENT) 0)
 #define SYS_INVALID_THREAD      ((SYS_THREAD) 0)
-#define SYS_INVALID_SHMEM       ((SYS_SHMEM) 0)
 #define SYS_INVALID_NET_ADDRESS ((NET_ADDRESS) INADDR_NONE)
-#define SYS_INVALID_IPCNAME     ((SYS_IPCNAME) 0)
+
+#define SYS_THREAD_ONCE_INIT    0
 
 #define SysSNPrintf             _snprintf
 
@@ -74,13 +70,16 @@ typedef unsigned __int64 SYS_UINT64;
 typedef unsigned __int64 SYS_LONGLONG;
 typedef unsigned int SYS_PTRUINT;
 typedef unsigned long SYS_HANDLE;
+typedef int SYS_TLSKEY;
+typedef LONG    SYS_THREAD_ONCE;
 typedef SOCKET  SYS_SOCKET;
 typedef int     socklen_t;
-typedef unsigned __int64 SYS_IPCNAME;
 typedef HANDLE  SYS_SEMAPHORE;
+typedef HANDLE  SYS_MUTEX;
+typedef HANDLE  SYS_EVENT;
 typedef unsigned long SYS_THREAD;
-typedef HANDLE  SYS_SHMEM;
 typedef unsigned long NET_ADDRESS;
+
 
 
 

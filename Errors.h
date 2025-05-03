@@ -145,7 +145,6 @@
 #define ERR_BAD_SMARTDNSHOST_SYNTAX (-117)
 #define ERR_MAILBOX_SIZE            (-118)
 #define ERR_DYNDNS_CONFIG           (-119)
-#define ERR_INVALID_SHARED_BLOCK    (-120)
 #define ERR_PROCESS_EXECUTE         (-121)
 #define ERR_BAD_MAILPROC_CMD_SYNTAX (-122)
 #define ERR_NO_MAILPROC_FILE        (-123)
@@ -161,7 +160,6 @@
 #define ERR_INVALID_SEMAPHORE       (-134)
 #define ERR_SHMEM_ALREADY_EXIST     (-135)
 #define ERR_SHMEM_NOT_EXIST         (-136)
-#define ERR_SEM_ALREADY_EXIST       (-137)
 #define ERR_SEM_NOT_EXIST           (-138)
 #define ERR_SERVER_BUSY             (-139)
 #define ERR_IP_NOT_ALLOWED          (-140)
@@ -216,6 +214,15 @@
 #define ERR_RCPTTO_UNKNOWN          (-189)
 #define ERR_LOADMODULE              (-190)
 #define ERR_LOADMODULESYMBOL        (-191)
+#define ERR_NOMORE_TLSKEYS          (-192)
+#define ERR_INVALID_TLSKEY          (-193)
+#define ERR_ERRORINIT_FAILED        (-194)
+#define ERR_SENDFILE                (-195)
+#define ERR_MUTEXINIT               (-196)
+#define ERR_CONDINIT                (-197)
+#define ERR_THREADCREATE            (-198)
+#define ERR_CREATEMUTEX             (-199)
+#define ERR_NO_LOCAL_SPOOL_FILES    (-200)
 
 
 
@@ -226,15 +233,13 @@
 
 
 int             ErrGetErrorCode(void);
-void            ErrSetErrorCode(int iError, char const * pszInfo = NULL);
+int             ErrSetErrorCode(int iError, char const * pszInfo = NULL);
 const char     *ErrGetErrorString(int iError);
 const char     *ErrGetErrorString(void);
 char           *ErrGetErrorStringInfo(int iError);
 int             ErrLogMessage(int iLogLevel, char const * pszFormat,...);
 int             ErrFileVLogMessage(char const * pszFileName, char const * pszFormat,
                         va_list Args);
-void            ErrCleanupErrorInfos(int iFreeInfos);
-
 
 
 

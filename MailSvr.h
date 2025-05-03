@@ -31,17 +31,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 //  Defined in MailSvr.cpp
 ///////////////////////////////////////////////////////////////////////////////
-extern SharedBlock SHB_CTRLSvr,
-                SHB_FINGSvr,
-                SHB_SMTPSvr,
-                SHB_SMAILSvr,
-                SHB_POP3Svr,
-                SHB_PSYNCSvr;
+extern SHB_HANDLE hShbFING,
+                hShbCTRL,
+                hShbPOP3,
+                hShbSMTP,
+                hShbSMAIL,
+                hShbPSYNC,
+                hShbLMAIL;
 extern char     szMailPath[SYS_MAX_PATH];
-extern unsigned int uKeyMagic;
-extern SYS_IPCNAME SemPSYNCThreads;
 extern bool     bServerDebug;
-extern int      iLogRotateDays;
+extern SYS_SEMAPHORE hSyncSem;
+extern int      iLogRotateHours;
 extern int      iQueueSplitLevel;
 
 
@@ -52,7 +52,7 @@ extern int      iQueueSplitLevel;
 int             SvrMain(int iArgCount, char *pszArgs[]);
 int             SvrStopServer(bool bWait = true);
 bool            SvrInShutdown(void);
-int             SvrShutdownCB(void * pData);
+int             SvrShutdownCB(void *pData);
 
 
 

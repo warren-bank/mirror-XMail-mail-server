@@ -20,12 +20,12 @@
  *
  */
 
-#ifndef _SYSTYPESLINUX_H
-#define _SYSTYPESLINUX_H
+#ifndef _SYSTYPESSOLARIS_H
+#define _SYSTYPESSOLARIS_H
 
 
 
-#define SYS_OS_PORT             "Linux/" SYS_CPU_PORT
+#define SYS_OS_PORT             "Solaris/" SYS_CPU_PORT
 
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
 #define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
@@ -59,6 +59,9 @@
 #define SYS_FD_SET              FD_SET
 #define SYS_FD_ISSET            FD_ISSET
 
+#if !defined(INADDR_NONE)
+#define INADDR_NONE             0xffffffff
+#endif
 
 
 

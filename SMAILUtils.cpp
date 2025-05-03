@@ -129,7 +129,7 @@ static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessa
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr);
 static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagList,
-                        char * pszRecipient);
+                        char *pszRecipient);
 
 
 
@@ -428,7 +428,7 @@ static int      USmlLoadTags(FILE * pSpoolFile, HSLIST & hTagList)
             }
 
             int             iNameLength = Min((int) (pszEndTag - szSpoolLine),
-                                    sizeof(szTagName) - 1);
+                    sizeof(szTagName) - 1);
 
             strncpy(szTagName, szSpoolLine, iNameLength);
             szTagName[iNameLength] = '\0';
@@ -1279,7 +1279,7 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
     char const     *pszMailFrom = USmlMailFrom(hFSpool);
 
     fprintf(pSpoolFile, "MAIL FROM: <%s>\r\n",
-            (pszFromUser != NULL) ? pszFromUser: pszMailFrom);
+            (pszFromUser != NULL) ? pszFromUser : pszMailFrom);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "RCPT TO:"
@@ -1287,7 +1287,7 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
     char const     *pszRcptTo = USmlRcptTo(hFSpool);
 
     fprintf(pSpoolFile, "RCPT TO: <%s>\r\n",
-            (pszRcptUser != NULL) ? pszRcptUser: pszRcptTo);
+            (pszRcptUser != NULL) ? pszRcptUser : pszRcptTo);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write SPOOL_FILE_DATA_START
@@ -2019,7 +2019,7 @@ static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessa
     MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
-    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" SMAIL_LOG_FILE);
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR SMAIL_LOG_FILE);
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -2182,7 +2182,7 @@ static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr)
 
 
 static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagList,
-                        char * pszRecipient)
+                        char *pszRecipient)
 {
 
     if (pszRcptTo == NULL)

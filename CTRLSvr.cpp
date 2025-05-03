@@ -40,6 +40,7 @@
 #include "POP3GwLink.h"
 #include "MailDomains.h"
 #include "SMAILUtils.h"
+#include "SMTPUtils.h"
 #include "MailConfig.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
@@ -262,7 +263,7 @@ static int      CTRLLogSession(char const * pszUsername, char const * pszPasswor
     MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
-    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" CTRL_LOG_FILE);
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR CTRL_LOG_FILE);
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -323,19 +324,10 @@ static int      CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL,
 unsigned int    CTRLThreadProc(void *pThreadData)
 {
 
-    SHB_HANDLE      hShbCTRL = ShbConnectBlock(SHB_CTRLSvr);
-
-    if (hShbCTRL == SHB_INVALID_HANDLE)
-        return (ErrGetErrorCode());
-
     CTRLConfig     *pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL);
 
     if (pCTRLCfg == NULL)
-    {
-        ErrorPush();
-        ShbCloseBlock(hShbCTRL);
-        return (ErrorPop());
-    }
+        return (ErrGetErrorCode());
 
 
     int             iNumSockFDs = 0;
@@ -347,13 +339,10 @@ unsigned int    CTRLThreadProc(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         ShbUnlock(hShbCTRL);
-        ShbCloseBlock(hShbCTRL);
         return (ErrorPop());
     }
 
     ShbUnlock(hShbCTRL);
-
-    SysIgnoreThreadsExit();
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", CTRL_SERVER_NAME);
@@ -389,7 +378,7 @@ unsigned int    CTRLThreadProc(void *pThreadData)
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
             else
-                SysCloseSocket(ConnSockFD[ss], 1);
+                SysCloseSocket(ConnSockFD[ss]);
 
         }
     }
@@ -417,8 +406,6 @@ unsigned int    CTRLThreadProc(void *pThreadData)
         SysSleep(CTRL_WAIT_SLEEP);
     }
 
-    ShbCloseBlock(hShbCTRL);
-
     SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", CTRL_SERVER_NAME);
 
     return (0);
@@ -433,19 +420,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
     SYS_SOCKET      SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create handle to hook shared memory
-///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbCTRL = ShbConnectBlock(SHB_CTRLSvr);
-
-    if (hShbCTRL == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        SysCloseSocket(SockFD);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer
 ///////////////////////////////////////////////////////////////////////////////
     BSOCK_HANDLE    hBSock = BSckAttach(SockFD);
@@ -455,7 +429,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         SysCloseSocket(SockFD);
-        ShbCloseBlock(hShbCTRL);
         return (ErrorPop());
     }
 
@@ -469,7 +442,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
         CTRLSendCmdResult(hBSock, ErrorFetch(), ErrGetErrorString(), STD_CTRL_TIMEOUT);
 
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbCTRL);
         return (ErrorPop());
     }
 
@@ -484,7 +456,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
 
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbCTRL);
         return (ErrorPop());
     }
 
@@ -499,7 +470,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         BSckDetach(hBSock, 1);
         CTRLThreadCountAdd(-1, hShbCTRL);
-        ShbCloseBlock(hShbCTRL);
         return (ErrorPop());
     }
 
@@ -526,8 +496,6 @@ static unsigned int CTRLClientThread(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
     CTRLThreadCountAdd(-1, hShbCTRL);
 
-
-    ShbCloseBlock(hShbCTRL);
 
     return (0);
 
@@ -799,7 +767,7 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Welcome
 ///////////////////////////////////////////////////////////////////////////////
-	char            szTime[256] = "";
+    char            szTime[256] = "";
 
     MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
@@ -1128,7 +1096,16 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Check real user account existence
 ///////////////////////////////////////////////////////////////////////////////
-    UserInfo       *pUI = UsrGetUserByName(ppszTokens[1], ppszTokens[3]);
+    char            szAccountName[MAX_ADDR_NAME] = "",
+                    szAccountDomain[MAX_ADDR_NAME] = "";
+
+    if (USmtpSplitEmailAddr(ppszTokens[3], szAccountName, szAccountDomain) < 0)
+    {
+        StrSNCpy(szAccountName, ppszTokens[3]);
+        StrSNCpy(szAccountDomain, ppszTokens[1]);
+    }
+
+    UserInfo       *pUI = UsrGetUserByName(szAccountDomain, szAccountName);
 
     if (pUI == NULL)
     {
@@ -1718,7 +1695,7 @@ static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
 
-    char const     *pszPerms = (iTokensCount > 4) ? ppszTokens[4]: DEFAULT_MLUSER_PERMS;
+    char const     *pszPerms = (iTokensCount > 4) ? ppszTokens[4] : DEFAULT_MLUSER_PERMS;
     MLUserInfo     *pMLUI = UsrMLAllocDefault(ppszTokens[3], pszPerms);
 
     if (pMLUI == NULL)

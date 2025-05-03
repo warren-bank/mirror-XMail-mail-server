@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.64 ( Beta-18 )
+Version      : 0.65 ( Beta-19 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 02-11-2000
+Date         : 25-11-2000
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -187,7 +187,7 @@ Date 27-05-2000
 Date 29-05-2000
 	Bug fixes in controller server and in PSYNC server.
 	Added  --install-auto  to install XMail as an autostart service ( NT ).
-	Better reliability in custom domain processing has been coded ( REMEMBER to add 
+	Better reliability in custom domain processing has been coded ( REMEMBER to add
 	the  spool  directory inside  custdomains  ).
 	Improved delivery error logs for a better problem understanding and fix.
 	Some code rewrites.
@@ -382,6 +382,20 @@ Date 02-11-2000		0.64
 	Fixed a bug in the new masquerading feature of XMail ( POP3LINKS.TAB ).
 	Fixed a bug that makes XMail crashes when a mail loop condition is detected.
 	Removed the strict RFC compliant check on messages.
+Date 25-11-2000		0.65
+	Complete Linux library rewrite, now using PThread library instead of forking.
+	Solaris/SPARC port added ( HPUX/PARISC incoming ).
+	Removed the -Ma flags for the maximum number of accounts coz it's no more needed due
+	the new Linux system library ( now the memory shares is given for free instead of having
+	to rely on IPC ).
+	Removed the -Mk parameter due the IPC stuff removal.
+	Extra domain aliases has been added ( see ALIASES.TAB section ).
+	A new feature has been added to XMail to enable XMail users to prepare mail files in a
+	given format, put them in /spool/local directory and get them delivered by the server
+	( see "XMail local mailer" section ).
+	Two new directories  "local"  and  "temp"  must be created inside the  "spool"  directory.
+	The meaning of the command line param "-Mr ..." has changed from days to hours.
+
 
 
 
@@ -479,11 +493,11 @@ Part 0			License
 Part 1			Overview
 
 	This server born due to the need of having a free and stable Mail Server
-	to be used inside my company, which at least now, use a Windows Network. 
-	I don't like to reinvent the wheel but the need of some special features 
-	drive me to start a new project. Probably if I could use a Linux server 
-	on my net, I would be able to satisfy my needs without write code, but 
-	this is not my case. It should be also portable to other OSs, like Linux 
+	to be used inside my company, which at least now, use a Windows Network.
+	I don't like to reinvent the wheel but the need of some special features
+	drive me to start a new project. Probably if I could use a Linux server
+	on my net, I would be able to satisfy my needs without write code, but
+	this is not my case. It should be also portable to other OSs, like Linux
 	and other Unixes.
 	Another reason that drove me to write XMail is the presence of the same steps
 	in setting up a typical mail server, ie :
@@ -525,18 +539,20 @@ Part 2			Features
 	6) SMTP relay checking
 	7) SMTP RBL maps check (rbl.maps.vix.com)
 	8) SMTP RSS maps check (relays.mail-abuse.org)
-	9) SMTP protection over spammers ( IP based and address based )
-	10) SMTP authentication ( PLAIN LOGIN CRAM-MD5 and custom )
-	11) POP3 account syncronizer with external POP3 accounts
-	12) Aliases
-	13) Mailing lists
-	14) Custom mail processing
-	15) Remote administration
-	16) Custom mail exchangers
-	17) Logging
-	18) Multi platform
-	19) Domain message filters
-	20) Custom ( external ) POP3 authentication
+	8) SMTP ORBS relay check (relays.orbs.org)
+	10) SMTP protection over spammers ( IP based and address based )
+	11) SMTP authentication ( PLAIN LOGIN CRAM-MD5 and custom )
+	12) POP3 account syncronizer with external POP3 accounts
+	13) Aliases
+	14) Mailing lists
+	15) Custom mail processing
+	16) Locally generated mail files delivery
+	17) Remote administration
+	18) Custom mail exchangers
+	19) Logging
+	20) Multi platform
+	21) Domain message filters
+	22) Custom ( external ) POP3 authentication
 
 
 
@@ -617,13 +633,14 @@ Part 6			Build
 	In Windows NT I give You a project that can be loaded from Visual C++ while
 	in Linux ( and other Unixes ) I give You a Makefile.lnx ( for now ) :
 
-	# make -f Makefile.lnx
+	# make -f Makefile.lnx		( Linux )
+	# make -f Makefile.sso		( Sun/Solaris - You need GCC to build on Solaris )
 
 	will build XMail and tools executables.
 	As soon as the project reach a higher maturity I plan to supply a configure script.
 	Under Linux an init.d startup script is supplied ( xmail ) to allow You to run
 	XMail as a standard rc? daemon. You must put it into /etc/init.d ( it depends on which
-	distro You're using ) directory and then create K??xmail - S??xmail links into the 
+	distro You're using ) directory and then create K??xmail - S??xmail links into the
 	proper directories.
 	Under Windows NT You can uncomment the statement "#define SERVICE" in MainWin.cpp
 	to build an executable that can run as a service.
@@ -636,7 +653,7 @@ Part 6			Build
 	XMail --install-auto
 
 	to install XMail as an automatic startup service.
-	If You run  --install  and You want XMail to run at NT boot You must go in 
+	If You run  --install  and You want XMail to run at NT boot You must go in
 	ControlPanel->Services and edit the startup options of XMail.
 	Once You have the service version of XMail You can run it in a "normal" way by
 	executing :
@@ -658,7 +675,7 @@ Part 6			Build
 
 Part 7			Configuration
 
-	[ Linux ]
+	[ Linux/Solaris ]
 
 	1) Build XMail
 	2) Log as root
@@ -676,7 +693,7 @@ Part 7			Configuration
 		If You've setup XMail to work in a subdirectory other then  /var/MailRoot  You
 		must edit  xmail  startup script to customize its boot
 	13) If You're smart enough You can create Your S??xmail and K??xmail links, otherwise
-		You can use a module configuration tool like the one supplied with KDE
+		You can use a module configuration tool like the one supplied with KDE ( ksysv )
 	14) To start XMail without reboot You can run ( from root ):
 			xmail start
 		otherwise reboot Your machine
@@ -768,16 +785,18 @@ Part 7			Configuration
 		pop3locks	<dir>
 		pop3linklocks	<dir>
 		spool		<dir>
-			0	<dir>
-				0	<dir>
-					mess	<dir>
-					rsnd	<dir>
-					info	<dir>
-					temp	<dir>
-					slog	<dir>
-					lock	<dir>
-					cust	<dir>
-					froz	<dir>
+			local		<dir>
+			temp		<dir>
+			0			<dir>
+				0			<dir>
+					mess		<dir>
+					rsnd		<dir>
+					info		<dir>
+					temp		<dir>
+					slog		<dir>
+					lock		<dir>
+					cust		<dir>
+					froz		<dir>
 				...
 			...
 		userauth	<dir>
@@ -786,7 +805,7 @@ Part 7			Configuration
 		domains		<dir>
 
 	and for each domain DOMAIN handled a directory ( inside  domains  ) :
-	
+
 			DOMAIN		<dir>
 
 	inside which reside, for each account ACCOUNT ( inside  domains/ACCOUNT ) :
@@ -809,14 +828,14 @@ Part 7			Configuration
 						cur	<dir>
 
 	for Maildir structure.
-	TAB files are text files ( in the sense meant by OS : <CR><LF> for NT and <CR> for Linux ) 
+	TAB files are text files ( in the sense meant by OS : <CR><LF> for NT and <CR> for Linux )
 	with this format :
 
 	"value1"[TAB]"value2"[TAB]...[NEWLINE]
 
 	Examine now the means of this files.
 
-	
+
 	ALIASES.TAB :
 
 	"domain"[TAB]"alias"[TAB]"realaccount"[NEWLINE]
@@ -827,9 +846,10 @@ Part 7			Configuration
 
 	define "davidel" as alias for "dlibenzi" in "maticad" domain.
 
-	"maticad"	"foo*bog"	"dlibenzi"	
+	"maticad"	"foo*bog"	"homer@internal-domain.org"
 
-	define an alias for all users whose name start with  foo  and end with  bog.
+	define an alias for all users whose name start with  foo  and end with  bog
+	that point to the locally handled account  homer@internal-domain.org.
 
 	"maticad"	"??trips"	"travels"
 
@@ -860,16 +880,16 @@ Part 7			Configuration
 
 	"maticad.it"	"dlibenzi"	"maticad"	"dlibenzi"
 
-	This file is used in configutaions in which the server run not directly on internet 
+	This file is used in configutaions in which the server run not directly on internet
 	( like my case ) but act as internal mail exchanger and external mail gateway.
 	This file define "Return-Path: <...>" mapping for internal mail delivery.
-	If You are using a Mail client like Outlook, Eudora, KMail ... You have configured 
+	If You are using a Mail client like Outlook, Eudora, KMail ... You have configured
 	Your email address with the external account say "dlibenzi@maticad.it".
-	When You post an inernal message to "foo@maticad" the mail client put Your external 
+	When You post an inernal message to "foo@maticad" the mail client put Your external
 	email address ( "dlibenzi@maticad.it" ) in the "MAIL FROM: <...>" SMTP request.
 	Now if the user "foo" reply to this message, it'll reply to "dlibenzimaticad.it"
 	then it'll be sent to the external mail server.
-	With the entry above in EXTALIASES.TAB file the "Return-Path: <...>" field is filled 
+	With the entry above in EXTALIASES.TAB file the "Return-Path: <...>" field is filled
 	with "dlibenzi@maticad" that lead to an internal mail reply.
 	You __CANNOT__ edit this file while XMail is running due to the fact that is an indexed file.
 
@@ -1889,64 +1909,61 @@ Part 18			Command line
 
 	[XMAIL]
 	-Ms pathname	= Mail root path also settable with MAIL_ROOT environment
-	-Mk key		= Root key number used in shared memories and semaphores names generation
-	-Md		= Activate debug ( verbose ) mode
-	-Mr days	= Set log rotate days step
-	-Ma accounts	= Set the estimated number of accounts that XMail will be able to sustain.
-			  This is not a strict value, but give XMail a way to estimate the number
-			  of accounts that it should keep up. If You set it to 10000 XMail would be
-			  able to sustain up to 12000-12500 accounts, but You can't set it to 10000
-			  and leave XMail to handle 20000 accounts. The default value is 25000.
+	-Md				= Activate debug ( verbose ) mode
+	-Mr hours		= Set log rotate hours step
 	-Mx split-level	= Set the queue split level. The value You set here is rounded to the lower
-			  prime number higher or equal than the value You've set.
+						prime number higher or equal than the value You've set.
 
 	[POP3]
-	-Pp port	= Set POP3 server port ( if You change this You must know what You're doing )
-	-Pt timeout	= Set POP3 session timeout ( seconds ) after which the server will close
-			  the connection if not receive any commands
-	-Pl		= Enable POP3 logging
-	-Pw timeout	= Set the delay timeout in response to a bad POP3 login. Such time will be
-			  doubled at the next bad login
-	-Ph		= Hang the connection in bad login response
+	-Pp port		= Set POP3 server port ( if You change this You must know what You're doing )
+	-Pt timeout		= Set POP3 session timeout ( seconds ) after which the server will close
+						the connection if not receive any commands
+	-Pl				= Enable POP3 logging
+	-Pw timeout		= Set the delay timeout in response to a bad POP3 login. Such time will be
+						doubled at the next bad login
+	-Ph				= Hang the connection in bad login response
 	-PI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-PX nthreads	= Set the maximum number of threads for POP3 server
 
 	[SMTP]
-	-Sp port	= Set SMTP server port ( if You change this You must know what You're doing )
-	-St timeout	= Set SMTP session timeout ( seconds ) after which the server will close
-			  the connection if not receive any commands
-	-Sl		= Enable SMTP logging
-	-SI bindip	= Bind server to the specified ip address ( can be multiple )
+	-Sp port		= Set SMTP server port ( if You change this You must know what You're doing )
+	-St timeout		= Set SMTP session timeout ( seconds ) after which the server will close
+						the connection if not receive any commands
+	-Sl				= Enable SMTP logging
+	-SI bindip		= Bind server to the specified ip address ( can be multiple )
 	-SX nthreads	= Set the maximum number of threads for SMTP server
 	-Sr maxrcpts	= Set the maximu number of recipients for a single SMTP message ( default 100 )
 
 	[SMAIL]
 	-Qn nthreads	= Set the number of mailer threads
-	-Qt timeout	= Set the timeout to be waited for a next try after send failure
-	-Qi ratio	= Set the increment ratio of the reschedule time in sending a messages.
-			  At every failure in delivery a message, reschedule time T is incremented
-			  by ( T / ratio ), therefore  T(i) = T(i-1) + T(i-1)/ratio.
-			  If You set this ratio to zero, T remain unchanged over delivery tentatives.
+	-Qt timeout		= Set the timeout to be waited for a next try after send failure
+	-Qi ratio		= Set the increment ratio of the reschedule time in sending a messages.
+						At every failure in delivery a message, reschedule time T is incremented
+						by ( T / ratio ), therefore  T(i) = T(i-1) + T(i-1)/ratio.
+						If You set this ratio to zero, T remain unchanged over delivery tentatives.
 	-Qr nretries	= Set the maximum number of times to try to send the message
-	-Ql		= Enable SMAIL logging
+	-Ql				= Enable SMAIL logging
 
 	[PSYNC]
-	-Yi timeout	= Set external POP3 accounts sync timout
+	-Yi timeout		= Set external POP3 accounts sync timout
 	-Yt nthreads	= Set the number of POP3 sync threads
 
 	[FINGER]
-	-Fp port	= Set FINGER server port ( if You change this You must know what You're doing )
-	-Fl		= Enable FINGER logging
+	-Fp port		= Set FINGER server port ( if You change this You must know what You're doing )
+	-Fl				= Enable FINGER logging
 	-FI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 
 	[CTRL]
-	-Cp port	= Set CTRL server port ( if You change this You must know what You're doing )
-	-Ct timeout	= Set CTRL session timeout ( seconds ) after which the server will close
-			  the connection if not receive any commands
-	-Cl		= Enable CTRL logging
+	-Cp port		= Set CTRL server port ( if You change this You must know what You're doing )
+	-Ct timeout		= Set CTRL session timeout ( seconds ) after which the server will close
+			  			the connection if not receive any commands
+	-Cl				= Enable CTRL logging
 	-CI ip[:port]	= Bind server to the specified ip address and ( optional ) port ( can be multiple )
 	-CX nthreads	= Set the maximum number of threads for CTRL server
 
+	[LMAIL]
+	-Ln nthreads	= Set the number of local mailer threads
+	-Ll				= Enable local mail logging
 
 
 
@@ -2089,7 +2106,7 @@ Part 19			XMail admin protocol
 
 	domain		= domain name ( must be handled by the server )
 	alias		= alias to add
-	username	= real account username
+	username	= real email account ( locally handled )
 
 	The result will be a RESSTRING.
 
@@ -2519,7 +2536,6 @@ Part 19			XMail admin protocol
 	Are there guys that want to build Web configuration tools ?
 	Let me know <davide_libenzi@mycio.com>.
 
-	
 
 
 
@@ -2534,7 +2550,66 @@ Part 19			XMail admin protocol
 
 
 
-Part 20			CtrlClnt ( XMail administration )
+
+
+
+Part 20			XMail local mailer
+
+	XMail has the ability to deliver locally prepared mail files that if founds
+	inside the  spool/local  directory.
+	The format of these files is strict :
+
+	mail from:<...>[CR][LF]
+	rcpt to:<...>[CR][LF]
+	...
+	[CR][LF]
+	message text with [CR][LF] line termination
+
+	All lines must be [CR][LF] terminated, with one mail-from statement, one or more
+	rcpt-to statements, an empty line and the message text.
+	Mail files must not be created directly inside the  /spool/local  directory but
+	instead inside  /spool/temp  directory.
+	When the file is prepared it has to be moved inside  /spool/local.
+	The file name format is :
+
+	stime-seqnr.pid.hostname
+
+	where :
+
+	stime		= system time in sec from 01/01/1970
+	seqnr		= sequence number for the current file
+	pid			= process or thread id
+	hostname	= creator process host name
+
+	Example :
+
+	97456928-001.7892.home.bogus
+
+	XMail has a number of LMAIL threads that periodically scans the  /spool/local
+	directory watching for locally generated mail files.
+	You can tune this number of threads with the "-Ln nthreads" command line option.
+	The suggested number ranges from three to seven.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Part 21			CtrlClnt ( XMail administration )
 
 	You can use CtrlClnt to send administration commands to XMail.
 	These commands are defined in the previous section.
@@ -2570,7 +2645,7 @@ Part 20			CtrlClnt ( XMail administration )
 
 
 
-Part 21			Server Shutdown
+Part 22			Server Shutdown
 
 	[Linux]
 	Under Linux XMail creates a file named XMail.pid under /var/run that contain the PID
@@ -2584,7 +2659,7 @@ Part 21			Server Shutdown
 
 	xmail start / stop
 
-	
+
 	[NT as console service]
 	Under NT console service ( XMail --debug ... ) You can hit Ctrl-C to initiate the
 	shutdown process.
@@ -2597,7 +2672,7 @@ Part 21			Server Shutdown
 	[All]
 	XMail detect a shutdown condition by checking the presence of a file named
 	.shutdown  inside its main directory ( MAIL_ROOT ).
-	You can initiate XMail shutdown process by creating ( or copying ) a file 
+	You can initiate XMail shutdown process by creating ( or copying ) a file
 	with that name.
 
 
@@ -2614,7 +2689,7 @@ Part 21			Server Shutdown
 
 
 
-Part 22			MkUsers
+Part 23			MkUsers
 
 	This command line utility enable You to create user accounts structure by giving
 	it a formatted list of users parameters ( or a formatted text file ).
@@ -2696,7 +2771,7 @@ Part 22			MkUsers
 
 
 
-Part 23			Miscellaneous
+Part 24			Miscellaneous
 
 	[1]
 	To handle multiple POP3 domains the server makes a reverse lookup of the IP address
@@ -2739,9 +2814,9 @@ Part 23			Miscellaneous
 
 	[2]
 	REMEMBER TO REMOVE THE EXAMPLE ACCOUNT FROM CTRLACCOUNTS.TAB FILE !
-	
+
 	[3]
-	The main cause of bugs with XMail is due a bad line termination of configuration 
+	The main cause of bugs with XMail is due a bad line termination of configuration
 	files, so check that these files being correctly line terminated for Your OS.
 	Linux uses the standard <CR> while M$ uses <CR><LF>.
 
@@ -2784,7 +2859,7 @@ Part 23			Miscellaneous
 
 
 
-Part 24			Known bugs
+Part 25			Known bugs
 
 	Version 0.1 ( Alpha-1 ) :
 
@@ -2813,12 +2888,13 @@ Part 24			Known bugs
 
 
 
-Part 25			Thanks
+Part 26			Thanks
 
 	My mother Adelisa, to give me the light.
 	My cat Grace, for her patience to wait for food while I'm coding.
 	All free source community, to give me code and knowledge.
 	My company, myCIO.com, to give me my wage.
+
 
 
 

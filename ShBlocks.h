@@ -35,26 +35,15 @@
 
 typedef void   *SHB_HANDLE;
 
-struct SharedBlock
-{
-    unsigned long   ulOwnerID;
-    unsigned int    uSize;
-    SYS_IPCNAME     ShmName;
-    SYS_IPCNAME     SemName;
-    SYS_SEMAPHORE   SemID;
-    SYS_SHMEM       ShmID;
-};
 
 
 
 
 
-int             ShbCreateBlock(SharedBlock & SHB, unsigned int uSize);
-int             ShbDestroyBlock(SharedBlock & SHB);
-SHB_HANDLE      ShbConnectBlock(SharedBlock & SHB);
-void            ShbCloseBlock(SHB_HANDLE hBlock);
+SHB_HANDLE      ShbCreateBlock(unsigned int uSize);
+int             ShbCloseBlock(SHB_HANDLE hBlock);
 void           *ShbLock(SHB_HANDLE hBlock);
-void            ShbUnlock(SHB_HANDLE hBlock);
+int             ShbUnlock(SHB_HANDLE hBlock);
 
 
 

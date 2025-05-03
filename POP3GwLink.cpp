@@ -907,7 +907,7 @@ int             GwLkLocalDomain(POP3Link const * pPopLnk)
 {
 
     return (((pPopLnk != NULL) && (pPopLnk->pszDomain[0] != '@') &&
-            (pPopLnk->pszDomain[0] != '?') && (pPopLnk->pszDomain[0] != '&')) ? 1: 0);
+                    (pPopLnk->pszDomain[0] != '?') && (pPopLnk->pszDomain[0] != '&')) ? 1 : 0);
 
 }
 
@@ -917,7 +917,7 @@ int             GwLkMasqueradeDomain(POP3Link const * pPopLnk)
 {
 
     return (((pPopLnk != NULL) &&
-            ((pPopLnk->pszDomain[0] == '?') || (pPopLnk->pszDomain[0] == '&'))) ? 1: 0);
+                    ((pPopLnk->pszDomain[0] == '?') || (pPopLnk->pszDomain[0] == '&'))) ? 1 : 0);
 
 }
 
@@ -999,10 +999,12 @@ int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable)
 
         time(&tCurr);
 
-        struct tm      *ptmTime = localtime(&tCurr);
+        struct tm       tmTime;
         char            szTime[256] = "";
 
-        strftime(szTime, sizeof(szTime), "%d %b %Y %H:%M:%S %Z", ptmTime);
+        SysLocalTime(&tCurr, &tmTime);
+
+        strftime(szTime, sizeof(szTime), "%d %b %Y %H:%M:%S %Z", &tmTime);
 
         fprintf(pFile, "%s\n", szTime);
 

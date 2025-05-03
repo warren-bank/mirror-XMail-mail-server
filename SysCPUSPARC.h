@@ -21,39 +21,16 @@
  */
 
 
-#ifndef _MEMHEAP_H
-#define _MEMHEAP_H
+#ifndef _SYSCPUSPARC_H
+#define _SYSCPUSPARC_H
 
 
 
 
-
-#define HEAP_OFFSET(p, b)           (SYS_PTRUINT) ((unsigned char *) (p) - (unsigned char *) (b))
-#define HEAP_ADDRESS(b, o)          ((unsigned char *) (b) + (o))
-
-
-
-
-
-
-struct MemHeapData
-{
-    unsigned int    uSize;
-    SYS_PTRUINT     uFreePtr;
-    SYS_PTRUINT     uAllocPtr;
-    unsigned int    uAllocSize;
-    unsigned int    uFreeBlocks;
-    unsigned int    uAllocBlocks;
-};
-
-
-
-
-
-
-int             HeapSetup(MemHeapData & MHD, unsigned char *pBase, unsigned int uSize);
-SYS_PTRUINT     HeapAlloc(MemHeapData & MHD, unsigned char *pBase, unsigned int uSize);
-int             HeapFree(MemHeapData & MHD, unsigned char *pBase, SYS_PTRUINT uBlock);
+#define SYS_CPU_PORT                "SPARC"
+#define BIG_ENDIAN_CPU
+#define BIG_ENDIAN_BITFIELD
+#define CPU_NEED_ALIGNMENT
 
 
 

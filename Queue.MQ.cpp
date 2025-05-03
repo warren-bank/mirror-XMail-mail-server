@@ -64,27 +64,21 @@
 
 
 
+
+
+struct QueueEntry
+{
+    SysListHead     LLink;
+    int             iLevel1;
+    int             iLevel2;
+    char           *pszFileName;
+    time_t          tLastTry;
+};
+
 struct QueueOpens
 {
     char           *pszRootPath;
-    SHB_HANDLE      hShbQueue;
-};
-
-struct QueueDir
-{
-    int             iMessagesCount;
-    int             iNewMessages;
-    unsigned long   ulFlags;
-    time_t          tMessAccess;
-    time_t          tRsndAccess;
-    time_t          tRsndNext;
-};
-
-struct QueueArena
-{
-    int             iNumDirsLevel;
-    int             iTotalMessages;
-    QueueDir        Dirs[1];
+    MessageQueue   *pMQ;
 };
 
 struct QueueStream
@@ -102,11 +96,16 @@ struct QueueStream
 
 
 
-static int      QueRegister(char const * pszRootPath, SHB_HANDLE hShbQueue);
-static int      QueUnregister(SHB_HANDLE hShbQueue);
-static SHB_HANDLE QueGetShared(char const * pszBasePath);
+static int      QueRegister(char const * pszRootPath, MessageQueue * pMQ);
+static int      QueUnregister(MessageQueue * pMQ);
+static MessageQueue *QueGetRegQueue(char const * pszBasePath);
 static int      QueCreateStruct(char const * pszRootPath);
-static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * pszRootPath);
+static QueueEntry  *QueAllocEntry(int iLevel1, int iLevel2, char const * pszMessageFile);
+static int      QueFreeEntry(QueueEntry * pQE);
+static int      QueAddDirEntries(MessageQueue & MQ, char const * pszRootPath,
+                        int iLevel1, int iLevel2);
+static int      QueStructInitialize(MessageQueue & MQ, int iNumDirsLevel);
+static int      QueStructCleanup(MessageQueue & MQ);
 static int      QueDumpFrozen(char const * pszFrozFilePath, FILE * pListFile);
 static int      QueBasePathIndexes(char const * pszBasePath, int &iLevel1, int &iLevel2);
 static int      QueFullPathIndexes(char const * pszFilePath, int &iLevel1, int &iLevel2);
@@ -151,7 +150,7 @@ int             QueHandlerInit(void)
     for (int ii = 0; ii < MAX_ACTIVE_QUEUES; ii++)
     {
         RegQueue[ii].pszRootPath = NULL;
-        RegQueue[ii].hShbQueue = SHB_INVALID_HANDLE;
+        RegQueue[ii].pMQ = NULL;
     }
 
     return (0);
@@ -170,7 +169,7 @@ int             QueHandlerCleanup(void)
             SysFree(RegQueue[ii].pszRootPath);
 
             RegQueue[ii].pszRootPath = NULL;
-            RegQueue[ii].hShbQueue = SHB_INVALID_HANDLE;
+            RegQueue[ii].pMQ = NULL;
         }
     }
 
@@ -180,7 +179,7 @@ int             QueHandlerCleanup(void)
 
 
 
-static int      QueRegister(char const * pszRootPath, SHB_HANDLE hShbQueue)
+static int      QueRegister(char const * pszRootPath, MessageQueue * pMQ)
 {
 
     for (int ii = 0; ii < MAX_ACTIVE_QUEUES; ii++)
@@ -188,7 +187,7 @@ static int      QueRegister(char const * pszRootPath, SHB_HANDLE hShbQueue)
         if (RegQueue[ii].pszRootPath == NULL)
         {
             RegQueue[ii].pszRootPath = SysStrDup(pszRootPath);
-            RegQueue[ii].hShbQueue = hShbQueue;
+            RegQueue[ii].pMQ = pMQ;
 
             return (0);
         }
@@ -201,17 +200,17 @@ static int      QueRegister(char const * pszRootPath, SHB_HANDLE hShbQueue)
 
 
 
-static int      QueUnregister(SHB_HANDLE hShbQueue)
+static int      QueUnregister(MessageQueue * pMQ)
 {
 
     for (int ii = 0; ii < MAX_ACTIVE_QUEUES; ii++)
     {
-        if (RegQueue[ii].hShbQueue == hShbQueue)
+        if (RegQueue[ii].pMQ == pMQ)
         {
             SysFree(RegQueue[ii].pszRootPath);
 
             RegQueue[ii].pszRootPath = NULL;
-            RegQueue[ii].hShbQueue = SHB_INVALID_HANDLE;
+            RegQueue[ii].pMQ = NULL;
 
             return (0);
         }
@@ -224,13 +223,13 @@ static int      QueUnregister(SHB_HANDLE hShbQueue)
 
 
 
-static SHB_HANDLE QueGetShared(char const * pszBasePath)
+static MessageQueue *QueGetRegQueue(char const * pszBasePath)
 {
 
     for (int ii = 0; ii < MAX_ACTIVE_QUEUES; ii++)
         if ((RegQueue[ii].pszRootPath != NULL) &&
                 (strnicmp(RegQueue[ii].pszRootPath, pszBasePath, strlen(RegQueue[ii].pszRootPath)) == 0))
-            return (RegQueue[ii].hShbQueue);
+            return (RegQueue[ii].pMQ);
 
 
     ErrSetErrorCode(ERR_QUEUE_ENTRY_NOT_FOUND);
@@ -340,23 +339,51 @@ static int      QueCreateStruct(char const * pszRootPath)
 
 
 
-static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * pszRootPath)
+static QueueEntry  *QueAllocEntry(int iLevel1, int iLevel2, char const * pszMessageFile)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Initialize queue directory data
-///////////////////////////////////////////////////////////////////////////////
-    pQD->iMessagesCount = 0;
-    pQD->iNewMessages = 0;
-    pQD->ulFlags = 0;
-    pQD->tMessAccess = pQD->tRsndAccess = pQD->tRsndNext = 0;
 
+    QueueEntry         *pQE = (QueueEntry *) SysAlloc(sizeof(QueueEntry));
+
+    if (pQE == NULL)
+        return (NULL);
+
+    SYS_INIT_LIST_HEAD(&pQE->LLink);
+
+    pQE->iLevel1 = iLevel1;
+    pQE->iLevel2 = iLevel2;
+    pQE->pszFileName = SysStrDup(pszMessageFile);
+    pQE->tLastTry = time(NULL);
+
+    return (pQE);
+
+}
+
+
+
+static int      QueFreeEntry(QueueEntry * pQE)
+{
+
+    SysFree(pQE->pszFileName);
+
+    SysFree(pQE);
+
+    return (0);
+
+}
+
+
+
+static int      QueAddDirEntries(MessageQueue & MQ, char const * pszRootPath,
+                        int iLevel1, int iLevel2)
+{
 ///////////////////////////////////////////////////////////////////////////////
 //  File scan the new messages dir
 ///////////////////////////////////////////////////////////////////////////////
     char            szDirPath[SYS_MAX_PATH] = "";
 
-    sprintf(szDirPath, "%s%s%s", pszRootPath, SYS_SLASH_STR, QUEUE_MESS_DIR);
-
+    sprintf(szDirPath, "%s%s%d%s%d%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2,
+            SYS_SLASH_STR, QUEUE_MESS_DIR);
 
     char            szMsgFileName[SYS_MAX_PATH] = "";
     FSCAN_HANDLE    hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName);
@@ -365,17 +392,17 @@ static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * 
     {
         do
         {
-            char            szMessFilePath[SYS_MAX_PATH] = "";
-
-            sprintf(szMessFilePath, "%s%s%s", szDirPath, SYS_SLASH_STR, szMsgFileName);
 
             if (!IsDotFilename(szMsgFileName))
             {
-                ++pQD->iMessagesCount;
+                QueueEntry     *pQE = QueAllocEntry(iLevel1, iLevel2, szMsgFileName);
 
-                ++pQD->iNewMessages;
+                if (pQE != NULL)
+                {
+                    SYS_LIST_ADDH(&pQE->LLink, &MQ.MessQueue);
 
-                ++pQA->iTotalMessages;
+                    ++MQ.iMessCount;
+                }
             }
 
         } while (MscNextFile(hFileScan, szMsgFileName));
@@ -386,22 +413,25 @@ static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * 
 ///////////////////////////////////////////////////////////////////////////////
 //  File scan the resend messages dir
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(szDirPath, "%s%s%s", pszRootPath, SYS_SLASH_STR, QUEUE_RSND_DIR);
-
+    sprintf(szDirPath, "%s%s%d%s%d%s%s",
+            pszRootPath, SYS_SLASH_STR, iLevel1, SYS_SLASH_STR, iLevel2,
+            SYS_SLASH_STR, QUEUE_RSND_DIR);
 
     if ((hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName)) != INVALID_FSCAN_HANDLE)
     {
         do
         {
-            char            szMessFilePath[SYS_MAX_PATH] = "";
-
-            sprintf(szMessFilePath, "%s%s%s", szDirPath, SYS_SLASH_STR, szMsgFileName);
 
             if (!IsDotFilename(szMsgFileName))
             {
-                ++pQD->iMessagesCount;
+                QueueEntry     *pQE = QueAllocEntry(iLevel1, iLevel2, szMsgFileName);
 
-                ++pQA->iTotalMessages;
+                if (pQE != NULL)
+                {
+                    SYS_LIST_ADDH(&pQE->LLink, &MQ.RsndQueue);
+
+                    ++MQ.iRsndCount;
+                }
             }
 
         } while (MscNextFile(hFileScan, szMsgFileName));
@@ -415,28 +445,82 @@ static int      QueSetupDirEntry(QueueArena * pQA, QueueDir * pQD, char const * 
 
 
 
-int             QueCreateQueue(SHB_HANDLE & hShbQueue, char const * pszRootPath,
-                        int iNumDirsLevel)
+static int      QueStructInitialize(MessageQueue & MQ, int iNumDirsLevel)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Create shared memory block that holds queue data
-///////////////////////////////////////////////////////////////////////////////
-    if ((hShbQueue = ShbCreateBlock(sizeof(QueueArena) +
-            iNumDirsLevel * iNumDirsLevel * sizeof(QueueDir))) == SHB_INVALID_HANDLE)
+
+    ZeroData(MQ);
+
+    MQ.iNumDirsLevel = iNumDirsLevel;
+    MQ.iMessCount = 0;
+    MQ.iRsndCount = 0;
+
+    SYS_INIT_LIST_HEAD(&MQ.MessQueue);
+    SYS_INIT_LIST_HEAD(&MQ.RsndQueue);
+
+    if ((MQ.hMutex = SysCreateMutex()) == SYS_INVALID_MUTEX)
         return (ErrGetErrorCode());
 
-
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
-
-    if (pQA == NULL)
+    if ((MQ.hEvent = SysCreateEvent(1)) == SYS_INVALID_EVENT)
     {
         ErrorPush();
-        ShbCloseBlock(hShbQueue);
+        SysCloseMutex(MQ.hMutex);
         return (ErrorPop());
     }
 
-    pQA->iNumDirsLevel = iNumDirsLevel;
-    pQA->iTotalMessages = 0;
+    return (0);
+
+}
+
+
+
+static int      QueStructCleanup(MessageQueue & MQ)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Clear "mess" queue
+///////////////////////////////////////////////////////////////////////////////
+    SysListHead    *pLLink;
+
+    SYS_LIST_FOR_EACH(pLLink, &MQ.MessQueue)
+    {
+        QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
+
+        SYS_LIST_DEL(pLLink);
+
+        QueFreeEntry(pQE);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Clear "rsnd" queue
+///////////////////////////////////////////////////////////////////////////////
+    SYS_LIST_FOR_EACH(pLLink, &MQ.RsndQueue)
+    {
+        QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
+
+        SYS_LIST_DEL(pLLink);
+
+        QueFreeEntry(pQE);
+    }
+
+    SysCloseEvent(MQ.hEvent);
+
+    SysCloseMutex(MQ.hMutex);
+
+    ZeroData(MQ);
+
+    return (0);
+
+}
+
+
+
+int             QueCreateQueue(MessageQueue & MQ, char const * pszRootPath,
+                        int iNumDirsLevel)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Create message queue
+///////////////////////////////////////////////////////////////////////////////
+    if (QueStructInitialize(MQ, iNumDirsLevel) < 0)
+        return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Default to spool dir if pszRootPath is NULL
@@ -455,14 +539,12 @@ int             QueCreateQueue(SHB_HANDLE & hShbQueue, char const * pszRootPath,
     {
         char            szCurrPath[SYS_MAX_PATH] = "";
 
-        sprintf(szCurrPath, "%s%s%d",
-                pszRootPath, SYS_SLASH_STR, ii);
+        sprintf(szCurrPath, "%s%s%d", pszRootPath, SYS_SLASH_STR, ii);
 
         if (!SysExistFile(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
         {
             ErrorPush();
-            ShbUnlock(hShbQueue);
-            ShbCloseBlock(hShbQueue);
+            QueStructCleanup(MQ);
             return (ErrorPop());
         }
 
@@ -474,39 +556,39 @@ int             QueCreateQueue(SHB_HANDLE & hShbQueue, char const * pszRootPath,
             if (!SysExistFile(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
             {
                 ErrorPush();
-                ShbUnlock(hShbQueue);
-                ShbCloseBlock(hShbQueue);
+                QueStructCleanup(MQ);
                 return (ErrorPop());
             }
 
             if (QueCreateStruct(szCurrPath) < 0)
             {
                 ErrorPush();
-                ShbUnlock(hShbQueue);
-                ShbCloseBlock(hShbQueue);
+                QueStructCleanup(MQ);
                 return (ErrorPop());
             }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Update queue data by scanning the current directory
 ///////////////////////////////////////////////////////////////////////////////
-            QueueDir       *pQD = pQA->Dirs + LIndex2D(ii, jj, pQA->iNumDirsLevel);
-
-            QueSetupDirEntry(pQA, pQD, szCurrPath);
+            QueAddDirEntries(MQ, pszRootPath, ii, jj);
 
         }
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Set the queue event if the queue is not empty
+///////////////////////////////////////////////////////////////////////////////
+    if ((MQ.iMessCount > 0) || (MQ.iRsndCount > 0))
+        SysSetEvent(MQ.hEvent);
 
-    ShbUnlock(hShbQueue);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Register the new queue to the queue handler
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueRegister(pszRootPath, hShbQueue) < 0)
+    if (QueRegister(pszRootPath, &MQ) < 0)
     {
         ErrorPush();
-        ShbCloseBlock(hShbQueue);
+        QueStructCleanup(MQ);
         return (ErrorPop());
     }
 
@@ -516,15 +598,15 @@ int             QueCreateQueue(SHB_HANDLE & hShbQueue, char const * pszRootPath,
 
 
 
-int             QueCloseQueue(SHB_HANDLE hShbQueue)
+int             QueCloseQueue(MessageQueue & MQ)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Unregister the new queue from the queue handler
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueUnregister(hShbQueue) < 0)
+    if (QueUnregister(&MQ) < 0)
         return (ErrGetErrorCode());
 
-    ShbCloseBlock(hShbQueue);
+    QueStructCleanup(MQ);
 
     return (0);
 
@@ -713,23 +795,12 @@ int             QueGetFrozenList(char const * pszRootPath, char const * pszListF
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get associated shared block
+//  Get associated queue
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbQueue = QueGetShared(pszRootPath);
+    MessageQueue   *pMQ = QueGetRegQueue(pszRootPath);
 
-    if (hShbQueue == SHB_INVALID_HANDLE)
+    if (pMQ == NULL)
         return (ErrGetErrorCode());
-
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
-
-    if (pQA == NULL)
-        return (ErrGetErrorCode());
-
-
-    int             iNumDirsLevel = pQA->iNumDirsLevel;
-
-
-    ShbUnlock(hShbQueue);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Creates the list file and start scanning the frozen queue
@@ -742,6 +813,7 @@ int             QueGetFrozenList(char const * pszRootPath, char const * pszListF
         return (ERR_FILE_CREATE);
     }
 
+    int             iNumDirsLevel = pMQ->iNumDirsLevel;
 
     for (int ii = 0; ii < iNumDirsLevel; ii++)
     {
@@ -957,30 +1029,38 @@ static int      QueNotifyInsert(char const * pszBasePath, char const * pszMessFi
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get associated shared block
+//  Get associated queue
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbQueue = QueGetShared(pszBasePath);
+    MessageQueue   *pMQ = QueGetRegQueue(pszBasePath);
 
-    if (hShbQueue == SHB_INVALID_HANDLE)
+    if (pMQ == NULL)
         return (ErrGetErrorCode());
 
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
+///////////////////////////////////////////////////////////////////////////////
+//  Allocates a queue entry
+///////////////////////////////////////////////////////////////////////////////
+    QueueEntry     *pQE = QueAllocEntry(iLevel1, iLevel2, pszMessFile);
 
-    if (pQA == NULL)
+    if (pQE == NULL)
         return (ErrGetErrorCode());
 
+///////////////////////////////////////////////////////////////////////////////
+//  Add the queue entry
+///////////////////////////////////////////////////////////////////////////////
+    if (SysLockMutex(pMQ->hMutex) < 0)
+    {
+        ErrorPush();
+        QueFreeEntry(pQE);
+        return (ErrorPop());
+    }
 
-    QueueDir       *pQD = pQA->Dirs + LIndex2D(iLevel1, iLevel2, pQA->iNumDirsLevel);
+    SYS_LIST_ADDT(&pQE->LLink, &pMQ->MessQueue);
 
+    ++pMQ->iMessCount;
 
-    ++pQD->iMessagesCount;
+    SysSetEvent(pMQ->hEvent);
 
-    ++pQD->iNewMessages;
-
-    ++pQA->iTotalMessages;
-
-
-    ShbUnlock(hShbQueue);
+    SysUnlockMutex(pMQ->hMutex);
 
     return (0);
 
@@ -1001,31 +1081,70 @@ static int      QueNotifyRemove(char const * pszBasePath, char const * pszMessFi
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get associated shared block
+//  Get associated queue
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbQueue = QueGetShared(pszBasePath);
+    MessageQueue   *pMQ = QueGetRegQueue(pszBasePath);
 
-    if (hShbQueue == SHB_INVALID_HANDLE)
+    if (pMQ == NULL)
         return (ErrGetErrorCode());
 
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
-
-    if (pQA == NULL)
+///////////////////////////////////////////////////////////////////////////////
+//  Remove the queue entry
+///////////////////////////////////////////////////////////////////////////////
+    if (SysLockMutex(pMQ->hMutex) < 0)
         return (ErrGetErrorCode());
 
-
-    QueueDir       *pQD = pQA->Dirs + LIndex2D(iLevel1, iLevel2, pQA->iNumDirsLevel);
-
-
-    --pQD->iMessagesCount;
-
-    --pQA->iTotalMessages;
 
     if (bNewMessage)
-        --pQD->iNewMessages;
+    {
+        SysListHead    *pLLink;
 
+        SYS_LIST_FOR_EACH(pLLink, &MQ.MessQueue)
+        {
+            QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
 
-    ShbUnlock(hShbQueue);
+            if ((pQE->iLevel1 == iLevel1) && (pQE->iLevel2 == iLevel2) &&
+                    (stricmp(pszMessFile, pQE->pszFileName) == 0))
+            {
+                SYS_LIST_DEL(pLLink);
+
+                QueFreeEntry(pQE);
+
+                --pMQ->iMessCount;
+
+                if ((pMQ->iMessCount == 0) && (pMQ->iRsndCount == 0))
+                    SysResetEvent(pMQ->hEvent);
+
+                break;
+            }
+        }
+    }
+    else
+    {
+        SysListHead    *pLLink;
+
+        SYS_LIST_FOR_EACH(pLLink, &MQ.RsndQueue)
+        {
+            QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
+
+            if ((pQE->iLevel1 == iLevel1) && (pQE->iLevel2 == iLevel2) &&
+                    (stricmp(pszMessFile, pQE->pszFileName) == 0))
+            {
+                SYS_LIST_DEL(pLLink);
+
+                QueFreeEntry(pQE);
+
+                --pMQ->iRsndCount;
+
+                if ((pMQ->iMessCount == 0) && (pMQ->iRsndCount == 0))
+                    SysResetEvent(pMQ->hEvent);
+
+                break;
+            }
+        }
+    }
+
+    SysUnlockMutex(pMQ->hMutex);
 
     return (0);
 
@@ -1045,27 +1164,47 @@ static int      QueNotifyResend(char const * pszBasePath, char const * pszMessFi
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get associated shared block
+//  Get associated queue
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbQueue = QueGetShared(pszBasePath);
+    MessageQueue   *pMQ = QueGetRegQueue(pszBasePath);
 
-    if (hShbQueue == SHB_INVALID_HANDLE)
+    if (pMQ == NULL)
         return (ErrGetErrorCode());
 
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
-
-    if (pQA == NULL)
+///////////////////////////////////////////////////////////////////////////////
+//  Move the queue entry
+///////////////////////////////////////////////////////////////////////////////
+    if (SysLockMutex(pMQ->hMutex) < 0)
         return (ErrGetErrorCode());
 
 
-    QueueDir       *pQD = pQA->Dirs + LIndex2D(iLevel1, iLevel2, pQA->iNumDirsLevel);
+    QueueEntry     *pMoveQE = NULL;
+    SysListHead    *pLLink;
 
-    --pQD->iNewMessages;
+    SYS_LIST_FOR_EACH(pLLink, &MQ.MessQueue)
+    {
+        QueueEntry     *pQE = SYS_LIST_ENTRY(pLLink, QueueEntry, LLink);
 
-    pQD->tRsndNext = time(NULL);
+        if ((pQE->iLevel1 == iLevel1) && (pQE->iLevel2 == iLevel2) &&
+                (stricmp(pszMessFile, pQE->pszFileName) == 0))
+        {
+            SYS_LIST_DEL(pLLink);
 
+            --pMQ->iMessCount;
 
-    ShbUnlock(hShbQueue);
+            pMoveQE = pQE;
+            break;
+        }
+    }
+
+    if (pMoveQE != NULL)
+    {
+        SYS_LIST_ADDT(&pMoveQE->LLink, &pMQ->RsndQueue);
+
+        ++pMQ->iRsndCount;
+    }
+
+    SysUnlockMutex(pMQ->hMutex);
 
     return (0);
 
@@ -1596,15 +1735,27 @@ int             QuePeekLockedFiles(char const * pszRootPath, char **ppszMessFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Get associated shared block
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbQueue = QueGetShared(pszRootPath);
+    SharedBlock    *pSHB = QueGetRegQueue(pszRootPath);
+
+    if (pSHB == NULL)
+        return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
+//  Connect to the shared block and get pointers to queue srtucture
+///////////////////////////////////////////////////////////////////////////////
+    SHB_HANDLE      hShbQueue = ShbConnectBlock(*pSHB);
 
     if (hShbQueue == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
 
-    QueueArena     *pQA = (QueueArena *) ShbLock(hShbQueue);
+    MessageQueue     *pQA = (MessageQueue *) ShbLock(hShbQueue);
 
     if (pQA == NULL)
-        return (ErrGetErrorCode());
+    {
+        ErrorPush();
+        ShbCloseBlock(hShbQueue);
+        return (ErrorPop());
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Give up if there isn't something to get
@@ -1612,6 +1763,7 @@ int             QuePeekLockedFiles(char const * pszRootPath, char **ppszMessFile
     if (pQA->iTotalMessages == 0)
     {
         ShbUnlock(hShbQueue);
+        ShbCloseBlock(hShbQueue);
 
         ErrSetErrorCode(ERR_NO_SMTP_SPOOL_FILES);
         return (ERR_NO_SMTP_SPOOL_FILES);
@@ -1720,6 +1872,7 @@ int             QuePeekLockedFiles(char const * pszRootPath, char **ppszMessFile
         if (pszQueueSubdir == NULL)
         {
             ShbUnlock(hShbQueue);
+            ShbCloseBlock(hShbQueue);
 
             ErrSetErrorCode(ERR_NO_SMTP_SPOOL_FILES);
             return (ERR_NO_SMTP_SPOOL_FILES);
@@ -1753,8 +1906,12 @@ int             QuePeekLockedFiles(char const * pszRootPath, char **ppszMessFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Update scan directory data
 ///////////////////////////////////////////////////////////////////////////////
-    if ((pQA = (QueueArena *) ShbLock(hShbQueue)) == NULL)
-        return (ErrGetErrorCode());
+    if ((pQA = (MessageQueue *) ShbLock(hShbQueue)) == NULL)
+    {
+        ErrorPush();
+        ShbCloseBlock(hShbQueue);
+        return (ErrorPop());
+    }
 
     pScanQD = pQA->Dirs + LIndex2D(iLevel1, iLevel2, pQA->iNumDirsLevel);
 
@@ -1769,6 +1926,8 @@ int             QuePeekLockedFiles(char const * pszRootPath, char **ppszMessFile
 
 
     ShbUnlock(hShbQueue);
+
+    ShbCloseBlock(hShbQueue);
 
     return (iPeekResult);
 

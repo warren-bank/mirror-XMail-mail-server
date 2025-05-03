@@ -21,50 +21,35 @@
  */
 
 
-#ifndef _SYSINCLUDE_H
-#define _SYSINCLUDE_H
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//  Load CPU defines
-///////////////////////////////////////////////////////////////////////////////
-#include "CPUDefines.h"
+#ifndef _LMAILSVR_H
+#define _LMAILSVR_H
 
 
 
 
-#ifdef WIN32
-
-#include "SysIncludeWin.h"
-
-#else           // #ifdef WIN32
-#ifdef __LINUX__
-
-#include "SysIncludeLinux.h"
-
-#else           // #ifdef __LINUX__
-#ifdef __SOLARIS__
-
-#include "SysIncludeSolaris.h"
-
-#else           // #ifdef __SOLARIS__
-
-#error System type not defined
-
-#endif          // #ifdef __SOLARIS__
-#endif          // #ifdef __LINUX__
-#endif          // #ifdef WIN32
+#define LMAILF_STOP_SERVER          (1 << 0)
+#define LMAILF_LOG_ENABLED          (1 << 1)
 
 
 
-#include "SysTypes.h"
 
-#include "SysMacros.h"
+struct LMAILConfig
+{
+    unsigned long   ulFlags;
+    long            lNumThreads;
+    long            lThreadCount;
 
-#include "SysLists.h"
+};
 
-#include "Errors.h"
+
+
+
+
+char           *LMAILGetSpoolDir(char *pszSpoolPath);
+unsigned int    LMAILThreadProc(void *pThreadData);
+
+
+
 
 
 

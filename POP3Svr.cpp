@@ -249,19 +249,6 @@ static unsigned int POP3ClientThread(void *pThreadData)
     SYS_SOCKET      SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create handle to hook shared memory
-///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbPOP3 = ShbConnectBlock(SHB_POP3Svr);
-
-    if (hShbPOP3 == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        SysCloseSocket(SockFD);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer
 ///////////////////////////////////////////////////////////////////////////////
     BSOCK_HANDLE    hBSock = BSckAttach(SockFD);
@@ -271,7 +258,6 @@ static unsigned int POP3ClientThread(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         SysCloseSocket(SockFD);
-        ShbCloseBlock(hShbPOP3);
         return (ErrorPop());
     }
 
@@ -285,7 +271,6 @@ static unsigned int POP3ClientThread(void *pThreadData)
         UPopSendErrorResponse(hBSock, ErrGetErrorCode(), STD_POP3_TIMEOUT);
 
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbPOP3);
         return (ErrorPop());
     }
 
@@ -299,7 +284,6 @@ static unsigned int POP3ClientThread(void *pThreadData)
         UPopSendErrorResponse(hBSock, ErrGetErrorCode(), STD_POP3_TIMEOUT);
 
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbPOP3);
         return (ErrorPop());
     }
 
@@ -321,8 +305,6 @@ static unsigned int POP3ClientThread(void *pThreadData)
     BSckDetach(hBSock, 1);
 
 
-    ShbCloseBlock(hShbPOP3);
-
     return (0);
 
 }
@@ -332,22 +314,12 @@ static unsigned int POP3ClientThread(void *pThreadData)
 unsigned int    POP3ThreadProc(void *pThreadData)
 {
 
-    SHB_HANDLE      hShbPOP3 = ShbConnectBlock(SHB_POP3Svr);
-
-    if (hShbPOP3 == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        return (ErrorPop());
-    }
-
     POP3Config     *pPOP3Cfg = (POP3Config *) ShbLock(hShbPOP3);
 
     if (pPOP3Cfg == NULL)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        ShbCloseBlock(hShbPOP3);
         return (ErrorPop());
     }
 
@@ -361,13 +333,10 @@ unsigned int    POP3ThreadProc(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         ShbUnlock(hShbPOP3);
-        ShbCloseBlock(hShbPOP3);
         return (ErrorPop());
     }
 
     ShbUnlock(hShbPOP3);
-
-    SysIgnoreThreadsExit();
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", POP3_SERVER_NAME);
@@ -403,7 +372,7 @@ unsigned int    POP3ThreadProc(void *pThreadData)
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
             else
-                SysCloseSocket(ConnSockFD[ss], 1);
+                SysCloseSocket(ConnSockFD[ss]);
 
         }
     }
@@ -430,8 +399,6 @@ unsigned int    POP3ThreadProc(void *pThreadData)
 
         SysSleep(POP3_WAIT_SLEEP);
     }
-
-    ShbCloseBlock(hShbPOP3);
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", POP3_SERVER_NAME);
 
@@ -530,7 +497,7 @@ static int      POP3LogSession(POP3Session & POP3S)
     MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
-    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" POP3_LOG_FILE);
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR POP3_LOG_FILE);
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());

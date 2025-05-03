@@ -123,6 +123,10 @@ SOURCE=.\FINGSvr.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\LMAILSvr.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\MailConfig.cpp
 # End Source File
 # Begin Source File
@@ -148,16 +152,17 @@ SOURCE=.\MainLinux.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\MainSolaris.cpp
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE=.\MainWin.cpp
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
 SOURCE=.\MD5.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\MemHeap.cpp
 # End Source File
 # Begin Source File
 
@@ -221,15 +226,16 @@ SOURCE=.\SvrUtils.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\SWMR.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\SysDep.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\SysDepLinux.cpp
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=.\SysDepSolaris.cpp
 # PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
@@ -303,6 +309,10 @@ SOURCE=.\FINGSvr.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\LMAILSvr.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\MailConfig.h
 # End Source File
 # Begin Source File
@@ -320,10 +330,6 @@ SOURCE=.\MailSvr.h
 # Begin Source File
 
 SOURCE=.\MD5.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\MemHeap.h
 # End Source File
 # Begin Source File
 
@@ -395,7 +401,7 @@ SOURCE=.\SvrUtils.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\SWMR.h
+SOURCE=.\SysCPUSPARC.h
 # End Source File
 # Begin Source File
 
@@ -415,7 +421,15 @@ SOURCE=.\SysIncludeLinux.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\SysIncludeSolaris.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\SysIncludeWin.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\SysLists.h
 # End Source File
 # Begin Source File
 
@@ -428,6 +442,10 @@ SOURCE=.\SysTypes.h
 # Begin Source File
 
 SOURCE=.\SysTypesLinux.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\SysTypesSolaris.h
 # End Source File
 # Begin Source File
 

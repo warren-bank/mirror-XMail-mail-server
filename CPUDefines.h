@@ -31,9 +31,15 @@
 #include "SysCPUx86.h"
 
 #else           // #ifdef XMAIL_X86
+#ifdef XMAIL_SPARC
+
+#include "SysCPUSPARC.h"
+
+#else           // #ifdef XMAIL_SPARC
 
 #error CPU type not defined
 
+#endif          // #ifdef XMAIL_SPARC
 #endif          // #ifdef XMAIL_X86
 
 

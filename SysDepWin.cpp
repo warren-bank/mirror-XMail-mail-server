@@ -30,6 +30,9 @@
 
 
 
+#define MAX_TLS_KEYS                    64
+#define UNUSED_TLS_KEY_PROC             ((void (*)(void *)) -1)
+
 #define SOCK_VERSION_REQUESTED          MAKEWORD(2, 0)
 #define SHUTDOWN_RECV_TIMEOUT           2
 
@@ -53,6 +56,16 @@
 
 
 
+struct TlsKeyEntry
+{
+    void            (*pFreeProc) (void *);
+};
+
+struct TlsKeyData
+{
+    void           *pData;
+};
+
 struct FileFindData
 {
     char            szFindPath[SYS_MAX_PATH];
@@ -71,6 +84,9 @@ struct ThreadRunner
 
 
 
+static void     SysInitTlsKeyEntries(void);
+static void     SysInitTlsKeys(void);
+static void     SysCleanupTlsKeys(void);
 static char const *SysGetLastError(void);
 static int      SysBlockSocket(SYS_SOCKET SockFD, int OnOff);
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD);
@@ -88,18 +104,67 @@ static BOOL WINAPI SysBreakHandlerRoutine(DWORD dwCtrlType);
 
 
 
+static CRITICAL_SECTION csTLS;
+static bool     bSetupEntries = true;
+static TlsKeyEntry TlsKeyEntries[MAX_TLS_KEYS];
+static          __declspec(thread)
+    TlsKeyData      TlsKeys[MAX_TLS_KEYS];
 static time_t   tSysStart;
 static SYS_INT64 PCFreq,
                 PCSysStart;
-static SYS_IPCNAME LogSemIPCName;
-static SYS_SEMAPHORE RootLogSemID;
-static THRDLS SYS_SEMAPHORE LogSemID;
+static CRITICAL_SECTION csLog;
 static void     (*SysBreakHandler) (void) = NULL;
 
 
 
 
 
+
+
+
+
+static void     SysInitTlsKeyEntries(void)
+{
+
+    if (bSetupEntries)
+    {
+        for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
+            TlsKeyEntries[ii].pFreeProc = UNUSED_TLS_KEY_PROC;
+
+        bSetupEntries = false;
+    }
+
+}
+
+
+
+static void     SysInitTlsKeys(void)
+{
+
+    for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
+        TlsKeys[ii].pData = NULL;
+
+}
+
+
+
+static void     SysCleanupTlsKeys(void)
+{
+
+    EnterCriticalSection(&csTLS);
+
+    for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
+    {
+        if ((TlsKeyEntries[ii].pFreeProc != UNUSED_TLS_KEY_PROC) &&
+                (TlsKeyEntries[ii].pFreeProc != NULL))
+            TlsKeyEntries[ii].pFreeProc(TlsKeys[ii].pData);
+
+        TlsKeys[ii].pData = NULL;
+    }
+
+    LeaveCriticalSection(&csTLS);
+
+}
 
 
 
@@ -161,21 +226,19 @@ int             SysInitLibrary(void)
     if (WSAStartup(SOCK_VERSION_REQUESTED, &WSD))
     {
         ErrSetErrorCode(ERR_NETWORK);
-        return (-1);
+        return (ERR_NETWORK);
     }
 
+    InitializeCriticalSection(&csTLS);
+    SysInitTlsKeyEntries();
 
-    LogSemIPCName = SysCreateIPCName();
-    if ((RootLogSemID = SysCreateSemaphore(1, SYS_DEFAULT_MAXCOUNT,
-                            LogSemIPCName)) == SYS_INVALID_SEMAPHORE)
-        return (ErrGetErrorCode());
-
+    InitializeCriticalSection(&csLog);
 
     if (SysThreadSetup() < 0)
     {
         ErrorPush();
-        SysCloseSemaphore(RootLogSemID);
-        SysKillSemaphore(RootLogSemID);
+        DeleteCriticalSection(&csLog);
+        DeleteCriticalSection(&csTLS);
         return (ErrorPop());
     }
 
@@ -191,8 +254,9 @@ void            SysCleanupLibrary(void)
 
     SysThreadCleanup();
 
-    SysCloseSemaphore(RootLogSemID);
-    SysKillSemaphore(RootLogSemID);
+    DeleteCriticalSection(&csLog);
+
+    DeleteCriticalSection(&csTLS);
 
     WSACleanup();
 
@@ -214,7 +278,7 @@ SYS_SOCKET      SysCreateSocket(int iAddressFamily, int iType, int iProtocol)
 
     if (SysSetSocketsOptions((SYS_SOCKET) SockFD) < 0)
     {
-        SysCloseSocket((SYS_SOCKET) SockFD, 1);
+        SysCloseSocket((SYS_SOCKET) SockFD);
 
         return (SYS_INVALID_SOCKET);
     }
@@ -255,6 +319,22 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
     }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Disable linger
+///////////////////////////////////////////////////////////////////////////////
+    struct linger   Ling;
+
+    ZeroData(Ling);
+    Ling.l_onoff = 0;
+    Ling.l_linger = 0;
+
+    if (setsockopt(SockFD, SOL_SOCKET, SO_LINGER, (const char *) &Ling,
+                    sizeof(Ling)) != 0)
+    {
+        ErrSetErrorCode(ERR_SETSOCKOPT);
+        return (ERR_SETSOCKOPT);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
 //  Set KEEPALIVE if supported
 ///////////////////////////////////////////////////////////////////////////////
     setsockopt(SockFD, SOL_SOCKET, SO_KEEPALIVE, (const char *) &iActivate,
@@ -267,39 +347,8 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
 
 
 
-void            SysCloseSocket(SYS_SOCKET SockFD, int iHardClose)
+void            SysCloseSocket(SYS_SOCKET SockFD)
 {
-
-    if (!iHardClose)
-    {
-        shutdown(SockFD, SD_SEND);
-
-        int             iRecvResult;
-        HANDLE          hSockEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-        do
-        {
-            if (hSockEvent != NULL)
-            {
-                WSAEventSelect(SockFD, (WSAEVENT) hSockEvent, FD_READ | FD_CLOSE);
-
-                WSAWaitForMultipleEvents(1, &hSockEvent, TRUE,
-                        (DWORD) (SHUTDOWN_RECV_TIMEOUT * 1000), TRUE);
-
-                WSAEventSelect(SockFD, (WSAEVENT) hSockEvent, 0);
-            }
-
-            char            szBuffer[256] = "";
-
-            iRecvResult = SysRecvLL(SockFD, szBuffer, sizeof(szBuffer));
-
-        } while (iRecvResult > 0);
-
-        if (hSockEvent != NULL)
-            CloseHandle(hSockEvent);
-
-        shutdown(SockFD, SD_BOTH);
-    }
 
     closesocket(SockFD);
 
@@ -736,7 +785,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
         if ((SysBlockSocket(SockFDAccept, 0) < 0) ||
                 (SysSetSocketsOptions(SockFDAccept) < 0))
         {
-            SysCloseSocket(SockFDAccept, 1);
+            SysCloseSocket(SockFDAccept);
             return (ErrGetErrorCode());
         }
     }
@@ -906,8 +955,15 @@ NET_ADDRESS     SysGetHostByName(char const * pszName)
 
     struct hostent *pHostEnt = gethostbyname(pszName);
 
-    return ((pHostEnt != NULL) ? (NET_ADDRESS) * ((SYS_UINT32 *) pHostEnt->h_addr_list[0]) :
-            SYS_INVALID_NET_ADDRESS);
+    if ((pHostEnt == NULL) || (pHostEnt->h_addr_list[0] == NULL))
+        return (SYS_INVALID_NET_ADDRESS);
+
+
+    NET_ADDRESS     Addr;
+
+    memcpy(&Addr, pHostEnt->h_addr_list[0], sizeof(Addr));
+
+    return (Addr);
 
 }
 
@@ -994,39 +1050,14 @@ NET_ADDRESS     SysInetAddr(char const * pszDotName)
 
 
 
-SYS_IPCNAME     SysCreateIPCName(void)
+SYS_SEMAPHORE   SysCreateSemaphore(int iInitCount, int iMaxCount)
 {
 
-    extern unsigned int uKeyMagic;
-    static unsigned int uIPCSeqNr = 0;
-
-    return ((((SYS_IPCNAME) uKeyMagic) << 32) | ((SYS_IPCNAME)++ uIPCSeqNr));
-
-}
-
-
-
-
-SYS_SEMAPHORE   SysCreateSemaphore(int iInitCount, int iMaxCount, SYS_IPCNAME SemName)
-{
-
-    char            szSemName[128] = "";
-
-    sprintf(szSemName, "Sem%I64X", SemName);
-
-    HANDLE          hSemaphore = CreateSemaphore(NULL, iInitCount, iMaxCount, szSemName);
+    HANDLE          hSemaphore = CreateSemaphore(NULL, iInitCount, iMaxCount, NULL);
 
     if (hSemaphore == NULL)
     {
         ErrSetErrorCode(ERR_CREATESEMAPHORE);
-        return (SYS_INVALID_SEMAPHORE);
-    }
-
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-    {
-        CloseHandle(hSemaphore);
-
-        ErrSetErrorCode(ERR_SEM_ALREADY_EXIST);
         return (SYS_INVALID_SEMAPHORE);
     }
 
@@ -1036,39 +1067,10 @@ SYS_SEMAPHORE   SysCreateSemaphore(int iInitCount, int iMaxCount, SYS_IPCNAME Se
 
 
 
-SYS_SEMAPHORE   SysConnectSemaphore(int iInitCount, int iMaxCount, SYS_IPCNAME SemName)
+int             SysCloseSemaphore(SYS_SEMAPHORE hSemaphore)
 {
 
-    char            szSemName[128] = "";
-
-    sprintf(szSemName, "Sem%I64X", SemName);
-
-    HANDLE          hSemaphore = CreateSemaphore(NULL, iInitCount, iMaxCount, szSemName);
-
-    if (hSemaphore == NULL)
-    {
-        ErrSetErrorCode(ERR_CREATESEMAPHORE);
-        return (SYS_INVALID_SEMAPHORE);
-    }
-
-    if (GetLastError() != ERROR_ALREADY_EXISTS)
-    {
-        CloseHandle(hSemaphore);
-
-        ErrSetErrorCode(ERR_SEM_NOT_EXIST);
-        return (SYS_INVALID_SEMAPHORE);
-    }
-
-    return ((SYS_SEMAPHORE) hSemaphore);
-
-}
-
-
-
-int             SysCloseSemaphore(SYS_SEMAPHORE SemID)
-{
-
-    if (!CloseHandle((HANDLE) SemID))
+    if (!CloseHandle((HANDLE) hSemaphore))
     {
         ErrSetErrorCode(ERR_CLOSEHANDLE);
         return (ERR_CLOSEHANDLE);
@@ -1080,19 +1082,10 @@ int             SysCloseSemaphore(SYS_SEMAPHORE SemID)
 
 
 
-int             SysKillSemaphore(SYS_SEMAPHORE SemID)
+int             SysWaitSemaphore(SYS_SEMAPHORE hSemaphore, int iTimeout)
 {
 
-    return (0);
-
-}
-
-
-
-int             SysWaitSemaphore(SYS_SEMAPHORE SemID, int iTimeout)
-{
-
-    if (WaitForSingleObject((HANDLE) SemID, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0)
+    if (WaitForSingleObject((HANDLE) hSemaphore, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0)
     {
         ErrSetErrorCode(ERR_TIMEOUT);
         return (ERR_TIMEOUT);
@@ -1104,10 +1097,11 @@ int             SysWaitSemaphore(SYS_SEMAPHORE SemID, int iTimeout)
 
 
 
-int             SysReleaseSemaphore(SYS_SEMAPHORE SemID, int iCount)
+
+int             SysReleaseSemaphore(SYS_SEMAPHORE hSemaphore, int iCount)
 {
 
-    if (!ReleaseSemaphore((HANDLE) SemID, (LONG) iCount, NULL))
+    if (!ReleaseSemaphore((HANDLE) hSemaphore, (LONG) iCount, NULL))
     {
         ErrSetErrorCode(ERR_RELEASESEMAPHORE);
         return (ERR_RELEASESEMAPHORE);
@@ -1117,6 +1111,177 @@ int             SysReleaseSemaphore(SYS_SEMAPHORE SemID, int iCount)
 
 }
 
+
+
+int             SysTryWaitSemaphore(SYS_SEMAPHORE hSemaphore)
+{
+
+    if (WaitForSingleObject((HANDLE) hSemaphore, 0) != WAIT_OBJECT_0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    return (0);
+
+}
+
+
+
+SYS_MUTEX       SysCreateMutex(void)
+{
+
+    HANDLE          hMutex = CreateMutex(NULL, FALSE, NULL);
+
+    if (hMutex == NULL)
+    {
+        ErrSetErrorCode(ERR_CREATEMUTEX);
+        return (SYS_INVALID_MUTEX);
+    }
+
+    return ((SYS_MUTEX) hMutex);
+
+}
+
+
+
+int             SysCloseMutex(SYS_MUTEX hMutex)
+{
+
+    if (!CloseHandle((HANDLE) hMutex))
+    {
+        ErrSetErrorCode(ERR_CLOSEHANDLE);
+        return (ERR_CLOSEHANDLE);
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysLockMutex(SYS_MUTEX hMutex, int iTimeout)
+{
+
+    if (WaitForSingleObject((HANDLE) hMutex, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysUnlockMutex(SYS_MUTEX hMutex)
+{
+
+    ReleaseMutex((HANDLE) hMutex);
+
+    return (0);
+
+}
+
+
+
+int             SysTryLockMutex(SYS_MUTEX hMutex)
+{
+
+    if (WaitForSingleObject((HANDLE) hMutex, 0) != WAIT_OBJECT_0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    return (0);
+
+}
+
+
+
+SYS_EVENT       SysCreateEvent(int iManualReset)
+{
+
+    HANDLE          hEvent = CreateEvent(NULL, iManualReset, FALSE, NULL);
+
+    if (hEvent == NULL)
+    {
+        ErrSetErrorCode(ERR_CREATEEVENT);
+        return (SYS_INVALID_EVENT);
+    }
+
+    return ((SYS_EVENT) hEvent);
+
+}
+
+
+
+int             SysCloseEvent(SYS_EVENT hEvent)
+{
+
+    if (!CloseHandle((HANDLE) hEvent))
+    {
+        ErrSetErrorCode(ERR_CLOSEHANDLE);
+        return (ERR_CLOSEHANDLE);
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysWaitEvent(SYS_EVENT hEvent, int iTimeout)
+{
+
+    if (WaitForSingleObject((HANDLE) hEvent, (DWORD) (iTimeout * 1000)) != WAIT_OBJECT_0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    return (0);
+
+}
+
+
+
+int             SysSetEvent(SYS_EVENT hEvent)
+{
+
+    SetEvent((HANDLE) hEvent);
+
+    return (0);
+
+}
+
+
+
+int             SysResetEvent(SYS_EVENT hEvent)
+{
+
+    ResetEvent((HANDLE) hEvent);
+
+    return (0);
+
+}
+
+
+
+int             SysTryWaitEvent(SYS_EVENT hEvent)
+{
+
+    if (WaitForSingleObject((HANDLE) hEvent, 0) != WAIT_OBJECT_0)
+    {
+        ErrSetErrorCode(ERR_TIMEOUT);
+        return (ERR_TIMEOUT);
+    }
+
+    return (0);
+
+}
 
 
 
@@ -1194,9 +1359,7 @@ SYS_THREAD      SysCreateServiceThread(unsigned int (*pThreadProc) (void *), SYS
 static int      SysThreadSetup(void)
 {
 
-    if ((LogSemID = SysConnectSemaphore(1, SYS_DEFAULT_MAXCOUNT,
-                            LogSemIPCName)) == SYS_INVALID_SEMAPHORE)
-        return (ErrGetErrorCode());
+    SysInitTlsKeys();
 
 
     return (0);
@@ -1208,13 +1371,8 @@ static int      SysThreadSetup(void)
 static int      SysThreadCleanup(void)
 {
 
-    extern void     ErrCleanupErrorInfos(int);
 
-
-    SysCloseSemaphore(LogSemID);
-
-
-    ErrCleanupErrorInfos(1);
+    SysCleanupTlsKeys();
 
     return (0);
 
@@ -1285,14 +1443,6 @@ unsigned long   SysGetCurrentThreadId(void)
 {
 
     return ((unsigned long) GetCurrentThreadId());
-
-}
-
-
-
-void            SysIgnoreThreadsExit(void)
-{
-
 
 }
 
@@ -1412,6 +1562,112 @@ void            SysSetBreakHandler(void (*BreakHandler) (void))
 
 
 
+int             SysCreateTlsKey(SYS_TLSKEY & TlsKey, void (*pFreeProc) (void *))
+{
+
+    EnterCriticalSection(&csTLS);
+
+    for (int ii = 0; ii < MAX_TLS_KEYS; ii++)
+    {
+        if (TlsKeyEntries[ii].pFreeProc == UNUSED_TLS_KEY_PROC)
+        {
+            TlsKeyEntries[ii].pFreeProc = pFreeProc;
+
+            LeaveCriticalSection(&csTLS);
+
+            TlsKey = (SYS_TLSKEY) ii;
+
+            return (0);
+        }
+    }
+
+    LeaveCriticalSection(&csTLS);
+
+
+    ErrSetErrorCode(ERR_NOMORE_TLSKEYS);
+
+    return (ERR_NOMORE_TLSKEYS);
+
+}
+
+
+
+int             SysDeleteTlsKey(SYS_TLSKEY & TlsKey)
+{
+
+    int             iKey = (int) TlsKey;
+
+    EnterCriticalSection(&csTLS);
+
+    if ((iKey < 0) || (iKey >= MAX_TLS_KEYS) ||
+            (TlsKeyEntries[iKey].pFreeProc == UNUSED_TLS_KEY_PROC))
+    {
+        LeaveCriticalSection(&csTLS);
+
+        ErrSetErrorCode(ERR_INVALID_TLSKEY);
+        return (ERR_INVALID_TLSKEY);
+    }
+
+    TlsKeyEntries[iKey].pFreeProc = UNUSED_TLS_KEY_PROC;
+
+    LeaveCriticalSection(&csTLS);
+
+    TlsKey = (SYS_TLSKEY) - 1;
+
+    return (0);
+
+}
+
+
+
+int             SysSetTlsKeyData(SYS_TLSKEY & TlsKey, void *pData)
+{
+
+    int             iKey = (int) TlsKey;
+
+    if ((iKey < 0) || (iKey >= MAX_TLS_KEYS) ||
+            (TlsKeyEntries[iKey].pFreeProc == UNUSED_TLS_KEY_PROC))
+    {
+        ErrSetErrorCode(ERR_INVALID_TLSKEY);
+        return (ERR_INVALID_TLSKEY);
+    }
+
+    TlsKeys[iKey].pData = pData;
+
+    return (0);
+
+}
+
+
+
+void           *SysGetTlsKeyData(SYS_TLSKEY & TlsKey)
+{
+
+    int             iKey = (int) TlsKey;
+
+    if ((iKey < 0) || (iKey >= MAX_TLS_KEYS) ||
+            (TlsKeyEntries[iKey].pFreeProc == UNUSED_TLS_KEY_PROC))
+    {
+        ErrSetErrorCode(ERR_INVALID_TLSKEY);
+        return (NULL);
+    }
+
+    return (TlsKeys[iKey].pData);
+
+}
+
+
+
+void            SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void))
+{
+
+    if (InterlockedExchange(pThrOnce, 1) == 0)
+        pOnceProc();
+
+}
+
+
+
 void           *SysAlloc(unsigned int uSize)
 {
 
@@ -1492,119 +1748,6 @@ int             SysUnlockFile(const char *pszFileName, char const * pszLockExt)
     {
         ErrSetErrorCode(ERR_NOT_LOCKED);
         return (ERR_NOT_LOCKED);
-    }
-
-    return (0);
-
-}
-
-
-
-SYS_SHMEM       SysCreateSharedMem(unsigned int uSize, SYS_IPCNAME ShmName)
-{
-
-    char            szShmName[128] = "";
-
-    sprintf(szShmName, "Shm%I64X", ShmName);
-
-    HANDLE          hMemMap = CreateFileMapping((HANDLE) 0xFFFFFFFF, NULL, PAGE_READWRITE,
-            0, uSize, szShmName);
-
-    if (hMemMap == NULL)
-    {
-        ErrSetErrorCode(ERR_CREATEFILEMAPPING);
-        return (SYS_INVALID_SHMEM);
-    }
-
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
-    {
-        CloseHandle(hMemMap);
-
-        ErrSetErrorCode(ERR_SHMEM_ALREADY_EXIST);
-        return (SYS_INVALID_SHMEM);
-    }
-
-    return ((SYS_SHMEM) hMemMap);
-
-}
-
-
-
-SYS_SHMEM       SysConnectSharedMem(unsigned int uSize, SYS_IPCNAME ShmName)
-{
-
-    char            szShmName[128] = "";
-
-    sprintf(szShmName, "Shm%I64X", ShmName);
-
-    HANDLE          hMemMap = CreateFileMapping((HANDLE) 0xFFFFFFFF, NULL, PAGE_READWRITE,
-            0, uSize, szShmName);
-
-    if (hMemMap == NULL)
-    {
-        ErrSetErrorCode(ERR_CREATEFILEMAPPING);
-        return (SYS_INVALID_SHMEM);
-    }
-
-    if (GetLastError() != ERROR_ALREADY_EXISTS)
-    {
-        CloseHandle(hMemMap);
-
-        ErrSetErrorCode(ERR_SHMEM_NOT_EXIST);
-        return (SYS_INVALID_SHMEM);
-    }
-
-    return ((SYS_SHMEM) hMemMap);
-
-}
-
-
-
-int             SysCloseSharedMem(SYS_SHMEM ShMemID)
-{
-
-    if (!CloseHandle((HANDLE) ShMemID))
-    {
-        ErrSetErrorCode(ERR_CLOSEHANDLE);
-        return (ERR_CLOSEHANDLE);
-    }
-
-    return (0);
-
-}
-
-
-
-int             SysKillSharedMem(SYS_SHMEM ShMemID)
-{
-
-    return (0);
-
-}
-
-
-
-void           *SysMapSharedMem(SYS_SHMEM ShMemID)
-{
-
-    void           *pAddress = MapViewOfFile((HANDLE) ShMemID, FILE_MAP_WRITE, 0, 0, 0);
-
-    if (pAddress == NULL)
-        ErrSetErrorCode(ERR_MAPVIEWOFFILE);
-
-    return (pAddress);
-
-}
-
-
-
-int             SysUnmapSharedMem(SYS_SHMEM ShMemID, void *pAddress)
-{
-
-    if (!UnmapViewOfFile(pAddress))
-    {
-        ErrSetErrorCode(ERR_UNMAPVIEWOFFILE);
-        return (ERR_UNMAPVIEWOFFILE);
     }
 
     return (0);
@@ -1720,8 +1863,7 @@ int             SysLogMessage(int iLogLevel, char const * pszFormat,...)
 
     extern bool     bServerDebug;
 
-    if (SysWaitSemaphore(LogSemID, SYS_INFINITE_TIMEOUT) < 0)
-        return (ErrGetErrorCode());
+    EnterCriticalSection(&csLog);
 
 
     va_list         Args;
@@ -1755,7 +1897,7 @@ int             SysLogMessage(int iLogLevel, char const * pszFormat,...)
     va_end(Args);
 
 
-    SysReleaseSemaphore(LogSemID, 1);
+    LeaveCriticalSection(&csLog);
 
     return (0);
 
@@ -1766,7 +1908,7 @@ int             SysLogMessage(int iLogLevel, char const * pszFormat,...)
 void            SysSleep(int iTimeout)
 {
 
-    Sleep(iTimeout * 1000);
+    SysMsSleep(iTimeout * 1000);
 
 }
 
@@ -1909,8 +2051,8 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
     }
 
     ZeroData(FI);
-    FI.iFileType = (stat_buffer.st_mode & _S_IFREG) ? ftNormal:
-            ((stat_buffer.st_mode & _S_IFDIR) ? ftDirectory: ftOther);
+    FI.iFileType = (stat_buffer.st_mode & _S_IFREG) ? ftNormal :
+            ((stat_buffer.st_mode & _S_IFDIR) ? ftDirectory : ftOther);
     FI.ulSize = (unsigned long) stat_buffer.st_size;
     FI.tCreat = stat_buffer.st_ctime;
     FI.tMod = stat_buffer.st_mtime;
@@ -1978,7 +2120,7 @@ char           *SysGetTmpFile(char *pszFileName)
 
     GetTempPath(sizeof(szTmpPath), szTmpPath);
 
-    static THRDLS unsigned int uFileSeqNr = 0;
+    static unsigned int uFileSeqNr = 0;
     SYS_LONGLONG    llFileID = (((SYS_LONGLONG) GetCurrentThreadId()) << 32) | (SYS_LONGLONG)++ uFileSeqNr;
 
     sprintf(pszFileName, "%smsrv%I64x.tmp", szTmpPath, llFileID);
@@ -2053,5 +2195,57 @@ int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat,
 {
 
     return (_vsnprintf(pszBuffer, iSize, pszFormat, Args));
+
+}
+
+
+
+char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSavePtr)
+{
+
+    return (*ppszSavePtr = strtok(pszData, pszDelim));
+
+}
+
+
+
+char           *SysCTime(time_t * pTimer, char *pszBuffer)
+{
+
+    return (strcpy(pszBuffer, ctime(pTimer)));
+
+}
+
+
+
+struct tm      *SysLocalTime(time_t * pTimer, struct tm * pTStruct)
+{
+
+    *pTStruct = *localtime(pTimer);
+
+    return (pTStruct);
+
+}
+
+
+
+struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct)
+{
+
+    *pTStruct = *gmtime(pTimer);
+
+    return (pTStruct);
+
+}
+
+
+
+char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize)
+{
+
+    strncpy(pszBuffer, asctime(pTStruct), iBufferSize);
+    pszBuffer[iBufferSize - 1] = '\0';
+
+    return (pszBuffer);
 
 }

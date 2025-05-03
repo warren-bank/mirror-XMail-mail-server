@@ -43,6 +43,17 @@
 
 
 
+struct MessageQueue
+{
+    SysListHead     MessQueue;
+    SysListHead     RsndQueue;
+    SYS_MUTEX       hMutex;
+    SYS_EVENT       hEvent;
+    int             iNumDirsLevel;
+    int             iMessCount;
+    int             iRsndCount;
+};
+
 typedef struct NQS_HANDLE_struct
 {
 }              *NQS_HANDLE;
@@ -55,9 +66,9 @@ typedef struct NQS_HANDLE_struct
 
 int             QueHandlerInit(void);
 int             QueHandlerCleanup(void);
-int             QueCreateQueue(SHB_HANDLE & hShbQueue, char const * pszRootPath,
+int             QueCreateQueue(MessageQueue & MQ, char const * pszRootPath,
                         int iNumDirsLevel = STD_QUEUEFS_DIRS_X_LEVEL);
-int             QueCloseQueue(SHB_HANDLE hShbQueue);
+int             QueCloseQueue(MessageQueue & MQ);
 int             QueGetTempFile(char const * pszRootPath, char *pszFilePath,
                         int iNumDirsLevel = STD_QUEUEFS_DIRS_X_LEVEL);
 int             QueGetBasePath(char const * pszFilePath, char *pszBasePath,

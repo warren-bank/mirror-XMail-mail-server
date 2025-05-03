@@ -32,12 +32,11 @@
 
 
 
-
-struct BlockHandler
+struct SharedBlock
 {
-    SYS_SEMAPHORE   SemID;
-    SYS_SHMEM       ShmID;
-    void           *pShmData;
+    unsigned int    uSize;
+    SYS_MUTEX       hMutex;
+    void           *pData;
 };
 
 
@@ -47,143 +46,52 @@ struct BlockHandler
 
 
 
-static int      ShbValidateBlock(SharedBlock const & SHB);
 
 
 
 
-
-
-
-
-
-static int      ShbValidateBlock(SharedBlock const & SHB)
+SHB_HANDLE      ShbCreateBlock(unsigned int uSize)
 {
 
-    if (SHB.uSize == 0)
+    SharedBlock    *pSHB = (SharedBlock *) SysAlloc(sizeof(SharedBlock));
+
+    if (pSHB == NULL)
+        return (SHB_INVALID_HANDLE);
+
+    ZeroData(*pSHB);
+    pSHB->uSize = uSize;
+
+    if ((pSHB->hMutex = SysCreateMutex()) == SYS_INVALID_MUTEX)
     {
-        ErrSetErrorCode(ERR_INVALID_SHARED_BLOCK);
-        return (ERR_INVALID_SHARED_BLOCK);
+        SysFree(pSHB);
+        return (SHB_INVALID_HANDLE);
     }
+
+    if ((pSHB->pData = SysAlloc(uSize)) == NULL)
+    {
+        SysCloseMutex(pSHB->hMutex);
+        SysFree(pSHB);
+        return (SHB_INVALID_HANDLE);
+    }
+
+    memset(pSHB->pData, 0, uSize);
+
+    return ((SHB_HANDLE) pSHB);
+
+}
+
+
+
+int             ShbCloseBlock(SHB_HANDLE hBlock)
+{
+
+    SharedBlock    *pSHB = (SharedBlock *) hBlock;
+
+    SysCloseMutex(pSHB->hMutex);
+
+    SysFree(pSHB);
 
     return (0);
-
-}
-
-
-
-
-int             ShbCreateBlock(SharedBlock & SHB, unsigned int uSize)
-{
-
-    ZeroData(SHB);
-    SHB.ulOwnerID = SysGetCurrentThreadId();
-    SHB.uSize = uSize;
-    SHB.ShmName = SysCreateIPCName();
-    SHB.SemName = SysCreateIPCName();
-
-    if ((SHB.SemID = SysCreateSemaphore(1, SYS_DEFAULT_MAXCOUNT,
-                            SHB.SemName)) == SYS_INVALID_SEMAPHORE)
-    {
-        ZeroData(SHB);
-        return (ErrGetErrorCode());
-    }
-
-
-    if ((SHB.ShmID = SysCreateSharedMem(uSize, SHB.ShmName)) == SYS_INVALID_SHMEM)
-    {
-        ErrorPush();
-        SysCloseSemaphore(SHB.SemID);
-        SysKillSemaphore(SHB.SemID);
-        ZeroData(SHB);
-        return (ErrorPop());
-    }
-
-    void           *pShmData = SysMapSharedMem(SHB.ShmID);
-
-    memset(pShmData, 0, uSize);
-
-    SysUnmapSharedMem(SHB.ShmID, pShmData);
-
-    return (0);
-
-}
-
-
-
-int             ShbDestroyBlock(SharedBlock & SHB)
-{
-
-    if (ShbValidateBlock(SHB) < 0)
-        return (ErrGetErrorCode());
-
-
-    SysCloseSemaphore(SHB.SemID);
-    SysKillSemaphore(SHB.SemID);
-
-    SysCloseSharedMem(SHB.ShmID);
-    SysKillSharedMem(SHB.ShmID);
-
-    ZeroData(SHB);
-
-    return (0);
-
-}
-
-
-
-
-SHB_HANDLE      ShbConnectBlock(SharedBlock & SHB)
-{
-
-    if (ShbValidateBlock(SHB) < 0)
-        return (SHB_INVALID_HANDLE);
-
-
-    SYS_SHMEM       ShmID = SysConnectSharedMem(SHB.uSize, SHB.ShmName);
-
-    if (ShmID == SYS_INVALID_SHMEM)
-        return (SHB_INVALID_HANDLE);
-
-    SYS_SEMAPHORE   SemID = SysConnectSemaphore(1, SYS_DEFAULT_MAXCOUNT,
-            SHB.SemName);
-
-    if (SemID == SYS_INVALID_SEMAPHORE)
-    {
-        SysCloseSharedMem(ShmID);
-        return (SHB_INVALID_HANDLE);
-    }
-
-
-    BlockHandler   *pBH = (BlockHandler *) SysAlloc(sizeof(BlockHandler));
-
-    if (pBH == NULL)
-    {
-        SysCloseSemaphore(SemID);
-        SysCloseSharedMem(ShmID);
-        return (SHB_INVALID_HANDLE);
-    }
-
-    pBH->ShmID = ShmID;
-    pBH->SemID = SemID;
-    pBH->pShmData = SysMapSharedMem(SHB.ShmID);
-
-    return ((SHB_HANDLE) pBH);
-
-}
-
-
-
-void            ShbCloseBlock(SHB_HANDLE hBlock)
-{
-
-    BlockHandler   *pBH = (BlockHandler *) hBlock;
-
-    SysCloseSemaphore(pBH->SemID);
-    SysUnmapSharedMem(pBH->ShmID, pBH->pShmData);
-    SysCloseSharedMem(pBH->ShmID);
-
-    SysFree(pBH);
 
 }
 
@@ -192,22 +100,24 @@ void            ShbCloseBlock(SHB_HANDLE hBlock)
 void           *ShbLock(SHB_HANDLE hBlock)
 {
 
-    BlockHandler   *pBH = (BlockHandler *) hBlock;
+    SharedBlock    *pSHB = (SharedBlock *) hBlock;
 
-    if (SysWaitSemaphore(pBH->SemID, SYS_INFINITE_TIMEOUT) < 0)
+    if (SysLockMutex(pSHB->hMutex, SYS_INFINITE_TIMEOUT) < 0)
         return (NULL);
 
-    return (pBH->pShmData);
+    return (pSHB->pData);
 
 }
 
 
 
-void            ShbUnlock(SHB_HANDLE hBlock)
+int             ShbUnlock(SHB_HANDLE hBlock)
 {
 
-    BlockHandler   *pBH = (BlockHandler *) hBlock;
+    SharedBlock    *pSHB = (SharedBlock *) hBlock;
 
-    SysReleaseSemaphore(pBH->SemID, 1);
+    SysUnlockMutex(pSHB->hMutex);
+
+    return (0);
 
 }

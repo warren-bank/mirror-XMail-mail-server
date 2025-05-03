@@ -35,13 +35,12 @@
 
 
 
-#define MAX_XMAIL_ACCOUNTS          25000
 #define TAB_COMMENT_CHAR            '#'
 #define MAX_ADDR_NAME               256
 #define MAX_HOST_NAME               256
 #define MAX_MESSAGE_ID              SYS_MAX_PATH
 #define MAX_ACCEPT_ADDRESSES        32
-#define LOG_ROTATE_DAYS             1
+#define LOG_ROTATE_HOURS            24
 #define STD_SERVER_TIMEOUT          90
 
 

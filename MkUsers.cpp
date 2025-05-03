@@ -1,7 +1,7 @@
 
 
 
-#ifdef WIN32
+#if defined(WIN32)
 
 #include <stdio.h>
 #include <io.h>
@@ -47,8 +47,8 @@ char const     *SysErrStr(void)
 
 
 
-#else           // #ifdef WIN32
-#ifdef __LINUX__
+#else           // #if defined(WIN32)
+#if defined(__LINUX__) || defined(__SOLARIS__)
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -99,12 +99,12 @@ char const     *SysErrStr(void)
 
 
 
-#else           // #ifdef __LINUX__
+#else           // #if defined(__LINUX__) || defined(__SOLARIS__)
 
 #error system type not defined !
 
-#endif          // #ifdef __LINUX__
-#endif          // #ifdef WIN32
+#endif          // #if defined(__LINUX__) || defined(__SOLARIS__)
+#endif          // #if defined(WIN32)
 
 
 

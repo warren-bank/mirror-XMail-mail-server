@@ -67,7 +67,7 @@
 struct DNS_HEADER
 {
     SYS_UINT16      Id;
-#ifdef BIG_ENDIAN_BITFIELD
+#ifdef LITTLE_ENDIAN_BITFIELD
     SYS_UINT8       RD:1,
                     TC:1,
                     AA:1,
@@ -85,7 +85,7 @@ struct DNS_HEADER
     SYS_UINT8       RA:1,
                     Z:3,
                     RCode:4;
-#endif // #ifdef BIG_ENDIAN_BITFIELD
+#endif // #ifdef LITTLE_ENDIAN_BITFIELD
     SYS_UINT16      QDCount;
     SYS_UINT16      ANCount;
     SYS_UINT16      NSCount;

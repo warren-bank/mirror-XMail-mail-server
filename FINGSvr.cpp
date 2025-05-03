@@ -130,19 +130,6 @@ static unsigned int FINGClientThread(void *pThreadData)
     SYS_SOCKET      SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create handle to hook shared memory
-///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbFING = ShbConnectBlock(SHB_FINGSvr);
-
-    if (hShbFING == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        SysCloseSocket(SockFD);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
 //  Increase threads count
 ///////////////////////////////////////////////////////////////////////////////
     FINGConfig     *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
@@ -152,7 +139,6 @@ static unsigned int FINGClientThread(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         SysCloseSocket(SockFD);
-        ShbCloseBlock(hShbFING);
         return (ErrorPop());
     }
 
@@ -170,7 +156,6 @@ static unsigned int FINGClientThread(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         SysCloseSocket(SockFD);
-        ShbCloseBlock(hShbFING);
         return (ErrorPop());
     }
 
@@ -195,15 +180,12 @@ static unsigned int FINGClientThread(void *pThreadData)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        ShbCloseBlock(hShbFING);
         return (ErrorPop());
     }
 
     --pFINGCfg->lThreadCount;
 
     ShbUnlock(hShbFING);
-
-    ShbCloseBlock(hShbFING);
 
     return (0);
 
@@ -215,22 +197,12 @@ static unsigned int FINGClientThread(void *pThreadData)
 unsigned int    FINGThreadProc(void *pThreadData)
 {
 
-    SHB_HANDLE      hShbFING = ShbConnectBlock(SHB_FINGSvr);
-
-    if (hShbFING == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        return (ErrorPop());
-    }
-
     FINGConfig     *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
     if (pFINGCfg == NULL)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        ShbCloseBlock(hShbFING);
         return (ErrorPop());
     }
 
@@ -244,13 +216,10 @@ unsigned int    FINGThreadProc(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         ShbUnlock(hShbFING);
-        ShbCloseBlock(hShbFING);
         return (ErrorPop());
     }
 
     ShbUnlock(hShbFING);
-
-    SysIgnoreThreadsExit();
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", FING_SERVER_NAME);
@@ -285,7 +254,7 @@ unsigned int    FINGThreadProc(void *pThreadData)
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
             else
-                SysCloseSocket(ConnSockFD[ss], 1);
+                SysCloseSocket(ConnSockFD[ss]);
 
         }
     }
@@ -313,8 +282,6 @@ unsigned int    FINGThreadProc(void *pThreadData)
         SysSleep(FING_WAIT_SLEEP);
     }
 
-    ShbCloseBlock(hShbFING);
-
     SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", FING_SERVER_NAME);
 
     return (0);
@@ -333,7 +300,7 @@ static int      FINGLogSession(char const * pszSockHost, char const * pszSockDom
     MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
-    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" FING_LOG_FILE);
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR FING_LOG_FILE);
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -555,8 +522,8 @@ static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup user
 ///////////////////////////////////////////////////////////////////////////////
-    char            szRealUser[MAX_ADDR_NAME] = "";
-    UserInfo       *pUI = UsrGetUserByNameOrAlias(pszDomain, pszUser, szRealUser);
+    char            szRealAddr[MAX_ADDR_NAME] = "";
+    UserInfo       *pUI = UsrGetUserByNameOrAlias(pszDomain, pszUser, szRealAddr);
 
     if (pUI != NULL)
     {
@@ -570,10 +537,10 @@ static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
             char            szRespBuffer[2048] = "";
 
             sprintf(szRespBuffer,
-                    "EMail       : %s@%s\r\n"
+                    "EMail       : %s\r\n"
                     "  Real Name : %s\r\n"
                     "  Home Page : %s",
-                    szRealUser, pszDomain,
+                    szRealAddr,
                     (pszRealName != NULL) ? pszRealName : "??",
                     (pszHomePage != NULL) ? pszHomePage : "??");
 

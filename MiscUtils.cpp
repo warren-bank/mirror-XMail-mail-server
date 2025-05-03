@@ -267,7 +267,9 @@ int             MscGetTimeNbrString(char *pszTimeStr, int iStringSize, time_t tT
         time(&tTime);
 
 
-    struct tm       tmSession = *localtime(&tTime);
+    struct tm       tmSession;
+
+    SysLocalTime(&tTime, &tmSession);
 
     SysSNPrintf(pszTimeStr, iStringSize, "%04d-%02d-%02d %02d:%02d:%02d",
             tmSession.tm_year + 1900,
@@ -291,11 +293,13 @@ int             MscGetTime(struct tm & tmLocal, int &iDiffHours, int &iDiffMins,
     if (tCurr == 0)
         time(&tCurr);
 
-    tmLocal = *localtime(&tCurr);
+    SysLocalTime(&tCurr, &tmLocal);
 
 
     struct tm       tmTimeLOC = tmLocal,
-                    tmTimeGM = *gmtime(&tCurr);
+                    tmTimeGM;
+
+    SysGMTime(&tCurr, &tmTimeGM);
 
     tmTimeLOC.tm_isdst = 0;
     tmTimeGM.tm_isdst = 0;
@@ -731,46 +735,7 @@ int             MscMoveFile(char const * pszOldName, char const * pszNewName)
 char           *MscGetString(FILE * pFile, char *pszBuffer, int iMaxChars)
 {
 
-    int             ii = 0;
-
-    for (;;)
-    {
-        if (ii >= iMaxChars)
-        {
-            ErrSetErrorCode(ERR_LINE_TOO_LONG);
-            return (NULL);
-        }
-
-        int             iChar = fgetc(pFile);
-
-        if (iChar == EOF)
-            return (NULL);
-
-        if (iChar == '\r')
-        {
-            iChar = fgetc(pFile);
-
-            if ((iChar != EOF) && (iChar != '\n'))
-                ungetc(iChar, pFile);
-
-            break;
-        }
-        else if (iChar == '\n')
-        {
-            iChar = fgetc(pFile);
-
-            if ((iChar != EOF) && (iChar != '\r'))
-                ungetc(iChar, pFile);
-
-            break;
-        }
-        else
-            pszBuffer[ii++] = (char) iChar;
-    }
-
-    pszBuffer[ii] = '\0';
-
-    return (pszBuffer);
+    return ((fgets(pszBuffer, iMaxChars, pFile) != NULL) ? StrEOLTrim(pszBuffer) : NULL);
 
 }
 
@@ -910,19 +875,23 @@ char           *MscLogFilePath(char const * pszLogFile, char *pszLogFilePath)
 
     time(&tCurrent);
 
-    unsigned long   ulRotStep = (unsigned long) (86400L * iLogRotateDays);
+    unsigned long   ulRotStep = (unsigned long) (3600L * iLogRotateHours);
     time_t          tLogFileTime = (time_t) NbrFloor((unsigned long) tCurrent, ulRotStep);
-    struct tm       tmLogFileTime = *localtime(&tLogFileTime);
+    struct tm       tmLogFileTime;
     char            szLogsDir[SYS_MAX_PATH] = "";
+
+    SysLocalTime(&tLogFileTime, &tmLogFileTime);
 
     SvrGetLogsDir(szLogsDir);
     AppendSlash(szLogsDir);
 
-    sprintf(pszLogFilePath, "%s%s-%04d%02d%02d",
+    sprintf(pszLogFilePath, "%s%s-%04d%02d%02d%02d%02d",
             szLogsDir, pszLogFile,
             tmLogFileTime.tm_year + 1900,
             tmLogFileTime.tm_mon + 1,
-            tmLogFileTime.tm_mday);
+            tmLogFileTime.tm_mday,
+            tmLogFileTime.tm_hour,
+            tmLogFileTime.tm_min);
 
 
     return (pszLogFilePath);
@@ -1578,8 +1547,8 @@ int             MscSetupServerNetPath(ServerNetPath & SvrPath, char const * pszC
 
 
 
-int             MscSplitAddressPort(char const * pszConnSpec, char * pszAddress,
-                        int & iPortNo, int iDefPortNo)
+int             MscSplitAddressPort(char const * pszConnSpec, char *pszAddress,
+                        int &iPortNo, int iDefPortNo)
 {
 
     char const     *pszColon = strchr(pszConnSpec, ':');
@@ -1595,11 +1564,137 @@ int             MscSplitAddressPort(char const * pszConnSpec, char * pszAddress,
     }
     else
     {
-    	strcpy(pszAddress, pszConnSpec);
+        strcpy(pszAddress, pszConnSpec);
 
         iPortNo = iDefPortNo;
     }
 
     return (0);
+
+}
+
+
+
+
+SYS_UINT16      MscReadUint16(void const * pData)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    SYS_UINT16      uValue;
+
+    memcpy(&uValue, pData, sizeof(uValue));
+
+    return (uValue);
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+                    return (*(SYS_UINT16 const *) pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
+
+}
+
+
+
+
+SYS_UINT32      MscReadUint32(void const * pData)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    SYS_UINT32      uValue;
+
+    memcpy(&uValue, pData, sizeof(uValue));
+
+    return (uValue);
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+                    return (*(SYS_UINT32 const *) pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
+
+}
+
+
+
+
+SYS_UINT64      MscReadUint64(void const * pData)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    SYS_UINT64      uValue;
+
+    memcpy(&uValue, pData, sizeof(uValue));
+
+    return (uValue);
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+                    return (*(SYS_UINT64 const *) pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
+
+}
+
+
+
+
+void           *MscWriteUint16(void *pData, SYS_UINT16 uValue)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    return (memcpy(pData, &uValue, sizeof(uValue)));
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+    *((SYS_UINT16 *) pData) = uValue;
+
+    return (pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
+
+}
+
+
+
+
+void           *MscWriteUint32(void *pData, SYS_UINT32 uValue)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    return (memcpy(pData, &uValue, sizeof(uValue)));
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+    *((SYS_UINT32 *) pData) = uValue;
+
+    return (pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
+
+}
+
+
+
+
+void           *MscWriteUint64(void *pData, SYS_UINT64 uValue)
+{
+
+#if defined(CPU_NEED_ALIGNMENT)
+
+    return (memcpy(pData, &uValue, sizeof(uValue)));
+
+#else           // #if defined(CPU_NEED_ALIGNMENT)
+
+    *((SYS_UINT64 *) pData) = uValue;
+
+    return (pData);
+
+#endif          // #if defined(CPU_NEED_ALIGNMENT)
 
 }

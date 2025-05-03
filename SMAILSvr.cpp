@@ -115,19 +115,19 @@ static int      SMAILFilterMacroSubstitutes(char **ppszCmdTokens, char const * p
 static SMAILConfig *SMAILGetConfigCopy(SHB_HANDLE hShbSMAIL)
 {
 
-    SMAILConfig    *pPSYNCCfg = (SMAILConfig *) ShbLock(hShbSMAIL);
+    SMAILConfig    *pLMAILCfg = (SMAILConfig *) ShbLock(hShbSMAIL);
 
-    if (pPSYNCCfg == NULL)
+    if (pLMAILCfg == NULL)
         return (NULL);
 
-    SMAILConfig    *pNewPSYNCCfg = (SMAILConfig *) SysAlloc(sizeof(SMAILConfig));
+    SMAILConfig    *pNewLMAILCfg = (SMAILConfig *) SysAlloc(sizeof(SMAILConfig));
 
-    if (pNewPSYNCCfg != NULL)
-        memcpy(pNewPSYNCCfg, pPSYNCCfg, sizeof(SMAILConfig));
+    if (pNewLMAILCfg != NULL)
+        memcpy(pNewLMAILCfg, pLMAILCfg, sizeof(SMAILConfig));
 
     ShbUnlock(hShbSMAIL);
 
-    return (pNewPSYNCCfg);
+    return (pNewLMAILCfg);
 
 }
 
@@ -185,27 +185,17 @@ static int      SMAILLogEnabled(SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg)
 unsigned int    SMAILThreadProc(void *pThreadData)
 {
 
-    SHB_HANDLE      hShbSMAIL = ShbConnectBlock(SHB_SMAILSvr);
-
-    if (hShbSMAIL == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        return (ErrorPop());
-    }
-
     SMAILConfig    *pSMAILCfg = (SMAILConfig *) ShbLock(hShbSMAIL);
 
     if (pSMAILCfg == NULL)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        ShbCloseBlock(hShbSMAIL);
         return (ErrorPop());
     }
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Get retry timeout and thread id
+//  Get thread id
 ///////////////////////////////////////////////////////////////////////////////
     long            lThreadId = pSMAILCfg->lThreadCount;
 
@@ -252,8 +242,6 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 ///////////////////////////////////////////////////////////////////////////////
     SMAILThreadCountAdd(-1, hShbSMAIL);
 
-
-    ShbCloseBlock(hShbSMAIL);
 
     SysLogMessage(LOG_LEV_MESSAGE, "SMAIL thread [%02ld] stopped\n", lThreadId);
 
@@ -1255,7 +1243,7 @@ static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDom
         USmtpCleanupError(&SMTPE);
 
         if (USmtpSendMail(ppszRelays[ss], pszSMTPDomain, pszSendMailFrom, pszSendRcptTo,
-                pszMailFile, &SMTPE) == 0)
+                        pszMailFile, &SMTPE) == 0)
         {
 ///////////////////////////////////////////////////////////////////////////////
 //  Log Mailer operation

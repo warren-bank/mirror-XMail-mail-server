@@ -23,8 +23,10 @@ set -e
 
 start_xmail()
 {
-    export MAIL_ROOT=$XMAIL_ROOT
-    export MAIL_CMD_LINE=$XMAIL_CMD_LINE
+    MAIL_ROOT=$XMAIL_ROOT
+	export MAIL_ROOT
+    MAIL_CMD_LINE=$XMAIL_CMD_LINE
+	export MAIL_CMD_LINE
     $DAEMON
     while [ ! -f /var/run/$NAME.pid ]
     do

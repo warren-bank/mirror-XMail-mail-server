@@ -41,6 +41,7 @@
 #define ZeroData(d)             memset(&(d), 0, sizeof(d))
 #define CountOf(t)              (sizeof(t) / sizeof((t)[0]))
 #define SetEmptyString(s)       (s)[0] = '\0'
+#define IsEmptyString(s)        (*(s) == '\0')
 #define CharISame(a, b)         (tolower(a) == tolower(b))
 #define StrINComp(s, t)         strnicmp(s, t, strlen(t))
 #define StrNComp(s, t)          strncmp(s, t, strlen(t))
@@ -53,6 +54,8 @@
 #define ErrorFetch()            iPushedError
 #define SysFreeCheck(p)         do { if ((p) != NULL) SysFree(p), (p) = NULL; } while(0)
 #define IsDotFilename(f)        ((f)[0] == '.')
+#define IsEmailAddress(a)       (strchr((a), '@') != NULL)
+
 
 
 

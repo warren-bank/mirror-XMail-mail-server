@@ -39,6 +39,7 @@
 #include "UsrUtils.h"
 #include "Maildir.h"
 #include "TabIndex.h"
+#include "SMTPUtils.h"
 #include "UsrAuth.h"
 
 
@@ -1257,6 +1258,12 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
         return (ERR_FILE_CREATE);
     }
 
+
+    char            szUserAddress[MAX_ADDR_NAME] = "";
+
+    sprintf(szUserAddress, "%s@%s", pszName, pszDomain);
+
+
     int             iAliasFound = 0;
     char            szAlsLine[USR_ALIAS_LINE_MAX] = "";
 
@@ -1270,8 +1277,9 @@ static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= alsMax) &&
-                (stricmp(pszName, ppszStrings[alsName]) == 0) &&
-                (stricmp(pszDomain, ppszStrings[alsDomain]) == 0))
+                (((stricmp(pszName, ppszStrings[alsName]) == 0) &&
+                    (stricmp(pszDomain, ppszStrings[alsDomain]) == 0)) ||
+                (stricmp(szUserAddress, ppszStrings[alsName]) == 0)))
         {
 
             ++iAliasFound;
@@ -1387,14 +1395,28 @@ UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
 
 
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
-                        char *pszRealUser)
+                        char *pszRealAddr)
 {
 
-    char           *pszAliasedUser = NULL;
-    char            szAliasedUser[MAX_ADDR_NAME] = "";
+    char const     *pszAliasedUser = NULL,
+                   *pszAliasedDomain = NULL;
+    char            szAliasedAccount[MAX_ADDR_NAME] = "",
+                    szAliasedName[MAX_ADDR_NAME] = "",
+                    szAliasedDomain[MAX_ADDR_NAME] = "";
 
-    if (UsrAliasLookupName(pszDomain, pszName, szAliasedUser))
-        pszAliasedUser = szAliasedUser;
+    if (UsrAliasLookupName(pszDomain, pszName, szAliasedAccount))
+    {
+        if (USmtpSplitEmailAddr(szAliasedAccount, szAliasedName, szAliasedDomain) < 0)
+        {
+            pszAliasedUser = szAliasedAccount;
+            pszAliasedDomain = pszDomain;
+        }
+        else
+        {
+            pszAliasedUser = szAliasedName;
+            pszAliasedDomain = szAliasedDomain;
+        }
+    }
 
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
@@ -1412,14 +1434,10 @@ UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszNa
     UserInfo       *pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszName);
 
     if ((pUI == NULL) && (pszAliasedUser != NULL))
-    {
-        pUI = UsrGetUserByNameLK(szUsrFilePath, pszDomain, pszAliasedUser);
+        pUI = UsrGetUserByNameLK(szUsrFilePath, pszAliasedDomain, pszAliasedUser);
 
-        pszName = pszAliasedUser;
-    }
-
-    if (pszRealUser != NULL)
-        strcpy(pszRealUser, pszName);
+    if ((pUI != NULL) && (pszRealAddr != NULL))
+        UsrGetAddress(pUI, pszRealAddr);
 
 
     RLckUnlockSH(hResLock);

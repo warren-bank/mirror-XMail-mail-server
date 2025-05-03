@@ -24,7 +24,6 @@
 #include "SysInclude.h"
 #include "SysDep.h"
 #include "SvrDefines.h"
-#include "MemHeap.h"
 #include "ShBlocks.h"
 #include "ResLocks.h"
 #include "BuffSock.h"
@@ -38,15 +37,7 @@
 
 
 
-#define NUM_ACCOUNTS_X_GATE         32
-#define MIN_LOCK_MEMORY             (64 * 1024)
-#define MAX_LOCK_MEMORY             (1024 * 1024)
-
-#define MIN_WAIT_GATES              101
-#define MAX_WAIT_GATES              5381
-#define MAX_WAIT_GATE_SEMAPHORES    64
-
-#define END_OF_LIST                 ((SYS_PTRUINT) -1)
+#define STD_WAIT_GATES              37
 
 
 
@@ -55,54 +46,22 @@
 
 
 
-struct GatesAllocParams
-{
-    int             iNumGates;
-    int             iNumSemaphores;
-    int             iLockMemorySize;
-};
-
-struct WaitGateSemaphore
-{
-    SYS_IPCNAME     SemName;
-    SYS_SEMAPHORE   SemID;
-};
 
 struct ResWaitGate
 {
-    SYS_IPCNAME     SemName;
+    SYS_SEMAPHORE   hSemaphore;
     int             iWaitingProcesses;
-    SYS_PTRUINT     uResList;
+    SysListHead     ResList;
 };
-/* INDENT OFF */
 
 struct ResLockEntry
 {
-    SYS_PTRUINT    uNext;
-    SYS_UINT32      ShLocks:31;
-    SYS_UINT32      ExLocks:1;
+    SysListHead     LLink;
+    int             iShLocks;
+    int             iExLocks;
     char            szName[1];
 };
 
-/* INDENT ON */
-
-struct ResLockArena
-{
-    MemHeapData     MHD;
-    int             iNumSemaphores;
-    SYS_PTRUINT     uSemaphoresPtr;
-    int             iNumGates;
-    SYS_PTRUINT     uGatesPtr;
-};
-
-struct ResArenaConnection
-{
-    SHB_HANDLE      hResLocks;
-    ResLockArena   *pRLA;
-    unsigned char  *pHeapBase;
-    WaitGateSemaphore *pWGS;
-    ResWaitGate    *pRWG;
-};
 
 
 
@@ -111,31 +70,20 @@ struct ResArenaConnection
 
 
 
-static int      RLckSetupAllocParams(int iNumAccounts, GatesAllocParams & GAP);
-static int      RLckConnectArena(ResArenaConnection & RAC);
-static int      RLckDisconnectArena(ResArenaConnection & RAC);
-static int      RLckLockArena(ResArenaConnection & RAC);
-static int      RLckUnlockArena(ResArenaConnection & RAC);
+
 static char    *RLckGetResourceName(unsigned int uUserID, unsigned int uResID,
                         char *pszResourceName);
-static int      RLckGetWaitGate(char const * pszResourceName, int iNumGates);
-static ResLockEntry *RLckGetEntry(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName);
-static int      RLckRemoveEntry(ResArenaConnection & RAC, int iWaitGate,
-                        ResLockEntry * pRLE);
-static ResLockEntry *RLckAllocEntry(ResArenaConnection & RAC, char const * pszResourceName);
-static int      RLckTryLockEX(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName);
-static int      RLckDoUnlockEX(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName);
-static int      RLckTryLockSH(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName);
-static int      RLckDoUnlockSH(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName);
-static RLCK_HANDLE RLckLock(char const * pszResourceName,
-                        int (*pLockProc) (ResArenaConnection &, int, char const *));
-static int      RLckUnlock(RLCK_HANDLE hLock,
-                        int (*pUnlockProc) (ResArenaConnection &, int, char const *));
+static int      RLckGetWaitGate(char const * pszResourceName);
+static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName);
+static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE);
+static ResLockEntry *RLckAllocEntry(char const * pszResourceName);
+static int      RLckFreeEntry(ResLockEntry * pRLE);
+static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName);
+static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName);
+static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName);
+static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName);
+static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int, char const *));
+static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char const *));
 
 
 
@@ -149,7 +97,8 @@ static int      RLckUnlock(RLCK_HANDLE hLock,
 
 
 
-static SharedBlock SHB_ResLocks;
+static SYS_MUTEX hRLMutex = SYS_INVALID_MUTEX;
+static ResWaitGate RLGates[STD_WAIT_GATES];
 
 
 
@@ -162,151 +111,36 @@ static SharedBlock SHB_ResLocks;
 
 
 
-static int      RLckSetupAllocParams(int iNumAccounts, GatesAllocParams & GAP)
-{
 
-    ZeroData(GAP);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Calculate the number of gates
-///////////////////////////////////////////////////////////////////////////////
-    int             iGates = iNumAccounts / NUM_ACCOUNTS_X_GATE;
-
-    while (!IsPrimeNumber(iGates))
-        ++iGates;
-
-    GAP.iNumGates = max(MIN_WAIT_GATES, min(iGates, MAX_WAIT_GATES));
-
-///////////////////////////////////////////////////////////////////////////////
-//  Calculate the number of semaphores
-///////////////////////////////////////////////////////////////////////////////
-    GAP.iNumSemaphores = min(GAP.iNumGates / 80 + 1, MAX_WAIT_GATE_SEMAPHORES);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Calculate locking memory heap size
-///////////////////////////////////////////////////////////////////////////////
-    int             iLockMemory = (iNumAccounts / 8) * 80;
-
-    GAP.iLockMemorySize = min(MAX_LOCK_MEMORY, max(iLockMemory, MIN_LOCK_MEMORY));
-
-
-    return (0);
-
-}
-
-
-
-int             RLckInitLockers(int iNumAccounts)
+int             RLckInitLockers(void)
 {
 ///////////////////////////////////////////////////////////////////////////////
-//  Calculate allocation params
+//  Create resource locking mutex
 ///////////////////////////////////////////////////////////////////////////////
-    GatesAllocParams GAP;
-
-    RLckSetupAllocParams(iNumAccounts, GAP);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Create resource locking shared block
-///////////////////////////////////////////////////////////////////////////////
-    unsigned int    uAllocSize = (sizeof(ResLockArena) + GAP.iLockMemorySize +
-            GAP.iNumGates * sizeof(ResWaitGate) + GAP.iNumSemaphores * sizeof(WaitGateSemaphore));
-
-    if (ShbCreateBlock(SHB_ResLocks, uAllocSize) < 0)
+    if ((hRLMutex = SysCreateMutex()) == SYS_INVALID_MUTEX)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Connect to shared block
+//  Initialize wait gates
 ///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hResLocks = ShbConnectBlock(SHB_ResLocks);
-
-    if (hResLocks == SHB_INVALID_HANDLE)
+    for (int ii = 0; ii < STD_WAIT_GATES; ii++)
     {
-        ErrorPush();
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
-    }
-
-    ResLockArena   *pRLA = (ResLockArena *) ShbLock(hResLocks);
-
-    if (pRLA == NULL)
-    {
-        ErrorPush();
-        ShbCloseBlock(hResLocks);
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Setup resource entries heap
-///////////////////////////////////////////////////////////////////////////////
-    unsigned char  *pHeapBase = (unsigned char *) pRLA + sizeof(ResLockArena);
-
-    if (HeapSetup(pRLA->MHD, pHeapBase, uAllocSize - sizeof(ResLockArena)) < 0)
-    {
-        ErrorPush();
-        ShbUnlock(hResLocks);
-        ShbCloseBlock(hResLocks);
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
-    }
-
-    pRLA->iNumSemaphores = GAP.iNumSemaphores;
-    pRLA->iNumGates = GAP.iNumGates;
-
-///////////////////////////////////////////////////////////////////////////////
-//  Allocates gates table and semaphore table
-///////////////////////////////////////////////////////////////////////////////
-    if (((pRLA->uSemaphoresPtr = HeapAlloc(pRLA->MHD, pHeapBase,
-                                    GAP.iNumSemaphores * sizeof(WaitGateSemaphore))) == 0) ||
-            ((pRLA->uGatesPtr = HeapAlloc(pRLA->MHD, pHeapBase,
-                                    GAP.iNumGates * sizeof(ResWaitGate))) == 0))
-    {
-        ErrorPush();
-        ShbUnlock(hResLocks);
-        ShbCloseBlock(hResLocks);
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Setup gates semaphores
-///////////////////////////////////////////////////////////////////////////////
-    WaitGateSemaphore *pWGS = (WaitGateSemaphore *) HEAP_ADDRESS(pHeapBase, pRLA->uSemaphoresPtr);
-
-    for (int ii = 0; ii < GAP.iNumSemaphores; ii++)
-    {
-        pWGS[ii].SemName = SysCreateIPCName();
-
-        if ((pWGS[ii].SemID = SysCreateSemaphore(0, SYS_DEFAULT_MAXCOUNT,
-                                pWGS[ii].SemName)) == SYS_INVALID_SEMAPHORE)
+        if ((RLGates[ii].hSemaphore = SysCreateSemaphore(0,
+                                SYS_DEFAULT_MAXCOUNT)) == SYS_INVALID_SEMAPHORE)
         {
             ErrorPush();
 
             for (--ii; ii >= 0; ii--)
-                SysCloseSemaphore(pWGS[ii].SemID), SysKillSemaphore(pWGS[ii].SemID);
+                SysCloseSemaphore(RLGates[ii].hSemaphore);
 
-            ShbUnlock(hResLocks);
-            ShbCloseBlock(hResLocks);
-            ShbDestroyBlock(SHB_ResLocks);
+            SysCloseMutex(hRLMutex);
             return (ErrorPop());
         }
+
+        RLGates[ii].iWaitingProcesses = 0;
+
+        SYS_INIT_LIST_HEAD(&RLGates[ii].ResList);
     }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Setup gates table
-///////////////////////////////////////////////////////////////////////////////
-    ResWaitGate    *pRWG = (ResWaitGate *) HEAP_ADDRESS(pHeapBase, pRLA->uGatesPtr);
-
-    for (int ww = 0, ss = 0; ww < GAP.iNumGates; ww++, ss = INext(ss, GAP.iNumSemaphores))
-    {
-        pRWG[ww].SemName = pWGS[ss].SemName;
-        pRWG[ww].iWaitingProcesses = 0;
-        pRWG[ww].uResList = END_OF_LIST;
-    }
-
-    ShbUnlock(hResLocks);
-
-    ShbCloseBlock(hResLocks);
 
     return (0);
 
@@ -317,100 +151,28 @@ int             RLckInitLockers(int iNumAccounts)
 int             RLckCleanupLockers(void)
 {
 
-    ResArenaConnection RAC;
+    SysLockMutex(hRLMutex, SYS_INFINITE_TIMEOUT);
 
-    if (RLckConnectArena(RAC) < 0)
+    for (int ii = 0; ii < STD_WAIT_GATES; ii++)
     {
-        ErrorPush();
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
+        SysListHead    *pLLink;
+
+        SYS_LIST_FOR_EACH(pLLink, &RLGates[ii].ResList)
+        {
+            ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
+
+            SYS_LIST_DEL(&pRLE->LLink);
+
+            RLckFreeEntry(pRLE);
+        }
+
+
+        SysCloseSemaphore(RLGates[ii].hSemaphore);
     }
 
-    if (RLckLockArena(RAC) < 0)
-    {
-        ErrorPush();
-        RLckDisconnectArena(RAC);
-        ShbDestroyBlock(SHB_ResLocks);
-        return (ErrorPop());
-    }
+    SysUnlockMutex(hRLMutex);
 
-
-    for (int ii = 0; ii < RAC.pRLA->iNumSemaphores; ii++)
-        SysCloseSemaphore(RAC.pWGS[ii].SemID), SysKillSemaphore(RAC.pWGS[ii].SemID);
-
-
-    RLckUnlockArena(RAC);
-
-    RLckDisconnectArena(RAC);
-
-    ShbDestroyBlock(SHB_ResLocks);
-
-    return (0);
-
-}
-
-
-
-
-static int      RLckConnectArena(ResArenaConnection & RAC)
-{
-
-    ZeroData(RAC);
-
-    if ((RAC.hResLocks = ShbConnectBlock(SHB_ResLocks)) == SHB_INVALID_HANDLE)
-        return (ErrGetErrorCode());
-
-    RAC.pRLA = NULL;
-    RAC.pHeapBase = NULL;
-    RAC.pWGS = NULL;
-    RAC.pRWG = NULL;
-
-    return (0);
-
-}
-
-
-
-static int      RLckDisconnectArena(ResArenaConnection & RAC)
-{
-
-    ShbCloseBlock(RAC.hResLocks);
-
-    ZeroData(RAC);
-
-    return (0);
-
-}
-
-
-
-static int      RLckLockArena(ResArenaConnection & RAC)
-{
-
-    if ((RAC.pRLA = (ResLockArena *) ShbLock(RAC.hResLocks)) == NULL)
-        return (ErrGetErrorCode());
-
-    RAC.pHeapBase = (unsigned char *) RAC.pRLA + sizeof(ResLockArena);
-
-    RAC.pWGS = (WaitGateSemaphore *) HEAP_ADDRESS(RAC.pHeapBase, RAC.pRLA->uSemaphoresPtr);
-
-    RAC.pRWG = (ResWaitGate *) HEAP_ADDRESS(RAC.pHeapBase, RAC.pRLA->uGatesPtr);
-
-    return (0);
-
-}
-
-
-
-static int      RLckUnlockArena(ResArenaConnection & RAC)
-{
-
-    ShbUnlock(RAC.hResLocks);
-
-    RAC.pRLA = NULL;
-    RAC.pHeapBase = NULL;
-    RAC.pWGS = NULL;
-    RAC.pRWG = NULL;
+    SysCloseMutex(hRLMutex);
 
     return (0);
 
@@ -430,32 +192,32 @@ static char    *RLckGetResourceName(unsigned int uUserID, unsigned int uResID,
 
 
 
-static int      RLckGetWaitGate(char const * pszResourceName, int iNumGates)
+static int      RLckGetWaitGate(char const * pszResourceName)
 {
 
     SYS_UINT32      uHashValue = MscHashString(pszResourceName, strlen(pszResourceName));
 
-    return ((int) (uHashValue % iNumGates));
+    return ((int) (uHashValue % STD_WAIT_GATES));
 
 }
 
 
 
-static ResLockEntry *RLckGetEntry(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName)
+static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName)
 {
 
-    SYS_PTRUINT     uListPtr = RAC.pRWG[iWaitGate].uResList;
+    SysListHead    *pLLink;
 
-    while (uListPtr != END_OF_LIST)
+    SYS_LIST_FOR_EACH(pLLink, &RLGates[iWaitGate].ResList)
     {
-        ResLockEntry   *pRLE = (ResLockEntry *) HEAP_ADDRESS(RAC.pHeapBase, uListPtr);
+        ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
         if (stricmp(pszResourceName, pRLE->szName) == 0)
             return (pRLE);
 
-        uListPtr = pRLE->uNext;
     }
+
+    ErrSetErrorCode(ERR_LOCK_ENTRY_NOT_FOUND);
 
     return (NULL);
 
@@ -463,69 +225,44 @@ static ResLockEntry *RLckGetEntry(ResArenaConnection & RAC, int iWaitGate,
 
 
 
-static int      RLckRemoveEntry(ResArenaConnection & RAC, int iWaitGate,
-                        ResLockEntry * pRLE)
+static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE)
 {
 
-    SYS_PTRUINT     uPrevPtr = END_OF_LIST,
-                    uListPtr = RAC.pRWG[iWaitGate].uResList;
+    SysListHead    *pLLink;
 
-    while (uListPtr != END_OF_LIST)
+    SYS_LIST_FOR_EACH(pLLink, &RLGates[iWaitGate].ResList)
     {
-        ResLockEntry   *pCurrRLE = (ResLockEntry *) HEAP_ADDRESS(RAC.pHeapBase, uListPtr);
+        ResLockEntry   *pCurrRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
         if (pCurrRLE == pRLE)
-            break;
+        {
+            SYS_LIST_DEL(&pRLE->LLink);
 
-        uPrevPtr = uListPtr;
-        uListPtr = pCurrRLE->uNext;
+            RLckFreeEntry(pRLE);
+
+            return (0);
+        }
     }
 
-    if (uListPtr == END_OF_LIST)
-    {
-        ErrSetErrorCode(ERR_LOCK_ENTRY_NOT_FOUND);
-        return (ERR_LOCK_ENTRY_NOT_FOUND);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Delete entry from list
-///////////////////////////////////////////////////////////////////////////////
-    if (uPrevPtr == END_OF_LIST)
-        RAC.pRWG[iWaitGate].uResList = pRLE->uNext;
-    else
-    {
-        ResLockEntry   *pPrevRLE = (ResLockEntry *) HEAP_ADDRESS(RAC.pHeapBase, uPrevPtr);
-
-        pPrevRLE->uNext = pRLE->uNext;
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Free heap memory
-///////////////////////////////////////////////////////////////////////////////
-    if (HeapFree(RAC.pRLA->MHD, RAC.pHeapBase, HEAP_OFFSET(pRLE, RAC.pHeapBase)) < 0)
-        return (ErrGetErrorCode());
-
-
-    return (0);
+    ErrSetErrorCode(ERR_LOCK_ENTRY_NOT_FOUND);
+    return (ERR_LOCK_ENTRY_NOT_FOUND);
 
 }
 
 
 
-static ResLockEntry *RLckAllocEntry(ResArenaConnection & RAC, char const * pszResourceName)
+static ResLockEntry *RLckAllocEntry(char const * pszResourceName)
 {
 
-    SYS_PTRUINT     uEntryPtr = HeapAlloc(RAC.pRLA->MHD, RAC.pHeapBase,
-            sizeof(ResLockEntry) + strlen(pszResourceName));
+    ResLockEntry   *pRLE = (ResLockEntry *) SysAlloc(sizeof(ResLockEntry) +
+            strlen(pszResourceName));
 
-    if (uEntryPtr == 0)
+    if (pRLE == NULL)
         return (NULL);
 
-    ResLockEntry   *pRLE = (ResLockEntry *) HEAP_ADDRESS(RAC.pHeapBase, uEntryPtr);
-
-    pRLE->uNext = END_OF_LIST;
-    pRLE->ShLocks = 0;
-    pRLE->ExLocks = 0;
+    SYS_INIT_LIST_HEAD(&pRLE->LLink);
+    pRLE->iShLocks = 0;
+    pRLE->iExLocks = 0;
     strcpy(pRLE->szName, pszResourceName);
 
     return (pRLE);
@@ -534,35 +271,44 @@ static ResLockEntry *RLckAllocEntry(ResArenaConnection & RAC, char const * pszRe
 
 
 
-static int      RLckTryLockEX(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName)
+static int      RLckFreeEntry(ResLockEntry * pRLE)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(RAC, iWaitGate, pszResourceName);
+    SysFree(pRLE);
+
+    return (0);
+
+}
+
+
+
+static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName)
+{
+
+    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
 
     if (pRLE == NULL)
     {
-        if ((pRLE = RLckAllocEntry(RAC, pszResourceName)) == NULL)
+        if ((pRLE = RLckAllocEntry(pszResourceName)) == NULL)
             return (ErrGetErrorCode());
 
-        pRLE->ExLocks = 1;
+        pRLE->iExLocks = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Insert new entry in resource list
 ///////////////////////////////////////////////////////////////////////////////
-        pRLE->uNext = RAC.pRWG[iWaitGate].uResList;
+        SYS_LIST_ADDH(&pRLE->LLink, &RLGates[iWaitGate].ResList);
 
-        RAC.pRWG[iWaitGate].uResList = HEAP_OFFSET(pRLE, RAC.pHeapBase);
     }
     else
     {
-        if (pRLE->ExLocks || (pRLE->ShLocks != 0))
+        if ((pRLE->iExLocks > 0) || (pRLE->iShLocks > 0))
         {
             ErrSetErrorCode(ERR_LOCKED_RESOURCE);
             return (ERR_LOCKED_RESOURCE);
         }
 
-        pRLE->ExLocks = 1;
+        pRLE->iExLocks = 1;
     }
 
     return (0);
@@ -571,43 +317,33 @@ static int      RLckTryLockEX(ResArenaConnection & RAC, int iWaitGate,
 
 
 
-static int      RLckDoUnlockEX(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName)
+static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(RAC, iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
 
-    if ((pRLE == NULL) || !pRLE->ExLocks)
+    if ((pRLE == NULL) || (pRLE->iExLocks == 0))
     {
         ErrSetErrorCode(ERR_RESOURCE_NOT_LOCKED);
         return (ERR_RESOURCE_NOT_LOCKED);
     }
 
-    pRLE->ExLocks = 0;
+    pRLE->iExLocks = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Remove entry from list and delete entry heap memory
+//  Remove entry from list and delete entry memory
 ///////////////////////////////////////////////////////////////////////////////
-    if (RLckRemoveEntry(RAC, iWaitGate, pRLE) < 0)
+    if (RLckRemoveEntry(iWaitGate, pRLE) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Release waiting processes
 ///////////////////////////////////////////////////////////////////////////////
-    if (RAC.pRWG[iWaitGate].iWaitingProcesses > 0)
+    if (RLGates[iWaitGate].iWaitingProcesses > 0)
     {
-        SYS_SEMAPHORE   SemID = SysConnectSemaphore(0, SYS_DEFAULT_MAXCOUNT,
-                RAC.pRWG[iWaitGate].SemName);
+        SysReleaseSemaphore(RLGates[iWaitGate].hSemaphore, RLGates[iWaitGate].iWaitingProcesses);
 
-        if (SemID == SYS_INVALID_SEMAPHORE)
-            return (ErrGetErrorCode());
-
-
-        SysReleaseSemaphore(SemID, RAC.pRWG[iWaitGate].iWaitingProcesses);
-
-        RAC.pRWG[iWaitGate].iWaitingProcesses = 0;
-
-        SysCloseSemaphore(SemID);
+        RLGates[iWaitGate].iWaitingProcesses = 0;
     }
 
     return (0);
@@ -616,35 +352,33 @@ static int      RLckDoUnlockEX(ResArenaConnection & RAC, int iWaitGate,
 
 
 
-static int      RLckTryLockSH(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName)
+static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(RAC, iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
 
     if (pRLE == NULL)
     {
-        if ((pRLE = RLckAllocEntry(RAC, pszResourceName)) == NULL)
+        if ((pRLE = RLckAllocEntry(pszResourceName)) == NULL)
             return (ErrGetErrorCode());
 
-        pRLE->ShLocks = 1;
+        pRLE->iShLocks = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Insert new entry in resource list
 ///////////////////////////////////////////////////////////////////////////////
-        pRLE->uNext = RAC.pRWG[iWaitGate].uResList;
+        SYS_LIST_ADDH(&pRLE->LLink, &RLGates[iWaitGate].ResList);
 
-        RAC.pRWG[iWaitGate].uResList = HEAP_OFFSET(pRLE, RAC.pHeapBase);
     }
     else
     {
-        if (pRLE->ExLocks)
+        if (pRLE->iExLocks > 0)
         {
             ErrSetErrorCode(ERR_LOCKED_RESOURCE);
             return (ERR_LOCKED_RESOURCE);
         }
 
-        ++pRLE->ShLocks;
+        ++pRLE->iShLocks;
     }
 
     return (0);
@@ -653,43 +387,33 @@ static int      RLckTryLockSH(ResArenaConnection & RAC, int iWaitGate,
 
 
 
-static int      RLckDoUnlockSH(ResArenaConnection & RAC, int iWaitGate,
-                        char const * pszResourceName)
+static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(RAC, iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
 
-    if ((pRLE == NULL) || (pRLE->ShLocks == 0))
+    if ((pRLE == NULL) || (pRLE->iShLocks == 0))
     {
         ErrSetErrorCode(ERR_RESOURCE_NOT_LOCKED);
         return (ERR_RESOURCE_NOT_LOCKED);
     }
 
-    if (--pRLE->ShLocks == 0)
+    if (--pRLE->iShLocks == 0)
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove entry from list and delete entry heap memory
 ///////////////////////////////////////////////////////////////////////////////
-        if (RLckRemoveEntry(RAC, iWaitGate, pRLE) < 0)
+        if (RLckRemoveEntry(iWaitGate, pRLE) < 0)
             return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Release waiting processes
 ///////////////////////////////////////////////////////////////////////////////
-        if (RAC.pRWG[iWaitGate].iWaitingProcesses > 0)
+        if (RLGates[iWaitGate].iWaitingProcesses > 0)
         {
-            SYS_SEMAPHORE   SemID = SysConnectSemaphore(0, SYS_DEFAULT_MAXCOUNT,
-                    RAC.pRWG[iWaitGate].SemName);
+            SysReleaseSemaphore(RLGates[iWaitGate].hSemaphore, RLGates[iWaitGate].iWaitingProcesses);
 
-            if (SemID == SYS_INVALID_SEMAPHORE)
-                return (ErrGetErrorCode());
-
-
-            SysReleaseSemaphore(SemID, RAC.pRWG[iWaitGate].iWaitingProcesses);
-
-            RAC.pRWG[iWaitGate].iWaitingProcesses = 0;
-
-            SysCloseSemaphore(SemID);
+            RLGates[iWaitGate].iWaitingProcesses = 0;
         }
     }
 
@@ -699,76 +423,51 @@ static int      RLckDoUnlockSH(ResArenaConnection & RAC, int iWaitGate,
 
 
 
-static RLCK_HANDLE RLckLock(char const * pszResourceName,
-                        int (*pLockProc) (ResArenaConnection &, int, char const *))
+static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int, char const *))
 {
 
-    ResArenaConnection RAC;
-
-    if (RLckConnectArena(RAC) < 0)
-        return (INVALID_RLCK_HANDLE);
-
-
     int             iWaitGate = -1;
-    SYS_SEMAPHORE   SemID = SYS_INVALID_SEMAPHORE;
 
     for (;;)
     {
-        if (RLckLockArena(RAC) < 0)
-        {
-            RLckDisconnectArena(RAC);
+///////////////////////////////////////////////////////////////////////////////
+//  Lock resources list access
+///////////////////////////////////////////////////////////////////////////////
+        if (SysLockMutex(hRLMutex, SYS_INFINITE_TIMEOUT) < 0)
             return (INVALID_RLCK_HANDLE);
-        }
+
 
         if (iWaitGate < 0)
-            iWaitGate = RLckGetWaitGate(pszResourceName, RAC.pRLA->iNumGates);
+            iWaitGate = RLckGetWaitGate(pszResourceName);
 
 
-        int             iLockResult = pLockProc(RAC, iWaitGate, pszResourceName);
+        int             iLockResult = pLockProc(iWaitGate, pszResourceName);
 
 
         if (iLockResult == ERR_LOCKED_RESOURCE)
         {
-            if ((SemID == SYS_INVALID_SEMAPHORE) &&
-                    ((SemID = SysConnectSemaphore(0, SYS_DEFAULT_MAXCOUNT,
-                                            RAC.pRWG[iWaitGate].SemName)) == SYS_INVALID_SEMAPHORE))
-            {
-                RLckUnlockArena(RAC);
-                RLckDisconnectArena(RAC);
-                return (INVALID_RLCK_HANDLE);
-            }
+            SYS_SEMAPHORE   SemID = RLGates[iWaitGate].hSemaphore;
 
-            ++RAC.pRWG[iWaitGate].iWaitingProcesses;
+            ++RLGates[iWaitGate].iWaitingProcesses;
 
-            RLckUnlockArena(RAC);
+            SysUnlockMutex(hRLMutex);
 
             if (SysWaitSemaphore(SemID, SYS_INFINITE_TIMEOUT) < 0)
-            {
-                SysCloseSemaphore(SemID);
-                RLckDisconnectArena(RAC);
                 return (INVALID_RLCK_HANDLE);
-            }
         }
         else if (iLockResult == 0)
         {
-            RLckUnlockArena(RAC);
+            SysUnlockMutex(hRLMutex);
 
             break;
         }
         else
         {
-            if (SemID != SYS_INVALID_SEMAPHORE)
-                SysCloseSemaphore(SemID);
-            RLckUnlockArena(RAC);
-            RLckDisconnectArena(RAC);
+            SysUnlockMutex(hRLMutex);
+
             return (INVALID_RLCK_HANDLE);
         }
     }
-
-    if (SemID != SYS_INVALID_SEMAPHORE)
-        SysCloseSemaphore(SemID);
-
-    RLckDisconnectArena(RAC);
 
     return ((RLCK_HANDLE) SysStrDup(pszResourceName));
 
@@ -776,41 +475,29 @@ static RLCK_HANDLE RLckLock(char const * pszResourceName,
 
 
 
-static int      RLckUnlock(RLCK_HANDLE hLock,
-                        int (*pUnlockProc) (ResArenaConnection &, int, char const *))
+static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char const *))
 {
 
     char           *pszResourceName = (char *) hLock;
-    ResArenaConnection RAC;
 
-    if (RLckConnectArena(RAC) < 0)
-    {
-        SysFree(pszResourceName);
+///////////////////////////////////////////////////////////////////////////////
+//  Lock resources list access
+///////////////////////////////////////////////////////////////////////////////
+    if (SysLockMutex(hRLMutex, SYS_INFINITE_TIMEOUT) < 0)
         return (ErrGetErrorCode());
-    }
 
-    if (RLckLockArena(RAC) < 0)
+
+    int             iWaitGate = RLckGetWaitGate(pszResourceName);
+
+    if (pUnlockProc(iWaitGate, pszResourceName) < 0)
     {
         ErrorPush();
-        RLckDisconnectArena(RAC);
+        SysUnlockMutex(hRLMutex);
         SysFree(pszResourceName);
         return (ErrorPop());
     }
 
-    int             iWaitGate = RLckGetWaitGate(pszResourceName, RAC.pRLA->iNumGates);
-
-    if (pUnlockProc(RAC, iWaitGate, pszResourceName) < 0)
-    {
-        ErrorPush();
-        RLckUnlockArena(RAC);
-        RLckDisconnectArena(RAC);
-        SysFree(pszResourceName);
-        return (ErrorPop());
-    }
-
-    RLckUnlockArena(RAC);
-
-    RLckDisconnectArena(RAC);
+    SysUnlockMutex(hRLMutex);
 
     SysFree(pszResourceName);
 

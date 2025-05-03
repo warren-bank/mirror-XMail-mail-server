@@ -1697,8 +1697,10 @@ int             USmtpSendMail(BSOCK_HANDLE hBSock, const char *pszFrom, const ch
 ///////////////////////////////////////////////////////////////////////////////
 //  Send file
 ///////////////////////////////////////////////////////////////////////////////
+    time_t          tCheckPoint = time(NULL);
+
     if (SysSendFile(BSckGetAttachedSocket(hBSock), pszFileName, STD_SMTP_TIMEOUT,
-                    SvrShutdownCB, NULL) < 0)
+                    SvrShutdownCB, &tCheckPoint) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1874,7 +1876,10 @@ MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
 ///////////////////////////////////////////////////////////////////////////////
     int             iMXCost = INT_MAX,
                     iCurrIndex = -1;
-    char           *pszToken = strtok(pszMXHosts, ":, \t\r\n");
+    char           *pszToken = NULL,
+                   *pszSavePtr = NULL;
+
+    pszToken = SysStrTok(pszMXHosts, ":, \t\r\n", &pszSavePtr);
 
     while ((pMXR->iNumMXRecords < MAX_MX_RECORDS) && (pszToken != NULL))
     {
@@ -1883,7 +1888,7 @@ MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
 ///////////////////////////////////////////////////////////////////////////////
         int             iCost = atoi(pszToken);
 
-        if ((pszToken = strtok(NULL, ":, \t\r\n")) == NULL)
+        if ((pszToken = SysStrTok(NULL, ":, \t\r\n", &pszSavePtr)) == NULL)
         {
             for (--pMXR->iNumMXRecords; pMXR->iNumMXRecords >= 0; pMXR->iNumMXRecords--)
                 SysFree(pMXR->pszMXName[pMXR->iNumMXRecords]);
@@ -1909,7 +1914,7 @@ MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
 
         ++pMXR->iNumMXRecords;
 
-        pszToken = strtok(NULL, ":, \t\r\n");
+        pszToken = SysStrTok(NULL, ":, \t\r\n", &pszSavePtr);
     }
 
     SysFree(pszMXHosts);

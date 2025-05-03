@@ -21,23 +21,46 @@
  */
 
 
-#ifndef _SWMR_H
-#define _SWMR_H
+#ifndef _SYSINCLUDELINUX_H
+#define _SYSINCLUDELINUX_H
 
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/select.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+#include <ctype.h>
+#include <signal.h>
+#include <time.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <netdb.h>
+#include <dirent.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/nameser.h>
+#include <syslog.h>
+#include <dlfcn.h>
+#include <sched.h>
+#include <thread.h>
+#include <pthread.h>
 
-int             SWMRCreateHandler(SharedBlock & SHB);
-int             SWMRDestroyHandler(SharedBlock & SHB);
-SHB_HANDLE      SWMRConnectHandler(SharedBlock & SHB);
-void            SWMRCloseHandle(SHB_HANDLE hSWMR);
-int             SWMRReadLock(SHB_HANDLE hSWMR);
-int             SWMRReadUnlock(SHB_HANDLE hSWMR);
-int             SWMRWriteLock(SHB_HANDLE hSWMR);
-int             SWMRWriteUnlock(SHB_HANDLE hSWMR);
-SHB_HANDLE      SWMRCreateReadLock(SharedBlock & SHB);
-void            SWMRCloseReadUnlock(SHB_HANDLE hSWMR);
-SHB_HANDLE      SWMRCreateWriteLock(SharedBlock & SHB);
-void            SWMRCloseWriteUnlock(SHB_HANDLE hSWMR);
+
 
 
 

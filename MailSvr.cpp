@@ -45,6 +45,7 @@
 #include "POP3GwLink.h"
 #include "CTRLSvr.h"
 #include "FINGSvr.h"
+#include "LMAILSvr.h"
 #include "DynDNS.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
@@ -58,7 +59,7 @@
 #define ENV_CMD_LINE                "MAIL_CMD_LINE"
 #define SVR_SHUTDOWN_FILE           ".shutdown"
 #define STD_SMAIL_THREADS           16
-#define MAX_SMAIL_THREADS           64
+#define MAX_SMAIL_THREADS           128
 #define STD_SMAIL_RETRY_TIMEOUT     480
 #define STD_SMAIL_RETRY_INCR_RATIO  16
 #define STD_SMAIL_MAX_RETRY         32
@@ -70,7 +71,8 @@
 #define MAX_SMTP_THREADS            512
 #define STD_SMTP_MAX_RCPTS          100
 #define MAX_CTRL_THREADS            512
-#define MAIL_MAGIC_KEY              0xabcd
+#define STD_LMAIL_THREADS           3
+#define MAX_LMAIL_THREADS           17
 #define SVR_EXIT_WAIT               480
 #define STD_SERVER_SESSION_TIMEOUT  90
 #define MAX_CLIENTS_WAIT            300
@@ -101,6 +103,8 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[]);
 static void     SvrCleanupSMAIL(void);
 static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[]);
 static void     SvrCleanupPSYNC(void);
+static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[]);
+static void     SvrCleanupLMAIL(void);
 static int      SvrSetup(int iArgCount, char *pszArgs[]);
 static void     SvrCleanup(void);
 static void     SvrBreakHandler(void);
@@ -115,37 +119,32 @@ static char   **SvrMergeArgs(int iArgs, char *pszArgs[], int &iArgsCount);
 ///////////////////////////////////////////////////////////////////////////////
 //  External visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
-SharedBlock     SHB_CTRLSvr,
-                SHB_FINGSvr,
-                SHB_SMTPSvr,
-                SHB_SMAILSvr,
-                SHB_SMAILQueue,
-                SHB_POP3Svr,
-                SHB_PSYNCSvr;
+SHB_HANDLE      hShbFING,
+                hShbCTRL,
+                hShbPOP3,
+                hShbSMTP,
+                hShbSMAIL,
+                hShbPSYNC,
+                hShbLMAIL;
 char            szMailPath[SYS_MAX_PATH];
-unsigned int    uKeyMagic = MAIL_MAGIC_KEY;
-SYS_IPCNAME     SemPSYNCThreads;
+SYS_SEMAPHORE   hSyncSem;
 bool            bServerDebug;
-int             iLogRotateDays = LOG_ROTATE_DAYS;
+int             iLogRotateHours = LOG_ROTATE_HOURS;
 int             iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Local visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
+static SHB_HANDLE hShbQueue;
 static char     szShutdownFile[SYS_MAX_PATH];
-static SHB_HANDLE hShbFING,
-                hShbCTRL,
-                hShbPOP3,
-                hShbSMTP,
-                hShbSMAIL,
-                hShbPSYNC;
 static int      iNumSMAILThreads;
-static SYS_SEMAPHORE SemSyncID;
+static int      iNumLMAILThreads;
 static SYS_THREAD hCTRLThread,
                 hFINGThread,
                 hPOP3Thread,
                 hSMTPThread,
                 hSMAILThreads[MAX_SMAIL_THREADS],
+                hLMAILThreads[MAX_LMAIL_THREADS],
                 hPSYNCThread;
 
 
@@ -236,15 +235,8 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
         }
     }
 
-    if (ShbCreateBlock(SHB_CTRLSvr, sizeof(CTRLConfig)) < 0)
+    if ((hShbCTRL = ShbCreateBlock(sizeof(CTRLConfig))) == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
-
-    if ((hShbCTRL = ShbConnectBlock(SHB_CTRLSvr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_CTRLSvr);
-        return (ErrorPop());
-    }
 
     CTRLConfig     *pCTRLCfg = (CTRLConfig *) ShbLock(hShbCTRL);
 
@@ -252,7 +244,6 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
     {
         ErrorPush();
         ShbCloseBlock(hShbCTRL);
-        ShbDestroyBlock(SHB_CTRLSvr);
         return (ErrorPop());
     }
 
@@ -274,7 +265,6 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
     if ((hCTRLThread = SysCreateThread(CTRLThreadProc, NULL)) == SYS_INVALID_THREAD)
     {
         ShbCloseBlock(hShbCTRL);
-        ShbDestroyBlock(SHB_CTRLSvr);
         return (ErrGetErrorCode());
     }
 
@@ -309,7 +299,6 @@ static void     SvrCleanupCTRL(void)
 
 
     ShbCloseBlock(hShbCTRL);
-    ShbDestroyBlock(SHB_CTRLSvr);
 
 }
 
@@ -348,22 +337,14 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
         }
     }
 
-    if (ShbCreateBlock(SHB_FINGSvr, sizeof(FINGConfig)) < 0)
+    if ((hShbFING = ShbCreateBlock(sizeof(FINGConfig))) == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
-
-    if ((hShbFING = ShbConnectBlock(SHB_FINGSvr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_FINGSvr);
-        return (ErrorPop());
-    }
 
     FINGConfig     *pFINGCfg = (FINGConfig *) ShbLock(hShbFING);
 
     if (pFINGCfg == NULL)
     {
         ShbCloseBlock(hShbFING);
-        ShbDestroyBlock(SHB_FINGSvr);
         return (ErrGetErrorCode());
     }
 
@@ -383,7 +364,6 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
     if ((hFINGThread = SysCreateThread(FINGThreadProc, NULL)) == SYS_INVALID_THREAD)
     {
         ShbCloseBlock(hShbFING);
-        ShbDestroyBlock(SHB_FINGSvr);
         return (ErrGetErrorCode());
     }
 
@@ -418,7 +398,6 @@ static void     SvrCleanupFING(void)
 
 
     ShbCloseBlock(hShbFING);
-    ShbDestroyBlock(SHB_FINGSvr);
 
 }
 
@@ -479,22 +458,14 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
         }
     }
 
-    if (ShbCreateBlock(SHB_POP3Svr, sizeof(POP3Config)) < 0)
+    if ((hShbPOP3 = ShbCreateBlock(sizeof(POP3Config))) == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
-
-    if ((hShbPOP3 = ShbConnectBlock(SHB_POP3Svr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_POP3Svr);
-        return (ErrorPop());
-    }
 
     POP3Config     *pPOP3Cfg = (POP3Config *) ShbLock(hShbPOP3);
 
     if (pPOP3Cfg == NULL)
     {
         ShbCloseBlock(hShbPOP3);
-        ShbDestroyBlock(SHB_POP3Svr);
         return (ErrGetErrorCode());
     }
 
@@ -522,7 +493,6 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
     if ((hPOP3Thread = SysCreateThread(POP3ThreadProc, NULL)) == SYS_INVALID_THREAD)
     {
         ShbCloseBlock(hShbPOP3);
-        ShbDestroyBlock(SHB_POP3Svr);
         return (ErrGetErrorCode());
     }
 
@@ -556,7 +526,6 @@ static void     SvrCleanupPOP3(void)
 
 
     ShbCloseBlock(hShbPOP3);
-    ShbDestroyBlock(SHB_POP3Svr);
 
 }
 
@@ -612,22 +581,14 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
         }
     }
 
-    if (ShbCreateBlock(SHB_SMTPSvr, sizeof(SMTPConfig)) < 0)
+    if ((hShbSMTP = ShbCreateBlock(sizeof(SMTPConfig))) == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
-
-    if ((hShbSMTP = ShbConnectBlock(SHB_SMTPSvr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_SMTPSvr);
-        return (ErrorPop());
-    }
 
     SMTPConfig     *pSMTPCfg = (SMTPConfig *) ShbLock(hShbSMTP);
 
     if (pSMTPCfg == NULL)
     {
         ShbCloseBlock(hShbSMTP);
-        ShbDestroyBlock(SHB_SMTPSvr);
         return (ErrGetErrorCode());
     }
 
@@ -649,7 +610,6 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
     if ((hSMTPThread = SysCreateThread(SMTPThreadProc, NULL)) == SYS_INVALID_THREAD)
     {
         ShbCloseBlock(hShbSMTP);
-        ShbDestroyBlock(SHB_SMTPSvr);
         return (ErrGetErrorCode());
     }
 
@@ -683,7 +643,6 @@ static void     SvrCleanupSMTP(void)
 
 
     ShbCloseBlock(hShbSMTP);
-    ShbDestroyBlock(SHB_SMTPSvr);
 
 }
 
@@ -735,15 +694,8 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
         }
     }
 
-    if (ShbCreateBlock(SHB_SMAILSvr, sizeof(SMAILConfig)) < 0)
+    if ((hShbSMAIL = ShbCreateBlock(sizeof(SMAILConfig))) == SHB_INVALID_HANDLE)
         return (ErrGetErrorCode());
-
-    if ((hShbSMAIL = ShbConnectBlock(SHB_SMAILSvr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_SMAILSvr);
-        return (ErrorPop());
-    }
 
     SMAILConfig    *pSMAILCfg = (SMAILConfig *) ShbLock(hShbSMAIL);
 
@@ -751,7 +703,6 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
     {
         ErrorPush();
         ShbCloseBlock(hShbSMAIL);
-        ShbDestroyBlock(SHB_SMAILSvr);
 
         return (ErrorPop());
     }
@@ -769,11 +720,10 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Initialize queue fs
 ///////////////////////////////////////////////////////////////////////////////
-    if (QueCreateQueue(SHB_SMAILQueue, NULL, iQueueSplitLevel) < 0)
+    if (QueCreateQueue(hShbQueue, NULL, iQueueSplitLevel) < 0)
     {
         ErrorPush();
         ShbCloseBlock(hShbSMAIL);
-        ShbDestroyBlock(SHB_SMAILSvr);
 
         return (ErrorPop());
     }
@@ -818,12 +768,11 @@ static void     SvrCleanupSMAIL(void)
 
 
     ShbCloseBlock(hShbSMAIL);
-    ShbDestroyBlock(SHB_SMAILSvr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Close the mail queue
 ///////////////////////////////////////////////////////////////////////////////
-    QueCloseQueue(SHB_SMAILQueue);
+    QueCloseQueue(hShbQueue);
 
 }
 
@@ -856,27 +805,14 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
         }
     }
 
-    SemPSYNCThreads = SysCreateIPCName();
-
-    if ((SemSyncID = SysCreateSemaphore(iNumSyncThreads,
-                            SYS_DEFAULT_MAXCOUNT, SemPSYNCThreads)) == SYS_INVALID_SEMAPHORE)
+    if ((hSyncSem = SysCreateSemaphore(iNumSyncThreads, SYS_DEFAULT_MAXCOUNT)) == SYS_INVALID_SEMAPHORE)
         return (ErrGetErrorCode());
 
 
-    if (ShbCreateBlock(SHB_PSYNCSvr, sizeof(PSYNCConfig)) < 0)
+    if ((hShbPSYNC = ShbCreateBlock(sizeof(PSYNCConfig))) == SHB_INVALID_HANDLE)
     {
         ErrorPush();
-        SysCloseSemaphore(SemSyncID);
-        SysKillSemaphore(SemSyncID);
-        return (ErrorPop());
-    }
-
-    if ((hShbPSYNC = ShbConnectBlock(SHB_PSYNCSvr)) == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        ShbDestroyBlock(SHB_PSYNCSvr);
-        SysCloseSemaphore(SemSyncID);
-        SysKillSemaphore(SemSyncID);
+        SysCloseSemaphore(hSyncSem);
         return (ErrorPop());
     }
 
@@ -886,9 +822,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
     {
         ErrorPush();
         ShbCloseBlock(hShbPSYNC);
-        ShbDestroyBlock(SHB_PSYNCSvr);
-        SysCloseSemaphore(SemSyncID);
-        SysKillSemaphore(SemSyncID);
+        SysCloseSemaphore(hSyncSem);
         return (ErrorPop());
     }
 
@@ -910,9 +844,7 @@ static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
     if ((hPSYNCThread = SysCreateThread(PSYNCThreadProc, NULL)) == SYS_INVALID_THREAD)
     {
         ShbCloseBlock(hShbPSYNC);
-        ShbDestroyBlock(SHB_PSYNCSvr);
-        SysCloseSemaphore(SemSyncID);
-        SysKillSemaphore(SemSyncID);
+        SysCloseSemaphore(hSyncSem);
 
         return (ErrGetErrorCode());
     }
@@ -947,10 +879,101 @@ static void     SvrCleanupPSYNC(void)
 
 
     ShbCloseBlock(hShbPSYNC);
-    ShbDestroyBlock(SHB_PSYNCSvr);
 
-    SysCloseSemaphore(SemSyncID);
-    SysKillSemaphore(SemSyncID);
+    SysCloseSemaphore(hSyncSem);
+
+}
+
+
+
+static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
+{
+
+    int             ii;
+    unsigned long   ulFlags = 0;
+
+    iNumLMAILThreads = STD_LMAIL_THREADS;
+
+    for (ii = 0; ii < iArgCount; ii++)
+    {
+        if ((pszArgs[ii][0] != '-') || (pszArgs[ii][1] != 'L'))
+            continue;
+
+        switch (pszArgs[ii][2])
+        {
+            case ('n'):
+                if (++ii < iArgCount)
+                    iNumLMAILThreads = atoi(pszArgs[ii]);
+
+                iNumLMAILThreads = min(MAX_LMAIL_THREADS, max(1, iNumLMAILThreads));
+                break;
+
+            case ('l'):
+                ulFlags |= LMAILF_LOG_ENABLED;
+                break;
+        }
+    }
+
+    if ((hShbLMAIL = ShbCreateBlock(sizeof(LMAILConfig))) == SHB_INVALID_HANDLE)
+        return (ErrGetErrorCode());
+
+    LMAILConfig    *pLMAILCfg = (LMAILConfig *) ShbLock(hShbLMAIL);
+
+    if (pLMAILCfg == NULL)
+    {
+        ErrorPush();
+        ShbCloseBlock(hShbLMAIL);
+
+        return (ErrorPop());
+    }
+
+    pLMAILCfg->ulFlags = ulFlags;
+    pLMAILCfg->lNumThreads = iNumLMAILThreads;
+    pLMAILCfg->lThreadCount = 0;
+
+
+    ShbUnlock(hShbLMAIL);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Create mailer threads
+///////////////////////////////////////////////////////////////////////////////
+    for (ii = 0; ii < iNumLMAILThreads; ii++)
+        hLMAILThreads[ii] = SysCreateThread(LMAILThreadProc, NULL);
+
+    return (0);
+
+}
+
+
+
+static void     SvrCleanupLMAIL(void)
+{
+
+///////////////////////////////////////////////////////////////////////////////
+//  Stop LMAIL Thread ( and unlock threads wait with "SysReleaseSemaphore" )
+///////////////////////////////////////////////////////////////////////////////
+    LMAILConfig    *pLMAILCfg = (LMAILConfig *) ShbLock(hShbLMAIL);
+
+    pLMAILCfg->ulFlags |= LMAILF_STOP_SERVER;
+
+    ShbUnlock(hShbLMAIL);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Wait LMAIL Threads
+///////////////////////////////////////////////////////////////////////////////
+    int             tt;
+
+    for (tt = 0; tt < iNumLMAILThreads; tt++)
+        SysWaitThread(hLMAILThreads[tt], SVR_EXIT_WAIT);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Close LMAIL Threads
+///////////////////////////////////////////////////////////////////////////////
+    for (tt = 0; tt < iNumLMAILThreads; tt++)
+        SysCloseThread(hLMAILThreads[tt], 1);
+
+
+    ShbCloseBlock(hShbLMAIL);
 
 }
 
@@ -972,8 +995,6 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 
     bServerDebug = false;
 
-    int             iMaxAccounts = MAX_XMAIL_ACCOUNTS;
-
     for (int ii = 0; ii < iArgCount; ii++)
     {
         if ((pszArgs[ii][0] != '-') || (pszArgs[ii][1] != 'M'))
@@ -986,23 +1007,13 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
                     strcpy(szMailPath, pszArgs[ii]);
                 break;
 
-            case ('k'):
-                if (++ii < iArgCount)
-                    uKeyMagic = (unsigned int) atol(pszArgs[ii]);
-                break;
-
             case ('d'):
                 bServerDebug = true;
                 break;
 
             case ('r'):
                 if (++ii < iArgCount)
-                    iLogRotateDays = atoi(pszArgs[ii]);
-                break;
-
-            case ('a'):
-                if (++ii < iArgCount)
-                    iMaxAccounts = atoi(pszArgs[ii]);
+                    iLogRotateHours = atoi(pszArgs[ii]);
                 break;
 
             case ('x'):
@@ -1033,7 +1044,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup resource lockers
 ///////////////////////////////////////////////////////////////////////////////
-    if (RLckInitLockers(iMaxAccounts) < 0)
+    if (RLckInitLockers() < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1214,6 +1225,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1224,6 +1236,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         SvrCleanupSMAIL();
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1235,6 +1248,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         SvrCleanupCTRL();
         SvrCleanupSMAIL();
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1247,6 +1261,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         SvrCleanupCTRL();
         SvrCleanupSMAIL();
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1260,6 +1275,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         SvrCleanupCTRL();
         SvrCleanupSMAIL();
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1274,6 +1290,23 @@ int             SvrMain(int iArgCount, char *pszArgs[])
         SvrCleanupCTRL();
         SvrCleanupSMAIL();
         StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
+        SysCleanupLibrary();
+        return (ErrorPop());
+    }
+
+    if (SvrSetupLMAIL(iMergeArgsCount, ppszMergeArgs) < 0)
+    {
+        ErrorPush();
+        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
+        SvrCleanupFING();
+        SvrCleanupPSYNC();
+        SvrCleanupSMTP();
+        SvrCleanupPOP3();
+        SvrCleanupCTRL();
+        SvrCleanupSMAIL();
+        StrFreeStrings(ppszMergeArgs);
+        SvrCleanup();
         SysCleanupLibrary();
         return (ErrorPop());
     }
@@ -1298,6 +1331,7 @@ int             SvrMain(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Goodbye cleanups
 ///////////////////////////////////////////////////////////////////////////////
+    SvrCleanupLMAIL();
     SvrCleanupFING();
     SvrCleanupPSYNC();
     SvrCleanupSMTP();
@@ -1355,12 +1389,12 @@ bool            SvrInShutdown(void)
 int             SvrShutdownCB(void *pData)
 {
 
+    time_t         *ptLastCheck = (time_t *) pData;
     time_t          tCurr = time(NULL);
-    static THRDLS time_t tLastCheck = 0;
 
-    if ((tCurr - tLastCheck) > SHUTDOWN_CHECK_TIME)
+    if ((tCurr - *ptLastCheck) > SHUTDOWN_CHECK_TIME)
     {
-        tLastCheck = tCurr;
+        *ptLastCheck = tCurr;
 
         if (SvrInShutdown())
             return (-1);

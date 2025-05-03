@@ -56,6 +56,8 @@
 #include <netinet/in.h>
 #include <syslog.h>
 #include <dlfcn.h>
+#include <sched.h>
+#include <pthread.h>
 
 
 

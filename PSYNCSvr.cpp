@@ -136,14 +136,6 @@ static int      PSYNCTimeToStop(SHB_HANDLE hShbPSYNC)
 unsigned int    PSYNCThreadProc(void *pThreadData)
 {
 
-    SysIgnoreThreadsExit();
-
-    SHB_HANDLE      hShbPSYNC = ShbConnectBlock(SHB_PSYNCSvr);
-
-    if (hShbPSYNC == SHB_INVALID_HANDLE)
-        return (ErrGetErrorCode());
-
-
     SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", PSYNC_SERVER_NAME);
 
 
@@ -203,8 +195,6 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
     }
 
 
-    ShbCloseBlock(hShbPSYNC);
-
     SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", PSYNC_SERVER_NAME);
 
     return (0);
@@ -216,24 +206,12 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
 static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
 {
 
-    SYS_SEMAPHORE   SemSyncID = SysConnectSemaphore(pPSYNCCfg->iNumSyncThreads,
-            SYS_DEFAULT_MAXCOUNT, SemPSYNCThreads);
-
-    if (SemSyncID == SYS_INVALID_SEMAPHORE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-        return (ErrorPop());
-    }
-
-
     GWLKF_HANDLE    hLinksDB = GwLkOpenDB();
 
     if (hLinksDB == INVALID_GWLKF_HANDLE)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-        SysCloseSemaphore(SemSyncID);
         return (ErrorPop());
     }
 
@@ -249,7 +227,7 @@ static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg
             continue;
 
 
-        if (SysWaitSemaphore(SemSyncID, SYS_INFINITE_TIMEOUT) < 0)
+        if (SysWaitSemaphore(hSyncSem, SYS_INFINITE_TIMEOUT) < 0)
             break;
 
         if (PSYNCTimeToStop(hShbPSYNC))
@@ -264,14 +242,11 @@ static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg
         {
             GwLkFreePOP3Link(pPopLnk);
 
-            SysReleaseSemaphore(SemSyncID, 1);
+            SysReleaseSemaphore(hSyncSem, 1);
         }
     }
 
     GwLkCloseDB(hLinksDB);
-
-
-    SysCloseSemaphore(SemSyncID);
 
     return (0);
 
@@ -283,15 +258,7 @@ static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg
 static int      PSYNCThreadNotifyExit(void)
 {
 
-    SYS_SEMAPHORE   SemSyncID = SysConnectSemaphore(0, SYS_DEFAULT_MAXCOUNT,
-            SemPSYNCThreads);
-
-    if (SemSyncID == SYS_INVALID_SEMAPHORE)
-        return (ErrGetErrorCode());
-
-    SysReleaseSemaphore(SemSyncID, 1);
-
-    SysCloseSemaphore(SemSyncID);
+    SysReleaseSemaphore(hSyncSem, 1);
 
     return (0);
 
@@ -311,25 +278,6 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_MESSAGE, "%s\n", ErrGetErrorString(ErrorFetch()));
 
-        GwLkFreePOP3Link(pPopLnk);
-///////////////////////////////////////////////////////////////////////////////
-//  Notify thread exit semaphore
-///////////////////////////////////////////////////////////////////////////////
-        PSYNCThreadNotifyExit();
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  Create handle to shared memory configuration
-///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbPSYNC = ShbConnectBlock(SHB_PSYNCSvr);
-
-    if (hShbPSYNC == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString(ErrorFetch()));
-
-        GwLkLinkUnlock(pPopLnk);
         GwLkFreePOP3Link(pPopLnk);
 ///////////////////////////////////////////////////////////////////////////////
 //  Notify thread exit semaphore
@@ -419,11 +367,6 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Decrease threads count
 ///////////////////////////////////////////////////////////////////////////////
     PSYNCThreadCountAdd(-1, hShbPSYNC);
-
-///////////////////////////////////////////////////////////////////////////////
-//  Free handle to shared memory configuration
-///////////////////////////////////////////////////////////////////////////////
-    ShbCloseBlock(hShbPSYNC);
 
 
     GwLkLinkUnlock(pPopLnk);

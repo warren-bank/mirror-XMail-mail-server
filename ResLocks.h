@@ -43,7 +43,7 @@ typedef struct RLCK_HANDLE_struct
 
 
 
-int             RLckInitLockers(int iNumAccounts);
+int             RLckInitLockers(void);
 int             RLckCleanupLockers(void);
 RLCK_HANDLE     RLckLockEX(char const * pszResourceName);
 RLCK_HANDLE     RLckLockEX(unsigned int uUserID, unsigned int uResID);

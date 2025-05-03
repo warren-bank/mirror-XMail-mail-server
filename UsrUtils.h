@@ -95,7 +95,7 @@ int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias);
 int             UsrRemoveDomainAliases(const char *pszDomain);
 UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName);
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
-                        char *pszRealUser = NULL);
+                        char *pszRealAddr = NULL);
 int             UsrRemoveUser(const char *pszDomain, const char *pszName,
                         unsigned int uUserID);
 int             UsrModifyUser(UserInfo * pUI);

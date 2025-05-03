@@ -318,18 +318,6 @@ static unsigned int SMTPClientThread(void *pThreadData)
     SYS_SOCKET      SockFD = (SYS_SOCKET) (unsigned int) pThreadData;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Create handle to the shared memory configuration
-///////////////////////////////////////////////////////////////////////////////
-    SHB_HANDLE      hShbSMTP = ShbConnectBlock(SHB_SMTPSvr);
-
-    if (hShbSMTP == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysCloseSocket(SockFD);
-        return (ErrorPop());
-    }
-
-///////////////////////////////////////////////////////////////////////////////
 //  Link socket to the bufferer
 ///////////////////////////////////////////////////////////////////////////////
     BSOCK_HANDLE    hBSock = BSckAttach(SockFD);
@@ -338,7 +326,6 @@ static unsigned int SMTPClientThread(void *pThreadData)
     {
         ErrorPush();
         SysCloseSocket(SockFD);
-        ShbCloseBlock(hShbSMTP);
         return (ErrorPop());
     }
 
@@ -353,7 +340,6 @@ static unsigned int SMTPClientThread(void *pThreadData)
                 SMTP_SERVER_NAME, ErrGetErrorString(ErrorFetch()));
 
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbSMTP);
         return (ErrorPop());
     }
 
@@ -368,7 +354,6 @@ static unsigned int SMTPClientThread(void *pThreadData)
                 SMTP_SERVER_NAME, ErrGetErrorString(ErrorFetch()));
 
         BSckDetach(hBSock, 1);
-        ShbCloseBlock(hShbSMTP);
         return (ErrorPop());
     }
 
@@ -390,8 +375,6 @@ static unsigned int SMTPClientThread(void *pThreadData)
     BSckDetach(hBSock, 1);
 
 
-    ShbCloseBlock(hShbSMTP);
-
     return (0);
 
 }
@@ -401,22 +384,12 @@ static unsigned int SMTPClientThread(void *pThreadData)
 unsigned int    SMTPThreadProc(void *pThreadData)
 {
 
-    SHB_HANDLE      hShbSMTP = ShbConnectBlock(SHB_SMTPSvr);
-
-    if (hShbSMTP == SHB_INVALID_HANDLE)
-    {
-        ErrorPush();
-        SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        return (ErrorPop());
-    }
-
     SMTPConfig     *pSMTPCfg = (SMTPConfig *) ShbLock(hShbSMTP);
 
     if (pSMTPCfg == NULL)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
-        ShbCloseBlock(hShbSMTP);
         return (ErrorPop());
     }
 
@@ -430,13 +403,10 @@ unsigned int    SMTPThreadProc(void *pThreadData)
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
         ShbUnlock(hShbSMTP);
-        ShbCloseBlock(hShbSMTP);
         return (ErrorPop());
     }
 
     ShbUnlock(hShbSMTP);
-
-    SysIgnoreThreadsExit();
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s started\n", SMTP_SERVER_NAME);
@@ -472,7 +442,7 @@ unsigned int    SMTPThreadProc(void *pThreadData)
             if (hClientThread != SYS_INVALID_THREAD)
                 SysCloseThread(hClientThread, 0);
             else
-                SysCloseSocket(ConnSockFD[ss], 1);
+                SysCloseSocket(ConnSockFD[ss]);
 
         }
     }
@@ -499,8 +469,6 @@ unsigned int    SMTPThreadProc(void *pThreadData)
 
         SysSleep(SMTP_WAIT_SLEEP);
     }
-
-    ShbCloseBlock(hShbSMTP);
 
     SysLogMessage(LOG_LEV_MESSAGE, "%s stopped\n", SMTP_SERVER_NAME);
 
@@ -712,7 +680,7 @@ static int      SMTPLogSession(SMTPSession & SMTPS)
     MscGetTimeNbrString(szTime, sizeof(szTime) - 1);
 
 
-    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR "/" SMTP_LOG_FILE);
+    RLCK_HANDLE     hResLock = RLckLockEX(SVR_LOGS_DIR SYS_SLASH_STR SMTP_LOG_FILE);
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -762,7 +730,7 @@ static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock)
 ///////////////////////////////////////////////////////////////////////////////
 //  Send welcome message
 ///////////////////////////////////////////////////////////////////////////////
-	char            szTime[256] = "";
+    char            szTime[256] = "";
 
     MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
