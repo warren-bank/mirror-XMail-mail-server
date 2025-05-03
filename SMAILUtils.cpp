@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,11 +29,12 @@
 #include "ShBlocks.h"
 #include "ResLocks.h"
 #include "BuffSock.h"
-#include "MailConfig.h"
-#include "MessQueue.h"
-#include "QueueUtils.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
+#include "MailConfig.h"
+#include "MessQueue.h"
+#include "SMAILUtils.h"
+#include "QueueUtils.h"
 #include "ExtAliases.h"
 #include "MiscUtils.h"
 #include "MailDomains.h"
@@ -41,7 +42,6 @@
 #include "SMTPUtils.h"
 #include "AppDefines.h"
 #include "MailSvr.h"
-#include "SMAILUtils.h"
 
 
 
@@ -60,7 +60,6 @@
 #define SMAIL_LOG_FILE                  "smail"
 #define MAX_MTA_OPS                     16
 #define ADDRESS_TOKENIZER               ","
-
 
 
 
@@ -106,7 +105,8 @@ struct MessageTagData
 
 static MessageTagData *USmlAllocTag(char const * pszTagName, char const * pszTagData);
 static void     USmlFreeTag(MessageTagData * pMTD);
-static MessageTagData *USmlFindTag(HSLIST & hTagList, char const * pszTagName);
+static MessageTagData *USmlFindTag(HSLIST & hTagList, char const * pszTagName,
+                        TAG_POSITION & TagPosition);
 static int      USmlAddTag(HSLIST & hTagList, char const * pszTagName,
                         char const * pszTagData, int iUpdate = 0);
 static void     USmlFreeTagsList(HSLIST & hTagList);
@@ -143,9 +143,11 @@ static char const *USmlAddressFromAtPtr(char const * pszAt, char const * pszBase
                         char *pszAddress, int iMaxAddress);
 static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
                         char const * const * ppszMatchDomains = NULL);
-static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains, ...);
+static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains,
+                        char const * const * ppszAddrTags);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMaxAddress);
-static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList);
+static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList,
+                        const char *pszFetchHdrTags);
 static int      USmlCreateSpoolFile(FILE * pMailFile, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszSpoolFile);
 
@@ -293,15 +295,24 @@ static void     USmlFreeTag(MessageTagData * pMTD)
 
 
 
-static MessageTagData *USmlFindTag(HSLIST & hTagList, char const * pszTagName)
+static MessageTagData *USmlFindTag(HSLIST & hTagList, char const * pszTagName,
+                        TAG_POSITION & TagPosition)
 {
 
-    MessageTagData *pMTD = (MessageTagData *) ListFirst(hTagList);
+    MessageTagData *pMTD = (TagPosition == TAG_POSITION_INIT) ?
+            (MessageTagData *) ListFirst(hTagList): (MessageTagData *) TagPosition;
 
     for (; pMTD != INVALID_SLIST_PTR; pMTD = (MessageTagData *)
             ListNext(hTagList, (PLISTLINK) pMTD))
+    {
         if (strcmp(pMTD->pszTagName, pszTagName) == 0)
+        {
+            TagPosition = (TAG_POSITION) ListNext(hTagList, (PLISTLINK) pMTD);
             return (pMTD);
+        }
+    }
+
+    TagPosition = (TAG_POSITION) INVALID_SLIST_PTR;
 
     return (NULL);
 
@@ -324,7 +335,8 @@ static int      USmlAddTag(HSLIST & hTagList, char const * pszTagName,
     }
     else
     {
-        MessageTagData *pMTD = USmlFindTag(hTagList, pszTagName);
+        TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+        MessageTagData *pMTD = USmlFindTag(hTagList, pszTagName, TagPosition);
 
         if (pMTD != NULL)
         {
@@ -1149,12 +1161,13 @@ int             USmlWriteMailFile(SPLF_HANDLE hFSpool, FILE * pMsgFile)
 
 
 
-char           *USmlGetTag(SPLF_HANDLE hFSpool, char const * pszTagName)
+char           *USmlGetTag(SPLF_HANDLE hFSpool, char const * pszTagName,
+                        TAG_POSITION & TagPosition)
 {
 
     SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
 
-    MessageTagData *pMTD = USmlFindTag(pSFD->hTagList, pszTagName);
+    MessageTagData *pMTD = USmlFindTag(pSFD->hTagList, pszTagName, TagPosition);
 
     return ((pMTD != NULL) ? SysStrDup(pMTD->pszTagData) : NULL);
 
@@ -1185,7 +1198,8 @@ int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
 
     SpoolFileData  *pSFD = (SpoolFileData *) hFSpool;
 
-    char           *pszOldAddress = USmlGetTag(hFSpool, pszTagName);
+    TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+    char           *pszOldAddress = USmlGetTag(hFSpool, pszTagName, TagPosition);
 
     if (pszOldAddress == NULL)
     {
@@ -1304,7 +1318,8 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
 ///////////////////////////////////////////////////////////////////////////////
 //  Check the existence of the return path string ( PSYNC messages have )
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszReturnPath = USmlGetTag(hFSpool, "Return-Path");
+    TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+    char           *pszReturnPath = USmlGetTag(hFSpool, "Return-Path", TagPosition);
 
     if (pszReturnPath == NULL)
     {
@@ -1443,7 +1458,8 @@ int             USmlVCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUs
         if (pszValue == NULL)
             break;
 
-        fprintf(pSpoolFile, "%s: %s\r\n", pszHeader, pszValue);
+        if (!IsEmptyString(pszHeader))
+            fprintf(pSpoolFile, "%s: %s\r\n", pszHeader, pszValue);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1608,6 +1624,7 @@ static int      USmlProcessCustomMailingFile(UserInfo * pUI, SPLF_HANDLE hFSpool
         }
 
         StrFreeStrings(ppszCmdTokens);
+
     }
 
     fclose(pMPFile);
@@ -1773,7 +1790,6 @@ static int      USmlCmd_external(char **ppszCmdTokens, int iNumTokens, UserInfo 
 
 
 
-
 static int      USmlCmd_wait(char **ppszCmdTokens, int iNumTokens, UserInfo * pUI,
                         SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         LocalMailProcConfig & LMPC)
@@ -1857,6 +1873,10 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
         return (ERR_BAD_MAILPROC_CMD_SYNTAX);
     }
 
+    char            szUserAddress[MAX_ADDR_NAME] = "";
+
+    UsrGetAddress(pUI, szUserAddress);
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Redirection loop
 ///////////////////////////////////////////////////////////////////////////////
@@ -1878,8 +1898,9 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
         QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
 
 
-        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii],
-                szQueueFilePath, NULL) < 0)
+        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii], szQueueFilePath,
+                "X-Deliver-To", szUserAddress,
+                NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);
@@ -1939,8 +1960,9 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
         QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
 
 
-        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii],
-                szQueueFilePath, NULL) < 0)
+        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii], szQueueFilePath,
+                "X-Deliver-To", szUserAddress,
+                NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);
@@ -2559,14 +2581,17 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr,
 //  Try to discover the "Return-Path" ( or eventually "From" ) tag to setup
 //  the "MAIL FROM: <>" part of the spool message
 ///////////////////////////////////////////////////////////////////////////////
-    MessageTagData *pMTD = USmlFindTag(hTagList, "Return-Path");
+    TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+    MessageTagData *pMTD = USmlFindTag(hTagList, "Return-Path", TagPosition);
 
     if ((pMTD != NULL) &&
             (USmlParseAddress(pMTD->pszTagData, NULL, 0, pszFromAddr, iMaxAddress) == 0))
         return (0);
 
 
-    if (((pMTD = USmlFindTag(hTagList, "From")) != NULL) &&
+    TagPosition = TAG_POSITION_INIT;
+
+    if (((pMTD = USmlFindTag(hTagList, "From", TagPosition)) != NULL) &&
             (USmlParseAddress(pMTD->pszTagData, NULL, 0, pszFromAddr, iMaxAddress) == 0))
         return (0);
 
@@ -2623,7 +2648,8 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
         if (((pszCurr = USmlAddressFromAtPtr(pszAt, pszAddrList, szAddress,
                                 sizeof(szAddress) - 1)) != NULL) &&
                 (USmtpSplitEmailAddr(szAddress, NULL, szDomain) == 0) &&
-                ((ppszMatchDomains == NULL) || StrStringsIMatch(ppszMatchDomains, szDomain)))
+                ((ppszMatchDomains == NULL) || StrStringsIMatch(ppszMatchDomains, szDomain)) &&
+                (StrIStr(StrDynGet(pAddrDS), szAddress) == NULL))
         {
             if (StrDynSize(pAddrDS) > 0)
                 StrDynAdd(pAddrDS, ADDRESS_TOKENIZER);
@@ -2639,29 +2665,32 @@ static int      USmlAddAddresses(char const * pszAddrList, DynString * pAddrDS,
 
 
 
-static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains, ...)
+static char   **USmlGetAddressList(HSLIST & hTagList, char const * const * ppszMatchDomains,
+                        char const * const * ppszAddrTags)
 {
 
     DynString       AddrDS;
 
     StrDynInit(&AddrDS);
 
-
-    char const     *pszTag = NULL;
-    va_list         Args;
-
-    va_start(Args, ppszMatchDomains);
-
-    while ((pszTag = va_arg(Args, char *)) != NULL)
+    for (int ii = 0; ppszAddrTags[ii] != NULL; ii++)
     {
-        MessageTagData *pMTD = USmlFindTag(hTagList, pszTag);
+        char const     *pszHdrTag = (strchr("+", ppszAddrTags[ii][0]) != NULL) ?
+                                ppszAddrTags[ii] + 1: ppszAddrTags[ii];
+        TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+        MessageTagData *pMTD = USmlFindTag(hTagList, pszHdrTag, TagPosition);
 
         if (pMTD != NULL)
+        {
             USmlAddAddresses(pMTD->pszTagData, &AddrDS, ppszMatchDomains);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Exclusive tag detected, stop the scan
+///////////////////////////////////////////////////////////////////////////////
+            if ((StrDynSize(&AddrDS) > 0) && (ppszAddrTags[ii][0] == '+'))
+                break;
+        }
     }
-
-    va_end(Args);
 
 
     char          **ppszAddresses = StrTokenize(StrDynGet(&AddrDS), ADDRESS_TOKENIZER);
@@ -2681,7 +2710,8 @@ static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMa
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to extract the "To:" tag from the mail headers
 ///////////////////////////////////////////////////////////////////////////////
-    MessageTagData *pMTD = USmlFindTag(hTagList, "To");
+    TAG_POSITION    TagPosition = TAG_POSITION_INIT;
+    MessageTagData *pMTD = USmlFindTag(hTagList, "To", TagPosition);
 
     if ((pMTD == NULL) ||
             (USmlParseAddress(pMTD->pszTagData, NULL, 0, pszToAddr, iMaxAddress) < 0))
@@ -2696,45 +2726,65 @@ static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr, int iMa
 
 
 
-static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList)
+static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagList,
+                        const char *pszFetchHdrTags)
 {
 
-    char          **ppszRcptList = NULL;
+    char          **ppszRcptList = NULL,
+                  **ppszAddrTags = NULL;
+
+    if ((pszFetchHdrTags != NULL) &&
+            ((ppszAddrTags = StrTokenize(pszFetchHdrTags, ",")) == NULL))
+        return (NULL);
 
     if (pszRcptTo == NULL)
     {
-///////////////////////////////////////////////////////////////////////////////
-//  If the recipient is NULL try to extract the "To:", "Cc:" and "Bcc:"
-//  addresses from the message
-///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList, NULL,
-                                "To", "Cc", "Bcc", NULL)) == NULL)
+        if (ppszAddrTags == NULL)
+        {
+            ErrSetErrorCode(ERR_NO_HDR_FETCH_TAGS);
             return (NULL);
+        }
 
+///////////////////////////////////////////////////////////////////////////////
+//  If the recipient is NULL try to extract addresses from the message using
+//  the supplied tag string
+///////////////////////////////////////////////////////////////////////////////
+        if ((ppszRcptList = USmlGetAddressList(hTagList, NULL, ppszAddrTags)) == NULL)
+        {
+            StrFreeStrings(ppszAddrTags);
+            return (NULL);
+        }
 
     }
     else if (*pszRcptTo == '?')
     {
+        if (ppszAddrTags == NULL)
+        {
+            ErrSetErrorCode(ERR_NO_HDR_FETCH_TAGS);
+            return (NULL);
+        }
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract matching domains
 ///////////////////////////////////////////////////////////////////////////////
         char          **ppszDomains = StrTokenize(pszRcptTo, ",");
 
         if (ppszDomains == NULL)
+        {
+            StrFreeStrings(ppszAddrTags);
             return (NULL);
+        }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "?" + masquerade-domain
 ///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1],
-                                "To", "Cc", "Bcc", NULL)) == NULL)
+        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1], ppszAddrTags)) == NULL)
         {
             StrFreeStrings(ppszDomains);
+            StrFreeStrings(ppszAddrTags);
             return (NULL);
         }
-
-        StrFreeStrings(ppszDomains);
 
 
         int             iAddrCount = StrStringsCount(ppszRcptList);
@@ -2747,7 +2797,7 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
             if (USmtpSplitEmailAddr(ppszRcptList[ii], szToUser, NULL) == 0)
             {
                 SysSNPrintf(szRecipient, sizeof(szRecipient) - 1, "%s@%s",
-                        szToUser, pszRcptTo + 1);
+                        szToUser, ppszDomains[0] + 1);
 
                 SysFree(ppszRcptList[ii]);
 
@@ -2755,29 +2805,37 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
             }
         }
 
+        StrFreeStrings(ppszDomains);
     }
     else if (*pszRcptTo == '&')
     {
+        if (ppszAddrTags == NULL)
+        {
+            ErrSetErrorCode(ERR_NO_HDR_FETCH_TAGS);
+            return (NULL);
+        }
+
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract matching domains
 ///////////////////////////////////////////////////////////////////////////////
         char          **ppszDomains = StrTokenize(pszRcptTo, ",");
 
         if (ppszDomains == NULL)
+        {
+            StrFreeStrings(ppszAddrTags);
             return (NULL);
+        }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
 //  "&" + add-domain
 ///////////////////////////////////////////////////////////////////////////////
-        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1],
-                                "To", "Cc", "Bcc", NULL)) == NULL)
+        if ((ppszRcptList = USmlGetAddressList(hTagList, &ppszDomains[1], ppszAddrTags)) == NULL)
         {
             StrFreeStrings(ppszDomains);
+            StrFreeStrings(ppszAddrTags);
             return (NULL);
         }
-
-        StrFreeStrings(ppszDomains);
 
 
         int             iAddrCount = StrStringsCount(ppszRcptList);
@@ -2787,17 +2845,20 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
             char            szRecipient[MAX_ADDR_NAME] = "";
 
             SysSNPrintf(szRecipient, sizeof(szRecipient) - 1, "%s%s",
-                    ppszRcptList[ii], pszRcptTo + 1);
+                    ppszRcptList[ii], ppszDomains[0] + 1);
 
             SysFree(ppszRcptList[ii]);
 
             ppszRcptList[ii] = SysStrDup(szRecipient);
         }
 
+        StrFreeStrings(ppszDomains);
     }
     else
         ppszRcptList = StrBuildList(pszRcptTo, NULL);
 
+    if (ppszAddrTags != NULL)
+        StrFreeStrings(ppszAddrTags);
 
     return (ppszRcptList);
 
@@ -2805,7 +2866,8 @@ static char   **USmlBuildTargetRcptList(char const * pszRcptTo, HSLIST & hTagLis
 
 
 
-int             USmlDeliverFetchedMsg(char const * pszSyncAddr, char const * pszMailFile)
+int             USmlDeliverFetchedMsg(char const * pszSyncAddr, const char *pszFetchHdrTags,
+                        char const * pszMailFile)
 {
 
     FILE           *pMailFile = fopen(pszMailFile, "rb");
@@ -2840,7 +2902,7 @@ int             USmlDeliverFetchedMsg(char const * pszSyncAddr, char const * psz
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract recipient list
 ///////////////////////////////////////////////////////////////////////////////
-    char          **ppszRcptList = USmlBuildTargetRcptList(pszSyncAddr, hTagList);
+    char          **ppszRcptList = USmlBuildTargetRcptList(pszSyncAddr, hTagList, pszFetchHdrTags);
 
     if (ppszRcptList == NULL)
     {

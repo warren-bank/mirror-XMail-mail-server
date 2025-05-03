@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 #
 # skeleton	example file to build /etc/init.d/ scripts.
 #		This file should be used to construct scripts for /etc/init.d.
@@ -19,6 +19,7 @@ DESC="XMail server"
 test -f $DAEMON || exit 0
 
 set -e
+ulimit -c 20000
 
 start_xmail()
 {

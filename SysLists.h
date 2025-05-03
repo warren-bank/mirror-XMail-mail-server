@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,6 +35,11 @@ do { \
     (ptr)->pNext = (ptr); (ptr)->pPrev = (ptr); \
 } while (0)
 
+#define SYS_INIT_LIST_LINK(ptr) \
+do { \
+    (ptr)->pNext = NULL; (ptr)->pPrev = NULL; \
+} while (0)
+
 #define SYS_LIST_ADD(new, prev, next) \
 do { \
     struct SysListHead *    pPrev = prev; \
@@ -55,7 +60,12 @@ do { \
     (prev)->pNext = next; \
 } while (0)
 
-#define SYS_LIST_DEL(entry)             SYS_LIST_UNLINK((entry)->pPrev, (entry)->pNext)
+#define SYS_LIST_DEL(entry) \
+do { \
+    SYS_LIST_UNLINK((entry)->pPrev, (entry)->pNext); \
+    (entry)->pPrev = NULL; \
+    (entry)->pNext = NULL; \
+} while (0)
 
 #define SYS_LIST_EMTPY(head)            ((head)->pNext == head)
 
@@ -80,6 +90,7 @@ do { \
 
 #define SYS_LIST_LAST(head)                 (((head)->pPrev != (head)) ? (head)->pPrev: NULL)
 
+#define SYS_LIST_LINKED(ptr)                (((ptr)->pPrev != NULL) && ((ptr)->pNext != NULL))
 
 
 

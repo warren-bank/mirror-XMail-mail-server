@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -264,7 +264,7 @@ static ResLockEntry *RLckAllocEntry(char const * pszResourceName)
     if (pRLE == NULL)
         return (NULL);
 
-    SYS_INIT_LIST_HEAD(&pRLE->LLink);
+    SYS_INIT_LIST_LINK(&pRLE->LLink);
     pRLE->iShLocks = 0;
     pRLE->iExLocks = 0;
     strcpy(pRLE->szName, pszResourceName);

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -170,7 +170,6 @@ static ErrorStrings Errors[] =
     {ERR_DOMAIN_ALREADY_HANDLED, "Domain already exist"},
     {ERR_BAD_CTRL_LOGIN, "Bad controller login"},
     {ERR_CTRL_ACCOUNTS_FILE_NOT_FOUND, "Controller accounts file not found"},
-    {ERR_RBL_SPAMMER, "RBL registered spammer (rbl.maps.vix.com.)"},
     {ERR_SPAMMER_IP, "Server registered spammer IP"},
     {ERR_TRUNCATED_DGRAM_DNS_RESPONSE, "Truncated UDP DNS response"},
     {ERR_NO_DGRAM_DNS_RESPONSE, "Unable to get UDP DNS response"},
@@ -183,7 +182,6 @@ static ErrorStrings Errors[] =
     {ERR_NO_MAILPROC_FILE, "User mail processing file not present"},
     {ERR_DNS_RECURSION_NOT_AVAILABLE, "DNS recursion not available"},
     {ERR_POP3_EXTERNAL_LINK_DISABLED, "External POP3 link disabled"},
-    {ERR_RSS_SPAMMER, "RSS registered spammer (relays.mail-abuse.org.)"},
     {ERR_BAD_DOMAIN_PROC_CMD_SYNTAX, "Error in custom domain processing file syntax"},
     {ERR_NOT_A_CUSTOM_DOMAIN, "Not a custom domain"},
     {ERR_NO_MORE_TOKENS, "No more tokens"},
@@ -258,8 +256,6 @@ static ErrorStrings Errors[] =
     {ERR_BAD_CMDSTR_CHARS, "Bad characters in command line"},
     {ERR_FETCHMSG_UNDELIVERED, "POP3 fetched message failed delivery"},
     {ERR_USER_VAR_NOT_FOUND, "User configuration variable not found"},
-    {ERR_ORBS_SPAMMER, "ORBS registered spammer (relays.orbs.org.)"},
-    {ERR_DUL_SPAMMER, "DUL registered spammer (dialups.mail-abuse.org.)"},
     {ERR_NO_POP3_IP, "Invalid or not available POP3 connection IP"},
     {ERR_NO_MESSAGE_FILE, "Message file not existent"},
     {ERR_GET_DISK_SPACE_INFO, "Error getting disk space info"},
@@ -276,6 +272,8 @@ static ErrorStrings Errors[] =
     {ERR_ADOMAIN_NOT_FOUND, "Domain alias not found"},
     {ERR_NOT_A_CMD_ALIAS, "Cmd alias not found"},
     {ERR_GETSOCKOPT, "Error in function {getsockopt}"},
+    {ERR_NO_HDR_FETCH_TAGS, "No fetch headers tags string supplied"},
+    {ERR_SET_FILE_TIME, "Error setting file times"},
 
 };
 

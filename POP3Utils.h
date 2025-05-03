@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ int             UPopSessionTopMsg(POP3_HANDLE hPOPSession, int iMsgIndex, int iN
 int             UPopSaveUserIP(POP3_HANDLE hPOPSession);
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer,
                         const char *pszRmtName, const char *pszRmtPassword,
+                        const char *pszFetchHdrTags = "+X-Deliver-To,To,Cc",
                         const char *pszAuthType = AUTH_TYPE_CLEAR,
                         const char * pszErrorAccount = NULL);
 int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,

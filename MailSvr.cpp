@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@
 #include "UsrUtils.h"
 #include "SvrUtils.h"
 #include "MessQueue.h"
+#include "SMAILUtils.h"
 #include "QueueUtils.h"
 #include "ExtAliases.h"
 #include "AliasDomain.h"

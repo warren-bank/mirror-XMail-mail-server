@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,9 +36,9 @@
 
 #define INVALID_SPLF_HANDLE             ((SPLF_HANDLE) 0)
 
+#define TAG_POSITION_INIT               ((TAG_POSITION) -1)
+
 #define LMPCF_LOG_ENABLED               (1 << 0)
-
-
 
 
 
@@ -63,6 +63,7 @@ struct LocalMailProcConfig
 
 };
 
+typedef void   *TAG_POSITION;
 
 
 
@@ -90,7 +91,7 @@ char const     *USmlSendRcptTo(SPLF_HANDLE hFSpool);
 int             USmlSyncChanges(SPLF_HANDLE hFSpool);
 int             USmlGetMsgFileSection(SPLF_HANDLE hFSpool, FileSection & FS);
 int             USmlWriteMailFile(SPLF_HANDLE hFSpool, FILE * pMsgFile);
-char           *USmlGetTag(SPLF_HANDLE hFSpool, char const * pszTagName);
+char           *USmlGetTag(SPLF_HANDLE hFSpool, char const * pszTagName, TAG_POSITION & TagPosition);
 int             USmlAddTag(SPLF_HANDLE hFSpool, char const * pszTagName,
                         char const * pszTagData, int iUpdate = 0);
 int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
@@ -131,7 +132,8 @@ int             USmlCustomizedDomain(char const * pszDestDomain);
 int             USmlLogMessage(SPLF_HANDLE hFSpool, char const * pszMedium, char const * pszParam);
 int             USmlParseAddress(char const * pszAddress, char *pszPreAddr,
                         int iMaxPreAddress, char *pszEmailAddr, int iMaxAddress);
-int             USmlDeliverFetchedMsg(char const *pszSyncAddr, char const * pszMailFile);
+int             USmlDeliverFetchedMsg(char const *pszSyncAddr, const char *pszFetchHdrTags,
+                        char const * pszMailFile);
 int             USmlMailLoopCheck(SPLF_HANDLE hFSpool, SVRCFG_HANDLE hSvrConfig);
 
 

@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -135,7 +135,6 @@
 #define ERR_DOMAIN_ALREADY_HANDLED  (-109)
 #define ERR_BAD_CTRL_LOGIN          (-110)
 #define ERR_CTRL_ACCOUNTS_FILE_NOT_FOUND    (-111)
-#define ERR_RBL_SPAMMER             (-112)
 #define ERR_SPAMMER_IP              (-113)
 #define ERR_TRUNCATED_DGRAM_DNS_RESPONSE    (-114)
 #define ERR_NO_DGRAM_DNS_RESPONSE   (-115)
@@ -148,7 +147,6 @@
 #define ERR_NO_MAILPROC_FILE        (-123)
 #define ERR_DNS_RECURSION_NOT_AVAILABLE (-124)
 #define ERR_POP3_EXTERNAL_LINK_DISABLED (-125)
-#define ERR_RSS_SPAMMER             (-126)
 #define ERR_BAD_DOMAIN_PROC_CMD_SYNTAX  (-128)
 #define ERR_NOT_A_CUSTOM_DOMAIN     (-129)
 #define ERR_NO_MORE_TOKENS          (-130)
@@ -223,8 +221,6 @@
 #define ERR_BAD_CMDSTR_CHARS        (-203)
 #define ERR_FETCHMSG_UNDELIVERED    (-204)
 #define ERR_USER_VAR_NOT_FOUND      (-205)
-#define ERR_ORBS_SPAMMER            (-206)
-#define ERR_DUL_SPAMMER             (-207)
 #define ERR_NO_POP3_IP              (-208)
 #define ERR_NO_MESSAGE_FILE         (-209)
 #define ERR_GET_DISK_SPACE_INFO     (-210)
@@ -241,6 +237,8 @@
 #define ERR_ADOMAIN_NOT_FOUND       (-221)
 #define ERR_NOT_A_CMD_ALIAS         (-222)
 #define ERR_GETSOCKOPT              (-223)
+#define ERR_NO_HDR_FETCH_TAGS       (-224)
+#define ERR_SET_FILE_TIME           (-225)
 
 
 

@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.5
+Version: 1.6
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,33 @@ fi
 
 
 %changelog
+
+* Sun Mar 03 2002 Davide Libenzi <davidel@xmailserver.org>
+    Added a new USER.TAB variable "UseReplyTo" ( default 1 ) to make it possible to disable the emission
+    of the Reply-To: header for mailing lists.
+    Fixed a bug that caused XMail to uncorrectly deliver POP3 fetched messages when used togheter with
+    domain masquerading.
+    Changed index file structure to use an hash table for faster lookups and index rebuilding.
+    New files inside the  tabindex  directory now have the extension  .hdx  and old  .idx  files can be removed.
+    Added X-Deliver-To: header to messages redirected with MAILPROC.TAB file.
+    Added configurable Received: tag option in SERVER.TAB by using the variable "ReceivedHdrType".
+    Added a configurable list of header tags to be used to extract addresses for POP3 fetched messages
+    by using the SERVER.TAB variable "FetchHdrTags".
+    History ( change log ) entries have been moved from the main documentation file and a new file ( ChangeLog.txt )
+    has been created to store change-log entries.
+    Removed RBL-MAPSCheck ( currently blackholes.mail-abuse.org. ), RSS-MAPSCheck ( currently relays.mail-abuse.org. )
+    and DUL-MAPSCheck ( currently dialups.mail-abuse.org. ) specific variables and now everything must
+    be handled with CustMapsList ( please look at the documentation ).
+    Added  NotifyMsgLinesExtra  SERVER.TAB variable to specify the number of lines of the bounced message
+    to include inside the notify reply ( default zero, that means only header ).
+    The message log file is now listed inside the notification message sent to  ErrorsAdmin  ( or  PostMaster  ).
+    Added  NotifySendLogToSender  SERVER.TAB variable to enable/disable the send of the message log file
+    inside the notify message to the sender ( default is off ).
+    Added  TempErrorsAdmin  SERVER.TAB variable to specify an account that will receive temporary delivery
+    failures notifications ( default is empty ).
+    Added a new SERVER.TAB variable  NotifyTryPattern  to specify at which delivery attempt failure
+    the system has to send the notification message.
+    Fixed a bug that caused alias domains to have higher priority lookup compared to standard domains.
 
 * Tue Feb 05 2002 Davide Libenzi <davidel@xmailserver.org>
     Fixed a bug in wildcard aliases domain lookup.

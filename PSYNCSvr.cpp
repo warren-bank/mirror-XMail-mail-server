@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -335,6 +335,14 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     char const     *pszErrorAccount = (IsEmptyString(szErrorAccount)) ? NULL: szErrorAccount;
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Get headers tags that must be checked to extract recipients
+///////////////////////////////////////////////////////////////////////////////
+    char            szFetchHdrTags[256] = "";
+
+    SvrConfigVar("FetchHdrTags", szFetchHdrTags, sizeof(szFetchHdrTags) - 1,
+            hSvrConfig, "+X-Deliver-To,To,Cc");
+
+///////////////////////////////////////////////////////////////////////////////
 //  Lock the link
 ///////////////////////////////////////////////////////////////////////////////
     if (GwLkLinkLock(pPopLnk) < 0)
@@ -379,7 +387,8 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
             UsrGetAddress(pUI, szUserAddress);
 
             if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                            pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
+                            pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                            pszErrorAccount) < 0)
                 ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
                         pPopLnk->pszName, pPopLnk->pszDomain);
 
@@ -401,7 +410,8 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
+                        pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                        pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
                     "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                     pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
@@ -422,7 +432,8 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 //  Sync ( "pszDomain" == "@" + domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType, pszErrorAccount) < 0)
+                        pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                        pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
                     "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                     szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);

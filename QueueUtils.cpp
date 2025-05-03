@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -60,12 +60,19 @@
 
 static int      QueUtDumpFrozen(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FILE * pListFile);
 static char    *QueUtGetReplyAddress(SPLF_HANDLE hFSpool);
-static int      QueUtTXErrorNotifySender(char const * pszMessFilePath, char const * pszReason);
-static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason);
-static int      QueUtTXErrorNotifyRoot(char const * pszMessFilePath, char const * pszReason);
+static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszAdminAddrVar,
+                        char const * pszReason, char const * pszText, char const * pszLogFile);
+static int      QueUtTXErrorExNotifySender(SPLF_HANDLE hFSpool, char const * pszMessFilePath,
+                        char const * pszAdminAddrVar, char const * pszReason, char const * pszText,
+                        char const * pszLogFile);
+static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason,
+                        char const * pszLogFile);
+static int      QueUtTXErrorExNotifyRoot(SPLF_HANDLE hFSpool, char const * pszMessFilePath,
+                        char const * pszReason, char const * pszLogFile);
 static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE hFSpool,
                         char const * pszFrom, char const * pszTo, char const * pszResponseFile,
-                        char const * pszReason);
+                        char const * pszReason, char const * pszText, int iLinesExtra,
+                        char const * pszLogFile);
 
 
 
@@ -126,7 +133,7 @@ static int      QueUtDumpFrozen(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FILE 
 
     char            szTime[128] = "";
 
-    MscGetTimeNbrString(szTime, sizeof(szTime) - 1, FI.tCreat);
+    MscGetTimeNbrString(szTime, sizeof(szTime) - 1, FI.tMod);
 
 
     fprintf(pListFile,
@@ -391,18 +398,21 @@ bool            QueUtRemoveSpoolErrors(void)
 
 
 int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszReason)
+                        SPLF_HANDLE hFSpool, char const * pszReason)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szQueueFilePath[SYS_MAX_PATH] = "";
+    char            szQueueFilePath[SYS_MAX_PATH] = "",
+                    szQueueLogFilePath[SYS_MAX_PATH] = "";
 
     QueGetFilePath(hQueue, hMessage, szQueueFilePath);
+    QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
 
 
     bool            bFreeze = false;
-    int             iNotifyResult = QueUtTXErrorNotifySender(szQueueFilePath, pszReason);
+    int             iNotifyResult = QueUtTXErrorExNotifySender(hFSpool, szQueueFilePath,
+                            "ErrorsAdmin", pszReason, NULL, szQueueLogFilePath);
 
     if ((iNotifyResult != ERR_NULL_SENDER) &&
             ((iNotifyResult != 0) || !QueUtRemoveSpoolErrors()))
@@ -417,18 +427,40 @@ int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE h
 
 
 
-int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char const * pszReason)
+int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        SPLF_HANDLE hFSpool, char const * pszReason, char const * pszText)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szQueueFilePath[SYS_MAX_PATH] = "";
+    char            szQueueLogFilePath[SYS_MAX_PATH] = "";
+
+    QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
+
+
+    return (QueUtTXErrorNotifySender(hFSpool, "TempErrorsAdmin", pszReason,
+            pszText, szQueueLogFilePath));
+
+}
+
+
+
+int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        SPLF_HANDLE hFSpool, char const * pszReason)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Get message file path
+///////////////////////////////////////////////////////////////////////////////
+    char            szQueueFilePath[SYS_MAX_PATH] = "",
+                    szQueueLogFilePath[SYS_MAX_PATH] = "";
 
     QueGetFilePath(hQueue, hMessage, szQueueFilePath);
+    QueGetFilePath(hQueue, hMessage, szQueueLogFilePath, QUEUE_SLOG_DIR);
 
 
     bool            bFreeze = false;
-    int             iNotifyResult = QueUtTXErrorNotifyRoot(szQueueFilePath, pszReason);
+    int             iNotifyResult = QueUtTXErrorExNotifyRoot(hFSpool, szQueueFilePath, pszReason,
+                            szQueueLogFilePath);
 
     if ((iNotifyResult != 0) || !QueUtRemoveSpoolErrors())
         bFreeze = true;
@@ -476,7 +508,8 @@ static char    *QueUtGetReplyAddress(SPLF_HANDLE hFSpool)
 
 
 
-static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszReason)
+static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszAdminAddrVar,
+                        char const * pszReason, char const * pszText, char const * pszLogFile)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract the sender
@@ -515,6 +548,8 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
+    int             iMsgLinesExtra = SvrGetConfigInt("NotifyMsgLinesExtra", 0, hSvrConfig);
+    bool            bSenderLog = SvrTestConfigFlag("NotifySendLogToSender", false, hSvrConfig);
     QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
     if (hMessage == INVALID_QMSG_HANDLE)
@@ -533,7 +568,8 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
     if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, pszReplyTo,
-                    szQueueFilePath, pszReason) < 0)
+                    szQueueFilePath, pszReason, pszText, iMsgLinesExtra,
+                    bSenderLog ? pszLogFile: NULL) < 0)
     {
         ErrorPush();
         QueCleanupMessage(hSpoolQueue, hMessage);
@@ -563,7 +599,7 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 ///////////////////////////////////////////////////////////////////////////////
     char            szEHAdmin[MAX_ADDR_NAME] = "";
 
-    if ((SvrConfigVar("ErrorsAdmin", szEHAdmin, sizeof(szEHAdmin) - 1, hSvrConfig) == 0) &&
+    if ((SvrConfigVar(pszAdminAddrVar, szEHAdmin, sizeof(szEHAdmin) - 1, hSvrConfig) == 0) &&
             !IsEmptyString(szEHAdmin))
     {
 ///////////////////////////////////////////////////////////////////////////////
@@ -582,7 +618,7 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
         if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, szEHAdmin,
-                        szQueueFilePath, pszReason) < 0)
+                        szQueueFilePath, pszReason, pszText, iMsgLinesExtra, pszLogFile) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hMessage);
@@ -613,19 +649,28 @@ static int      QueUtTXErrorNotifySender(SPLF_HANDLE hFSpool, char const * pszRe
 
 
 
-static int      QueUtTXErrorNotifySender(char const * pszMessFilePath, char const * pszReason)
+static int      QueUtTXErrorExNotifySender(SPLF_HANDLE hFSpool, char const * pszMessFilePath,
+                        char const * pszAdminAddrVar, char const * pszReason, char const * pszText,
+                        char const * pszLogFile)
 {
 
-    SPLF_HANDLE     hFSpool = USmlCreateHandle(pszMessFilePath);
+    bool            bCloseHSpool = false;
 
     if (hFSpool == INVALID_SPLF_HANDLE)
-        return (ErrGetErrorCode());
+    {
+        if ((hFSpool = USmlCreateHandle(pszMessFilePath)) == INVALID_SPLF_HANDLE)
+            return (ErrGetErrorCode());
+
+        bCloseHSpool = true;
+    }
 
 
-    int             iNotifyResult = QueUtTXErrorNotifySender(hFSpool, pszReason);
+    int             iNotifyResult = QueUtTXErrorNotifySender(hFSpool, pszAdminAddrVar, pszReason,
+                            pszText, pszLogFile);
 
 
-    USmlCloseHandle(hFSpool);
+    if (bCloseHSpool)
+        USmlCloseHandle(hFSpool);
 
     return (iNotifyResult);
 
@@ -633,7 +678,8 @@ static int      QueUtTXErrorNotifySender(char const * pszMessFilePath, char cons
 
 
 
-static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason)
+static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReason,
+                        char const * pszLogFile)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Load configuration handle
@@ -659,6 +705,7 @@ static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReas
 ///////////////////////////////////////////////////////////////////////////////
 //  Get message handle
 ///////////////////////////////////////////////////////////////////////////////
+    int             iMsgLinesExtra = SvrGetConfigInt("NotifyMsgLinesExtra", 0, hSvrConfig);
     QMSG_HANDLE     hMessage = QueCreateMessage(hSpoolQueue);
 
     if (hMessage == INVALID_QMSG_HANDLE)
@@ -677,7 +724,7 @@ static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReas
 //  Build error response mail file
 ///////////////////////////////////////////////////////////////////////////////
     if (QueUtBuildErrorRespose(szMailDomain, hFSpool, szPMAddress, szPMAddress,
-                    szQueueFilePath, pszReason) < 0)
+                    szQueueFilePath, pszReason, NULL, iMsgLinesExtra, pszLogFile) < 0)
     {
         ErrorPush();
         QueCleanupMessage(hSpoolQueue, hMessage);
@@ -706,19 +753,26 @@ static int      QueUtTXErrorNotifyRoot(SPLF_HANDLE hFSpool, char const * pszReas
 
 
 
-static int      QueUtTXErrorNotifyRoot(char const * pszMessFilePath, char const * pszReason)
+static int      QueUtTXErrorExNotifyRoot(SPLF_HANDLE hFSpool, char const * pszMessFilePath, char const * pszReason,
+                        char const * pszLogFile)
 {
 
-    SPLF_HANDLE     hFSpool = USmlCreateHandle(pszMessFilePath);
+    bool            bCloseHSpool = false;
 
     if (hFSpool == INVALID_SPLF_HANDLE)
-        return (ErrGetErrorCode());
+    {
+        if ((hFSpool = USmlCreateHandle(pszMessFilePath)) == INVALID_SPLF_HANDLE)
+            return (ErrGetErrorCode());
+
+        bCloseHSpool = true;
+    }
 
 
-    int             iNotifyResult = QueUtTXErrorNotifyRoot(hFSpool, pszReason);
+    int             iNotifyResult = QueUtTXErrorNotifyRoot(hFSpool, pszReason, pszLogFile);
 
 
-    USmlCloseHandle(hFSpool);
+    if (bCloseHSpool)
+        USmlCloseHandle(hFSpool);
 
     return (iNotifyResult);
 
@@ -728,7 +782,8 @@ static int      QueUtTXErrorNotifyRoot(char const * pszMessFilePath, char const 
 
 static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE hFSpool,
                         char const * pszFrom, char const * pszTo, char const * pszResponseFile,
-                        char const * pszReason)
+                        char const * pszReason, char const * pszText, int iLinesExtra,
+                        char const * pszLogFile)
 {
 
     char const     *pszSpoolFileName = USmlGetSpoolFile(hFSpool);
@@ -761,7 +816,7 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     if (USmlMapAddress(pszTo, szDomain, szName) < 0)
         strcpy(szTo, pszTo);
     else
-        sprintf(szTo, "%s@%s", szName, szDomain);
+        SysSNPrintf(szTo, sizeof(szTo) - 1, "%s@%s", szName, szDomain);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write domain
@@ -792,7 +847,7 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
 ///////////////////////////////////////////////////////////////////////////////
 //  Write Date ( mail data )
 ///////////////////////////////////////////////////////////////////////////////
-    char            szTime[256] = "";
+    char            szTime[128] = "";
 
     MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
@@ -846,17 +901,48 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     char const     *pszMailFrom = USmlMailFrom(hFSpool);
     char const     *pszRcptTo = USmlRcptTo(hFSpool);
 
-    fprintf(pRespFile, "Error sending message [%s] from [%s].\r\n\r\n"
+    fprintf(pRespFile, "[<01>] Error sending message [%s] from [%s].\r\n\r\n"
             "ID:        <%s>\r\n"
             "Mail From: <%s>\r\n"
-            "Rcpt To:   <%s>\r\n\r\n"
-            "<Failure Reason>\r\n"
-            "%s\r\n"
-            "</Failure Reason>\r\n\r\n"
-            "Below is reported the message header:\r\n"
-            "\r\n", pszSpoolFileName, pszSMTPDomain, pszSmtpMsgID,
-            pszMailFrom, pszRcptTo, pszReason);
+            "Rcpt To:   <%s>\r\n\r\n\r\n",
+            pszSpoolFileName, pszSMTPDomain, pszSmtpMsgID,
+            pszMailFrom, pszRcptTo);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Emit the delivery failure reason
+///////////////////////////////////////////////////////////////////////////////
+    if (pszReason != NULL)
+        fprintf(pRespFile, "[<02>] The reason of the delivery failure was:\r\n\r\n"
+                "%s\r\n\r\n\r\n", pszReason);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Emit extra text
+///////////////////////////////////////////////////////////////////////////////
+    if (pszText != NULL)
+        fprintf(pRespFile, "[<03>] Note:\r\n\r\n"
+                "%s\r\n\r\n\r\n", pszText);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Dump the log file associated with the message
+///////////////////////////////////////////////////////////////////////////////
+    char            szBuffer[1536] = "";
+
+    if (pszLogFile != NULL)
+    {
+        FILE           *pLogFile = fopen(pszLogFile, "rb");
+
+        if (pLogFile != NULL)
+        {
+            fprintf(pRespFile, "[<04>] Here is listed the message log file:\r\n\r\n");
+
+            while (MscGetString(pLogFile, szBuffer, sizeof(szBuffer) - 1) != NULL)
+                fprintf(pRespFile, "%s\r\n", szBuffer);
+
+            fprintf(pRespFile, "\r\n\r\n");
+
+            fclose(pLogFile);
+        }
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  This function retrieve the spool file message section and sync the content.
@@ -868,6 +954,7 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     {
         ErrorPush();
         fclose(pRespFile);
+        SysRemove(pszResponseFile);
         return (ErrorPop());
     }
 
@@ -879,6 +966,7 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     if (pMsgFile == NULL)
     {
         fclose(pRespFile);
+        SysRemove(pszResponseFile);
 
         ErrSetErrorCode(ERR_FILE_OPEN, FS.szFilePath);
         return (ERR_FILE_OPEN);
@@ -890,7 +978,10 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
     fseek(pMsgFile, FS.ulStartOffset, SEEK_SET);
 
 
-    char            szBuffer[2048] = "";
+    fprintf(pRespFile, "[<05>] Here is listed the initial part of the message:\r\n\r\n");
+
+
+    bool            bInHeaders = true;
 
     while (MscGetString(pMsgFile, szBuffer, sizeof(szBuffer) - 1) != NULL)
     {
@@ -907,10 +998,13 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
             return (ERR_MAIL_ERROR_LOOP);
         }
 
-        if (strlen(szBuffer) == 0)
+        if (bInHeaders && IsEmptyString(szBuffer))
+            bInHeaders = false;
+
+        if (!bInHeaders && (iLinesExtra-- < 0))
             break;
 
-        fprintf(pRespFile, ">> %s\r\n", szBuffer);
+        fprintf(pRespFile, "%s\r\n", szBuffer);
     }
 
     fclose(pMsgFile);
@@ -923,7 +1017,8 @@ static int      QueUtBuildErrorRespose(char const * pszSMTPDomain, SPLF_HANDLE h
 
 
 
-int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
+int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        SPLF_HANDLE hFSpool)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to resend the message
@@ -938,7 +1033,7 @@ int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 ///////////////////////////////////////////////////////////////////////////////
 //  Handle notifications and cleanup the message
 ///////////////////////////////////////////////////////////////////////////////
-        iResendResult = QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
+        iResendResult = QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool,
                 "The maximum number of delivery attempts has been reached");
 
         QueCloseMessage(hQueue, hMessage);

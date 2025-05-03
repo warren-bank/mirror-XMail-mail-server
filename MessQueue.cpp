@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -109,6 +109,8 @@ static int      QueGetFilePath(MessageQueue * pMQ, QueueMessage * pQM, char *psz
                         char const * pszQueueDir = NULL);
 static int      QueAddNew(MessageQueue * pMQ, QueueMessage * pQM);
 static bool     QueMessageExpired(MessageQueue * pMQ, QueueMessage * pQM);
+static time_t   QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
+                        unsigned int uRetryIncrRatio);
 static bool     QueMessageReadyToSend(MessageQueue * pMQ, QueueMessage * pQM);
 static int      QueAddRsnd(MessageQueue * pMQ, QueueMessage * pQM);
 static unsigned int QueRsndThread(void *pThreadData);
@@ -515,7 +517,7 @@ static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const * pszQ
         return (NULL);
 
 
-    SYS_INIT_LIST_HEAD(&pQM->LLink);
+    SYS_INIT_LIST_LINK(&pQM->LLink);
 
     pQM->iLevel1 = iLevel1;
 
@@ -627,8 +629,15 @@ static int      QueStatMessage(MessageQueue * pMQ, QueueMessage * pQM)
         return (ERR_FILE_OPEN);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Dump peek time
+///////////////////////////////////////////////////////////////////////////////
+    time_t          tCurr = time(NULL);
+    char            szTime[128] = "";
 
-    fprintf(pLogFile, "[PeekTime] %lu\n", (unsigned long) time(NULL));
+    MscGetTimeStr(szTime, sizeof(szTime) - 1, tCurr);
+
+    fprintf(pLogFile, "[PeekTime] %lu : %s\n", (unsigned long) tCurr, szTime);
 
 
     fclose(pLogFile);
@@ -816,6 +825,19 @@ time_t          QueGetLastTryTime(QMSG_HANDLE hMessage)
 
 
 
+time_t          QueGetMessageNextOp(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
+{
+
+    MessageQueue   *pMQ = (MessageQueue *) hQueue;
+    QueueMessage   *pQM = (QueueMessage *) hMessage;
+
+    return (pQM->tLastTry + QueNextRetryOp(pQM->iNumTries, (unsigned int) pMQ->iRetryTimeout,
+            (unsigned int) pMQ->iRetryIncrRatio));
+
+}
+
+
+
 int             QueInitMessageStats(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
@@ -990,19 +1012,27 @@ static bool     QueMessageExpired(MessageQueue * pMQ, QueueMessage * pQM)
 
 
 
-static bool     QueMessageReadyToSend(MessageQueue * pMQ, QueueMessage * pQM)
+static time_t   QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
+                        unsigned int uRetryIncrRatio)
 {
 
-    int             iNumTries = pQM->iNumTries;
-    unsigned int    uRetryIncrRatio = (unsigned int) pMQ->iRetryIncrRatio,
-                    uNextOp = (unsigned int) pMQ->iRetryTimeout;
+    unsigned int    uNextOp = uRetryTimeout;
 
     if (uRetryIncrRatio != 0)
         for (int ii = 1; ii < iNumTries; ii++)
             uNextOp += uNextOp / uRetryIncrRatio;
 
+    return ((time_t) uNextOp);
 
-    return (time(NULL) > (time_t) (pQM->tLastTry + uNextOp));
+}
+
+
+
+static bool     QueMessageReadyToSend(MessageQueue * pMQ, QueueMessage * pQM)
+{
+
+    return (time(NULL) > (pQM->tLastTry + QueNextRetryOp(pQM->iNumTries,
+            (unsigned int) pMQ->iRetryTimeout, (unsigned int) pMQ->iRetryIncrRatio)));
 
 }
 

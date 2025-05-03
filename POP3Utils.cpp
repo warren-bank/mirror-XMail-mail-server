@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,16 +31,16 @@
 #include "BuffSock.h"
 #include "MD5.h"
 #include "MailConfig.h"
-#include "MessQueue.h"
-#include "QueueUtils.h"
 #include "UsrUtils.h"
 #include "SvrUtils.h"
+#include "MessQueue.h"
+#include "SMAILUtils.h"
+#include "QueueUtils.h"
 #include "MiscUtils.h"
 #include "Maildir.h"
 #include "POP3Svr.h"
 #include "POP3Utils.h"
 #include "SMTPUtils.h"
-#include "SMAILUtils.h"
 #include "MailSvr.h"
 
 
@@ -1334,7 +1334,8 @@ static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex)
 
 
 int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtServer, const char *pszRmtName,
-                        const char *pszRmtPassword, const char *pszAuthType, const char *pszErrorAccount)
+                        const char *pszRmtPassword, const char *pszFetchHdrTags, const char *pszAuthType,
+                        const char *pszErrorAccount)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Connection to POP3 server
@@ -1383,13 +1384,13 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 ///////////////////////////////////////////////////////////////////////////////
 //  Spool deliver fetched message
 ///////////////////////////////////////////////////////////////////////////////
-            if (USmlDeliverFetchedMsg(pszSyncAddr, szMsgFileName) < 0)
+            if (USmlDeliverFetchedMsg(pszSyncAddr, pszFetchHdrTags, szMsgFileName) < 0)
             {
 ///////////////////////////////////////////////////////////////////////////////
 //  If there's an error ( catch errors ) account try to deliver to this one
 ///////////////////////////////////////////////////////////////////////////////
                 if ((pszErrorAccount != NULL) &&
-                        (USmlDeliverFetchedMsg(pszErrorAccount, szMsgFileName) == 0))
+                        (USmlDeliverFetchedMsg(pszErrorAccount, NULL, szMsgFileName) == 0))
                 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Delete remote message only if successfully delivered

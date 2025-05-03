@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,13 +31,13 @@
 #include "MiscUtils.h"
 #include "ResLocks.h"
 #include "BuffSock.h"
-#include "MessQueue.h"
-#include "QueueUtils.h"
-#include "MailDomains.h"
 #include "SvrUtils.h"
 #include "UsrUtils.h"
-#include "SMTPUtils.h"
+#include "MessQueue.h"
 #include "SMAILUtils.h"
+#include "QueueUtils.h"
+#include "MailDomains.h"
+#include "SMTPUtils.h"
 #include "ExtAliases.h"
 #include "UsrMailList.h"
 #include "MailConfig.h"
@@ -60,7 +60,7 @@
 #define FILTER_OUT_NNF_EXITCODE     97
 #define FILTER_OUT_NN_EXITCODE      98
 #define FILTER_OUT_EXITCODE         99
-#define MODIFY_EXITCODE             100
+#define FILTER_MODIFY_EXITCODE      100
 
 
 
@@ -77,6 +77,8 @@ static SMAILConfig *SMAILGetConfigCopy(SHB_HANDLE hShbSMAIL);
 static int      SMAILThreadCountAdd(long lCount, SHB_HANDLE hShbSMAIL,
                         SMAILConfig * pSMAILCfg = NULL);
 static int      SMAILLogEnabled(SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg = NULL);
+static int      SMAILHandleResendNotify(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, SPLF_HANDLE hFSpool);
 static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
                         QMSG_HANDLE hMessage, SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg);
 static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL);
@@ -262,6 +264,60 @@ unsigned int    SMAILThreadProc(void *pThreadData)
 
 
 
+static int      SMAILHandleResendNotify(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
+                        QMSG_HANDLE hMessage, SPLF_HANDLE hFSpool)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Check if it's time to notify about a failed delivery attempt
+///////////////////////////////////////////////////////////////////////////////
+    int             iRetryCount = QueGetTryCount(hMessage);
+    char            szNotifyPattern[128] = "";
+
+    SvrConfigVar("NotifyTryPattern", szNotifyPattern, sizeof(szNotifyPattern) - 1, hSvrConfig, "");
+
+    for (char * pszTry = szNotifyPattern; pszTry != NULL; ++pszTry)
+    {
+        if (isdigit(*pszTry) && (atoi(pszTry) == iRetryCount))
+            break;
+
+        if ((pszTry = strchr(pszTry, ',')) == NULL)
+            return (0);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Build the notification text and send the message
+///////////////////////////////////////////////////////////////////////////////
+    time_t          tLastTry = QueGetLastTryTime(hMessage),
+                    tNextTry = QueGetMessageNextOp(hQueue, hMessage);
+    char            szTimeLast[128] = "",
+                    szTimeNext[128] = "";
+
+    MscGetTimeStr(szTimeLast, sizeof(szTimeLast) - 1, tLastTry);
+    MscGetTimeStr(szTimeNext, sizeof(szTimeNext) - 1, tNextTry);
+
+
+    char           *pszText = StrSprint(
+                    "** This is a temporary error and you do not have to resend the message\r\n"
+                    "** The system tried to send the message at      : %s\r\n"
+                    "** The current number of delivery attempts is   : %d\r\n"
+                    "** The system will try to resend the message at : %s\r\n",
+                    szTimeLast, iRetryCount, szTimeNext);
+
+    if (pszText == NULL)
+        return (ErrGetErrorCode());
+
+
+    int             iNotifyResult = QueUtNotifyErrDelivery(hQueue, hMessage, hFSpool, NULL, pszText);
+
+
+    SysFree(pszText);
+
+    return (iNotifyResult);
+
+}
+
+
+
 static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQueue,
                         QMSG_HANDLE hMessage, SHB_HANDLE hShbSMAIL, SMAILConfig * pSMAILCfg)
 {
@@ -291,7 +347,8 @@ static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQ
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 
-        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+        QueUtCleanupNotifyRoot(hQueue, hMessage, INVALID_SPLF_HANDLE,
+                ErrGetErrorString(ErrorFetch()));
         QueCloseMessage(hQueue, hMessage);
 
         return (ErrorPop());
@@ -317,9 +374,8 @@ static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQ
                 "Message <%s> blocked by mail loop check !\n",
                 pszSmtpMessageID);
 
+        QueUtCleanupNotifyRoot(hQueue, hMessage, hFSpool, ErrGetErrorString(ErrorFetch()));
         USmlCloseHandle(hFSpool);
-
-        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
         QueCloseMessage(hQueue, hMessage);
 
         return (ErrorPop());
@@ -339,17 +395,21 @@ static int      SMAILTryProcessMessage(SVRCFG_HANDLE hSvrConfig, QUEUE_HANDLE hQ
         {
             USmlSyncChanges(hFSpool);
 
-            USmlCloseHandle(hFSpool);
+///////////////////////////////////////////////////////////////////////////////
+//  Handle resend notifications
+///////////////////////////////////////////////////////////////////////////////
+            SMAILHandleResendNotify(hSvrConfig, hQueue, hMessage, hFSpool);
 
+///////////////////////////////////////////////////////////////////////////////
+//  Resend the message
+///////////////////////////////////////////////////////////////////////////////
+            QueUtResendMessage(hQueue, hMessage, hFSpool);
 
-            QueUtResendMessage(hQueue, hMessage);
         }
         else
-        {
-            USmlCloseHandle(hFSpool);
-
             QueCloseMessage(hQueue, hMessage);
-        }
+
+        USmlCloseHandle(hFSpool);
 
         return (ErrorPop());
     }
@@ -401,7 +461,7 @@ static int      SMAILTryProcessSpool(SHB_HANDLE hShbSMAIL)
             ErrorPush();
             SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
 
-            QueUtResendMessage(hSpoolQueue, hMessage);
+            QueUtResendMessage(hSpoolQueue, hMessage, NULL);
 
             SysFree(pSMAILCfg);
             return (ErrorPop());
@@ -515,7 +575,7 @@ static int      SMAILProcessFile(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 
             QueUtErrLogMessage(hQueue, hMessage, "%s\n", szBounceMsg);
 
-            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, szBounceMsg);
+            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool, szBounceMsg);
 
             return (ErrorPop());
         }
@@ -555,6 +615,11 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 //  the sender will be the "real" message sender
 ///////////////////////////////////////////////////////////////////////////////
     char           *pszMLSender = UsrGetUserInfoVar(pUI, "ListSender");
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check if the use of the Reply-To: is requested
+///////////////////////////////////////////////////////////////////////////////
+    int             iUseReplyTo = UsrGetUserInfoVarInt(pUI, "UseReplyTo", 1);
 
 
     USRML_HANDLE    hUsersDB = UsrMLOpenDB(pUI);
@@ -597,7 +662,7 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 //  Create spool file. If "pszMLSender" is NULL the original sender is kept
 ///////////////////////////////////////////////////////////////////////////////
             if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szQueueFilePath,
-                    "Reply-To", ppszRcpt[0],
+                    (iUseReplyTo != 0) ? "Reply-To": "", ppszRcpt[0],
                     NULL) < 0)
             {
                 ErrorPush();
@@ -932,7 +997,7 @@ static int      SMAILHandleRemoteUserMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDL
 //  sender and remove the spool file
 ///////////////////////////////////////////////////////////////////////////////
         if (USmtpIsFatalError(&SMTPE))
-                QueUtCleanupNotifyErrDelivery(hQueue, hMessage, USmtpGetErrorMessage(&SMTPE));
+            QueUtCleanupNotifyErrDelivery(hQueue, hMessage, hFSpool, USmtpGetErrorMessage(&SMTPE));
 
         USmtpCleanupError(&SMTPE);
 
@@ -1585,7 +1650,8 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
     {
         ErrorPush();
 
-        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+        QueUtCleanupNotifyRoot(hQueue, hMessage, INVALID_SPLF_HANDLE,
+                ErrGetErrorString(ErrorFetch()));
 
         return (ErrorPop());
     }
@@ -1593,15 +1659,17 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract target domain and user
 ///////////////////////////////////////////////////////////////////////////////
+    int             iRcptDomains = StrStringsCount(SFH.ppszRcpt);
     char            szDestUser[MAX_ADDR_NAME] = "",
                     szDestDomain[MAX_ADDR_NAME] = "";
 
-    if ((StrStringsCount(SFH.ppszRcpt) < 1) ||
-            (USmtpSplitEmailAddr(SFH.ppszRcpt[0], szDestUser, szDestDomain) < 0))
+    if ((iRcptDomains < 1) ||
+            (USmtpSplitEmailAddr(SFH.ppszRcpt[iRcptDomains - 1], szDestUser, szDestDomain) < 0))
     {
         ErrorPush();
 
-        QueUtCleanupNotifyRoot(hQueue, hMessage, ErrGetErrorString(ErrorFetch()));
+        QueUtCleanupNotifyRoot(hQueue, hMessage, INVALID_SPLF_HANDLE,
+                ErrGetErrorString(ErrorFetch()));
 
         USmlCleanupSpoolFileHeader(SFH);
         return (ErrorPop());
@@ -1667,7 +1735,7 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
 //  Filter out message
 ///////////////////////////////////////////////////////////////////////////////
                     if (iExitCode == FILTER_OUT_EXITCODE)
-                        QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
+                        QueUtCleanupNotifyErrDelivery(hQueue, hMessage, NULL,
                                 ErrGetErrorString(ERR_FILTERED_MESSAGE));
                     else if (iExitCode == FILTER_OUT_NN_EXITCODE)
                         QueCleanupMessage(hQueue, hMessage, !QueUtRemoveSpoolErrors());
@@ -1677,7 +1745,7 @@ static int      SMAILFilterMessage(SHB_HANDLE hShbSMAIL, QUEUE_HANDLE hQueue, QM
                     ErrSetErrorCode(ERR_FILTERED_MESSAGE);
                     return (ERR_FILTERED_MESSAGE);
                 }
-                else if (iExitCode == MODIFY_EXITCODE)
+                else if (iExitCode == FILTER_MODIFY_EXITCODE)
                 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter modified the message

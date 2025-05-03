@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,9 +37,9 @@
 #include "DNS.h"
 #include "DNSCache.h"
 #include "MessQueue.h"
+#include "SMAILUtils.h"
 #include "QueueUtils.h"
 #include "SMTPSvr.h"
-#include "SMAILUtils.h"
 #include "SMTPUtils.h"
 #include "Base64Enc.h"
 #include "MD5.h"
@@ -59,9 +59,6 @@
 #define SMTPRELAY_LINE_MAX      512
 #define SMTP_RELAY_FILE         "smtprelay.tab"
 #define MAX_MX_RECORDS          32
-#define RBL_MAPS_DOMAIN         "rbl.maps.vix.com."
-#define RSS_MAPS_DOMAIN         "relays.mail-abuse.org."
-#define DUL_MAPS_DOMAIN         "dialups.mail-abuse.org."
 #define SMTP_SPAMMERS_FILE      "spammers.tab"
 #define SMTP_SPAM_ADDRESS_FILE  "spam-address.tab"
 #define SPAMMERS_LINE_MAX       512
@@ -2183,57 +2180,6 @@ void            USmtpMXSClose(MXS_HANDLE hMXSHandle)
 
 
 
-int             USmtpRBLCheck(SYS_INET_ADDR const & PeerInfo)
-{
-
-    if (USmtpDnsMapsContained(PeerInfo, RBL_MAPS_DOMAIN))
-    {
-        char            szIP[128] = "???.???.???.???";
-
-        ErrSetErrorCode(ERR_RBL_SPAMMER, SysInetNToA(PeerInfo, szIP));
-        return (ERR_RBL_SPAMMER);
-    }
-
-    return (0);
-
-}
-
-
-
-int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo)
-{
-
-    if (USmtpDnsMapsContained(PeerInfo, RSS_MAPS_DOMAIN))
-    {
-        char            szIP[128] = "???.???.???.???";
-
-        ErrSetErrorCode(ERR_RSS_SPAMMER, SysInetNToA(PeerInfo, szIP));
-        return (ERR_RSS_SPAMMER);
-    }
-
-    return (0);
-
-}
-
-
-
-int             USmtpDULCheck(SYS_INET_ADDR const & PeerInfo)
-{
-
-    if (USmtpDnsMapsContained(PeerInfo, DUL_MAPS_DOMAIN))
-    {
-        char            szIP[128] = "???.???.???.???";
-
-        ErrSetErrorCode(ERR_DUL_SPAMMER, SysInetNToA(PeerInfo, szIP));
-        return (ERR_DUL_SPAMMER);
-    }
-
-    return (0);
-
-}
-
-
-
 bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const * pszMapsServer)
 {
 
@@ -2440,7 +2386,7 @@ int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomai
 
 
 
-char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+char           *USmtpGetReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszMessageID)
 {
 
@@ -2454,12 +2400,41 @@ char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * 
 ///////////////////////////////////////////////////////////////////////////////
 //  Return "Received:" tag
 ///////////////////////////////////////////////////////////////////////////////
-    return (StrSprint(
+    char           *pszReceived = NULL;
+
+    switch (iType)
+    {
+        case (RECEIVED_TYPE_STRICT):
+            pszReceived = StrSprint(
+                    "Received: from %s\r\n"
+                    "\tby %s with %s\r\n"
+                    "\tid <%s> for <%s> from <%s>;\r\n"
+                    "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiServerDomain],
+                    ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+            break;
+
+        case (RECEIVED_TYPE_VERBOSE):
+            pszReceived = StrSprint(
                     "Received: from %s (%s)\r\n"
                     "\tby %s (%s) with %s\r\n"
                     "\tid <%s> for <%s> from <%s>;\r\n"
                     "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientIP],
-                    ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverIP],
-                    ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]));
+                    ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiServerIP],
+                    ppszMsgInfo[smsgiSeverName], pszMessageID, szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+            break;
+
+        case (RECEIVED_TYPE_STD):
+        default:
+            pszReceived = StrSprint(
+                    "Received: from %s (%s)\r\n"
+                    "\tby %s with %s\r\n"
+                    "\tid <%s> for <%s> from <%s>;\r\n"
+                    "\t%s\r\n", ppszMsgInfo[smsgiClientDomain], ppszMsgInfo[smsgiClientIP],
+                    ppszMsgInfo[smsgiServerDomain], ppszMsgInfo[smsgiSeverName], pszMessageID,
+                    szRcpt, szFrom, ppszMsgInfo[smsgiTime]);
+            break;
+    }
+
+    return (pszReceived);
 
 }

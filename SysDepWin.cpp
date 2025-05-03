@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -52,6 +52,7 @@
 
 #define MIN_TCP_SEND_SIZE               (1024 * 8)
 #define MAX_TCP_SEND_SIZE               (1024 * 128)
+#define K_IO_TIME_RATIO                 8
 
 #define MAX_STACK_SHIFT                 2048
 #define STACK_ALIGN_BYTES               8
@@ -997,7 +998,8 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             return (ErrorPop());
         }
 
-        if ((((time(NULL) - tStart) * 8) < iTimeout) && (iSndBuffSize < MAX_TCP_SEND_SIZE))
+        if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
+                (iSndBuffSize < MAX_TCP_SEND_SIZE))
             iSndBuffSize = Min(iSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         pszBuffer += iCurrSend;
@@ -2199,10 +2201,41 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
     ZeroData(FI);
     FI.iFileType = (WFD.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? ftDirectory : ftNormal;
     FI.ulSize = (unsigned long) WFD.nFileSizeLow;
-    FI.tCreat = SysFileTimeToTimet(&WFD.ftCreationTime);
     FI.tMod = SysFileTimeToTimet(&WFD.ftLastWriteTime);
 
     FindClose(hFind);
+
+    return (0);
+
+}
+
+
+
+int             SysSetFileModTime(char const * pszFileName, time_t tMod)
+{
+
+    HANDLE          hFile = CreateFile(pszFileName, GENERIC_WRITE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        ErrSetErrorCode(ERR_SET_FILE_TIME);
+        return (ERR_SET_FILE_TIME);
+    }
+
+    FILETIME        MFT;
+
+    SysTimetToFileTime(tMod, &MFT);
+
+    if (!SetFileTime(hFile, NULL, &MFT, &MFT))
+    {
+        CloseHandle(hFile);
+        ErrSetErrorCode(ERR_SET_FILE_TIME);
+        return (ERR_SET_FILE_TIME);
+    }
+
+    CloseHandle(hFile);
 
     return (0);
 

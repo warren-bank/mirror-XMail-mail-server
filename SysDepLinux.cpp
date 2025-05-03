@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@
 
 #define MIN_TCP_SEND_SIZE           (1024 * 8)
 #define MAX_TCP_SEND_SIZE           (1024 * 128)
+#define K_IO_TIME_RATIO             8
 
 #define MAX_STACK_SHIFT             2048
 #define STACK_ALIGN_BYTES           8
@@ -768,7 +769,8 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             return (ERR_SENDFILE);
         }
 
-        if ((((time(NULL) - tStart) * 8) < iTimeout) && (ulSndBuffSize < MAX_TCP_SEND_SIZE))
+        if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
+                (ulSndBuffSize < MAX_TCP_SEND_SIZE))
             ulSndBuffSize = Min(ulSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         ulCurrOffset += ulToSend;
@@ -810,7 +812,8 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
             return (ErrorPop());
         }
 
-        if ((((time(NULL) - tStart) * 8) < iTimeout) && (iSndBuffSize < MAX_TCP_SEND_SIZE))
+        if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
+                (iSndBuffSize < MAX_TCP_SEND_SIZE))
             iSndBuffSize = Min(iSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         pszBuffer += iCurrSend;
@@ -1822,7 +1825,7 @@ static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
     PIDWaitData     PWD;
 
     ZeroData(PWD);
-    SYS_INIT_LIST_HEAD(&PWD.LLink);
+    SYS_INIT_LIST_LINK(&PWD.LLink);
     PWD.WaitThreadId = pthread_self();
     PWD.PID = PID;
     PWD.iExitCode = -1;
@@ -2470,8 +2473,27 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
             ((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory :
             ((S_ISLNK(stat_buffer.st_mode)) ? ftLink : ftOther));
     FI.ulSize = (unsigned long) stat_buffer.st_size;
-    FI.tCreat = stat_buffer.st_ctime;
     FI.tMod = stat_buffer.st_mtime;
+
+    return (0);
+
+}
+
+
+
+int             SysSetFileModTime(char const * pszFileName, time_t tMod)
+{
+
+    struct utimbuf  TMB;
+
+    TMB.actime = tMod;
+    TMB.modtime = tMod;
+
+    if (utime(pszFileName, &TMB) != 0)
+    {
+        ErrSetErrorCode(ERR_SET_FILE_TIME);
+        return (ERR_SET_FILE_TIME);
+    }
 
     return (0);
 

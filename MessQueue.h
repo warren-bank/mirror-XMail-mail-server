@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ int             QueGetLevel1(QMSG_HANDLE hMessage);
 int             QueGetLevel2(QMSG_HANDLE hMessage);
 int             QueGetTryCount(QMSG_HANDLE hMessage);
 time_t          QueGetLastTryTime(QMSG_HANDLE hMessage);
+time_t          QueGetMessageNextOp(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 int             QueInitMessageStats(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 int             QueCleanupMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, bool bFreeze = false);
 int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);

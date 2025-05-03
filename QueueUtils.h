@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,11 +41,13 @@ int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char const * pszFormat, ...);
 bool            QueUtRemoveSpoolErrors(void);
 int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszReason);
+                        SPLF_HANDLE hFSpool, char const * pszReason);
+int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        SPLF_HANDLE hFSpool, char const * pszReason, char const * pszText);
 int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszReason);
-int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
-
+                        SPLF_HANDLE hFSpool, char const * pszReason);
+int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                        SPLF_HANDLE hFSpool);
 
 
 

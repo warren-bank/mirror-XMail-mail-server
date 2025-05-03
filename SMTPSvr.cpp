@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,17 +29,17 @@
 #include "BuffSock.h"
 #include "ResLocks.h"
 #include "StrUtils.h"
-#include "MessQueue.h"
-#include "QueueUtils.h"
-#include "SvrUtils.h"
-#include "MiscUtils.h"
 #include "UsrUtils.h"
+#include "SvrUtils.h"
+#include "MessQueue.h"
+#include "SMAILUtils.h"
+#include "QueueUtils.h"
+#include "MiscUtils.h"
 #include "Base64Enc.h"
 #include "MD5.h"
 #include "UsrMailList.h"
 #include "SMTPSvr.h"
 #include "SMTPUtils.h"
-#include "SMAILUtils.h"
 #include "MailDomains.h"
 #include "POP3Utils.h"
 #include "MailConfig.h"
@@ -184,7 +184,7 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
-static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+static int      SMTPAddReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile);
 static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile);
 static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
@@ -544,7 +544,7 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
             break;
 
         int             iRetCode = atoi(pszColon + 1),
-                        iMapLength = (int) (pszColon - pszMapList);
+                        iMapLength = Min((int) (pszColon - pszMapList), MAX_HOST_NAME - 1);
         char            szMapName[MAX_HOST_NAME] = "";
 
         strncpy(szMapName, pszMapList, iMapLength);
@@ -659,50 +659,6 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 
     if ((iCheckValue != 0) &&
             (SysGetHostByAddr(SMTPS.PeerInfo, SMTPS.szClientFQDN) < 0))
-    {
-        if (iCheckValue > 0)
-            SMTPS.ulFlags |= SMTPF_BLOCKED_IP;
-        else
-            SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  RBL-MAPS client check (rbl.maps.vix.com.)
-///////////////////////////////////////////////////////////////////////////////
-    if (((iCheckValue = SvrGetConfigInt("RBL-MAPSCheck", 0, SMTPS.hSvrConfig)) != 0) &&
-            (USmtpRBLCheck(SMTPS.PeerInfo) < 0))
-    {
-        if (iCheckValue > 0)
-        {
-            ErrorPush();
-            SvrReleaseConfigHandle(SMTPS.hSvrConfig);
-            return (ErrorPop());
-        }
-
-        SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  RSS-MAPS client check (relays.mail-abuse.org.)
-///////////////////////////////////////////////////////////////////////////////
-    if (((iCheckValue = SvrGetConfigInt("RSS-MAPSCheck", 0, SMTPS.hSvrConfig)) != 0) &&
-            (USmtpRSSCheck(SMTPS.PeerInfo) < 0))
-    {
-        if (iCheckValue > 0)
-        {
-            ErrorPush();
-            SvrReleaseConfigHandle(SMTPS.hSvrConfig);
-            return (ErrorPop());
-        }
-
-        SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
-    }
-
-///////////////////////////////////////////////////////////////////////////////
-//  DUL-MAPS client check (dialups.mail-abuse.org.)
-///////////////////////////////////////////////////////////////////////////////
-    if (((iCheckValue = SvrGetConfigInt("DUL-MAPSCheck", 0, SMTPS.hSvrConfig)) != 0) &&
-            (USmtpDULCheck(SMTPS.PeerInfo) < 0))
     {
         if (iCheckValue > 0)
             SMTPS.ulFlags |= SMTPF_BLOCKED_IP;
@@ -1699,6 +1655,9 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     if (SMTPS.iRcptCount >= SMTPS.pSMTPCfg->iMaxRcpts)
     {
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, "", "RCPT=ENBR", 0);
+
         BSckSendString(hBSock, "552 Too many recipients", SMTPS.pSMTPCfg->iTimeout);
 
         ErrSetErrorCode(ERR_SMTP_TOO_MANY_RECIPIENTS);
@@ -1710,6 +1669,10 @@ static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
     if (ppszFwdDomains == NULL)
     {
         ErrorPush();
+
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, "", "RCPT=ESYNTAX", 0);
+
         SMTPResetSession(SMTPS);
 
         BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
@@ -1914,11 +1877,12 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+static int      SMTPAddReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile)
 {
 
-    char           *pszReceived = USmtpGetReceived(ppszMsgInfo, pszMailFrom, pszRcptTo, pszMessageID);
+    char           *pszReceived = USmtpGetReceived(iType, ppszMsgInfo, pszMailFrom, pszRcptTo,
+                            pszMessageID);
 
     if (pszReceived == NULL)
         return (ErrGetErrorCode());
@@ -2024,6 +1988,11 @@ static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile
         return (ERR_INVALID_SPOOL_FILE);
     }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Get the Received: header type to emit
+///////////////////////////////////////////////////////////////////////////////
+    int             iReceivedType = SvrGetConfigInt("ReceivedHdrType", RECEIVED_TYPE_STD,
+                            SMTPS.hSvrConfig);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Read "RCPT TO:" ( 5th[,...] row(s) of the smtp-mail file )
@@ -2096,7 +2065,8 @@ static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "Received:" tag
 ///////////////////////////////////////////////////////////////////////////////
-        SMTPAddReceived(ppszMsgInfo, szMailFrom, szSpoolLine, szMessageID, pSpoolFile);
+        SMTPAddReceived(iReceivedType, ppszMsgInfo, szMailFrom, szSpoolLine,
+                szMessageID, pSpoolFile);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write mail data, saving and restoring the current file pointer

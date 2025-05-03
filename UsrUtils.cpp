@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,15 +30,16 @@
 #include "SList.h"
 #include "BuffSock.h"
 #include "MailConfig.h"
+#include "UsrUtils.h"
+#include "SvrUtils.h"
 #include "MessQueue.h"
+#include "SMAILUtils.h"
 #include "QueueUtils.h"
 #include "MailSvr.h"
 #include "MiscUtils.h"
-#include "SvrUtils.h"
 #include "MailDomains.h"
 #include "POP3GwLink.h"
 #include "ExtAliases.h"
-#include "UsrUtils.h"
 #include "Maildir.h"
 #include "TabIndex.h"
 #include "SMTPUtils.h"
@@ -144,6 +145,8 @@ static bool     UsrIsWildAlias(char const * pszAlias);
 static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName);
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
                         const char *pszName);
+static UserInfo *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
+                        char *pszRealAddr);
 static int      UsrDropUserEnv(UserInfo * pUI);
 static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile);
 static int      UsrCreateMailbox(char const * pszUsrUserPath);
@@ -1494,17 +1497,9 @@ UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName)
 
 
 
-UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
+static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
                         char *pszRealAddr)
 {
-///////////////////////////////////////////////////////////////////////////////
-//  Check for alias domain
-///////////////////////////////////////////////////////////////////////////////
-    char            szADomain[MAX_HOST_NAME] = "";
-
-    if (ADomLookupDomain(pszDomain, szADomain, true))
-        pszDomain = szADomain;
-
 
     char const     *pszAliasedUser = NULL,
                    *pszAliasedDomain = NULL;
@@ -1549,6 +1544,25 @@ UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszNa
 
 
     RLckUnlockSH(hResLock);
+
+    return (pUI);
+
+}
+
+
+
+UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
+                        char *pszRealAddr)
+{
+
+    UserInfo       *pUI = UsrGetUserByNameOrAliasNDA(pszDomain, pszName, pszRealAddr);
+    char            szADomain[MAX_HOST_NAME] = "";
+
+///////////////////////////////////////////////////////////////////////////////
+//  Check for alias domain if first lookup failed
+///////////////////////////////////////////////////////////////////////////////
+    if ((pUI == NULL) && ADomLookupDomain(pszDomain, szADomain, true))
+        pUI = UsrGetUserByNameOrAliasNDA(szADomain, pszName, pszRealAddr);
 
     return (pUI);
 

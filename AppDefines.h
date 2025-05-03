@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 
 #define APP_PRODUCER            "GNU"
 #define APP_NAME_STR            "XMail"
-#define APP_VERSION_STR         "1.5"
+#define APP_VERSION_STR         "1.6"
 #define APP_NAME_VERSION_STR    APP_NAME_STR " " APP_VERSION_STR
 #define APP_NAME_VERSION_OS_STR APP_NAME_VERSION_STR " (" SYS_OS_PORT ")"
 

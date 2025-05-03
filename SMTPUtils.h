@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,9 @@
 
 #define SMTP_FATAL_ERROR            999
 
+#define RECEIVED_TYPE_STD           0
+#define RECEIVED_TYPE_VERBOSE       1
+#define RECEIVED_TYPE_STRICT        2
 
 
 
@@ -56,7 +59,7 @@ enum SmtpMsgInfo
     smsgiClientDomain = 0,
     smsgiClientIP,
     smsgiServerDomain,
-    smsgiSeverIP,
+    smsgiServerIP,
     smsgiTime,
     smsgiSeverName,
 
@@ -98,16 +101,13 @@ MXS_HANDLE      USmtpGetMXFirst(SVRCFG_HANDLE hSvrConfig, const char *pszDomain,
                         char *pszMXHost);
 int             USmtpGetMXNext(MXS_HANDLE hMXSHandle, char *pszMXHost);
 void            USmtpMXSClose(MXS_HANDLE hMXSHandle);
-int             USmtpRBLCheck(SYS_INET_ADDR const & PeerInfo);
-int             USmtpRSSCheck(SYS_INET_ADDR const & PeerInfo);
-int             USmtpDULCheck(SYS_INET_ADDR const & PeerInfo);
 bool            USmtpDnsMapsContained(SYS_INET_ADDR const & PeerInfo, char const * pszMapsServer);
 int             USmtpSpammerCheck(const SYS_INET_ADDR & PeerInfo);
 int             USmtpSpamAddressCheck(char const * pszAddress);
 int             USmtpAddMessageInfo(FILE * pMsgFile, char const * pszClientDomain,
                         SYS_INET_ADDR const & PeerInfo, char const * pszServerDomain,
                         SYS_INET_ADDR const & SockInfo, char const * pszSmtpServerLogo);
-char           *USmtpGetReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
+char           *USmtpGetReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszMessageID);
 
 

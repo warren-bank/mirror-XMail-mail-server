@@ -1,6 +1,6 @@
 /*
  *  XMail by Davide Libenzi ( Intranet and Internet mail server )
- *  Copyright (C) 1999,2000,2001  Davide Libenzi
+ *  Copyright (C) 1999,...,2002  Davide Libenzi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -138,6 +138,7 @@ unsigned long   SysGetSize(SYS_HANDLE hFind);
 int             SysNextFile(SYS_HANDLE hFind, char *pszFileName);
 void            SysFindClose(SYS_HANDLE hFind);
 int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI);
+int             SysSetFileModTime(char const * pszFileName, time_t tMod);
 char           *SysStrDup(const char *pszString);
 char           *SysGetEnv(const char *pszVarName);
 char           *SysGetTmpFile(char *pszFileName);
