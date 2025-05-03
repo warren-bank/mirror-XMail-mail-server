@@ -1135,13 +1135,6 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    if (MDomIsHandledDomain(ppszTokens[1]) < 0)
-    {
-        ErrorPush();
-        CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
-        return (ErrorPop());
-    }
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Check real user account existence
 ///////////////////////////////////////////////////////////////////////////////
@@ -2089,14 +2082,6 @@ static int      CTRLDo_domainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
                         char const * const * ppszTokens, int iTokensCount)
 {
 
-    if (iTokensCount != 1)
-    {
-        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
-        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
-        return (ERR_BAD_CTRL_COMMAND);
-    }
-
-
     DOMLS_HANDLE    hDomainsDB = MDomOpenDB();
 
     if (hDomainsDB == INVALID_DOMLS_HANDLE)
@@ -2116,17 +2101,19 @@ static int      CTRLDo_domainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     {
         do
         {
-            char            szDomainLine[512] = "";
-
-            sprintf(szDomainLine, "\"%s\"", pszDomain);
-
-            if (BSckSendString(hBSock, szDomainLine, pCTRLCfg->iTimeout) < 0)
+            if ((iTokensCount < 2) || StrStringsRIWMatch(&ppszTokens[1], pszDomain))
             {
-                ErrorPush();
-                MDomCloseDB(hDomainsDB);
-                return (ErrorPop());
-            }
+                char            szDomainLine[512] = "";
 
+                sprintf(szDomainLine, "\"%s\"", pszDomain);
+
+                if (BSckSendString(hBSock, szDomainLine, pCTRLCfg->iTimeout) < 0)
+                {
+                    ErrorPush();
+                    MDomCloseDB(hDomainsDB);
+                    return (ErrorPop());
+                }
+            }
         } while ((pszDomain = MDomGetNextDomain(hDomainsDB)) != NULL);
     }
 
@@ -3112,14 +3099,6 @@ static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSoc
                         char const * const * ppszTokens, int iTokensCount)
 {
 
-    if (iTokensCount != 1)
-    {
-        CTRLSendCmdResult(pCTRLCfg, hBSock, ERR_BAD_CTRL_COMMAND);
-        ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
-        return (ERR_BAD_CTRL_COMMAND);
-    }
-
-
     ADOMAIN_HANDLE  hADomainDB = ADomOpenDB();
 
     if (hADomainDB == INVALID_ADOMAIN_HANDLE)
@@ -3137,12 +3116,15 @@ static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSoc
 
     for (; ppszStrings != NULL; ppszStrings = ADomGetNextDomain(hADomainDB))
     {
-        if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",
-                ppszStrings[adomADomain], ppszStrings[adomDomain]) < 0)
+        if ((iTokensCount < 2) || StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomADomain]))
         {
-            ErrorPush();
-            ADomCloseDB(hADomainDB);
-            return (ErrorPop());
+            if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",
+                    ppszStrings[adomADomain], ppszStrings[adomDomain]) < 0)
+            {
+                ErrorPush();
+                ADomCloseDB(hADomainDB);
+                return (ErrorPop());
+            }
         }
     }
 

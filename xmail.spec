@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.3
+Version: 1.4
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -117,6 +117,15 @@ fi
 
 
 %changelog
+
+* Fri Jan 18 2002 Davide Libenzi <davidel@xmailserver.org>
+    Fixed a bug that made XMail to fail to parse custom maps lists in SERVER.TAB.
+    Fixed a bug that prevented XMail to add wildcard-domain aliases.
+    Added a filter feature to the CTRL commands "domainlist" and "aliasdomainlist".
+    Added an extra message header field "X-AuthUser:" to log the username used by the account to send the message.
+    Added Reply-To: RFC822 header for mailing lists sends.
+    Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.
+
 * Wed Dec 19 2001 Davide Libenzi <davidel@xmailserver.org>
     ORBS maps test removed due old ORBS dead, the SERVER.TAB variable "CustMapsList"
     can be used to setup new ORBS ( and other ) maps. Fixed a bug in XMail's  sendmail

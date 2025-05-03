@@ -98,8 +98,10 @@ int             USmlSetTagAddress(SPLF_HANDLE hFSpool, char const * pszTagName,
 int             USmlMapAddress(char const * pszAddress, char *pszDomain, char *pszName);
 int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
                         SPLF_HANDLE hFSpool);
+int             USmlVCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
+                        char const * pszRcptUser, char const * pszFileName, va_list Headers);
 int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
-                        char const * pszRcptUser, char const * pszFileName);
+                        char const * pszRcptUser, char const * pszFileName, ...);
 int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
                         QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, LocalMailProcConfig & LMPC);
 int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash = 1);

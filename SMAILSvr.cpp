@@ -596,7 +596,9 @@ static int      SMAILMailingListExplode(UserInfo * pUI, SPLF_HANDLE hFSpool)
 ///////////////////////////////////////////////////////////////////////////////
 //  Create spool file. If "pszMLSender" is NULL the original sender is kept
 ///////////////////////////////////////////////////////////////////////////////
-            if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szQueueFilePath) < 0)
+            if (USmlCreateSpoolFile(hFSpool, pszMLSender, pMLUI->pszAddress, szQueueFilePath,
+                    "Reply-To", ppszRcpt[0],
+                    NULL) < 0)
             {
                 ErrorPush();
                 QueCleanupMessage(hSpoolQueue, hMessage);
@@ -1459,7 +1461,7 @@ static int      SMAILCmd_redirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL
             StrSNCpy(szAliasAddr, ppszCmdTokens[ii]);
 
 
-        if (USmlCreateSpoolFile(hFSpool, NULL, szAliasAddr, szQueueFilePath) < 0)
+        if (USmlCreateSpoolFile(hFSpool, NULL, szAliasAddr, szQueueFilePath, NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);
@@ -1537,7 +1539,7 @@ static int      SMAILCmd_lredirect(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAI
 
 
         if (USmlCreateSpoolFile(hFSpool, ppszRcpt[iRcptDomains - 1], szAliasAddr,
-                        szQueueFilePath) < 0)
+                        szQueueFilePath, NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);

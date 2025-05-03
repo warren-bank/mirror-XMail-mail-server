@@ -2073,7 +2073,7 @@ SYS_INT64       SysMsTime(void)
 
     MsTicks -= PCSysStart;
     MsTicks /= PCFreq;
-    MsTicks += (SYS_INT64) tSysStart *1000;
+    MsTicks += (SYS_INT64) tSysStart * 1000;
 
     return (MsTicks);
 
@@ -2084,15 +2084,7 @@ SYS_INT64       SysMsTime(void)
 int             SysExistFile(const char *pszFilePath)
 {
 
-    WIN32_FIND_DATA WFD;
-    HANDLE          hFind = FindFirstFile(pszFilePath, &WFD);
-
-    if (hFind == INVALID_HANDLE_VALUE)
-        return (0);
-
-    FindClose(hFind);
-
-    return (1);
+    return ((GetFileAttributes(pszFilePath) == (DWORD) -1) ? 0: 1);
 
 }
 

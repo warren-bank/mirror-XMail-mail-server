@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 1.3
+Version      : 1.4
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 19-12-2001
+Date         : 18-01-2002
 Project by   : Davide Libenzi <davidel@xmailserver.org>	http://www.xmailserver.org/
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -567,10 +567,13 @@ Date 19-12-2001	1.3
 	 Changed system library to have a better performace, expecially on the Windows platform.
 	 Users that are using XMail mainly inside their local LAN are strongly encouraged to switch to this version.
 	 Fixed a bug that enabled insertion of aliases that overlapped real accounts.
-	 
-
-
-
+Date 18-01-2002	1.4
+	 Fixed a bug that made XMail to fail to parse custom maps lists in SERVER.TAB.
+	 Fixed a bug that prevented XMail to add wildcard-domain aliases.
+	 Added a filter feature to the CTRL commands "domainlist" and "aliasdomainlist".
+	 Added an extra message header field "X-AuthUser:" to log the username used by the account to send the message.
+	 Added Reply-To: RFC822 header for mailing lists sends.
+	 Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.
 
 
 
@@ -836,9 +839,10 @@ Part 6			Build
 	XMail as a standard rc? daemon. You must put it into /etc/init.d ( it depends on which
 	distro You're using ) directory and then create K??xmail - S??xmail links into the
 	proper directories.
-	Under Windows NT You can uncomment the statement "#define SERVICE" in MainWin.cpp
-	to build an executable that can run as a service.
-	Then You can run :
+	Under Windows NT/2000/XP the XMail's executable is a Win32 service by default and if
+	You want to have it built like a standard executable You've to comment the statement
+	"#define SERVICE" in MainWin.cpp
+	When it's built as a service ( default ) You can run :
 
 	XMail --install
 
@@ -2763,8 +2767,13 @@ Part 20			XMail admin protocol
 	*) Listing handled domains
 
 	"domainlist"<CR><LF>
+	
+	or :
+	
+	"domainlist"[TAB]"wildmatch0"[TAB]...[TAB]"wildmatchN"<CR><LF>
 
 	The result will be a RESSTRING.
+	The wild match versions simply return a filtered list of domains.
 	In success case ( 00100 ) a formatted list of handled domains will follow, until a line
 	containing a single dot ( <CR><LF>.<CR><LF> ).
 
@@ -2798,8 +2807,13 @@ Part 20			XMail admin protocol
 	*) Listing alias domains
 
 	"aliasdomainlist"<CR><LF>
+	
+	or :
+	
+	"aliasdomainlist"[TAB]"wildmatch0"[TAB]...[TAB]"wildmatchN"<CR><LF>
 
 	The result will be a RESSTRING.
+	The wild match version simply returns a filtered list of alias domains.
 	In success case ( 00100 ) a formatted list of alias domains will follow, until a line
 	containing a single dot ( <CR><LF>.<CR><LF> ).
 

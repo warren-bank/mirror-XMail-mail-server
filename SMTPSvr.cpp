@@ -186,7 +186,7 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * pszMailFrom,
                         char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile);
-static int      SMTPSubmitPackedFile(const char *pszPkgFile);
+static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile);
 static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
                         SMTPSession & SMTPS);
 static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
@@ -536,7 +536,7 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
                         int & iMapCode)
 {
 
-    for (; pszMapList != NULL; pszMapList++)
+    for (;;)
     {
         char const     *pszColon = strchr(pszMapList, ':');
 
@@ -564,7 +564,10 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
             return (ERR_MAPS_CONTAINED);
         }
 
-        pszMapList = strchr(pszColon, ',');
+        if ((pszMapList = strchr(pszColon, ',')) == NULL)
+            break;
+
+        ++pszMapList;
     }
 
     return (0);
@@ -1870,7 +1873,7 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Transfer spool file
 ///////////////////////////////////////////////////////////////////////////////
-        if (SMTPSubmitPackedFile(SMTPS.szMsgFile) < 0)
+        if (SMTPSubmitPackedFile(SMTPS, SMTPS.szMsgFile) < 0)
             BSckVSendString(hBSock, SMTPS.pSMTPCfg->iTimeout,
                     "451 Requested action aborted: (%d) local error in processing", ErrGetErrorCode());
         else
@@ -1934,7 +1937,7 @@ static int      SMTPAddReceived(char const * const * ppszMsgInfo, char const * p
 
 
 
-static int      SMTPSubmitPackedFile(const char *pszPkgFile)
+static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile)
 {
 
     FILE           *pPkgFile = fopen(pszPkgFile, "rb");
@@ -2083,6 +2086,12 @@ static int      SMTPSubmitPackedFile(const char *pszPkgFile)
 //  Write SPOOL_FILE_DATA_START
 ///////////////////////////////////////////////////////////////////////////////
         fprintf(pSpoolFile, "%s\r\n", SPOOL_FILE_DATA_START);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Write "X-AuthUser:" tag
+///////////////////////////////////////////////////////////////////////////////
+        if (!IsEmptyString(SMTPS.szLogonUser))
+            fprintf(pSpoolFile, "X-AuthUser: %s\r\n", SMTPS.szLogonUser);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "Received:" tag

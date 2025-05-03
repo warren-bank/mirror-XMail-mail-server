@@ -1382,8 +1382,8 @@ int             USmlCreateMBFile(UserInfo * pUI, char const * pszFileName,
 
 
 
-int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
-                        char const * pszRcptUser, char const * pszFileName)
+int             USmlVCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
+                        char const * pszRcptUser, char const * pszFileName, va_list Headers)
 {
 
     char const     *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
@@ -1432,6 +1432,21 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
     fprintf(pSpoolFile, "%s\r\n", SPOOL_FILE_DATA_START);
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Write extra RFC822 headers
+///////////////////////////////////////////////////////////////////////////////
+    char const     *pszHeader = NULL;
+
+    while ((pszHeader = va_arg(Headers, char *)) != NULL)
+    {
+        char const     *pszValue = va_arg(Headers, char *);
+
+        if (pszValue == NULL)
+            break;
+
+        fprintf(pSpoolFile, "%s: %s\r\n", pszHeader, pszValue);
+    }
+
+///////////////////////////////////////////////////////////////////////////////
 //  Than write mail data
 ///////////////////////////////////////////////////////////////////////////////
     if (USmlWriteMailFile(hFSpool, pSpoolFile) < 0)
@@ -1445,6 +1460,26 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
     fclose(pSpoolFile);
 
     return (0);
+
+}
+
+
+
+
+int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
+                        char const * pszRcptUser, char const * pszFileName, ...)
+{
+
+    va_list         Headers;
+
+    va_start(Headers, pszFileName);
+
+    int             iCreateResult = USmlVCreateSpoolFile(hFSpool, pszFromUser,
+                            pszRcptUser, pszFileName, Headers);
+
+    va_end(Headers);
+
+    return (iCreateResult);
 
 }
 
@@ -1843,7 +1878,8 @@ static int      USmlCmd_redirect(char **ppszCmdTokens, int iNumTokens, UserInfo 
         QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
 
 
-        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii], szQueueFilePath) < 0)
+        if (USmlCreateSpoolFile(hFSpool, NULL, ppszCmdTokens[ii],
+                szQueueFilePath, NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);
@@ -1903,7 +1939,8 @@ static int      USmlCmd_lredirect(char **ppszCmdTokens, int iNumTokens, UserInfo
         QueGetFilePath(hSpoolQueue, hRedirMessage, szQueueFilePath);
 
 
-        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii], szQueueFilePath) < 0)
+        if (USmlCreateSpoolFile(hFSpool, szUserAddress, ppszCmdTokens[ii],
+                szQueueFilePath, NULL) < 0)
         {
             ErrorPush();
             QueCleanupMessage(hSpoolQueue, hRedirMessage);

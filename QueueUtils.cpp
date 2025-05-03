@@ -939,7 +939,7 @@ int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 //  Handle notifications and cleanup the message
 ///////////////////////////////////////////////////////////////////////////////
         iResendResult = QueUtCleanupNotifyErrDelivery(hQueue, hMessage,
-                "The maximum number of tentatives has been reached");
+                "The maximum number of delivery attempts has been reached");
 
         QueCloseMessage(hQueue, hMessage);
     }

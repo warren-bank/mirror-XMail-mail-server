@@ -52,6 +52,7 @@ void            StrFreeStrings(char **ppszStrings);
 int             StrStringsCount(char const * const * ppszStrings);
 bool            StrStringsMatch(char const * const * ppszStrings, char const * pszMatch);
 bool            StrStringsIMatch(char const * const * ppszStrings, char const * pszMatch);
+bool            StrStringsRIWMatch(char const * const * pszMatches, char const * pszString);
 char           *StrConcat(char const * const * ppszStrings, char const * pszCStr);
 char           *StrDeQuote(char *pszString, int iChar);
 char           *StrQuote(const char *pszString, int iChar);

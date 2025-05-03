@@ -357,6 +357,22 @@ bool            StrStringsIMatch(char const * const * ppszStrings, char const * 
 
 
 
+bool            StrStringsRIWMatch(char const * const * pszMatches, char const * pszString)
+{
+
+    int             ii;
+
+    for (ii = 0; pszMatches[ii] != NULL; ii++)
+        if (StrIWildMatch(pszString, pszMatches[ii]))
+            return (true);
+
+
+    return (false);
+
+}
+
+
+
 char           *StrConcat(char const * const * ppszStrings, char const * pszCStr)
 {
 
