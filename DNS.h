@@ -59,6 +59,7 @@
 
 #define QCLASS_ALL              255
 
+#define RCODE_NXDOMAIN          3
 
 
 

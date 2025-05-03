@@ -1557,6 +1557,8 @@ static int      CTRLDo_usergetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     char            szMPFile[SYS_MAX_PATH] = "";
 
+    SysGetTmpFile(szMPFile);
+
     if (UsrGetMailProcessFile(pUI, szMPFile) < 0)
     {
         ErrorPush();

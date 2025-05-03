@@ -33,6 +33,7 @@
 #define QUEUE_TEMP_DIR              "temp"
 #define QUEUE_SLOG_DIR              "slog"
 #define QUEUE_CUST_DIR              "cust"
+#define QUEUE_MPRC_DIR              "mprc"
 #define QUEUE_FROZ_DIR              "froz"
 
 #define STD_QUEUEFS_DIRS_X_LEVEL    23

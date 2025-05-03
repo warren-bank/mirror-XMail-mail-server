@@ -103,7 +103,7 @@ int             USmlVCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUs
                         char const * pszRcptUser, char const * pszFileName, va_list Headers);
 int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUser,
                         char const * pszRcptUser, char const * pszFileName, ...);
-int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
+int             USmlProcessLocalUserMessage(SVRCFG_HANDLE hSvrConfig, UserInfo * pUI, SPLF_HANDLE hFSpool,
                         QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, LocalMailProcConfig & LMPC);
 int             USmlGetDomainCustomDir(char *pszCustomDir, int iMaxPath, int iFinalSlash);
 int             USmlGetCmdAliasDir(char *pszAliasDir, int iMaxPath, int iFinalSlash);
@@ -122,6 +122,8 @@ int             USmlCreateCmdAliasDomainDir(char const *pszDomain);
 int             USmlDeleteCmdAliasDomainDir(char const *pszDomain);
 int             USmlGetDomainCustomSpoolFile(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
                         char *pszCustFilePath);
+int             USmlGetUserCustomSpoolFile(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
+                                           char *pszCustFilePath);
 int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, QUEUE_HANDLE hQueue,
                         QMSG_HANDLE hMessage, char const * pszDestDomain, char *pszCustFilePath);
 int             USmlGetCustomDomainFile(char const * pszDestDomain, char const * pszCustFilePath);

@@ -85,6 +85,7 @@ int             USmtpInitError(SMTPError * pSMTPE);
 bool            USmtpIsFatalError(SMTPError const * pSMTPE);
 char const     *USmtpGetErrorMessage(SMTPError const * pSMTPE);
 int             USmtpCleanupError(SMTPError * pSMTPE);
+char           *USmtpGetSMTPError(SMTPError * pSMTPE, char * pszError, int iMaxError);
 SMTPCH_HANDLE   USmtpCreateChannel(const char *pszServer, const char *pszDomain,
                         SMTPError * pSMTPE = NULL);
 int             USmtpCloseChannel(SMTPCH_HANDLE hSmtpCh, int iHardClose = 0, SMTPError * pSMTPE = NULL);

@@ -348,6 +348,16 @@ static int      QueCreateStruct(char const * pszRootPath)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
+//  Create user custom message processing dir ( mailproc.tab cache )
+///////////////////////////////////////////////////////////////////////////////
+    StrSNCpy(szDirPath, pszRootPath);
+    AppendSlash(szDirPath);
+    StrSNCat(szDirPath, QUEUE_MPRC_DIR);
+
+    if (!SysExistDir(szDirPath) && (SysMakeDir(szDirPath) < 0))
+        return (ErrGetErrorCode());
+
+///////////////////////////////////////////////////////////////////////////////
 //  Create frozen dir
 ///////////////////////////////////////////////////////////////////////////////
     StrSNCpy(szDirPath, pszRootPath);
@@ -1005,6 +1015,13 @@ int             QueCleanupMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, boo
 //  Clean 'cust' file
 ///////////////////////////////////////////////////////////////////////////////
     QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_CUST_DIR);
+
+    CheckRemoveFile(szQueueFilePath);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Clean 'mprc' file
+///////////////////////////////////////////////////////////////////////////////
+    QueGetFilePath(pMQ, pQM, szQueueFilePath, QUEUE_MPRC_DIR);
 
     CheckRemoveFile(szQueueFilePath);
 

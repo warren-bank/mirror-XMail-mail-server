@@ -2693,7 +2693,7 @@ int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
 
 
 
-int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath)
+int             UsrGetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
 {
 
     char            szMPFilePath[SYS_MAX_PATH] = "";
@@ -2716,8 +2716,6 @@ int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath)
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
-
-    SysGetTmpFile(pszMPPath);
 
     if (MscCopyFile(pszMPPath, szMPFilePath) < 0)
     {

@@ -75,11 +75,12 @@
 #define SMTPF_MAIL_UNLOCKED     (1 << 2)
 #define SMTPF_AUTHENTICATED     (1 << 3)
 #define SMTPF_VRFY_ENABLED      (1 << 4)
-#define SMTPF_BLOCKED_IP        (1 << 5)
-#define SMTPF_ETRN_ENABLED      (1 << 6)
-#define SMTPF_NOEMIT_AUTH       (1 << 7)
+#define SMTPF_MAPPED_IP         (1 << 5)
+#define SMTPF_NORDNS_IP         (1 << 6)
+#define SMTPF_ETRN_ENABLED      (1 << 7)
+#define SMTPF_NOEMIT_AUTH       (1 << 8)
 
-#define SMTPF_STATIC_MASK       SMTPF_BLOCKED_IP
+#define SMTPF_STATIC_MASK       (SMTPF_MAPPED_IP | SMTPF_NORDNS_IP)
 #define SMTPF_AUTH_MASK         (SMTPF_RELAY_ENABLED | SMTPF_MAIL_UNLOCKED | SMTPF_AUTHENTICATED | \
                                         SMTPF_VRFY_ENABLED | SMTPF_ETRN_ENABLED)
 #define SMTPF_RESET_MASK        (SMTPF_AUTH_MASK | SMTPF_STATIC_MASK | SMTPF_NOEMIT_AUTH)
@@ -157,7 +158,7 @@ static int      SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP,
 static unsigned int SMTPClientThread(void *pThreadData);
 static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
 static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
-                                  int & iMapCode);
+                                  char *pszMapName, int iMaxMapName, int & iMapCode);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                                 SMTPSession & SMTPS);
 static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
@@ -540,7 +541,7 @@ static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig)
 
 
 static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
-                                  int & iMapCode)
+                                  char *pszMapName, int iMaxMapName, int & iMapCode)
 {
 
     for (;;)
@@ -559,6 +560,9 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
 
         if (USmtpDnsMapsContained(PeerInfo, szMapName))
         {
+            if (pszMapName != NULL)
+                StrNCpy(pszMapName, szMapName, iMaxMapName);
+
             iMapCode = iRetCode;
 
             char            szIP[128] = "???.???.???.???",
@@ -645,7 +649,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
     {
         int             iMapCode = 0;
 
-        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, iMapCode) < 0)
+        if (SMTPCheckMapsList(SMTPS.PeerInfo, pszMapsList, NULL, 0, iMapCode) < 0)
         {
             if (iMapCode == 1)
             {
@@ -660,7 +664,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
             }
 
             if (iMapCode == 0)
-                SMTPS.ulFlags |= SMTPF_BLOCKED_IP;
+                SMTPS.ulFlags |= SMTPF_MAPPED_IP;
             else
                 SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, Abs(iMapCode));
         }
@@ -677,7 +681,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
         (SysGetHostByAddr(SMTPS.PeerInfo, SMTPS.szClientFQDN) < 0))
     {
         if (iCheckValue > 0)
-            SMTPS.ulFlags |= SMTPF_BLOCKED_IP;
+            SMTPS.ulFlags |= SMTPF_NORDNS_IP;
         else
             SMTPS.iCmdDelay = Max(SMTPS.iCmdDelay, -iCheckValue);
     }
@@ -685,34 +689,45 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup SMTP domain
 ///////////////////////////////////////////////////////////////////////////////
+    char           *pszSvrDomain = SvrGetConfigVar(SMTPS.hSvrConfig, "SmtpServerDomain");
     char            szIP[128] = "???.???.???.???";
 
-    if (MscGetSockHost(BSckGetAttachedSocket(hBSock), SMTPS.szSvrFQDN) < 0)
-        StrSNCpy(SMTPS.szSvrFQDN, SysInetNToA(SMTPS.SockInfo, szIP));
+    if (pszSvrDomain != NULL)
+    {
+        StrSNCpy(SMTPS.szSvrDomain, pszSvrDomain);
+
+        SysFree(pszSvrDomain);
+    }
     else
     {
+        if (MscGetSockHost(BSckGetAttachedSocket(hBSock), SMTPS.szSvrFQDN) < 0)
+            StrSNCpy(SMTPS.szSvrFQDN, SysInetNToA(SMTPS.SockInfo, szIP));
+        else
+        {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to get a valid domain from the FQDN
 ///////////////////////////////////////////////////////////////////////////////
-        if (MDomGetClientDomain(SMTPS.szSvrFQDN, SMTPS.szSvrDomain,
-                                sizeof(SMTPS.szSvrDomain) - 1) < 0)
-            StrSNCpy(SMTPS.szSvrDomain, SMTPS.szSvrFQDN);
-    }
-
-    if (IsEmptyString(SMTPS.szSvrDomain))
-    {
-        char           *pszDefDomain = SvrGetConfigVar(SMTPS.hSvrConfig, "RootDomain");
-
-        if (pszDefDomain == NULL)
-        {
-            SvrReleaseConfigHandle(SMTPS.hSvrConfig);
-            ErrSetErrorCode(ERR_NO_DOMAIN);
-            return (ERR_NO_DOMAIN);
+            if (MDomGetClientDomain(SMTPS.szSvrFQDN, SMTPS.szSvrDomain,
+                                    sizeof(SMTPS.szSvrDomain) - 1) < 0)
+                StrSNCpy(SMTPS.szSvrDomain, SMTPS.szSvrFQDN);
         }
 
-        StrSNCpy(SMTPS.szSvrDomain, pszDefDomain);
+///////////////////////////////////////////////////////////////////////////////
+//  Last attempt, try fetch the "RootDomain" variable ...
+///////////////////////////////////////////////////////////////////////////////
+        if (IsEmptyString(SMTPS.szSvrDomain))
+        {
+            if ((pszSvrDomain = SvrGetConfigVar(SMTPS.hSvrConfig, "RootDomain")) == NULL)
+            {
+                SvrReleaseConfigHandle(SMTPS.hSvrConfig);
+                ErrSetErrorCode(ERR_NO_DOMAIN);
+                return (ERR_NO_DOMAIN);
+            }
 
-        SysFree(pszDefDomain);
+            StrSNCpy(SMTPS.szSvrDomain, pszSvrDomain);
+
+            SysFree(pszSvrDomain);
+        }
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -829,10 +844,9 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
 ///////////////////////////////////////////////////////////////////////////////
 //  Clear bad ip mask and command delay
 ///////////////////////////////////////////////////////////////////////////////
-    SMTPS.ulFlags &= ~SMTPF_BLOCKED_IP;
+    SMTPS.ulFlags &= ~(SMTPF_MAPPED_IP | SMTPF_NORDNS_IP);
 
     SMTPS.iCmdDelay = 0;
-
 
     return (0);
 
@@ -1399,8 +1413,12 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  If the incoming IP is "mapped" stop here
 ///////////////////////////////////////////////////////////////////////////////
-    if (SMTPS.ulFlags & SMTPF_BLOCKED_IP)
+    if (SMTPS.ulFlags & (SMTPF_MAPPED_IP | SMTPF_NORDNS_IP))
     {
+        if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
+            SMTPLogSession(SMTPS, SMTPS.pszFrom, "",
+                           (SMTPS.ulFlags & SMTPF_MAPPED_IP) ? "SNDRIP=EIPMAP": "SNDRIP=ERDNS", 0);
+
         SMTPResetSession(SMTPS);
 
         SMTPSendError(hBSock, SMTPS, "551 Server access forbidden by your IP");
@@ -1568,7 +1586,15 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
 
     if (iDomainCount == 1)
     {
-        if (MDomIsHandledDomain(szDestDomain) == 0)
+        if (USmlIsCmdAliasAccount(szDestDomain, szDestUser) == 0)
+        {
+///////////////////////////////////////////////////////////////////////////////
+//  The recipient is handled with cmdaliases
+///////////////////////////////////////////////////////////////////////////////
+
+
+        }
+        else if (MDomIsHandledDomain(szDestDomain) == 0)
         {
 ///////////////////////////////////////////////////////////////////////////////
 //  Check user existance
@@ -1585,7 +1611,8 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                     UsrFreeUserInfo(pUI);
 
                     if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EDSBL", 0);
+                        SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0],
+                                       "RCPT=EDSBL", 0);
 
                     pszSMTPError = StrSprint("550 Account disabled <%s@%s>",
                                              szDestUser, szDestDomain);
@@ -1610,7 +1637,8 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                         UsrFreeUserInfo(pUI);
 
                         if (SMTPLogEnabled(SMTPS.hShbSMTP, SMTPS.pSMTPCfg))
-                            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0], "RCPT=EFULL", 0);
+                            SMTPLogSession(SMTPS, SMTPS.pszFrom, ppszFwdDomains[0],
+                                           "RCPT=EFULL", 0);
 
                         pszSMTPError = StrSprint("452 Mailbox full <%s@%s>",
                                                  szDestUser, szDestDomain);
@@ -1648,7 +1676,7 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
 
                 UsrFreeUserInfo(pUI);
             }
-            else if (USmlIsCmdAliasAccount(szDestDomain, szDestUser) < 0)
+            else
             {
 ///////////////////////////////////////////////////////////////////////////////
 //  Recipient domain is local but no account is found inside the standard

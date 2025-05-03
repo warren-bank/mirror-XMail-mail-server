@@ -116,7 +116,7 @@ char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, 
 char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash);
 int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
                         char const * pszMessageID);
-int             UsrGetMailProcessFile(UserInfo * pUI, char *pszMPPath);
+int             UsrGetMailProcessFile(UserInfo * pUI, char const * pszMPPath);
 int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath);
 char           *UsrGetAddress(UserInfo * pUI, char *pszAddress);
 int             UsrGetAliasDBFileSnapShot(char const * pszFileName);

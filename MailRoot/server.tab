@@ -3,6 +3,7 @@
 # Note : remember to use _REAL_ TABs and " to format this file
 #
 "RootDomain"	"xmailserver.test"
+"SmtpServerDomain"	"xmailserver.test"
 "POP3Domain"	"xmailserver.test"
 "HeloDomain"	"xmailserver.test"
 "PostMaster"	"root@xmailserver.test"

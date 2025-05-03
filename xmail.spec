@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.10
+Version: 1.11
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -126,6 +126,20 @@ fi
 
 
 %changelog
+
+* Sat Nov 9 2002 Davide Libenzi <davidel@xmailserver.org>
+    Added a new command line parameter -QT to enable a configurable timeout for filter commands.
+    Fixed a bug that made XMail to ignore cmdalias accounts when a wildcard alias was matching
+    the account itself.
+    Added the 'smtprelay' command to the MAILPROC.TAB processing.
+    Removed the 'wait' command from all custom processing.
+    Added a new macro @@RRCPT to filters commands to extract the real local recipient.
+    Changed the way the EXTALIASES.TAB mapping modify the return path. It now change the "Reply-To:"
+    instead of the "From:" to avoid problems with signature verification software.
+    Implemented logging on SMTP transactions rejected because of mapped IP or failing RDNS check.
+    Added a new SERVER.TAB variable "SmtpServerDomain" to force the SMTP domain used by XMail
+    in its banner string ( for CRAM-MD5 ESMTP authentication ).
+    Improved DNS resolution for not existing domains.
 
 * Sat Jul 27 2002 Davide Libenzi <davidel@xmailserver.org>
     Added a variable "CustomSMTPMessage" inside the server's configuration file SERVER.TAB to enable

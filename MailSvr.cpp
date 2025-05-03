@@ -84,7 +84,7 @@
 #define SERVER_SLEEP_TIMESLICE      2
 #define SHUTDOWN_CHECK_TIME         2
 #define STD_POP3AUTH_EXPIRE_TIME    (15 * 60)
-
+#define FILTER_TIMEOUT              90
 
 
 
@@ -135,6 +135,7 @@ char            szMailPath[SYS_MAX_PATH];
 QUEUE_HANDLE    hSpoolQueue;
 SYS_SEMAPHORE   hSyncSem;
 bool            bServerDebug;
+int             iFilterTimeout = FILTER_TIMEOUT;
 int             iLogRotateHours = LOG_ROTATE_HOURS;
 int             iQueueSplitLevel = STD_QUEUEFS_DIRS_X_LEVEL;
 #ifdef __UNIX__
@@ -718,6 +719,11 @@ static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 
         case ('l'):
             ulFlags |= SMAILF_LOG_ENABLED;
+            break;
+
+        case ('T'):
+            if (++ii < iArgCount)
+                iFilterTimeout = atoi(pszArgs[ii]);
             break;
         }
     }

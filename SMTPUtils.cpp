@@ -67,6 +67,7 @@
 #define SMTP_EXTAUTH_TIMEOUT    60
 #define SMTP_EXTAUTH_PRIORITY   SYS_PRIORITY_NORMAL
 #define SMTP_EXTAUTH_SUCCESS    0
+#define DEFAULT_SMTP_ERR        "417 Temporary delivery error"
 
 #define SMTPCH_SUPPORT_SIZE     (1 << 0)
 
@@ -890,6 +891,22 @@ int             USmtpCleanupError(SMTPError * pSMTPE)
     USmtpInitError(pSMTPE);
 
     return (0);
+
+}
+
+
+
+char           *USmtpGetSMTPError(SMTPError * pSMTPE, char * pszError, int iMaxError)
+{
+
+    char const     *pszSmtpErr = (pSMTPE != NULL) ? USmtpGetErrorMessage(pSMTPE): DEFAULT_SMTP_ERR;
+
+    if (IsEmptyString(pszSmtpErr))
+        pszSmtpErr = DEFAULT_SMTP_ERR;
+
+    StrNCpy(pszError, pszSmtpErr, iMaxError);
+
+    return (pszError);
 
 }
 

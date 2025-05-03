@@ -278,6 +278,7 @@ static ErrorStrings Errors[] =
     {ERR_DUPLICATE_HANDLE, "Error in function {DuplicateHandle}"},
     {ERR_EMPTY_LOG, "Log file is empty"},
     {ERR_BAD_RELATIVE_PATH, "Error in relative path syntax"},
+    {ERR_DNS_NXDOMAIN, "DNS name not exist"},
 
 };
 
