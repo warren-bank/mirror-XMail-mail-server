@@ -151,21 +151,21 @@ enum SmtpAuthFields
 
 
 static SMTPConfig *SMTPGetConfigCopy(SHB_HANDLE hShbSMTP);
-static int      SMTPLogEnabled(SHB_HANDLE hShbSMTP, SMTPConfig * pSMTPCfg = NULL);
+static int      SMTPLogEnabled(SHB_HANDLE hShbSMTP, SMTPConfig *pSMTPCfg = NULL);
 static int      SMTPCheckPeerIP(SYS_SOCKET SockFD);
 static int      SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP,
-                                   SMTPConfig * pSMTPCfg = NULL);
+                                   SMTPConfig *pSMTPCfg = NULL);
 static unsigned int SMTPClientThread(void *pThreadData);
 static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig);
-static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
+static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const *pszMapList,
                                   char *pszMapName, int iMaxMapName, int & iMapCode);
 static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
                                 SMTPSession & SMTPS, char *&pszSMTPError);
-static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig);
-static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms);
-static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI);
-static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
-                               char const * pszRecipient, char const * pszStatus,
+static int      SMTPLoadConfig(SMTPSession & SMTPS, char const *pszSvrConfig);
+static int      SMTPApplyPerms(SMTPSession & SMTPS, char const *pszPerms);
+static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo *pUI);
+static int      SMTPLogSession(SMTPSession & SMTPS, char const *pszSender,
+                               char const *pszRecipient, char const *pszStatus,
                                unsigned long ulMsgSize);
 static int      SMTPSendError(BSOCK_HANDLE hBSock, SMTPSession & SMTPS, char const *pszFormat, ...);
 static int      SMTPHandleSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock);
@@ -175,56 +175,56 @@ static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
                                   SMTPSession & SMTPS);
 static int      SMTPCheckReturnPath(const char *pszCommand, char **ppszRetDomains,
                                     SMTPSession & SMTPS, char *&pszSMTPError);
-static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const * pszUser,
-                                      char const * pszDomain);
+static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const *pszUser,
+                                      char const *pszDomain);
 static int      SMTPAddMessageInfo(SMTPSession & SMTPS);
 static int      SMTPCheckMailParams(const char *pszCommand, char **ppszRetDomains,
                                     SMTPSession & SMTPS, char *&pszSMTPError);
 static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
-static int      SMTPCheckRelayCapability(SMTPSession & SMTPS, char const * pszDestDomain);
+static int      SMTPCheckRelayCapability(SMTPSession & SMTPS, char const *pszDestDomain);
 static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
                                      char *&pszSMTPError);
 static int      SMTPHandleCmd_RCPT(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
 static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
-static int      SMTPAddReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
-                                char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile);
+static int      SMTPAddReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
+                                char const *pszRcptTo, char const *pszMessageID, FILE *pMailFile);
 static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile);
 static int      SMTPHandleCmd_HELO(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
 static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
-static int      SMTPListExtAuths(FILE * pRespFile, SMTPSession & SMTPS);
-static int      SMTPExternalAuthSubstitute(char **ppszAuthTokens, char const * pszChallenge,
-                                           char const * pszDigest, char const * pszSecretsFile);
-static int      SMTPCreateSecretsFile(char const * pszSecretsFile);
+static int      SMTPListExtAuths(FILE *pRespFile, SMTPSession & SMTPS);
+static int      SMTPExternalAuthSubstitute(char **ppszAuthTokens, char const *pszChallenge,
+                                           char const *pszDigest, char const *pszSecretsFile);
+static int      SMTPCreateSecretsFile(char const *pszSecretsFile);
 static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
                                          char **ppszAuthTokens);
 static int      SMTPDoAuthExternal(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                   char const * pszAuthType);
+                                   char const *pszAuthType);
 static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                char const * pszAuthParam);
+                                char const *pszAuthParam);
 static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                char const * pszAuthParam);
+                                char const *pszAuthParam);
 static char    *SMTPGetAuthFilePath(char *pszFilePath, int iMaxPath);
 static char    *SMTPGetExtAuthFilePath(char *pszFilePath, int iMaxPath);
-static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsername,
-                                      char const * pszPassword);
-static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
+static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const *pszUsername,
+                                      char const *pszPassword);
+static int      SMTPGetUserSmtpPerms(UserInfo *pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
                                      int iMaxPerms);
-static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
-                                          char const * pszUsername, char const * pszDigest);
-static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUsername,
-                                       char const * pszPassword);
-static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
-                                     char const * pszUsername, char const * pszDigest);
+static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const *pszChallenge,
+                                          char const *pszUsername, char const *pszDigest);
+static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const *pszUsername,
+                                       char const *pszPassword);
+static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const *pszChallenge,
+                                     char const *pszUsername, char const *pszDigest);
 static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                  char const * pszAuthParam);
+                                  char const *pszAuthParam);
 static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
-static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FILE * pRespFile);
+static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FILE *pRespFile);
 static int      SMTPHandleCmd_RSET(const char *pszCommand, BSOCK_HANDLE hBSock,
                                    SMTPSession & SMTPS);
 static int      SMTPHandleCmd_NOOP(const char *pszCommand, BSOCK_HANDLE hBSock,
@@ -267,7 +267,7 @@ static SMTPConfig *SMTPGetConfigCopy(SHB_HANDLE hShbSMTP)
 
 
 
-static int      SMTPLogEnabled(SHB_HANDLE hShbSMTP, SMTPConfig * pSMTPCfg)
+static int      SMTPLogEnabled(SHB_HANDLE hShbSMTP, SMTPConfig *pSMTPCfg)
 {
 
     int             iDoUnlock = 0;
@@ -317,7 +317,7 @@ static int      SMTPCheckPeerIP(SYS_SOCKET SockFD)
 
 
 static int      SMTPThreadCountAdd(long lCount, SHB_HANDLE hShbSMTP,
-                                   SMTPConfig * pSMTPCfg)
+                                   SMTPConfig *pSMTPCfg)
 {
 
     int             iDoUnlock = 0;
@@ -435,7 +435,7 @@ unsigned int    SMTPThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_SMTP_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pSMTPCfg->iNumAddr, pSMTPCfg->SvrPath, pSMTPCfg->iPort,
+    if (MscCreateServerSockets(pSMTPCfg->iNumAddr, pSMTPCfg->SvrAddr, pSMTPCfg->iPort,
                                SMTP_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
@@ -540,7 +540,7 @@ static int      SMTPCheckSysResources(SVRCFG_HANDLE hSvrConfig)
 
 
 
-static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * pszMapList,
+static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const *pszMapList,
                                   char *pszMapName, int iMaxMapName, int & iMapCode)
 {
 
@@ -551,8 +551,8 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
         if (pszColon == NULL)
             break;
 
-        int             iRetCode = atoi(pszColon + 1),
-            iMapLength = Min((int) (pszColon - pszMapList), MAX_HOST_NAME - 1);
+        int             iRetCode = atoi(pszColon + 1);
+        int             iMapLength = Min((int) (pszColon - pszMapList), MAX_HOST_NAME - 1);
         char            szMapName[MAX_HOST_NAME] = "";
 
         strncpy(szMapName, pszMapList, iMapLength);
@@ -565,8 +565,8 @@ static int      SMTPCheckMapsList(SYS_INET_ADDR const & PeerInfo, char const * p
 
             iMapCode = iRetCode;
 
-            char            szIP[128] = "???.???.???.???",
-                szMapSpec[MAX_HOST_NAME + 128] = "";
+            char            szIP[128] = "???.???.???.???";
+            char            szMapSpec[MAX_HOST_NAME + 128] = "";
 
             SysInetNToA(PeerInfo, szIP);
             SysSNPrintf(szMapSpec, sizeof(szMapSpec) - 1, "%s:%s", szMapName, szIP);
@@ -801,7 +801,7 @@ static int      SMTPInitSession(SHB_HANDLE hShbSMTP, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig)
+static int      SMTPLoadConfig(SMTPSession & SMTPS, char const *pszSvrConfig)
 {
 
     char          **ppszCfgTokens = StrTokenize(pszSvrConfig, ",");
@@ -825,7 +825,7 @@ static int      SMTPLoadConfig(SMTPSession & SMTPS, char const * pszSvrConfig)
 
 
 
-static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
+static int      SMTPApplyPerms(SMTPSession & SMTPS, char const *pszPerms)
 {
 
     for (int ii = 0; pszPerms[ii] != '\0'; ii++)
@@ -869,7 +869,7 @@ static int      SMTPApplyPerms(SMTPSession & SMTPS, char const * pszPerms)
 
 
 
-static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI)
+static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo *pUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Retrieve and apply permissions
@@ -912,8 +912,8 @@ static int      SMTPApplyUserConfig(SMTPSession & SMTPS, UserInfo * pUI)
 
 
 
-static int      SMTPLogSession(SMTPSession & SMTPS, char const * pszSender,
-                               char const * pszRecipient, char const * pszStatus, unsigned long ulMsgSize)
+static int      SMTPLogSession(SMTPSession & SMTPS, char const *pszSender,
+                               char const *pszRecipient, char const *pszStatus, unsigned long ulMsgSize)
 {
 
     char            szTime[256] = "";
@@ -1195,8 +1195,8 @@ static int      SMTPHandleCommand(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const * pszUser,
-                                      char const * pszDomain)
+static int      SMTPTryPopAuthIpCheck(SMTPSession & SMTPS, char const *pszUser,
+                                      char const *pszDomain)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Load user info
@@ -1262,8 +1262,8 @@ static int      SMTPCheckReturnPath(const char *pszCommand, char **ppszRetDomain
     }
 
 
-    char            szMailerUser[MAX_ADDR_NAME] = "",
-        szMailerDomain[MAX_ADDR_NAME] = "";
+    char            szMailerUser[MAX_ADDR_NAME] = "";
+    char            szMailerDomain[MAX_ADDR_NAME] = "";
 
     if (USmtpSplitEmailAddr(ppszRetDomains[0], szMailerUser, szMailerDomain) < 0)
     {
@@ -1553,7 +1553,7 @@ static int      SMTPHandleCmd_MAIL(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPCheckRelayCapability(SMTPSession & SMTPS, char const * pszDestDomain)
+static int      SMTPCheckRelayCapability(SMTPSession & SMTPS, char const *pszDestDomain)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  OK if enabled ( authentication )
@@ -1594,8 +1594,8 @@ static int      SMTPCheckForwardPath(char **ppszFwdDomains, SMTPSession & SMTPS,
         return (ERR_BAD_FORWARD_PATH);
     }
 
-    char            szDestUser[MAX_ADDR_NAME] = "",
-        szDestDomain[MAX_ADDR_NAME] = "";
+    char            szDestUser[MAX_ADDR_NAME] = "";
+    char            szDestDomain[MAX_ADDR_NAME] = "";
 
     if (USmtpSplitEmailAddr(ppszFwdDomains[iDomainCount - 1], szDestUser, szDestDomain) < 0)
     {
@@ -1919,12 +1919,12 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Write data
 ///////////////////////////////////////////////////////////////////////////////
-    int             iErrorCode = 0,
-        iLineLength,
-        iGotNL,
-        iGotNLPrev = 1;
-    unsigned long   ulMessageSize = 0,
-        ulMaxMsgSize = SMTPS.ulMaxMsgSize;
+    int             iErrorCode = 0;
+    int             iLineLength;
+    int             iGotNL;
+    int             iGotNLPrev = 1;
+    unsigned long   ulMessageSize = 0;
+    unsigned long   ulMaxMsgSize = SMTPS.ulMaxMsgSize;
     char const     *pszSmtpError = NULL;
     char            szBuffer[SMTP_MAX_LINE_SIZE + 4];
 
@@ -2043,8 +2043,8 @@ static int      SMTPHandleCmd_DATA(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPAddReceived(int iType, char const * const * ppszMsgInfo, char const * pszMailFrom,
-                                char const * pszRcptTo, char const * pszMessageID, FILE * pMailFile)
+static int      SMTPAddReceived(int iType, char const *const *ppszMsgInfo, char const *pszMailFrom,
+                                char const *pszRcptTo, char const *pszMessageID, FILE *pMailFile)
 {
 
     char           *pszReceived = USmtpGetReceived(iType, ppszMsgInfo, pszMailFrom, pszRcptTo,
@@ -2196,6 +2196,11 @@ static int      SMTPSubmitPackedFile(SMTPSession & SMTPS, const char *pszPkgFile
             return (ERR_FILE_CREATE);
         }
 
+///////////////////////////////////////////////////////////////////////////////
+//  Write info line
+///////////////////////////////////////////////////////////////////////////////
+        USmtpWriteInfoLine(pSpoolFile, ppszMsgInfo[smsgiClientAddr],
+                           ppszMsgInfo[smsgiServerAddr], ppszMsgInfo[smsgiTime]);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write SMTP domain
@@ -2483,7 +2488,7 @@ static int      SMTPHandleCmd_EHLO(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPListExtAuths(FILE * pRespFile, SMTPSession & SMTPS)
+static int      SMTPListExtAuths(FILE *pRespFile, SMTPSession & SMTPS)
 {
 
     char            szExtAuthFilePath[SYS_MAX_PATH] = "";
@@ -2519,8 +2524,8 @@ static int      SMTPListExtAuths(FILE * pRespFile, SMTPSession & SMTPS)
 
 
 
-static int      SMTPExternalAuthSubstitute(char **ppszAuthTokens, char const * pszChallenge,
-                                           char const * pszDigest, char const * pszSecretsFile)
+static int      SMTPExternalAuthSubstitute(char **ppszAuthTokens, char const *pszChallenge,
+                                           char const *pszDigest, char const *pszSecretsFile)
 {
 
     for (int ii = 0; ppszAuthTokens[ii] != NULL; ii++)
@@ -2566,7 +2571,7 @@ static int      SMTPExternalAuthSubstitute(char **ppszAuthTokens, char const * p
 
 
 
-static int      SMTPCreateSecretsFile(char const * pszSecretsFile)
+static int      SMTPCreateSecretsFile(char const *pszSecretsFile)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
@@ -2628,8 +2633,8 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 //  and get client response
 ///////////////////////////////////////////////////////////////////////////////
     unsigned int    uEnc64Length = 0;
-    char            szChallenge[1024] = "",
-        szDigest[1024] = "";
+    char            szChallenge[1024] = "";
+    char            szDigest[1024] = "";
 
     SysSNPrintf(szDigest, sizeof(szDigest) - 1, "%s:%s", ppszAuthTokens[1], SMTPS.szTimeStamp);
     encode64(szDigest, strlen(szDigest), szChallenge, sizeof(szChallenge) - 1, &uEnc64Length);
@@ -2776,7 +2781,7 @@ static int      SMTPExternalAuthenticate(BSOCK_HANDLE hBSock, SMTPSession & SMTP
 
 
 static int      SMTPDoAuthExternal(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                   char const * pszAuthType)
+                                   char const *pszAuthType)
 {
 
     char            szExtAuthFilePath[SYS_MAX_PATH] = "";
@@ -2832,7 +2837,7 @@ static int      SMTPDoAuthExternal(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
 
 static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                char const * pszAuthParam)
+                                char const *pszAuthParam)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Parameter validation
@@ -2864,8 +2869,8 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract plain auth params ( unused + 0 + username + 0 + password )
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszUsername = szClientAuth + strlen(szClientAuth) + 1,
-        *pszPassword = pszUsername + strlen(pszUsername) + 1;
+    char           *pszUsername = szClientAuth + strlen(szClientAuth) + 1;
+    char           *pszPassword = pszUsername + strlen(pszUsername) + 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Validate client response
@@ -2898,7 +2903,7 @@ static int      SMTPDoAuthPlain(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 
 
 static int      SMTPDoAuthLogin(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                char const * pszAuthParam)
+                                char const *pszAuthParam)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit encoded64 username request
@@ -3010,14 +3015,14 @@ static char    *SMTPGetExtAuthFilePath(char *pszFilePath, int iMaxPath)
 
 
 
-static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsername,
-                                      char const * pszPassword)
+static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const *pszUsername,
+                                      char const *pszPassword)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  First try to lookup  mailusers.tab
 ///////////////////////////////////////////////////////////////////////////////
-    char            szAccountUser[MAX_ADDR_NAME] = "",
-        szAccountDomain[MAX_HOST_NAME] = "";
+    char            szAccountUser[MAX_ADDR_NAME] = "";
+    char            szAccountDomain[MAX_HOST_NAME] = "";
 
     if (StrSplitString(pszUsername, POP3_USER_SPLITTERS, szAccountUser, sizeof(szAccountUser),
                        szAccountDomain, sizeof(szAccountDomain)) < 0)
@@ -3058,7 +3063,7 @@ static int      SMTPTryApplyLocalAuth(SMTPSession & SMTPS, char const * pszUsern
 
 
 
-static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
+static int      SMTPGetUserSmtpPerms(UserInfo *pUI, SVRCFG_HANDLE hSvrConfig, char *pszPerms,
                                      int iMaxPerms)
 {
 
@@ -3096,14 +3101,14 @@ static int      SMTPGetUserSmtpPerms(UserInfo * pUI, SVRCFG_HANDLE hSvrConfig, c
 
 
 
-static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
-                                          char const * pszUsername, char const * pszDigest)
+static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const *pszChallenge,
+                                          char const *pszUsername, char const *pszDigest)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  First try to lookup  mailusers.tab
 ///////////////////////////////////////////////////////////////////////////////
-    char            szAccountUser[MAX_ADDR_NAME] = "",
-        szAccountDomain[MAX_HOST_NAME] = "";
+    char            szAccountUser[MAX_ADDR_NAME] = "";
+    char            szAccountDomain[MAX_HOST_NAME] = "";
 
     if (StrSplitString(pszUsername, POP3_USER_SPLITTERS, szAccountUser, sizeof(szAccountUser),
                        szAccountDomain, sizeof(szAccountDomain)) < 0)
@@ -3155,8 +3160,8 @@ static int      SMTPTryApplyLocalCMD5Auth(SMTPSession & SMTPS, char const * pszC
 
 
 
-static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUsername,
-                                       char const * pszPassword)
+static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const *pszUsername,
+                                       char const *pszPassword)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
@@ -3222,8 +3227,8 @@ static int      SMTPTryApplyUsrPwdAuth(SMTPSession & SMTPS, char const * pszUser
 
 
 
-static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChallenge,
-                                     char const * pszUsername, char const * pszDigest)
+static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const *pszChallenge,
+                                     char const *pszUsername, char const *pszDigest)
 {
 
     char            szAuthFilePath[SYS_MAX_PATH] = "";
@@ -3294,7 +3299,7 @@ static int      SMTPTryApplyCMD5Auth(SMTPSession & SMTPS, char const * pszChalle
 
 
 static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
-                                  char const * pszAuthParam)
+                                  char const *pszAuthParam)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Emit encoded64 challenge and get client response
@@ -3326,8 +3331,8 @@ static int      SMTPDoAuthCramMD5(BSOCK_HANDLE hBSock, SMTPSession & SMTPS,
 ///////////////////////////////////////////////////////////////////////////////
 //  Extract the username and client digest
 ///////////////////////////////////////////////////////////////////////////////
-    char           *pszUsername = szClientResp,
-        *pszDigest = strchr(szClientResp, ' ');
+    char           *pszUsername = szClientResp;
+    char           *pszDigest = strchr(szClientResp, ' ');
 
     if (pszDigest == NULL)
     {
@@ -3400,8 +3405,8 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Decode AUTH command params
 ///////////////////////////////////////////////////////////////////////////////
-    char            szAuthType[128] = "",
-        szAuthParam[PLAIN_AUTH_PARAM_SIZE] = "";
+    char            szAuthType[128] = "";
+    char            szAuthParam[PLAIN_AUTH_PARAM_SIZE] = "";
 
     StrSNCpy(szAuthType, ppszTokens[1]);
 
@@ -3479,13 +3484,13 @@ static int      SMTPHandleCmd_AUTH(const char *pszCommand, BSOCK_HANDLE hBSock,
 
 
 
-static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FILE * pRespFile)
+static int      SMTPSendMultilineResponse(BSOCK_HANDLE hBSock, int iTimeout, FILE *pRespFile)
 {
 
     rewind(pRespFile);
 
-    char            szCurrLine[1024] = "",
-        szPrevLine[1024] = "";
+    char            szCurrLine[1024] = "";
+    char            szPrevLine[1024] = "";
 
     if (MscGetString(pRespFile, szPrevLine, sizeof(szPrevLine) - 1) != NULL)
     {
@@ -3597,8 +3602,8 @@ static int      SMTPHandleCmd_VRFY(const char *pszCommand, BSOCK_HANDLE hBSock,
     }
 
 
-    char            szVrfyUser[MAX_ADDR_NAME] = "",
-        szVrfyDomain[MAX_ADDR_NAME] = "";
+    char            szVrfyUser[MAX_ADDR_NAME] = "";
+    char            szVrfyDomain[MAX_ADDR_NAME] = "";
 
     if (USmtpSplitEmailAddr(ppszTokens[1], szVrfyUser, szVrfyDomain) < 0)
     {
@@ -3702,3 +3707,4 @@ static int      SMTPHandleCmd_ETRN(const char *pszCommand, BSOCK_HANDLE hBSock,
     return (0);
 
 }
+

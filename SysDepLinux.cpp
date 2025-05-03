@@ -117,16 +117,16 @@ static char const *SysGetLastError(void);
 static void     SysIgnoreProc(int iSignal);
 static int      SysSetSockNoDelay(SYS_SOCKET SockFD, int iNoDelay);
 static int      SysSetSocketsOptions(SYS_SOCKET SockFD);
-static int      SysFreeThreadData(ThrData * pTD);
+static int      SysFreeThreadData(ThrData *pTD);
 static void    *SysThreadStartup(void *pThreadData);
 static void     SysSigChildHandler(int iSignal);
-static int      SysThreadSetup(ThrData * pTD);
-static void     SysThreadCleanup(ThrData * pTD);
+static int      SysThreadSetup(ThrData *pTD);
+static void     SysThreadCleanup(ThrData *pTD);
 static int      SysExitPID(pid_t PID, int iExitCode);
 static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout);
 static void     SysBreakHandlerRoutine(int iSignal);
-static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock);
-static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData);
+static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK *pSpinLock);
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData);
 
 
 
@@ -301,8 +301,8 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
 
     int             iActivate = 1;
 
-    if (setsockopt(SockFD, SOL_SOCKET, SO_REUSEADDR, &iActivate,
-                    sizeof(iActivate)) != 0)
+    if (setsockopt(SockFD, SOL_SOCKET, SO_REUSEADDR, (const char *) &iActivate,
+                   sizeof(iActivate)) != 0)
     {
         ErrSetErrorCode(ERR_SETSOCKOPT);
         return (ERR_SETSOCKOPT);
@@ -322,7 +322,7 @@ static int      SysSetSocketsOptions(SYS_SOCKET SockFD)
 ///////////////////////////////////////////////////////////////////////////////
 //  Set KEEPALIVE if supported
 ///////////////////////////////////////////////////////////////////////////////
-    setsockopt(SockFD, SOL_SOCKET, SO_KEEPALIVE, &iActivate, sizeof(iActivate));
+    setsockopt(SockFD, SOL_SOCKET, SO_KEEPALIVE, (const char *) &iActivate, sizeof(iActivate));
 
 
     return (0);
@@ -340,7 +340,7 @@ void            SysCloseSocket(SYS_SOCKET SockFD)
 
 
 
-int             SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr * SockName, int iNameLen)
+int             SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr *SockName, int iNameLen)
 {
 
     if (bind((int) SockFD, SockName, iNameLen) == -1)
@@ -416,7 +416,7 @@ int             SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int
     while (iRtxBytes < iBufferSize)
     {
         int             iRtxCurrent = SysRecvData(SockFD, pszBuffer + iRtxBytes,
-                iBufferSize - iRtxBytes, iTimeout);
+                                                  iBufferSize - iRtxBytes, iTimeout);
 
         if (iRtxCurrent <= 0)
             return (iRtxBytes);
@@ -430,8 +430,8 @@ int             SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int
 
 
 
-int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int iFromlen,
-                        char *pszBuffer, int iBufferSize, int iTimeout)
+int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
+                                char *pszBuffer, int iBufferSize, int iTimeout)
 {
 
     struct pollfd   pfds;
@@ -477,7 +477,7 @@ int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int 
 
 
 
-int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSize, int iTimeout)
+int             SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
 
     struct pollfd   pfds;
@@ -521,7 +521,7 @@ int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBuff
 
 
 
-int             SysSend(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSize, int iTimeout)
+int             SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
 
     int             iRtxBytes = 0;
@@ -529,7 +529,7 @@ int             SysSend(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSi
     while (iRtxBytes < iBufferSize)
     {
         int             iRtxCurrent = SysSendData(SockFD, pszBuffer + iRtxBytes,
-                iBufferSize - iRtxBytes, iTimeout);
+                                                  iBufferSize - iRtxBytes, iTimeout);
 
         if (iRtxCurrent <= 0)
             return (iRtxBytes);
@@ -543,8 +543,8 @@ int             SysSend(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSi
 
 
 
-int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
-                        int iToLen, char const * pszBuffer, int iBufferSize, int iTimeout)
+int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
+                              int iToLen, char const *pszBuffer, int iBufferSize, int iTimeout)
 {
 
     struct pollfd   pfds;
@@ -588,7 +588,7 @@ int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
 
 
 
-int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, int iNameLen, int iTimeout)
+int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR *pSockName, int iNameLen, int iTimeout)
 {
 
     if (SysSetSockNoDelay(SockFD, 1) < 0)
@@ -638,7 +638,7 @@ int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, i
 
 
 
-SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen, int iTimeout)
+SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNameLen, int iTimeout)
 {
 
     struct pollfd   pfds;
@@ -666,7 +666,7 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
 
     socklen_t       SockALen = (socklen_t) * iNameLen;
     int             iAcptSock = accept((int) SockFD,
-            (struct sockaddr *) & pSockName->Addr, &SockALen);
+                                       (struct sockaddr *) & pSockName->Addr, &SockALen);
 
     if (iAcptSock == -1)
     {
@@ -690,8 +690,8 @@ SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNa
 
 
 
-int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
-                        int iTimeout)
+int             SysSelect(int iMaxFD, SYS_fd_set *pReadFDs, SYS_fd_set *pWriteFDs, SYS_fd_set *pExcptFDs,
+                          int iTimeout)
 {
 
     struct timeval  TV;
@@ -722,8 +722,8 @@ int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWrite
 
 
 
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
-                        unsigned long ulEndOffset, int iTimeout)
+int             SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBaseOffset,
+                            unsigned long ulEndOffset, int iTimeout)
 {
 
     int             iFileID = open(pszFileName, O_RDONLY);
@@ -743,8 +743,8 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 //  Set send timeout
 ///////////////////////////////////////////////////////////////////////////////
     socklen_t       OptLenght = sizeof(struct timeval);
-    struct timeval  oldTV,
-                    newTV;
+    struct timeval  oldTV;
+    struct timeval  newTV;
 
     if (getsockopt((int) SockFD, SOL_SOCKET, SO_SNDTIMEO, &oldTV, &OptLenght))
     {
@@ -760,9 +760,9 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 ///////////////////////////////////////////////////////////////////////////////
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulSndBuffSize = MIN_TCP_SEND_SIZE,
-                    ulCurrOffset = ulBaseOffset,
-                    ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
+    unsigned long   ulSndBuffSize = MIN_TCP_SEND_SIZE;
+    unsigned long   ulCurrOffset = ulBaseOffset;
+    unsigned long   ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
     time_t          tStart;
 
     while (ulCurrOffset < ulSndEndOffset)
@@ -773,7 +773,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 
         tStart = time(NULL);
         unsigned long   ulSendSize = (unsigned long) sendfile((int) SockFD, iFileID,
-                &ulStartOffset, ulToSend);
+                                                              &ulStartOffset, ulToSend);
 
 
         if (ulSendSize != ulToSend)
@@ -785,7 +785,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
         }
 
         if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
-                (ulSndBuffSize < MAX_TCP_SEND_SIZE))
+            (ulSndBuffSize < MAX_TCP_SEND_SIZE))
             ulSndBuffSize = Min(ulSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         ulCurrOffset += ulToSend;
@@ -796,7 +796,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 #else           // #ifdef USE_SENDFILE
 
     void           *pMapAddress = (void *) mmap((char *) 0, (size_t) ulFileSize, PROT_READ,
-            MAP_SHARED, iFileID, 0);
+                                                MAP_SHARED, iFileID, 0);
 
     if (pMapAddress == (void *) -1)
     {
@@ -809,8 +809,8 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 //  Send the file
 ///////////////////////////////////////////////////////////////////////////////
     int             iSndBuffSize = MIN_TCP_SEND_SIZE;
-    unsigned long   ulCurrOffset = ulBaseOffset,
-                    ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
+    unsigned long   ulCurrOffset = ulBaseOffset;
+    unsigned long   ulSndEndOffset = (ulEndOffset != (unsigned long) -1) ? ulEndOffset: ulFileSize;
     char           *pszBuffer = (char *) pMapAddress + ulBaseOffset;
     time_t          tStart;
 
@@ -828,7 +828,7 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
         }
 
         if ((((time(NULL) - tStart) * K_IO_TIME_RATIO) < iTimeout) &&
-                (iSndBuffSize < MAX_TCP_SEND_SIZE))
+            (iSndBuffSize < MAX_TCP_SEND_SIZE))
             iSndBuffSize = Min(iSndBuffSize * 2, MAX_TCP_SEND_SIZE);
 
         pszBuffer += iCurrSend;
@@ -848,13 +848,14 @@ int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigne
 
 
 
-int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRESS NetAddr, int iPortNo)
+int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily,
+                                NET_ADDRESS const & NetAddr, int iPortNo)
 {
 
     ZeroData(AddrInfo);
     AddrInfo.Addr.sin_family = iFamily;
     SAIN_Addr(AddrInfo.Addr) = NetAddr;
-    AddrInfo.Addr.sin_port = iPortNo;
+    AddrInfo.Addr.sin_port = htons((short) iPortNo);
 
     return (0);
 
@@ -862,16 +863,49 @@ int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRE
 
 
 
-NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo)
+int             SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo, NET_ADDRESS & NetAddr)
 {
 
-    return (SAIN_Addr(AddrInfo.Addr));
+    NetAddr = SAIN_Addr(AddrInfo.Addr);
+
+    return (0);
 
 }
 
 
 
-NET_ADDRESS     SysGetHostByName(char const * pszName)
+int             SysGetAddrPort(SYS_INET_ADDR const & AddrInfo)
+{
+
+    return (ntohs(AddrInfo.Addr.sin_port));
+
+}
+
+
+
+int             SysSetAddrAddress(SYS_INET_ADDR & AddrInfo, NET_ADDRESS const & NetAddr)
+{
+
+    SAIN_Addr(AddrInfo.Addr) = NetAddr;
+
+    return (0);
+
+}
+
+
+
+int             SysSetAddrPort(SYS_INET_ADDR & AddrInfo, int iPortNo)
+{
+
+    AddrInfo.Addr.sin_port = htons((short) iPortNo);
+
+    return (0);
+
+}
+
+
+
+int             SysGetHostByName(char const *pszName, NET_ADDRESS & NetAddr)
 {
 
     int             iErrorNo = 0;
@@ -880,16 +914,16 @@ NET_ADDRESS     SysGetHostByName(char const * pszName)
     char            szBuffer[1024];
 
     if ((gethostbyname_r(pszName, &HostEnt, szBuffer, sizeof(szBuffer),
-                            &pHostEnt, &iErrorNo) != 0) || (pHostEnt == NULL) ||
-            (pHostEnt->h_addr_list[0] == NULL))
-        return (SYS_INVALID_NET_ADDRESS);
+                         &pHostEnt, &iErrorNo) != 0) || (pHostEnt == NULL) ||
+        (pHostEnt->h_addr_list[0] == NULL))
+    {
+        ErrSetErrorCode(ERR_BAD_SERVER_ADDR, pszName);
+        return (ERR_BAD_SERVER_ADDR);
+    }
 
+    memcpy(&NetAddr, pHostEnt->h_addr_list[0], sizeof(NetAddr));
 
-    NET_ADDRESS     Addr;
-
-    memcpy(&Addr, pHostEnt->h_addr_list[0], sizeof(Addr));
-
-    return (Addr);
+    return (0);
 
 }
 
@@ -904,8 +938,8 @@ int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN)
     char            szBuffer[1024];
 
     if ((gethostbyaddr_r((const char *) &SAIN_Addr(AddrInfo.Addr), sizeof(SAIN_Addr(AddrInfo.Addr)),
-                            AF_INET, &HostEnt, szBuffer, sizeof(szBuffer), &pHostEnt, &iErrorNo) != 0) ||
-            (pHostEnt == NULL) || (pHostEnt->h_name == NULL))
+                         AF_INET, &HostEnt, szBuffer, sizeof(szBuffer), &pHostEnt, &iErrorNo) != 0) ||
+        (pHostEnt == NULL) || (pHostEnt->h_name == NULL))
     {
         char            szIP[128] = "???.???.???.???";
 
@@ -986,10 +1020,26 @@ char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char *pszIP)
 
 
 
-NET_ADDRESS     SysInetAddr(char const * pszDotName)
+int             SysInetAddr(char const *pszDotName, NET_ADDRESS & NetAddr)
 {
 
-    return ((NET_ADDRESS) inet_addr(pszDotName));
+    if ((NetAddr = (NET_ADDRESS) inet_addr(pszDotName)) == SYS_INVALID_NET_ADDRESS)
+    {
+        ErrSetErrorCode(ERR_BAD_SERVER_ADDR, pszDotName);
+        return (ERR_BAD_SERVER_ADDR);
+    }
+
+    return (0);
+
+}
+
+
+
+
+int             SysSameAddress(NET_ADDRESS const & NetAddr1, NET_ADDRESS const & NetAddr2)
+{
+
+    return (memcmp(&NetAddr1, &NetAddr2, sizeof(NET_ADDRESS)) == 0);
 
 }
 
@@ -1490,7 +1540,7 @@ int             SysTryWaitEvent(SYS_EVENT hEvent)
 
 
 
-static int      SysFreeThreadData(ThrData * pTD)
+static int      SysFreeThreadData(ThrData *pTD)
 {
 
     pthread_cond_destroy(&pTD->ExitWaitCond);
@@ -1596,7 +1646,7 @@ static void     SysSigChildHandler(int iSignal)
 {
 
     int             iExitStatus,
-                    iExitPid;
+        iExitPid;
 
     while ((iExitPid = waitpid(0, &iExitStatus, WUNTRACED | WNOHANG)) > 0)
     {
@@ -1610,7 +1660,7 @@ static void     SysSigChildHandler(int iSignal)
 
 
 
-static int      SysThreadSetup(ThrData * pTD)
+static int      SysThreadSetup(ThrData *pTD)
 {
 
     sigset_t        SigMask;
@@ -1647,7 +1697,7 @@ static int      SysThreadSetup(ThrData * pTD)
 
 
 
-static void     SysThreadCleanup(ThrData * pTD)
+static void     SysThreadCleanup(ThrData *pTD)
 {
 
     if (pTD != NULL)
@@ -1711,22 +1761,22 @@ int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
     }
 
     int             iMinPriority = sched_get_priority_min(iPolicy),
-                    iMaxPriority = sched_get_priority_max(iPolicy),
-                    iStdPriority = (iMinPriority + iMaxPriority) / 2;
+        iMaxPriority = sched_get_priority_max(iPolicy),
+        iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
     switch (iPriority)
     {
-        case (SYS_PRIORITY_NORMAL):
-            SchParam.sched_priority = iStdPriority;
-            break;
+    case (SYS_PRIORITY_NORMAL):
+        SchParam.sched_priority = iStdPriority;
+        break;
 
-        case (SYS_PRIORITY_LOWER):
-            SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
-            break;
+    case (SYS_PRIORITY_LOWER):
+        SchParam.sched_priority = iStdPriority - (iStdPriority - iMinPriority) / 3;
+        break;
 
-        case (SYS_PRIORITY_HIGHER):
-            SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
-            break;
+    case (SYS_PRIORITY_HIGHER):
+        SchParam.sched_priority = iStdPriority + (iStdPriority - iMinPriority) / 3;
+        break;
     }
 
     if (pthread_setschedparam(pTD->ThreadId, iPolicy, &SchParam) != 0)
@@ -1817,15 +1867,15 @@ static int      SysExitPID(pid_t PID, int iExitCode)
     SysListHead    *pLLink;
 
     SYS_LIST_FOR_EACH(pLLink, &WaitPIDList)
-    {
-        PIDWaitData    *pPWD = SYS_LIST_ENTRY(pLLink, PIDWaitData, LLink);
-
-        if (pPWD->PID == PID)
         {
-            pPWD->PID = 0;
-            pPWD->iExitCode = iExitCode;
+            PIDWaitData    *pPWD = SYS_LIST_ENTRY(pLLink, PIDWaitData, LLink);
+
+            if (pPWD->PID == PID)
+            {
+                pPWD->PID = 0;
+                pPWD->iExitCode = iExitCode;
+            }
         }
-    }
 
     SysSpinRelease(&WaitPIDSpin);
 
@@ -1912,7 +1962,7 @@ static int      SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
 
 
 
-int             SysExec(char const * pszCommand, char const * const * pszArgs, int iWaitTimeout,
+int             SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout,
                         int iPriority, int *piExitStatus)
 {
 
@@ -1933,17 +1983,17 @@ int             SysExec(char const * pszCommand, char const * const * pszArgs, i
 
     switch (iPriority)
     {
-        case (SYS_PRIORITY_NORMAL):
-            setpriority(PRIO_PROCESS, ProcessID, 0);
-            break;
+    case (SYS_PRIORITY_NORMAL):
+        setpriority(PRIO_PROCESS, ProcessID, 0);
+        break;
 
-        case (SYS_PRIORITY_LOWER):
-            setpriority(PRIO_PROCESS, ProcessID, SCHED_PRIORITY_INC);
-            break;
+    case (SYS_PRIORITY_LOWER):
+        setpriority(PRIO_PROCESS, ProcessID, SCHED_PRIORITY_INC);
+        break;
 
-        case (SYS_PRIORITY_HIGHER):
-            setpriority(PRIO_PROCESS, ProcessID, -SCHED_PRIORITY_INC);
-            break;
+    case (SYS_PRIORITY_HIGHER):
+        setpriority(PRIO_PROCESS, ProcessID, -SCHED_PRIORITY_INC);
+        break;
     }
 
 
@@ -2053,7 +2103,7 @@ void           *SysGetTlsKeyData(SYS_TLSKEY & TlsKey)
 
 
 
-void            SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void))
+void            SysThreadOnce(SYS_THREAD_ONCE *pThrOnce, void (*pOnceProc) (void))
 {
 
     pthread_once(pThrOnce, pOnceProc);
@@ -2101,12 +2151,12 @@ void           *SysRealloc(void *pData, unsigned int uSize)
 
 
 
-int             SysLockFile(const char *pszFileName, char const * pszLockExt)
+int             SysLockFile(const char *pszFileName, char const *pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
+    snprintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
     int             iFileID = open(szLockFile, O_CREAT | O_EXCL | O_RDWR, S_IREAD | S_IWRITE);
 
@@ -2130,12 +2180,12 @@ int             SysLockFile(const char *pszFileName, char const * pszLockExt)
 
 
 
-int             SysUnlockFile(const char *pszFileName, char const * pszLockExt)
+int             SysUnlockFile(const char *pszFileName, char const *pszLockExt)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
 
-    sprintf(szLockFile, "%s%s", pszFileName, pszLockExt);
+    snprintf(szLockFile, sizeof(szLockFile) - 1, "%s%s", pszFileName, pszLockExt);
 
     if (unlink(szLockFile) != 0)
     {
@@ -2149,7 +2199,7 @@ int             SysUnlockFile(const char *pszFileName, char const * pszLockExt)
 
 
 
-SYS_HANDLE      SysOpenModule(char const * pszFilePath)
+SYS_HANDLE      SysOpenModule(char const *pszFilePath)
 {
 
     void           *pModule = dlopen(pszFilePath, RTLD_LAZY);
@@ -2177,7 +2227,7 @@ int             SysCloseModule(SYS_HANDLE hModule)
 
 
 
-void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol)
+void           *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 {
 
     void           *pSymbol = dlsym((void *) hModule, pszSymbol);
@@ -2194,7 +2244,7 @@ void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol)
 
 
 
-int             SysEventLogV(char const * pszFormat, va_list Args)
+int             SysEventLogV(char const *pszFormat, va_list Args)
 {
 
     openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
@@ -2215,7 +2265,7 @@ int             SysEventLogV(char const * pszFormat, va_list Args)
 
 
 
-int             SysEventLog(char const * pszFormat,...)
+int             SysEventLog(char const *pszFormat,...)
 {
 
     va_list         Args;
@@ -2234,7 +2284,7 @@ int             SysEventLog(char const * pszFormat,...)
 
 
 
-int             SysLogMessage(int iLogLevel, char const * pszFormat,...)
+int             SysLogMessage(int iLogLevel, char const *pszFormat,...)
 {
 
     extern bool     bServerDebug;
@@ -2260,12 +2310,12 @@ int             SysLogMessage(int iLogLevel, char const * pszFormat,...)
     {
         switch (iLogLevel)
         {
-            case (LOG_LEV_WARNING):
-            case (LOG_LEV_ERROR):
+        case (LOG_LEV_WARNING):
+        case (LOG_LEV_ERROR):
 
-                SysEventLogV(pszFormat, Args);
+            SysEventLogV(pszFormat, Args);
 
-                break;
+            break;
         }
     }
 
@@ -2411,7 +2461,7 @@ SYS_HANDLE      SysFirstFile(const char *pszPath, char *pszFileName)
 
     char            szFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szFilePath, "%s%s", pFFD->szPath, pFFD->DE.d_name);
+    snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->DE.d_name);
 
     if (stat(szFilePath, &pFFD->FS) != 0)
     {
@@ -2465,7 +2515,7 @@ int             SysNextFile(SYS_HANDLE hFind, char *pszFileName)
 
     char            szFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szFilePath, "%s%s", pFFD->szPath, pFFD->DE.d_name);
+    snprintf(szFilePath, sizeof(szFilePath) - 1, "%s%s", pFFD->szPath, pFFD->DE.d_name);
 
     if (stat(szFilePath, &pFFD->FS) != 0)
     {
@@ -2492,7 +2542,7 @@ void            SysFindClose(SYS_HANDLE hFind)
 
 
 
-int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
+int             SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI)
 {
 
     struct stat     stat_buffer;
@@ -2505,8 +2555,8 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
 
     ZeroData(FI);
     FI.iFileType = (S_ISREG(stat_buffer.st_mode)) ? ftNormal :
-            ((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory :
-            ((S_ISLNK(stat_buffer.st_mode)) ? ftLink : ftOther));
+        ((S_ISDIR(stat_buffer.st_mode)) ? ftDirectory :
+         ((S_ISLNK(stat_buffer.st_mode)) ? ftLink : ftOther));
     FI.ulSize = (unsigned long) stat_buffer.st_size;
     FI.tMod = stat_buffer.st_mtime;
 
@@ -2516,7 +2566,7 @@ int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI)
 
 
 
-int             SysSetFileModTime(char const * pszFileName, time_t tMod)
+int             SysSetFileModTime(char const *pszFileName, time_t tMod)
 {
 
     struct utimbuf  TMB;
@@ -2567,7 +2617,7 @@ char           *SysGetTmpFile(char *pszFileName)
 
     static unsigned int uFileSeqNr = 0;
     SYS_LONGLONG    llFileID = ((((SYS_LONGLONG) SysGetCurrentThreadId()) << 32) |
-            (SYS_LONGLONG)++ uFileSeqNr);
+                                (SYS_LONGLONG)++ uFileSeqNr);
 
     sprintf(pszFileName, "/tmp/msrv%llx.tmp", llFileID);
 
@@ -2622,7 +2672,7 @@ int             SysRemoveDir(const char *pszPath)
 
 
 
-int             SysMoveFile(char const * pszOldName, char const * pszNewName)
+int             SysMoveFile(char const *pszOldName, char const *pszNewName)
 {
 
     if (rename(pszOldName, pszNewName) != 0)
@@ -2637,7 +2687,7 @@ int             SysMoveFile(char const * pszOldName, char const * pszNewName)
 
 
 
-int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args)
+int             SysVSNPrintf(char *pszBuffer, int iSize, char const *pszFormat, va_list Args)
 {
 
     int             iPrintResult = vsnprintf(pszBuffer, iSize, pszFormat, Args);
@@ -2663,7 +2713,7 @@ int             SysFileSync(FILE *pFile)
 
 
 
-char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSavePtr)
+char           *SysStrTok(char *pszData, char const *pszDelim, char **ppszSavePtr)
 {
 
     return (strtok_r(pszData, pszDelim, ppszSavePtr));
@@ -2672,7 +2722,7 @@ char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSaveP
 
 
 
-char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize)
+char           *SysCTime(time_t *pTimer, char *pszBuffer, int iBufferSize)
 {
 
     return (ctime_r(pTimer, pszBuffer));
@@ -2681,7 +2731,7 @@ char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize)
 
 
 
-struct tm      *SysLocalTime(time_t * pTimer, struct tm * pTStruct)
+struct tm      *SysLocalTime(time_t *pTimer, struct tm *pTStruct)
 {
 
     return (localtime_r(pTimer, pTStruct));
@@ -2690,7 +2740,7 @@ struct tm      *SysLocalTime(time_t * pTimer, struct tm * pTStruct)
 
 
 
-struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct)
+struct tm      *SysGMTime(time_t *pTimer, struct tm *pTStruct)
 {
 
     return (gmtime_r(pTimer, pTStruct));
@@ -2699,7 +2749,7 @@ struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct)
 
 
 
-char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize)
+char           *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize)
 {
 
     return (asctime_r(pTStruct, pszBuffer));
@@ -2717,7 +2767,7 @@ unsigned long   SysGetTimeZone(void)
 
 
 
-static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
+static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK *pSpinLock)
 {
 
     unsigned int    uValue;
@@ -2767,7 +2817,7 @@ static SYS_SPINLOCK SysTestAndSet(SYS_SPINLOCK * pSpinLock)
 
 
 
-int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock)
+int             SysSpinAcquire(SYS_SPINLOCK *pSpinLock)
 {
 
     int             iCount = 0;
@@ -2794,7 +2844,7 @@ int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock)
 
 
 
-int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
+int             SysSpinRelease(SYS_SPINLOCK *pSpinLock)
 {
 
     *pSpinLock = 0;
@@ -2805,7 +2855,7 @@ int             SysSpinRelease(SYS_SPINLOCK * pSpinLock)
 
 
 
-int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree)
+int             SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)
 {
 
     struct statfs   SFS;
@@ -2827,8 +2877,8 @@ int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_IN
 
 
 
-int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
-                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree)
+int             SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
+                              SYS_INT64 *pVirtTotal, SYS_INT64 *pVirtFree)
 {
 
     struct sysinfo  SI;
@@ -2854,14 +2904,14 @@ int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
 
 
 
-static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
+static unsigned int SysStkCall(unsigned int (*pProc)(void *), void *pData)
 {
 
     srand(getpid() * (unsigned int) time(NULL) * uSRandBase);
 
 
-    unsigned int    uResult,
-                    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
+    unsigned int    uResult;
+    unsigned int    uStkDisp = (unsigned int) (rand() % MAX_STACK_SHIFT) & ~(STACK_ALIGN_BYTES - 1);
 
 #if !defined(USE_ASM_STK_DISP)
 
@@ -2874,50 +2924,50 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
 #if defined(XMAIL_SPARC)
 
     __asm__ __volatile__(
-            "sub %%sp, %0, %%sp\n":
-            :
-            "r"(uStkDisp));
+        "sub %%sp, %0, %%sp\n":
+        :
+        "r"(uStkDisp));
 
 
     uResult = pProc(pData);
 
 
     __asm__ __volatile__(
-            "add %%sp, %0, %%sp\n":
-            :
-            "r"(uStkDisp));
+        "add %%sp, %0, %%sp\n":
+        :
+        "r"(uStkDisp));
 
 #elif defined(XMAIL_X86)
 
     __asm__ __volatile__(
-            "sub %0, %%esp\n":
-            :
-            "r"(uStkDisp));
+        "sub %0, %%esp\n":
+        :
+        "r"(uStkDisp));
 
 
     uResult = pProc(pData);
 
 
     __asm__ __volatile__(
-            "add %0, %%esp\n":
-            :
-            "r"(uStkDisp));
+        "add %0, %%esp\n":
+        :
+        "r"(uStkDisp));
 
 #elif defined(XMAIL_PPC)
 
     __asm__ __volatile__(
-            "subf %%r1, %0, %%r1\n":
-            :
-            "r"(uStkDisp));
+        "subf %%r1, %0, %%r1\n":
+        :
+        "r"(uStkDisp));
 
 
     uResult = pProc(pData);
 
 
     __asm__ __volatile__(
-            "add %%r1, %0, %%r1\n":
-            :
-            "r"(uStkDisp));
+        "add %%r1, %0, %%r1\n":
+        :
+        "r"(uStkDisp));
 
 #else
 
@@ -2929,3 +2979,4 @@ static unsigned int SysStkCall(unsigned int (*pProc)(void *), void * pData)
     return (uResult);
 
 }
+

@@ -87,12 +87,12 @@ int             DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
             return (ERR_DYNDNS_CONFIG);
         }
 
-        char           *pszUsername = (iTokensCount > 3) ? ppszTokens[3] : NULL,
-                       *pszPassword = (iTokensCount > 4) ? ppszTokens[4] : NULL;
+        char           *pszUsername = (iTokensCount > 3) ? ppszTokens[3] : NULL;
+        char           *pszPassword = (iTokensCount > 4) ? ppszTokens[4] : NULL;
 
 
         if (DynDnsRegisterDomainHTTP(ppszTokens[0], atoi(ppszTokens[1]), ppszTokens[2],
-                        pszUsername, pszPassword) < 0)
+                                     pszUsername, pszPassword) < 0)
         {
             ErrorPush();
             StrFreeStrings(ppszTokens);
@@ -116,8 +116,8 @@ int             DynDnsSetup(SVRCFG_HANDLE hSvrConfig)
 
 
 int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
-                        char const * pszHTTPRegString, char const * pszUsername,
-                        char const * pszPassword)
+                                         char const * pszHTTPRegString, char const * pszUsername,
+                                         char const * pszPassword)
 {
 
     SYS_SOCKET      SockFD;
@@ -125,13 +125,13 @@ int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
     SYS_INET_ADDR   SockAddr;
 
     if (MscCreateClientSocket(pszServer, iPortNo, SOCK_STREAM, &SockFD, &SvrAddr,
-                    &SockAddr, DYNDNS_REG_TIMEOUT) < 0)
+                              &SockAddr, DYNDNS_REG_TIMEOUT) < 0)
         return (ErrGetErrorCode());
 
 
-    char            szIP[128] = "???.???.???.???",
-                    szRegString[512] = "",
-                    szHTTPRequest[2048] = "";
+    char            szIP[128] = "???.???.???.???";
+    char            szRegString[512] = "";
+    char            szHTTPRequest[2048] = "";
 
     sprintf(szRegString, pszHTTPRegString, SysInetNToA(SockAddr, szIP));
 
@@ -154,7 +154,7 @@ int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
         char            szEncAuth[512] = "";
 
         encode64(szHTTPRequest, strlen(szHTTPRequest), szEncAuth,
-                sizeof(szEncAuth), &uEnc64Length);
+                 sizeof(szEncAuth), &uEnc64Length);
 
         sprintf(szHTTPRequest,
                 "GET %s HTTP/1.1\r\n"
@@ -219,3 +219,4 @@ int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
     return (0);
 
 }
+

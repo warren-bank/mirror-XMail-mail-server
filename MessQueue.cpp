@@ -48,6 +48,11 @@
 
 #define QUEF_SHUTDOWN               (1 << 0)
 
+#define QUMF_DELETED                (1 << 0)
+#define QUMF_FREEZE                 (1 << 1)
+
+#define QUE_MASK_TMPFLAGS(v)        ((v) & ~(QUMF_DELETED | QUMF_FREEZE))
+
 #define QUE_ARENA_SCAN_INTERVAL     15
 #define QUE_ARENA_SCAN_WAIT         2
 #define QUE_SCAN_THREAD_MAXWAIT     60
@@ -87,6 +92,7 @@ struct QueueMessage
     char           *pszFileName;
     int             iNumTries;
     time_t          tLastTry;
+    unsigned long   ulFlags;
 };
 
 
@@ -96,27 +102,28 @@ struct QueueMessage
 
 
 
-static int      QueCreateStruct(char const * pszRootPath);
-static int      QueLoad(MessageQueue * pMQ);
-static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2);
-static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const * pszQueueDir,
-                        char const * pszFileName, int iNumTries, time_t tLastTry);
-static int      QueFreeMessage(QueueMessage * pQM);
-static int      QueFreeMessList(SysListHead * pHead);
-static int      QueLoadMessageStat(MessageQueue * pMQ, QueueMessage * pQM);
-static int      QueStatMessage(MessageQueue * pMQ, QueueMessage * pQM);
-static int      QueGetFilePath(MessageQueue * pMQ, QueueMessage * pQM, char *pszFilePath,
-                        char const * pszQueueDir = NULL);
-static int      QueAddNew(MessageQueue * pMQ, QueueMessage * pQM);
-static bool     QueMessageExpired(MessageQueue * pMQ, QueueMessage * pQM);
+static int      QueCreateStruct(char const *pszRootPath);
+static int      QueLoad(MessageQueue *pMQ);
+static int      QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2);
+static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const *pszQueueDir,
+                                     char const *pszFileName, int iNumTries, time_t tLastTry);
+static int      QueFreeMessage(QueueMessage *pQM);
+static int      QueFreeMessList(SysListHead *pHead);
+static int      QueLoadMessageStat(MessageQueue *pMQ, QueueMessage *pQM);
+static int      QueStatMessage(MessageQueue *pMQ, QueueMessage *pQM);
+static int      QueGetFilePath(MessageQueue *pMQ, QueueMessage *pQM, char *pszFilePath,
+                               char const *pszQueueDir = NULL);
+static int      QueDoMessageCleanup(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
+static int      QueAddNew(MessageQueue *pMQ, QueueMessage *pQM);
+static bool     QueMessageExpired(MessageQueue *pMQ, QueueMessage *pQM);
 static time_t   QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
-                        unsigned int uRetryIncrRatio);
-static bool     QueMessageReadyToSend(MessageQueue * pMQ, QueueMessage * pQM);
-static int      QueAddRsnd(MessageQueue * pMQ, QueueMessage * pQM);
+                               unsigned int uRetryIncrRatio);
+static bool     QueMessageReadyToSend(MessageQueue *pMQ, QueueMessage *pQM);
+static int      QueAddRsnd(MessageQueue *pMQ, QueueMessage *pQM);
 static unsigned int QueRsndThread(void *pThreadData);
-static int      QueScanRsndArena(MessageQueue * pMQ);
-static bool     QueMessageDestMatch(MessageQueue * pMQ, QueueMessage * pQM,
-                        char const * pszAddressMatch);
+static int      QueScanRsndArena(MessageQueue *pMQ);
+static bool     QueMessageDestMatch(MessageQueue *pMQ, QueueMessage *pQM,
+                                    char const *pszAddressMatch);
 
 
 
@@ -130,7 +137,7 @@ static bool     QueMessageDestMatch(MessageQueue * pMQ, QueueMessage * pQM,
 
 
 
-QUEUE_HANDLE    QueOpen(char const * pszRootPath, int iMaxRetry, int iRetryTimeout,
+QUEUE_HANDLE    QueOpen(char const *pszRootPath, int iMaxRetry, int iRetryTimeout,
                         int iRetryIncrRatio, int iNumDirsLevel)
 {
 
@@ -283,7 +290,7 @@ char const     *QueGetRootPath(QUEUE_HANDLE hQueue)
 
 
 
-static int      QueCreateStruct(char const * pszRootPath)
+static int      QueCreateStruct(char const *pszRootPath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Create message dir ( new messages queue )
@@ -374,14 +381,15 @@ static int      QueCreateStruct(char const * pszRootPath)
 
 
 
-static int      QueLoad(MessageQueue * pMQ)
+static int      QueLoad(MessageQueue *pMQ)
 {
 
     char            szCurrPath[SYS_MAX_PATH] = "";
 
     for (int ii = 0; ii < pMQ->iNumDirsLevel; ii++)
     {
-        sprintf(szCurrPath, "%s%d", pMQ->pszRootPath, ii);
+        SysSNPrintf(szCurrPath, sizeof(szCurrPath) - 1, "%s%d",
+                    pMQ->pszRootPath, ii);
 
         if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
             return (ErrGetErrorCode());
@@ -389,7 +397,8 @@ static int      QueLoad(MessageQueue * pMQ)
 
         for (int jj = 0; jj < pMQ->iNumDirsLevel; jj++)
         {
-            sprintf(szCurrPath, "%s%d%s%d", pMQ->pszRootPath, ii, SYS_SLASH_STR, jj);
+            SysSNPrintf(szCurrPath, sizeof(szCurrPath) - 1, "%s%d%s%d",
+                        pMQ->pszRootPath, ii, SYS_SLASH_STR, jj);
 
             if (!SysExistDir(szCurrPath) && (SysMakeDir(szCurrPath) < 0))
                 return (ErrGetErrorCode());
@@ -415,16 +424,16 @@ static int      QueLoad(MessageQueue * pMQ)
 
 
 
-static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
+static int      QueLoadMessages(MessageQueue *pMQ, int iLevel1, int iLevel2)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  File scan the new messages dir
 ///////////////////////////////////////////////////////////////////////////////
     char            szDirPath[SYS_MAX_PATH] = "";
 
-    sprintf(szDirPath, "%s%d%s%d%s%s",
-            pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2,
-            SYS_SLASH_STR, QUEUE_MESS_DIR);
+    SysSNPrintf(szDirPath, sizeof(szDirPath) - 1, "%s%d%s%d%s%s",
+                pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2,
+                SYS_SLASH_STR, QUEUE_MESS_DIR);
 
     char            szMsgFileName[SYS_MAX_PATH] = "";
     FSCAN_HANDLE    hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName);
@@ -437,7 +446,7 @@ static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
             if (!IsDotFilename(szMsgFileName))
             {
                 QueueMessage   *pQM = QueAllocMessage(iLevel1, iLevel2, QUEUE_MESS_DIR,
-                        szMsgFileName, 0, 0);
+                                                      szMsgFileName, 0, 0);
 
                 if (pQM != NULL)
                 {
@@ -465,9 +474,9 @@ static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
 ///////////////////////////////////////////////////////////////////////////////
 //  File scan the resend messages dir
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(szDirPath, "%s%d%s%d%s%s",
-            pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2,
-            SYS_SLASH_STR, QUEUE_RSND_DIR);
+    SysSNPrintf(szDirPath, sizeof(szDirPath) - 1, "%s%d%s%d%s%s",
+                pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2,
+                SYS_SLASH_STR, QUEUE_RSND_DIR);
 
     if ((hFileScan = MscFirstFile(szDirPath, 0, szMsgFileName)) != INVALID_FSCAN_HANDLE)
     {
@@ -477,7 +486,7 @@ static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
             if (!IsDotFilename(szMsgFileName))
             {
                 QueueMessage   *pQM = QueAllocMessage(iLevel1, iLevel2, QUEUE_RSND_DIR,
-                        szMsgFileName, 0, 0);
+                                                      szMsgFileName, 0, 0);
 
                 if (pQM != NULL)
                 {
@@ -487,8 +496,8 @@ static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
                     if (QueLoadMessageStat(pMQ, pQM) < 0)
                     {
                         SysLogMessage(LOG_LEV_ERROR, "Error loading queue file: '%s%d%s%d%s%s%s%s'\n",
-                                pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
-                                QUEUE_RSND_DIR, SYS_SLASH_STR, szMsgFileName);
+                                      pMQ->pszRootPath, iLevel1, SYS_SLASH_STR, iLevel2, SYS_SLASH_STR,
+                                      QUEUE_RSND_DIR, SYS_SLASH_STR, szMsgFileName);
 
                         QueFreeMessage(pQM);
                     }
@@ -517,8 +526,8 @@ static int      QueLoadMessages(MessageQueue * pMQ, int iLevel1, int iLevel2)
 
 
 
-static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const * pszQueueDir,
-                        char const * pszFileName, int iNumTries, time_t tLastTry)
+static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const *pszQueueDir,
+                                     char const *pszFileName, int iNumTries, time_t tLastTry)
 {
 
     QueueMessage   *pQM = (QueueMessage *) SysAlloc(sizeof(QueueMessage));
@@ -541,6 +550,7 @@ static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const * pszQ
 
     pQM->tLastTry = tLastTry;
 
+    pQM->ulFlags = 0;
 
     return (pQM);
 
@@ -548,7 +558,7 @@ static QueueMessage *QueAllocMessage(int iLevel1, int iLevel2, char const * pszQ
 
 
 
-static int      QueFreeMessage(QueueMessage * pQM)
+static int      QueFreeMessage(QueueMessage *pQM)
 {
 
     SysFree(pQM->pszFileName);
@@ -561,7 +571,7 @@ static int      QueFreeMessage(QueueMessage * pQM)
 
 
 
-static int      QueFreeMessList(SysListHead * pHead)
+static int      QueFreeMessList(SysListHead *pHead)
 {
 
     SysListHead    *pLLink;
@@ -581,7 +591,7 @@ static int      QueFreeMessList(SysListHead * pHead)
 
 
 
-char           *QueLoadLastLogEntry(char const * pszLogFilePath)
+char           *QueLoadLastLogEntry(char const *pszLogFilePath)
 {
 
     FILE           *pLogFile = fopen(pszLogFilePath, "rb");
@@ -595,10 +605,10 @@ char           *QueLoadLastLogEntry(char const * pszLogFilePath)
 ///////////////////////////////////////////////////////////////////////////////
 //  Walk log entries
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulCurrOffset = 0,
-                    ulBaseOffset = (unsigned long) -1,
-                    ulEndOffset,
-                    ulPeekTime;
+    unsigned long   ulCurrOffset = 0;
+    unsigned long   ulBaseOffset = (unsigned long) -1;
+    unsigned long   ulEndOffset;
+    unsigned long   ulPeekTime;
     char            szLogLine[1024] = "";
 
     for (;;)
@@ -657,7 +667,7 @@ char           *QueLoadLastLogEntry(char const * pszLogFilePath)
 
 
 
-static int      QueLoadMessageStat(MessageQueue * pMQ, QueueMessage * pQM)
+static int      QueLoadMessageStat(MessageQueue *pMQ, QueueMessage *pQM)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build the slog file path
@@ -674,8 +684,8 @@ static int      QueLoadMessageStat(MessageQueue * pMQ, QueueMessage * pQM)
     if (pLogFile != NULL)
     {
         int             iNumTries = 0;
-        unsigned long   ulLastTime = 0,
-                        ulPeekTime;
+        unsigned long   ulLastTime = 0;
+        unsigned long   ulPeekTime;
         char            szLogLine[1024] = "";
 
         while (MscFGets(szLogLine, sizeof(szLogLine) - 1, pLogFile) != NULL)
@@ -697,7 +707,7 @@ static int      QueLoadMessageStat(MessageQueue * pMQ, QueueMessage * pQM)
 
 
 
-static int      QueStatMessage(MessageQueue * pMQ, QueueMessage * pQM)
+static int      QueStatMessage(MessageQueue *pMQ, QueueMessage *pQM)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build the slog file path
@@ -747,13 +757,14 @@ QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue)
 ///////////////////////////////////////////////////////////////////////////////
 //  Build message file path
 ///////////////////////////////////////////////////////////////////////////////
-    int             iLevel1 = rand() % pMQ->iNumDirsLevel,
-                    iLevel2 = rand() % pMQ->iNumDirsLevel;
-    char            szSubPath[SYS_MAX_PATH] = "",
-                    szMsgFilePath[SYS_MAX_PATH] = "";
+    int             iLevel1 = rand() % pMQ->iNumDirsLevel;
+    int             iLevel2 = rand() % pMQ->iNumDirsLevel;
+    char            szSubPath[SYS_MAX_PATH] = "";
+    char            szMsgFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szSubPath, "%s%d%s%d%s%s", pMQ->pszRootPath, iLevel1, SYS_SLASH_STR,
-            iLevel2, SYS_SLASH_STR, QUEUE_TEMP_DIR);
+    SysSNPrintf(szSubPath, sizeof(szSubPath) - 1, "%s%d%s%d%s%s",
+                pMQ->pszRootPath, iLevel1, SYS_SLASH_STR,
+                iLevel2, SYS_SLASH_STR, QUEUE_TEMP_DIR);
 
     if (MscUniqueFile(szSubPath, szMsgFilePath) < 0)
         return (INVALID_QMSG_HANDLE);
@@ -769,7 +780,7 @@ QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue)
 //  Create queue message data
 ///////////////////////////////////////////////////////////////////////////////
     QueueMessage   *pQM = QueAllocMessage(iLevel1, iLevel2, QUEUE_TEMP_DIR,
-            szMsgFileName, 0, 0);
+                                          szMsgFileName, 0, 0);
 
     if (pQM == NULL)
         return (INVALID_QMSG_HANDLE);
@@ -782,16 +793,17 @@ QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue)
 
 
 
-static int      QueGetFilePath(MessageQueue * pMQ, QueueMessage * pQM, char *pszFilePath,
-                        char const * pszQueueDir)
+static int      QueGetFilePath(MessageQueue *pMQ, QueueMessage *pQM, char *pszFilePath,
+                               char const *pszQueueDir)
 {
 
     if (pszQueueDir == NULL)
         pszQueueDir = pQM->pszQueueDir;
 
 
-    sprintf(pszFilePath, "%s%d%s%d%s%s%s%s", pMQ->pszRootPath, pQM->iLevel1, SYS_SLASH_STR,
-            pQM->iLevel2, SYS_SLASH_STR, pszQueueDir, SYS_SLASH_STR, pQM->pszFileName);
+    SysSNPrintf(pszFilePath, SYS_MAX_PATH - 1, "%s%d%s%d%s%s%s%s",
+                pMQ->pszRootPath, pQM->iLevel1, SYS_SLASH_STR,
+                pQM->iLevel2, SYS_SLASH_STR, pszQueueDir, SYS_SLASH_STR, pQM->pszFileName);
 
 
     return (0);
@@ -801,7 +813,7 @@ static int      QueGetFilePath(MessageQueue * pMQ, QueueMessage * pQM, char *psz
 
 
 int             QueGetFilePath(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char *pszFilePath,
-                        char const * pszQueueDir)
+                               char const *pszQueueDir)
 {
 
     MessageQueue   *pMQ = (MessageQueue *) hQueue;
@@ -819,6 +831,8 @@ int             QueCloseMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
     MessageQueue   *pMQ = (MessageQueue *) hQueue;
     QueueMessage   *pQM = (QueueMessage *) hMessage;
 
+    if (pQM->ulFlags & QUMF_DELETED)
+        QueDoMessageCleanup(hQueue, hMessage);
 
     QueFreeMessage(pQM);
 
@@ -828,8 +842,8 @@ int             QueCloseMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 
 
 
-QMSG_HANDLE     QueGetHandle(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2, char const * pszQueueDir,
-                        char const * pszFileName)
+QMSG_HANDLE     QueGetHandle(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2, char const *pszQueueDir,
+                             char const *pszFileName)
 {
 
     MessageQueue   *pMQ = (MessageQueue *) hQueue;
@@ -918,7 +932,7 @@ time_t          QueGetMessageNextOp(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
     QueueMessage   *pQM = (QueueMessage *) hMessage;
 
     return (pQM->tLastTry + QueNextRetryOp(pQM->iNumTries, (unsigned int) pMQ->iRetryTimeout,
-            (unsigned int) pMQ->iRetryIncrRatio));
+                                           (unsigned int) pMQ->iRetryIncrRatio));
 
 }
 
@@ -953,14 +967,14 @@ int             QueInitMessageStats(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 
 
 
-int             QueCleanupMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, bool bFreeze)
+static int      QueDoMessageCleanup(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
     MessageQueue   *pMQ = (MessageQueue *) hQueue;
     QueueMessage   *pQM = (QueueMessage *) hMessage;
     char            szQueueFilePath[SYS_MAX_PATH] = "";
 
-    if (bFreeze)
+    if (pQM->ulFlags & QUMF_FREEZE)
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Move message file
@@ -1032,6 +1046,22 @@ int             QueCleanupMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, boo
 
 
 
+int             QueCleanupMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, bool bFreeze)
+{
+
+    MessageQueue   *pMQ = (MessageQueue *) hQueue;
+    QueueMessage   *pQM = (QueueMessage *) hMessage;
+
+    pQM->ulFlags |= QUMF_DELETED;
+    if (bFreeze)
+        pQM->ulFlags |= QUMF_FREEZE;
+
+    return (0);
+
+}
+
+
+
 int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
@@ -1043,8 +1073,8 @@ int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 ///////////////////////////////////////////////////////////////////////////////
     if (strcmp(pQM->pszQueueDir, QUEUE_MESS_DIR) != 0)
     {
-        char            szSourceFile[SYS_MAX_PATH] = "",
-                        szTargetFile[SYS_MAX_PATH] = "";
+        char            szSourceFile[SYS_MAX_PATH] = "";
+        char            szTargetFile[SYS_MAX_PATH] = "";
 
         QueGetFilePath(pMQ, pQM, szSourceFile);
         QueGetFilePath(pMQ, pQM, szTargetFile, QUEUE_MESS_DIR);
@@ -1057,6 +1087,11 @@ int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 ///////////////////////////////////////////////////////////////////////////////
         pQM->pszQueueDir = QUEUE_MESS_DIR;
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Unmask temporary flags
+///////////////////////////////////////////////////////////////////////////////
+    pQM->ulFlags = QUE_MASK_TMPFLAGS(pQM->ulFlags);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Add to queue
@@ -1072,7 +1107,7 @@ int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 
 
 
-static int      QueAddNew(MessageQueue * pMQ, QueueMessage * pQM)
+static int      QueAddNew(MessageQueue *pMQ, QueueMessage *pQM)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Add the queue entry
@@ -1096,7 +1131,7 @@ static int      QueAddNew(MessageQueue * pMQ, QueueMessage * pQM)
 
 
 
-static bool     QueMessageExpired(MessageQueue * pMQ, QueueMessage * pQM)
+static bool     QueMessageExpired(MessageQueue *pMQ, QueueMessage *pQM)
 {
 
     return (pQM->iNumTries >= pMQ->iMaxRetry);
@@ -1106,7 +1141,7 @@ static bool     QueMessageExpired(MessageQueue * pMQ, QueueMessage * pQM)
 
 
 static time_t   QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
-                        unsigned int uRetryIncrRatio)
+                               unsigned int uRetryIncrRatio)
 {
 
     unsigned int    uNextOp = uRetryTimeout;
@@ -1121,11 +1156,12 @@ static time_t   QueNextRetryOp(int iNumTries, unsigned int uRetryTimeout,
 
 
 
-static bool     QueMessageReadyToSend(MessageQueue * pMQ, QueueMessage * pQM)
+static bool     QueMessageReadyToSend(MessageQueue *pMQ, QueueMessage *pQM)
 {
 
-    return (time(NULL) > (pQM->tLastTry + QueNextRetryOp(pQM->iNumTries,
-            (unsigned int) pMQ->iRetryTimeout, (unsigned int) pMQ->iRetryIncrRatio)));
+    return (time(NULL) > (pQM->tLastTry +
+                          QueNextRetryOp(pQM->iNumTries, (unsigned int) pMQ->iRetryTimeout,
+                                         (unsigned int) pMQ->iRetryIncrRatio)));
 
 }
 
@@ -1151,8 +1187,8 @@ int             QueResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 ///////////////////////////////////////////////////////////////////////////////
     if (strcmp(pQM->pszQueueDir, QUEUE_RSND_DIR) != 0)
     {
-        char            szSourceFile[SYS_MAX_PATH] = "",
-                        szTargetFile[SYS_MAX_PATH] = "";
+        char            szSourceFile[SYS_MAX_PATH] = "";
+        char            szTargetFile[SYS_MAX_PATH] = "";
 
         QueGetFilePath(pMQ, pQM, szSourceFile);
         QueGetFilePath(pMQ, pQM, szTargetFile, QUEUE_RSND_DIR);
@@ -1165,6 +1201,11 @@ int             QueResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 ///////////////////////////////////////////////////////////////////////////////
         pQM->pszQueueDir = QUEUE_RSND_DIR;
     }
+
+///////////////////////////////////////////////////////////////////////////////
+//  Unmask temporary flags
+///////////////////////////////////////////////////////////////////////////////
+    pQM->ulFlags = QUE_MASK_TMPFLAGS(pQM->ulFlags);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Add to queue
@@ -1180,14 +1221,13 @@ int             QueResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 
 
 
-static int      QueAddRsnd(MessageQueue * pMQ, QueueMessage * pQM)
+static int      QueAddRsnd(MessageQueue *pMQ, QueueMessage *pQM)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Add the queue entry
 ///////////////////////////////////////////////////////////////////////////////
     if (SysLockMutex(pMQ->hMutex, SYS_INFINITE_TIMEOUT) < 0)
         return (ErrGetErrorCode());
-
 
     SYS_LIST_ADDT(&pQM->LLink, &pMQ->RsndArenaQueue);
 
@@ -1308,7 +1348,7 @@ static unsigned int QueRsndThread(void *pThreadData)
 
 
 
-static int      QueScanRsndArena(MessageQueue * pMQ)
+static int      QueScanRsndArena(MessageQueue *pMQ)
 {
 
     if (SysLockMutex(pMQ->hMutex, SYS_INFINITE_TIMEOUT) < 0)
@@ -1318,33 +1358,33 @@ static int      QueScanRsndArena(MessageQueue * pMQ)
     SysListHead    *pLLink;
 
     SYS_LIST_FOR_EACH(pLLink, &pMQ->RsndArenaQueue)
-    {
-        QueueMessage   *pQM = SYS_LIST_ENTRY(pLLink, QueueMessage, LLink);
-
-        if (QueMessageReadyToSend(pMQ, pQM))
         {
+            QueueMessage   *pQM = SYS_LIST_ENTRY(pLLink, QueueMessage, LLink);
+
+            if (QueMessageReadyToSend(pMQ, pQM))
+            {
 ///////////////////////////////////////////////////////////////////////////////
 //  Set the list pointer to the next item
 ///////////////////////////////////////////////////////////////////////////////
-            pLLink = pLLink->pPrev;
+                pLLink = pLLink->pPrev;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove item from resend arena
 ///////////////////////////////////////////////////////////////////////////////
-            SYS_LIST_DEL(&pQM->LLink);
+                SYS_LIST_DEL(&pQM->LLink);
 
-            --pMQ->iRsndArenaCount;
+                --pMQ->iRsndArenaCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Add item from resend queue
 ///////////////////////////////////////////////////////////////////////////////
-            SYS_LIST_ADDT(&pQM->LLink, &pMQ->ReadyQueue);
+                SYS_LIST_ADDT(&pQM->LLink, &pMQ->ReadyQueue);
 
-            ++pMQ->iReadyCount;
+                ++pMQ->iReadyCount;
+
+            }
 
         }
-
-    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  If the count of rsnd queue is not zero, set the event
@@ -1364,7 +1404,15 @@ static int      QueScanRsndArena(MessageQueue * pMQ)
 int             QueCheckMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 {
 
+    MessageQueue   *pMQ = (MessageQueue *) hQueue;
+    QueueMessage   *pQM = (QueueMessage *) hMessage;
     char            szQueueFilePath[SYS_MAX_PATH] = "";
+
+    if (pQM->ulFlags & QUMF_DELETED)
+    {
+        ErrSetErrorCode(ERR_MESSAGE_DELETED);
+        return (ERR_MESSAGE_DELETED);
+    }
 
     QueGetFilePath(hQueue, hMessage, szQueueFilePath, QUEUE_MESS_DIR);
 
@@ -1385,8 +1433,8 @@ int             QueCheckMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage)
 
 
 
-static bool     QueMessageDestMatch(MessageQueue * pMQ, QueueMessage * pQM,
-                        char const * pszAddressMatch)
+static bool     QueMessageDestMatch(MessageQueue *pMQ, QueueMessage *pQM,
+                                    char const *pszAddressMatch)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get the queue file path
@@ -1411,11 +1459,11 @@ static bool     QueMessageDestMatch(MessageQueue * pMQ, QueueMessage * pQM,
 ///////////////////////////////////////////////////////////////////////////////
 //  RFC style ETRN ( domain based )
 ///////////////////////////////////////////////////////////////////////////////
-        char            szDestUser[MAX_ADDR_NAME] = "",
-                        szDestDomain[MAX_ADDR_NAME] = "";
+        char            szDestUser[MAX_ADDR_NAME] = "";
+        char            szDestDomain[MAX_ADDR_NAME] = "";
 
         if ((StrStringsCount(SFH.ppszRcpt) < 1) ||
-                (USmtpSplitEmailAddr(SFH.ppszRcpt[0], szDestUser, szDestDomain) < 0))
+            (USmtpSplitEmailAddr(SFH.ppszRcpt[0], szDestUser, szDestDomain) < 0))
         {
             USmlCleanupSpoolFileHeader(SFH);
             return (false);
@@ -1442,7 +1490,7 @@ static bool     QueMessageDestMatch(MessageQueue * pMQ, QueueMessage * pQM,
 
 
 
-int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const * pszAddressMatch)
+int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const *pszAddressMatch)
 {
 
     MessageQueue   *pMQ = (MessageQueue *) hQueue;
@@ -1455,33 +1503,33 @@ int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const * pszAddressMa
     SysListHead    *pLLink;
 
     SYS_LIST_FOR_EACH(pLLink, &pMQ->RsndArenaQueue)
-    {
-        QueueMessage   *pQM = SYS_LIST_ENTRY(pLLink, QueueMessage, LLink);
-
-        if ((pszAddressMatch == NULL) || QueMessageDestMatch(pMQ, pQM, pszAddressMatch))
         {
+            QueueMessage   *pQM = SYS_LIST_ENTRY(pLLink, QueueMessage, LLink);
+
+            if ((pszAddressMatch == NULL) || QueMessageDestMatch(pMQ, pQM, pszAddressMatch))
+            {
 ///////////////////////////////////////////////////////////////////////////////
 //  Set the list pointer to the next item
 ///////////////////////////////////////////////////////////////////////////////
-            pLLink = pLLink->pPrev;
+                pLLink = pLLink->pPrev;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove item from resend arena
 ///////////////////////////////////////////////////////////////////////////////
-            SYS_LIST_DEL(&pQM->LLink);
+                SYS_LIST_DEL(&pQM->LLink);
 
-            --pMQ->iRsndArenaCount;
+                --pMQ->iRsndArenaCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Add item from resend queue
 ///////////////////////////////////////////////////////////////////////////////
-            SYS_LIST_ADDT(&pQM->LLink, &pMQ->ReadyQueue);
+                SYS_LIST_ADDT(&pQM->LLink, &pMQ->ReadyQueue);
 
-            ++pMQ->iReadyCount;
+                ++pMQ->iReadyCount;
+
+            }
 
         }
-
-    }
 
 ///////////////////////////////////////////////////////////////////////////////
 //  If the count of rsnd queue is not zero, set the event
@@ -1495,3 +1543,4 @@ int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const * pszAddressMa
     return (0);
 
 }
+

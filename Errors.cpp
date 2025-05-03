@@ -280,6 +280,8 @@ static ErrorStrings Errors[] =
     {ERR_BAD_RELATIVE_PATH, "Error in relative path syntax"},
     {ERR_DNS_NXDOMAIN, "DNS name not exist"},
     {ERR_BAD_RFCNAME, "Name does not respect RFC822"},
+    {ERR_CONNECT, "Error connecting to remote address"},
+    {ERR_MESSAGE_DELETED, "Message marked for deletion"},
 
 };
 
@@ -339,7 +341,7 @@ static ErrorEnv *ErrSetupEnv(void)
     if (pEV == NULL)
     {
         if ((pEV = (ErrorEnv *) SysAlloc(sizeof(ErrorEnv) +
-                                CountOf(Errors) * sizeof(char *))) == NULL)
+                                         CountOf(Errors) * sizeof(char *))) == NULL)
             return (NULL);
 
 
@@ -394,7 +396,7 @@ int             ErrGetErrorCode(void)
 
 
 
-int             ErrSetErrorCode(int iError, char const * pszInfo)
+int             ErrSetErrorCode(int iError, char const *pszInfo)
 {
 
     ErrorEnv       *pEV = ErrSetupEnv();
@@ -464,7 +466,7 @@ char           *ErrGetErrorStringInfo(int iError)
 
     int             iInfoLength = (pEV->pszInfo[iErrIndex] != NULL) ? strlen(pEV->pszInfo[iErrIndex]) : 0;
     char           *pszErrorInfo = (char *) SysAlloc(strlen(Errors[iErrIndex].pszError) +
-            iInfoLength + 256);
+                                                     iInfoLength + 256);
 
     if (pszErrorInfo == NULL)
         return (NULL);
@@ -486,7 +488,7 @@ char           *ErrGetErrorStringInfo(int iError)
 
 
 
-int             ErrLogMessage(int iLogLevel, char const * pszFormat,...)
+int             ErrLogMessage(int iLogLevel, char const *pszFormat,...)
 {
 
     char           *pszErrorInfo = ErrGetErrorStringInfo(ErrGetErrorCode());
@@ -512,10 +514,10 @@ int             ErrLogMessage(int iLogLevel, char const * pszFormat,...)
 
 
     SysLogMessage(iLogLevel,
-            "<<\n"
-            "%s\n"
-            "%s"
-            ">>\n", pszErrorInfo, pszUserMessage);
+                  "<<\n"
+                  "%s\n"
+                  "%s"
+                  ">>\n", pszErrorInfo, pszUserMessage);
 
 
     SysFree(pszUserMessage);
@@ -528,8 +530,8 @@ int             ErrLogMessage(int iLogLevel, char const * pszFormat,...)
 
 
 
-int             ErrFileVLogMessage(char const * pszFileName, char const * pszFormat,
-                        va_list Args)
+int             ErrFileVLogMessage(char const *pszFileName, char const *pszFormat,
+                                   va_list Args)
 {
 
     char           *pszErrorInfo = ErrGetErrorStringInfo(ErrGetErrorCode());
@@ -574,3 +576,4 @@ int             ErrFileVLogMessage(char const * pszFileName, char const * pszFor
     return (0);
 
 }
+

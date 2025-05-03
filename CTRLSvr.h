@@ -45,7 +45,7 @@ struct CTRLConfig
     int             iSessionTimeout;
     int             iTimeout;
     int             iNumAddr;
-    ServerNetPath   SvrPath[MAX_CTRL_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_CTRL_ACCEPT_ADDRESSES];
 
 };
 

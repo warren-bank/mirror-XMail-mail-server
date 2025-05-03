@@ -1,6 +1,6 @@
 <HTML>
 <HEAD>
-<TITLE>XMail Change Log v 1.11</TITLE>
+<TITLE>XMail Change Log v 1.14</TITLE>
 <LINK REL="stylesheet" HREF="./xmail.css" TYPE="text/css">
 <LINK REV="made" HREF="mailto:davide@blue1.dev.mcafeelabs.com">
 </HEAD>
@@ -16,6 +16,7 @@
 	<LI><A HREF="#change log">CHANGE LOG</A></LI>
 	<UL>
 
+		<LI><A HREF="#april 2, 2003 v 1.14">April 2, 2003 v 1.14</A></LI>
 		<LI><A HREF="#january 25, 2003 v 1.12">January 25, 2003 v 1.12</A></LI>
 		<LI><A HREF="#november 9, 2002 v 1.11">November 9, 2002 v 1.11</A></LI>
 		<LI><A HREF="#july 27, 2002 v 1.10">July 27, 2002 v 1.10</A></LI>
@@ -98,11 +99,47 @@
 <HR>
 <P>
 <H1><A NAME="name">NAME</A></H1>
-<P>XMail Change Log as of Version 1.12</P>
+<P>XMail Change Log as of Version 1.14</P>
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
 <H1><A NAME="change log">CHANGE LOG</A></H1>
+<P>
+<H2><A NAME="april 2, 2003 v 1.14">April 2, 2003 v 1.14</A></H2>
+<UL>
+<LI>
+Added a ``Server:'' field to the notification message. It'll report the remote SMTP server
+host name and IP that issued the error. It will not be present if the error does not
+originate from a remote SMTP server.
+<P></P>
+<LI>
+Added a new command line parameter -MD to set the number of subdirectories allocated
+for the DNS cache files storage.
+<P></P>
+<LI>
+Messages with non RFC822 conforming headers are now handled by the PSYNC code.
+<P></P>
+<LI>
+'<STRONG>ATTENTION</STRONG>': The filter architecture has been completely changed. To correctly
+update to this version you have to create two empty files ``filters.in.tab'' and ``filters.out.tab''
+inside the $MAIL_ROOT directory. Please refer to the documentation for more informations
+about the new filter architecture. If you are not currently using filters, the simple
+creation of the two files listed above will be sufficent.
+<P></P>
+<LI>
+'<STRONG>ATTENTION</STRONG>': The internal spool file format is changed with the new line added
+( the 1st one ) that contain various message informations. Filters that rely on the
+internal spool file format must be changed to match the new structure.
+<P></P>
+<LI>
+Fixed a bug that made XMail to not correctly report zero sized files inside the mailbox.
+<P></P>
+<LI>
+Added file size to CTRL's ``filelist'' command.
+<P></P>
+<LI>
+Fixed a connect-error reporting bug on Windows platform.
+<P></P></UL>
 <P>
 <H2><A NAME="january 25, 2003 v 1.12">January 25, 2003 v 1.12</A></H2>
 <UL>

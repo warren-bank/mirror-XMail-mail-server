@@ -146,8 +146,8 @@ static int      MnRemovePID(void)
 static void     MnSIGCLD(int iSignal)
 {
 
-    int             iExitStatus,
-                    iDeadPID;
+    int             iExitStatus;
+    int             iDeadPID;
 
     while ((iDeadPID = wait3(&iExitStatus, WNOHANG, (struct rusage *) NULL)) > 0)
     {
@@ -330,3 +330,4 @@ int             main(int iArgCount, char *pszArgs[])
     return (MnDaemonStartup(iArgCount, pszArgs));
 
 }
+

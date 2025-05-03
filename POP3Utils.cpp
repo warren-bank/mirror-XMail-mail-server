@@ -88,28 +88,28 @@ struct POP3SessionData
 
 
 
-static int      UPopMailFileNameFilter(char const * pszFileName);
-static int      UPopFillMessageList(char const * pszBasePath, char const * pszSubPath,
+static int      UPopMailFileNameFilter(char const *pszFileName);
+static int      UPopFillMessageList(char const *pszBasePath, char const *pszSubPath,
                                     HSLIST & hMessageList, int &iMsgCount, unsigned long &ulMBSize);
-static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
+static int      UPopBuildMessageList(UserInfo *pUI, HSLIST & hMessageList,
                                      int *piMsgCount = NULL, unsigned long *pulMBSize = NULL);
-static void     UPopFreeMsgData(POP3MsgData * pPOPMD);
+static void     UPopFreeMsgData(POP3MsgData *pPOPMD);
 static void     UPopFreeMessageList(HSLIST & hMessageList);
 static unsigned long UPopMessagesSize(HSLIST & hMessageList);
 static POP3MsgData *UPopMessageFromIndex(POP3SessionData *pPOPSD, int iMsgIndex);
-static int      UPopCheckPeerIP(UserInfo * pUI, SYS_INET_ADDR const & PeerInfo);
-static int      UPopUpdateMailbox(POP3SessionData * pPOPSD);
+static int      UPopCheckPeerIP(UserInfo *pUI, SYS_INET_ADDR const & PeerInfo);
+static int      UPopUpdateMailbox(POP3SessionData *pPOPSD);
 static int      UPopCheckResponse(const char *pszResponse, char *pszMessage = NULL);
 static int      UPopGetResponse(BSOCK_HANDLE hBSock, char *pszResponse, int iMaxChars,
                                 int iTimeout = STD_POP3_TIMEOUT);
-static char    *UPopExtractServerTimeStamp(char const * pszResponse, char *pszTimeStamp,
+static char    *UPopExtractServerTimeStamp(char const *pszResponse, char *pszTimeStamp,
                                            int iMaxTimeStamp);
 static int      UPopSendCommand(BSOCK_HANDLE hBSock, const char *pszCommand, char *pszResponse,
                                 int iMaxChars, int iTimeout = STD_POP3_TIMEOUT);
 static int      UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
                                     const char *pszPassword, char *pszRespBuffer, int iMaxRespChars);
 static int      UPopDoAPOPAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
-                               const char *pszPassword, char const * pszTimeStamp,
+                               const char *pszPassword, char const *pszTimeStamp,
                                char *pszRespBuffer, int iMaxRespChars);
 static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUsername,
                                       const char *pszPassword, bool bTryAuthAPOP = false);
@@ -120,7 +120,7 @@ static int      UPopGetMailboxStatus(BSOCK_HANDLE hBSock, int &iMsgCount,
                                      unsigned long &ulMailboxSize);
 static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const char *pszFileName);
 static int      UPopDeleteMessage(BSOCK_HANDLE hBSock, int iMsgIndex);
-static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath, int iMaxPath);
+static int      UPopGetIpLogFilePath(UserInfo *pUI, char *pszFilePath, int iMaxPath);
 
 
 
@@ -130,7 +130,7 @@ static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath, int iMax
 
 
 
-static int      UPopMailFileNameFilter(char const * pszFileName)
+static int      UPopMailFileNameFilter(char const *pszFileName)
 {
 
     return ((*pszFileName != '.') ? 1: 0);
@@ -139,7 +139,7 @@ static int      UPopMailFileNameFilter(char const * pszFileName)
 
 
 
-int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize,
+int             UPopGetMailboxSize(UserInfo *pUI, unsigned long &ulMBSize,
                                    unsigned long &ulNumMessages)
 {
 
@@ -176,11 +176,11 @@ int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize,
 
 
 
-int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace)
+int             UPopCheckMailboxSize(UserInfo *pUI, unsigned long *pulAvailSpace)
 {
 
-    unsigned long   ulMBSize = 0,
-        ulNumMessages = 0;
+    unsigned long   ulMBSize = 0;
+    unsigned long   ulNumMessages = 0;
 
     if (UPopGetMailboxSize(pUI, ulMBSize, ulNumMessages) < 0)
         return (ErrGetErrorCode());
@@ -214,7 +214,7 @@ int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpac
 
 
 
-static int      UPopFillMessageList(char const * pszBasePath, char const * pszSubPath,
+static int      UPopFillMessageList(char const *pszBasePath, char const *pszSubPath,
                                     HSLIST & hMessageList, int &iMsgCount, unsigned long &ulMBSize)
 {
 ///////////////////////////////////////////////////////////////////////////////
@@ -225,7 +225,8 @@ static int      UPopFillMessageList(char const * pszBasePath, char const * pszSu
     if (pszSubPath == NULL)
         StrSNCpy(szScanPath, pszBasePath);
     else
-        sprintf(szScanPath, "%s" SYS_SLASH_STR "%s", pszBasePath, pszSubPath);
+        SysSNPrintf(szScanPath, sizeof(szScanPath) - 1, "%s" SYS_SLASH_STR "%s",
+                    pszBasePath, pszSubPath);
 
 
     char            szFileName[SYS_MAX_PATH] = "";
@@ -258,7 +259,8 @@ static int      UPopFillMessageList(char const * pszBasePath, char const * pszSu
             if (pszSubPath == NULL)
                 StrSNCpy(pPOPMD->szMsgName, szFileName);
             else
-                sprintf(pPOPMD->szMsgName, "%s" SYS_SLASH_STR "%s", pszSubPath, szFileName);
+                SysSNPrintf(pPOPMD->szMsgName, sizeof(pPOPMD->szMsgName) - 1,
+                            "%s" SYS_SLASH_STR "%s", pszSubPath, szFileName);
 
             pPOPMD->ulMsgSize = SysGetSize(hFind);
             pPOPMD->ulFlags = 0;
@@ -286,7 +288,7 @@ static int      UPopFillMessageList(char const * pszBasePath, char const * pszSu
 
 
 
-static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
+static int      UPopBuildMessageList(UserInfo *pUI, HSLIST & hMessageList,
                                      int *piMsgCount, unsigned long *pulMBSize)
 {
 
@@ -322,8 +324,7 @@ static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
     }
     else
     {
-        if ((UPopFillMessageList(szMBPath, "new", hMessageList, iMsgCount, ulMBSize) < 0) ||
-            (UPopFillMessageList(szMBPath, "cur", hMessageList, iMsgCount, ulMBSize) < 0))
+        if (UPopFillMessageList(szMBPath, "new", hMessageList, iMsgCount, ulMBSize) < 0)
         {
             ErrorPush();
             UPopFreeMessageList(hMessageList);
@@ -346,7 +347,7 @@ static int      UPopBuildMessageList(UserInfo * pUI, HSLIST & hMessageList,
 
 
 
-static void     UPopFreeMsgData(POP3MsgData * pPOPMD)
+static void     UPopFreeMsgData(POP3MsgData *pPOPMD)
 {
 
     SysFree(pPOPMD);
@@ -414,7 +415,7 @@ int             UPopAuthenticateAPOP(const char *pszDomain, const char *pszUsrNa
 
 
 
-static int      UPopCheckPeerIP(UserInfo * pUI, SYS_INET_ADDR const & PeerInfo)
+static int      UPopCheckPeerIP(UserInfo *pUI, SYS_INET_ADDR const & PeerInfo)
 {
 
     char            szIPMapFile[SYS_MAX_PATH] = "";
@@ -434,7 +435,7 @@ static int      UPopCheckPeerIP(UserInfo * pUI, SYS_INET_ADDR const & PeerInfo)
 
 
 POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
-                                 const char *pszUsrPass, SYS_INET_ADDR const * pPeerInfo)
+                                 const char *pszUsrPass, SYS_INET_ADDR const *pPeerInfo)
 {
 
     UserInfo       *pUI = UsrGetUserByName(pszDomain, pszUsrName);
@@ -560,7 +561,7 @@ char           *UPopGetUserInfoVar(POP3_HANDLE hPOPSession, const char *pszName,
 
 
 
-static int      UPopUpdateMailbox(POP3SessionData * pPOPSD)
+static int      UPopUpdateMailbox(POP3SessionData *pPOPSD)
 {
 
     char            szMBPath[SYS_MAX_PATH] = "";
@@ -585,7 +586,8 @@ static int      UPopUpdateMailbox(POP3SessionData * pPOPSD)
         {
             char            szMsgPath[SYS_MAX_PATH] = "";
 
-            sprintf(szMsgPath, "%s" SYS_SLASH_STR "%s", szMBPath, pPOPMD->szMsgName);
+            SysSNPrintf(szMsgPath, sizeof(szMsgPath) - 1, "%s" SYS_SLASH_STR "%s",
+                        szMBPath, pPOPMD->szMsgName);
 
             SysRemove(szMsgPath);
         }
@@ -831,8 +833,9 @@ int             UPopSessionSendMsg(POP3_HANDLE hPOPSession, int iMsgIndex,
     if (BSckSendString(hBSock, szResponse, pPOPSD->iTimeout) < 0)
         return (ErrGetErrorCode());
 
-    if (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, 0, (unsigned long) -1,
-                    pPOPSD->iTimeout) < 0)
+    if ((pPOPMD->ulMsgSize > 0) &&
+        (SysSendFile(BSckGetAttachedSocket(hBSock), szMsgFilePath, 0, (unsigned long) -1,
+                     pPOPSD->iTimeout) < 0))
         return (ErrGetErrorCode());
 
     if (BSckSendString(hBSock, ".", pPOPSD->iTimeout) < 0)
@@ -1020,12 +1023,12 @@ static int      UPopGetResponse(BSOCK_HANDLE hBSock, char *pszResponse, int iMax
 
 
 
-static char    *UPopExtractServerTimeStamp(char const * pszResponse, char *pszTimeStamp,
+static char    *UPopExtractServerTimeStamp(char const *pszResponse, char *pszTimeStamp,
                                            int iMaxTimeStamp)
 {
 
-    char const     *pszStartTS = strchr(pszResponse, '<'),
-        *pszEndTS = strchr(pszResponse, '>');
+    char const     *pszStartTS = strchr(pszResponse, '<');
+    char const     *pszEndTS = strchr(pszResponse, '>');
 
     if ((pszStartTS == NULL) || (pszEndTS == NULL))
         return (NULL);
@@ -1069,7 +1072,7 @@ static int      UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername
 ///////////////////////////////////////////////////////////////////////////////
 //  Send USER and read result
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszRespBuffer, "USER %s", pszUsername);
+    SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "USER %s", pszUsername);
 
     if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
         return (ErrGetErrorCode());
@@ -1077,7 +1080,7 @@ static int      UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername
 ///////////////////////////////////////////////////////////////////////////////
 //  Send PASS and read result
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszRespBuffer, "PASS %s", pszPassword);
+    SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "PASS %s", pszPassword);
 
     if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
         return (ErrGetErrorCode());
@@ -1091,7 +1094,7 @@ static int      UPopDoClearTextAuth(BSOCK_HANDLE hBSock, const char *pszUsername
 
 
 static int      UPopDoAPOPAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
-                               const char *pszPassword, char const * pszTimeStamp,
+                               const char *pszPassword, char const *pszTimeStamp,
                                char *pszRespBuffer, int iMaxRespChars)
 {
 
@@ -1112,7 +1115,7 @@ static int      UPopDoAPOPAuth(BSOCK_HANDLE hBSock, const char *pszUsername,
 ///////////////////////////////////////////////////////////////////////////////
 //  Send APOP and read result
 ///////////////////////////////////////////////////////////////////////////////
-    sprintf(pszRespBuffer, "APOP %s %s", pszUsername, szMD5);
+    SysSNPrintf(pszRespBuffer, iMaxRespChars - 1, "APOP %s %s", pszUsername, szMD5);
 
     if (UPopSendCommand(hBSock, pszRespBuffer, pszRespBuffer, iMaxRespChars) < 0)
         return (ErrGetErrorCode());
@@ -1128,19 +1131,15 @@ static BSOCK_HANDLE UPopCreateChannel(const char *pszServer, const char *pszUser
                                       const char *pszPassword, bool bTryAuthAPOP)
 {
 
-    ServerNetPath   NetPath;
+    SYS_INET_ADDR   SvrAddr;
 
-    if (MscSetupServerNetPath(NetPath, pszServer, STD_POP3_PORT) < 0)
+    if (MscGetServerAddress(pszServer, SvrAddr, STD_POP3_PORT) < 0)
         return (INVALID_BSOCK_HANDLE);
 
     SYS_SOCKET      SockFD = SysCreateSocket(AF_INET, SOCK_STREAM, 0);
 
     if (SockFD == SYS_INVALID_SOCKET)
         return (INVALID_BSOCK_HANDLE);
-
-    SYS_INET_ADDR   SvrAddr;
-
-    SysSetupAddress(SvrAddr, AF_INET, NetPath.NetAddr, htons(NetPath.iPortNo));
 
     if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), STD_POP3_TIMEOUT) < 0)
     {
@@ -1288,9 +1287,9 @@ static int      UPopRetrieveMessage(BSOCK_HANDLE hBSock, int iMsgIndex, const ch
         return (ErrGetErrorCode());
     }
 
-    int             iLineLength = 0,
-        iGotNL,
-        iGotNLPrev = 1;
+    int             iLineLength = 0;
+    int             iGotNL;
+    int             iGotNLPrev = 1;
 
     for (;;)
     {
@@ -1451,7 +1450,7 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
 
 
 
-static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath, int iMaxPath)
+static int      UPopGetIpLogFilePath(UserInfo *pUI, char *pszFilePath, int iMaxPath)
 {
 
     UsrGetUserPath(pUI, pszFilePath, iMaxPath, 1);
@@ -1464,7 +1463,7 @@ static int      UPopGetIpLogFilePath(UserInfo * pUI, char *pszFilePath, int iMax
 
 
 
-int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
+int             UPopUserIpCheck(UserInfo *pUI, SYS_INET_ADDR const *pPeerInfo,
                                 unsigned int uExpireTime)
 {
 
@@ -1504,7 +1503,12 @@ int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
 ///////////////////////////////////////////////////////////////////////////////
 //  Do IP matching
 ///////////////////////////////////////////////////////////////////////////////
-    if (SysInetAddr(szIP) != SysGetAddrAddress(*pPeerInfo))
+    NET_ADDRESS     PrevAddr;
+    NET_ADDRESS     CurrAddr;
+
+    if ((SysInetAddr(szIP, PrevAddr) < 0) ||
+        (SysGetAddrAddress(*pPeerInfo, CurrAddr) < 0) ||
+        !SysSameAddress(PrevAddr, CurrAddr))
     {
         ErrSetErrorCode(ERR_NO_POP3_IP);
         return (ERR_NO_POP3_IP);
@@ -1516,7 +1520,7 @@ int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
 
 
 
-int             UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress)
+int             UPopGetLastLoginAddress(UserInfo *pUI, SYS_INET_ADDR *pAddress)
 {
 
     char            szIpFilePath[SYS_MAX_PATH] = "";
@@ -1540,7 +1544,12 @@ int             UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress
 
     fclose(pIpFile);
 
+    NET_ADDRESS     NetAddr;
 
-    return (SysSetupAddress(*pAddress, AF_INET, SysInetAddr(szIP), 0));
+    if (SysInetAddr(szIP, NetAddr) < 0)
+        return (ErrGetErrorCode());
+
+    return (SysSetupAddress(*pAddress, AF_INET, NetAddr, 0));
 
 }
+

@@ -47,7 +47,7 @@ struct POP3Config
     int             iTimeout;
     int             iBadLoginWait;
     int             iNumAddr;
-    ServerNetPath   SvrPath[MAX_POP3_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_POP3_ACCEPT_ADDRESSES];
 
 };
 

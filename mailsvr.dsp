@@ -123,6 +123,10 @@ SOURCE=.\ExtAliases.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\Filter.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\FINGSvr.cpp
 # End Source File
 # Begin Source File
@@ -314,6 +318,10 @@ SOURCE=.\Errors.h
 # Begin Source File
 
 SOURCE=.\ExtAliases.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\Filter.h
 # End Source File
 # Begin Source File
 

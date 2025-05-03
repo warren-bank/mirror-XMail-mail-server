@@ -46,13 +46,13 @@ typedef struct POP3_HANDLE_struct
 
 
 
-int             UPopGetMailboxSize(UserInfo * pUI, unsigned long &ulMBSize,
+int             UPopGetMailboxSize(UserInfo *pUI, unsigned long &ulMBSize,
                         unsigned long &ulNumMessages);
-int             UPopCheckMailboxSize(UserInfo * pUI, unsigned long *pulAvailSpace = NULL);
+int             UPopCheckMailboxSize(UserInfo *pUI, unsigned long *pulAvailSpace = NULL);
 int             UPopAuthenticateAPOP(const char *pszDomain, const char *pszUsrName,
                         const char *pszTimeStamp, const char *pszDigest);
 POP3_HANDLE     UPopBuildSession(const char *pszDomain, const char *pszUsrName,
-                        const char *pszUsrPass, SYS_INET_ADDR const * pPeerInfo);
+                        const char *pszUsrPass, SYS_INET_ADDR const *pPeerInfo);
 void            UPopReleaseSession(POP3_HANDLE hPOPSession, int iUpdate = 1);
 char           *UPopGetUserInfoVar(POP3_HANDLE hPOPSession, const char *pszName,
                         const char *pszDefault = NULL);
@@ -76,10 +76,10 @@ int             UPopSyncRemoteLink(const char *pszSyncAddr, const char *pszRmtSe
                         const char *pszRmtName, const char *pszRmtPassword,
                         const char *pszFetchHdrTags = "+X-Deliver-To,To,Cc",
                         const char *pszAuthType = AUTH_TYPE_CLEAR,
-                        const char * pszErrorAccount = NULL);
-int             UPopUserIpCheck(UserInfo * pUI, SYS_INET_ADDR const * pPeerInfo,
+                        const char *pszErrorAccount = NULL);
+int             UPopUserIpCheck(UserInfo *pUI, SYS_INET_ADDR const *pPeerInfo,
                         unsigned int uExpireTime);
-int             UPopGetLastLoginAddress(UserInfo * pUI, SYS_INET_ADDR * pAddress);
+int             UPopGetLastLoginAddress(UserInfo *pUI, SYS_INET_ADDR *pAddress);
 
 
 

@@ -67,12 +67,12 @@
 
 
 
-static int      UAthGetConfigPath(char const * pszService, char const * pszDomain,
-                        char *pszConfigPath);
-static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
-                        char const * pszDomain, char const * pszUsername, UserInfo * pUI);
-static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomain,
-                        char const * pszUsername, char const * pszPassword, UserInfo * pUI);
+static int      UAthGetConfigPath(char const *pszService, char const *pszDomain,
+                                  char *pszConfigPath);
+static int      UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
+                               char const *pszDomain, char const *pszUsername, UserInfo *pUI);
+static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const *pszDomain,
+                                     char const *pszUsername, char const *pszPassword, UserInfo *pUI);
 
 
 
@@ -85,7 +85,7 @@ static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomai
 
 
 
-char           *UAthGetRootPath(char const * pszService, char *pszAuthPath, int iMaxPath)
+char           *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath)
 {
 
     CfgGetRootPath(pszAuthPath, iMaxPath);
@@ -107,8 +107,8 @@ char           *UAthGetRootPath(char const * pszService, char *pszAuthPath, int 
 
 
 
-static int      UAthGetConfigPath(char const * pszService, char const * pszDomain,
-                        char *pszConfigPath)
+static int      UAthGetConfigPath(char const *pszService, char const *pszDomain,
+                                  char *pszConfigPath)
 {
 
     char            szAuthPath[SYS_MAX_PATH] = "";
@@ -140,9 +140,9 @@ static int      UAthGetConfigPath(char const * pszService, char const * pszDomai
 
 
 
-static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
-                        char const * pszDomain, char const * pszUsername,
-                        char const * pszPassword, UserInfo * pUI)
+static int      UAthExecAuthOp(char const *pszService, char const *pszAuthOp,
+                               char const *pszDomain, char const *pszUsername,
+                               char const *pszPassword, UserInfo *pUI)
 {
 
     char            szAuthConfigPath[SYS_MAX_PATH] = "";
@@ -182,7 +182,7 @@ static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
             int             iExitCode = 0;
 
             if (SysExec(ppszCmdTokens[1], &ppszCmdTokens[1], USER_AUTH_TIMEOUT,
-                            USER_AUTH_PRIORITY, &iExitCode) == 0)
+                        USER_AUTH_PRIORITY, &iExitCode) == 0)
             {
                 if (iExitCode != AUTH_SUCCESS_CODE)
                 {
@@ -204,8 +204,8 @@ static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
                 fclose(pAuthFile);
 
                 SysLogMessage(LOG_LEV_MESSAGE,
-                        "Execution error in authentication file \"%s\"\n",
-                        szAuthConfigPath);
+                              "Execution error in authentication file \"%s\"\n",
+                              szAuthConfigPath);
 
                 ErrSetErrorCode(ERR_EXTERNAL_AUTH_FAILURE);
                 return (ERR_EXTERNAL_AUTH_FAILURE);
@@ -226,48 +226,48 @@ static int      UAthExecAuthOp(char const * pszService, char const * pszAuthOp,
 
 
 
-int             UAthAuthenticateUser(char const * pszService, char const * pszDomain,
-                        char const * pszUsername, char const * pszPassword)
+int             UAthAuthenticateUser(char const *pszService, char const *pszDomain,
+                                     char const *pszUsername, char const *pszPassword)
 {
 
     return (UAthExecAuthOp(pszService, AUTH_AUTHENTICATE_CONFIG, pszDomain, pszUsername,
-                    pszPassword, NULL));
+                           pszPassword, NULL));
 
 }
 
 
 
-int             UAthAddUser(char const * pszService, UserInfo * pUI)
+int             UAthAddUser(char const *pszService, UserInfo *pUI)
 {
 
     return (UAthExecAuthOp(pszService, AUTH_ADD_CONFIG, pUI->pszDomain, pUI->pszName,
-                    pUI->pszPassword, pUI));
+                           pUI->pszPassword, pUI));
 
 }
 
 
 
-int             UAthModifyUser(char const * pszService, UserInfo * pUI)
+int             UAthModifyUser(char const *pszService, UserInfo *pUI)
 {
 
     return (UAthExecAuthOp(pszService, AUTH_MODIFY_CONFIG, pUI->pszDomain, pUI->pszName,
-                    pUI->pszPassword, pUI));
+                           pUI->pszPassword, pUI));
 
 }
 
 
 
-int             UAthDelUser(char const * pszService, UserInfo * pUI)
+int             UAthDelUser(char const *pszService, UserInfo *pUI)
 {
 
     return (UAthExecAuthOp(pszService, AUTH_DEL_CONFIG, pUI->pszDomain, pUI->pszName,
-                    pUI->pszPassword, pUI));
+                           pUI->pszPassword, pUI));
 
 }
 
 
 
-int             UAthDropDomain(char const * pszService, char const * pszDomain)
+int             UAthDropDomain(char const *pszService, char const *pszDomain)
 {
 
     return (UAthExecAuthOp(pszService, AUTH_DROPDOMAIN_CONFIG, pszDomain, NULL, NULL, NULL));
@@ -276,8 +276,8 @@ int             UAthDropDomain(char const * pszService, char const * pszDomain)
 
 
 
-static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomain,
-                        char const * pszUsername, char const * pszPassword, UserInfo * pUI)
+static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const *pszDomain,
+                                     char const *pszUsername, char const *pszPassword, UserInfo *pUI)
 {
 
     for (int ii = 0; ppszCmdTokens[ii] != NULL; ii++)
@@ -337,3 +337,4 @@ static int      UAthMacroSubstitutes(char **ppszCmdTokens, char const * pszDomai
     return (0);
 
 }
+

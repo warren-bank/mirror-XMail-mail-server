@@ -63,7 +63,7 @@ VERSION
 
   current
 
-    1.12
+    1.14
 
   release type
 
@@ -71,7 +71,7 @@ VERSION
 
   release date
 
-    25-01-2003
+    02-04-2003
 
   project by
 
@@ -401,6 +401,8 @@ CONFIGURATION
       smtp.ipmap.tab  <file>
       ctrl.ipmap.tab  <file>
       finger.ipmap.tab    <file>
+      filters.in.tab  <file>
+      filters.out.tab <file>
 
     and these directories:
 
@@ -1129,7 +1131,7 @@ EXTERNAL AUTHENTICATION
 SMTP CLIENT AUTHENTICATION
 
     When a message is to be sent through an SMTP server that requires
-    authentication, XMail provides a way to handle this task by if th
+    authentication, XMail provides a way to handle this task by if the
     'userauth/smtp' subdirectory is set up properly.
 
     Suppose a mail is to be sent through the SMTP server 'mail.foo.net',
@@ -1594,7 +1596,7 @@ SERVER.TAB VARIABLES
                 authentication, even for sending to local domains, and this
                 is probably not what you want.
 
-DOMAIN MESSAGE FILTERS
+MESSAGE FILTERS
 
     This feature offers a way to filter messages by providing the ability to
     execute external programs, such as scripts or real executables. These
@@ -1609,42 +1611,55 @@ DOMAIN MESSAGE FILTERS
     stopped in its travel. If the filter modifies the message it must return
     '100'.
 
-    When a message is received by the SMTP server for user
-    'foo@xyzw.aiai.abc' XMail searches inside the 'filters' subdirectory to
-    find a file named (user processing):
+    Filter selection is driven by two files 'FILTERS.IN.TAB' and
+    'FILTERS.OUT.TAB' that have the following format:
 
-     foo@xyzw.aiai.abc.tab
+     "sender"[TAB]"recipient"[TAB]"remote-addr"[TAB]"local-addr"[TAB]"filename"[NEWLINE]
 
-    If this file is not found then XMail searches for (domain processing):
+    For example:
 
-     xyzw.aiai.abc.tab
-     aiai.abc.tab
-     abc.tab
+     "*@bad-domain.com" "*" "0.0.0.0/0" "0.0.0.0/0" "av-filter.tab"
+     "*" "clean@purified.net" "0.0.0.0/0" "0.0.0.0/0" "spam-block.tab"
+     "*" "*" "192.168.1.0/24" "0.0.0.0/0" "archive.tab"
 
-    If this file is not found then XMail searches for (default processing):
-
-     .tab
-
-    The '.tab' file offers a way to specify a default mail filtering.
-
-    If none of the above files are found the message continues its travel,
-    otherwise the file is processed by submitting the message to all filters
-    stored in the file.
-
-    The syntax of the file is:
+    where the file "av-filter.tab" must be present inside the
+    $MAIL_ROOT/filters directory. The "sender" and the "recipient" are
+    resolved to the real account when possible. Address selection mask are
+    formed by an IP address (network) plus the number of valid bits inside
+    the network mask. The file 'FILTERS.IN.TAB' lists filters that have to
+    be applied to inbound messages (going to local mailboxes) while the file
+    'FILTERS.OUT.TAB' lists filters that have to be applied to outbound
+    messages (delivered remotely). All four
+    (sender+recipient+remote-addr+local-addr) selection fields must have a
+    match in order "filename" to be evaluated. The syntax of the filter file
+    is:
 
      "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
-    Each argument can be a macro also:
+    Each file may contain multiple commands, that will be executed in
+    strictly sequential order. The first command that will trigger a
+    rejection code will make the filtering process to end. Each argument can
+    be a macro also:
 
     @@FROM
         the sender of the message
+
+    @@RFROM
+        the sender of the message resolved to the real account, when
+        possible (alias resolution)
 
     @@RCPT
         the target of the message
 
     @@RRCPT
-        the real recipient (@@RCPT could be an alias) of the message
+        the target of the message resolved to the real account, when
+        possible (alias resolution)
+
+    @@REMOTEADDR
+        remote IP address and port of the sender
+
+    @@LOCALADDR
+        local IP address and port where the message has been accepted
 
     @@FILE
         the message file path (the external command may modify the file if
@@ -1665,22 +1680,26 @@ DOMAIN MESSAGE FILTERS
     section on "SERVER.TAB" configuration enables this). If all filters
     return values different from '99, 98 and 97' the message continues its
     trip. The filter command may also modify the file (AV scanning, content
-    filter, message rewriting, etc) by returning '100'. If the filter
-    changes the message file it 'MUST' keep the message structure and it
-    'MUST' terminate all line with <CR><LF>.
+    filter, message rewriting, etc) by returning '100'. The filter 'MUST'
+    return '100' in case it modifies the message. If the filter changes the
+    message file it 'MUST' keep the message structure and it 'MUST'
+    terminate all line with <CR><LF>.
 
     The spool files has this structure:
 
-     SmtpDomain      [ 1st line ]
-     SmtpMessageID       [ 2nd line ]
-     MAIL FROM:<...>     [ 3th line ]
-     RCPT TO:<...>       [ 4th line ]
-     <<MAIL-DATA>>       [ 5th line ]
+     Info Data           [ 1th line ]
+     SmtpDomain          [ 2nd line ]
+     SmtpMessageID       [ 3rd line ]
+     MAIL FROM:<...>     [ 4th line ]
+     RCPT TO:<...>       [ 5th line ]
+     <<MAIL-DATA>>       [ 6th line ]
      ...
 
     After the '<<MAIL-DATA>>' tag (5th line) the message follows. The
     message is composed of a headers section and, after the first empty
-    line, the message body.
+    line, the message body. 'EXTREME' care must be used when modifying the
+    message because the filter will be working on the real message, and a
+    badly reformatted file will lead to message loss.
 
 USER.TAB VARIABLES
 
@@ -1848,6 +1867,10 @@ COMMAND LINE
         -MM     Setup XMail to use 'Maildir' delivery (default on Unix).
 
         -Mm     Setup XMail to use 'mailbox' delivery (default on Windows).
+
+        -MD ndirs
+                Set the number of subdirectories allocated for the DNS cache
+                files storage ( default 101 ).
 
     [POP3]
         -Pp port
@@ -2633,7 +2656,9 @@ XMAIL ADMIN PROTOCOL
 
     The result is a RESSTRING. If successful (00100), the directory is
     listed line by line, terminated by a line containing a single dot
-    (<CR><LF>.<CR><LF>).
+    (<CR><LF>.<CR><LF>). The listing format is:
+
+    "filename"[TAB]"filesize"<CR><LF>
 
   Getting configuration file
 
@@ -3125,7 +3150,7 @@ MISCELLANEOUS
         specifying the options '-SX maxthreads', '-PX maxthreads' and '-CX
         maxthreads'.
 
-    7.  If you have enabled logging, remember to setup the '-Mr ndays'
+    7.  If you have enabled logging, remember to setup the '-Mr hours'
         option depending on the traffic you get in your server. This avoids
         XMail having to work with very large log files and can improve
         server performance.

@@ -51,32 +51,37 @@ int             SysShutdownLibrary(int iMode = SYS_SHUTDOWN_SOFT);
 int             SysSetupSocketBuffers(int *piSndBufSize, int *piRcvBufSize);
 SYS_SOCKET      SysCreateSocket(int iAddressFamily, int iType, int iProtocol);
 void            SysCloseSocket(SYS_SOCKET SockFD);
-int             SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr * SockName, int iNameLen);
+int             SysBindSocket(SYS_SOCKET SockFD, const struct sockaddr *SockName, int iNameLen);
 void            SysListenSocket(SYS_SOCKET SockFD, int iConnections);
 int             SysRecvData(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout);
 int             SysRecv(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize, int iTimeout);
-int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr * pFrom, int iFromlen,
-                        char *pszBuffer, int iBufferSize, int iTimeout);
-int             SysSendData(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSize, int iTimeout);
-int             SysSend(SYS_SOCKET SockFD, char const * pszBuffer, int iBufferSize, int iTimeout);
-int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr * pTo,
-                        int iToLen, char const * pszBuffer, int iBufferSize, int iTimeout);
-int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR * pSockName, int iNameLen,
-                        int iTimeout);
-SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR * pSockName, int *iNameLen,
-                        int iTimeout);
-int             SysSelect(int iMaxFD, SYS_fd_set * pReadFDs, SYS_fd_set * pWriteFDs, SYS_fd_set * pExcptFDs,
-                        int iTimeout);
-int             SysSendFile(SYS_SOCKET SockFD, char const * pszFileName, unsigned long ulBaseOffset,
-                        unsigned long ulEndOffset, int iTimeout);
-int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily, NET_ADDRESS NetAddr, int iPortNo);
-NET_ADDRESS     SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo);
-NET_ADDRESS     SysGetHostByName(char const * pszName);
+int             SysRecvDataFrom(SYS_SOCKET SockFD, struct sockaddr *pFrom, int iFromlen,
+                                char *pszBuffer, int iBufferSize, int iTimeout);
+int             SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout);
+int             SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout);
+int             SysSendDataTo(SYS_SOCKET SockFD, const struct sockaddr *pTo,
+                              int iToLen, char const *pszBuffer, int iBufferSize, int iTimeout);
+int             SysConnect(SYS_SOCKET SockFD, const SYS_INET_ADDR *pSockName, int iNameLen,
+                           int iTimeout);
+SYS_SOCKET      SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int *iNameLen,
+                          int iTimeout);
+int             SysSelect(int iMaxFD, SYS_fd_set *pReadFDs, SYS_fd_set *pWriteFDs, SYS_fd_set *pExcptFDs,
+                          int iTimeout);
+int             SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, unsigned long ulBaseOffset,
+                            unsigned long ulEndOffset, int iTimeout);
+int             SysSetupAddress(SYS_INET_ADDR & AddrInfo, int iFamily,
+                                NET_ADDRESS const & NetAddr, int iPortNo);
+int             SysGetAddrAddress(SYS_INET_ADDR const & AddrInfo, NET_ADDRESS & NetAddr);
+int             SysGetAddrPort(SYS_INET_ADDR const & AddrInfo);
+int             SysSetAddrAddress(SYS_INET_ADDR & AddrInfo, NET_ADDRESS const & NetAddr);
+int             SysSetAddrPort(SYS_INET_ADDR & AddrInfo, int iPortNo);
+int             SysGetHostByName(char const *pszName, NET_ADDRESS & NetAddr);
 int             SysGetHostByAddr(SYS_INET_ADDR const & AddrInfo, char *pszFQDN);
 int             SysGetPeerInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
 int             SysGetSockInfo(SYS_SOCKET SockFD, SYS_INET_ADDR & AddrInfo);
-char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char * pszIP);
-NET_ADDRESS     SysInetAddr(char const * pszDotName);
+char           *SysInetNToA(SYS_INET_ADDR const & AddrInfo, char *pszIP);
+int             SysInetAddr(char const *pszDotName, NET_ADDRESS & NetAddr);
+int             SysSameAddress(NET_ADDRESS const & NetAddr1, NET_ADDRESS const & NetAddr2);
 
 SYS_SEMAPHORE   SysCreateSemaphore(int iInitCount, int iMaxCount);
 int             SysCloseSemaphore(SYS_SEMAPHORE hSemaphore);
@@ -103,7 +108,7 @@ void            SysCloseThread(SYS_THREAD ThreadID, int iForce);
 int             SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority);
 int             SysWaitThread(SYS_THREAD ThreadID, int iTimeout);
 unsigned long   SysGetCurrentThreadId(void);
-int             SysExec(char const * pszCommand, char const * const * pszArgs, int iWaitTimeout = 0,
+int             SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout = 0,
                         int iPriority = SYS_PRIORITY_NORMAL, int *piExitStatus = NULL);
 void            SysSetBreakHandler(void (*BreakHandler) (void));
 
@@ -112,22 +117,22 @@ int             SysDeleteTlsKey(SYS_TLSKEY & TlsKey);
 int             SysSetTlsKeyData(SYS_TLSKEY & TlsKey, void *pData);
 void           *SysGetTlsKeyData(SYS_TLSKEY & TlsKey);
 
-void            SysThreadOnce(SYS_THREAD_ONCE * pThrOnce, void (*pOnceProc) (void));
+void            SysThreadOnce(SYS_THREAD_ONCE *pThrOnce, void (*pOnceProc) (void));
 
 void           *SysAlloc(unsigned int uSize);
 void            SysFree(void *pData);
 void           *SysRealloc(void *pData, unsigned int uSize);
 
-int             SysLockFile(const char *pszFileName, char const * pszLockExt = ".lock");
-int             SysUnlockFile(const char *pszFileName, char const * pszLockExt = ".lock");
+int             SysLockFile(const char *pszFileName, char const *pszLockExt = ".lock");
+int             SysUnlockFile(const char *pszFileName, char const *pszLockExt = ".lock");
 
-SYS_HANDLE      SysOpenModule(char const * pszFilePath);
+SYS_HANDLE      SysOpenModule(char const *pszFilePath);
 int             SysCloseModule(SYS_HANDLE hModule);
-void           *SysGetSymbol(SYS_HANDLE hModule, char const * pszSymbol);
+void           *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol);
 
-int             SysEventLogV(char const * pszFormat, va_list Args);
-int             SysEventLog(char const * pszFormat,...);
-int             SysLogMessage(int iLogLevel, char const * pszFormat,...);
+int             SysEventLogV(char const *pszFormat, va_list Args);
+int             SysEventLog(char const *pszFormat,...);
+int             SysLogMessage(int iLogLevel, char const *pszFormat,...);
 void            SysSleep(int iTimeout);
 void            SysMsSleep(int iMsTimeout);
 SYS_INT64       SysMsTime(void);
@@ -138,32 +143,32 @@ int             SysIsDirectory(SYS_HANDLE hFind);
 unsigned long   SysGetSize(SYS_HANDLE hFind);
 int             SysNextFile(SYS_HANDLE hFind, char *pszFileName);
 void            SysFindClose(SYS_HANDLE hFind);
-int             SysGetFileInfo(char const * pszFileName, SYS_FILE_INFO & FI);
-int             SysSetFileModTime(char const * pszFileName, time_t tMod);
+int             SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO & FI);
+int             SysSetFileModTime(char const *pszFileName, time_t tMod);
 char           *SysStrDup(const char *pszString);
 char           *SysGetEnv(const char *pszVarName);
 char           *SysGetTmpFile(char *pszFileName);
 int             SysRemove(const char *pszFileName);
 int             SysMakeDir(const char *pszPath);
 int             SysRemoveDir(const char *pszPath);
-int             SysMoveFile(char const * pszOldName, char const * pszNewName);
+int             SysMoveFile(char const *pszOldName, char const *pszNewName);
 
-int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args);
+int             SysVSNPrintf(char *pszBuffer, int iSize, char const *pszFormat, va_list Args);
 int             SysFileSync(FILE *pFile);
 
-char           *SysStrTok(char *pszData, char const * pszDelim, char **ppszSavePtr);
-char           *SysCTime(time_t * pTimer, char *pszBuffer, int iBufferSize);
-struct tm      *SysLocalTime(time_t * pTimer, struct tm * pTStruct);
-struct tm      *SysGMTime(time_t * pTimer, struct tm * pTStruct);
-char           *SysAscTime(struct tm * pTStruct, char *pszBuffer, int iBufferSize);
+char           *SysStrTok(char *pszData, char const *pszDelim, char **ppszSavePtr);
+char           *SysCTime(time_t *pTimer, char *pszBuffer, int iBufferSize);
+struct tm      *SysLocalTime(time_t *pTimer, struct tm *pTStruct);
+struct tm      *SysGMTime(time_t *pTimer, struct tm *pTStruct);
+char           *SysAscTime(struct tm *pTStruct, char *pszBuffer, int iBufferSize);
 unsigned long   SysGetTimeZone(void);
 
-int             SysSpinAcquire(SYS_SPINLOCK * pSpinLock);
-int             SysSpinRelease(SYS_SPINLOCK * pSpinLock);
+int             SysSpinAcquire(SYS_SPINLOCK *pSpinLock);
+int             SysSpinRelease(SYS_SPINLOCK *pSpinLock);
 
-int             SysGetDiskSpace(char const * pszPath, SYS_INT64 * pTotal, SYS_INT64 * pFree);
-int             SysMemoryInfo(SYS_INT64 * pRamTotal, SYS_INT64 * pRamFree,
-                        SYS_INT64 * pVirtTotal, SYS_INT64 * pVirtFree);
+int             SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree);
+int             SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
+                              SYS_INT64 *pVirtTotal, SYS_INT64 *pVirtFree);
 
 
 

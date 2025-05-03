@@ -68,7 +68,7 @@ static char     index_64[128] = {
 
 
 int             encode64(const char *_in, unsigned inlen,
-                        char *_out, unsigned outmax, unsigned *outlen)
+                         char *_out, unsigned outmax, unsigned *outlen)
 {
 
     const unsigned char *in = (const unsigned char *) _in;
@@ -119,12 +119,12 @@ int             encode64(const char *_in, unsigned inlen,
 int             decode64(const char *in, unsigned inlen, char *out, unsigned *outlen)
 {
 
-    unsigned        len = 0,
-                    lup;
-    int             c1,
-                    c2,
-                    c3,
-                    c4;
+    unsigned        len = 0;
+    unsigned        lup;
+    int             c1;
+    int             c2;
+    int             c3;
+    int             c4;
 
     if (inlen >= 2 && in[0] == '+' && in[1] == ' ')
         in += 2, inlen -= 2;
@@ -167,3 +167,4 @@ int             decode64(const char *in, unsigned inlen, char *out, unsigned *ou
     return OK;
 
 }
+

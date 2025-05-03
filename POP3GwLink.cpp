@@ -82,9 +82,9 @@ static char    *GwLkGetTableFilePath(char *pszLnkFilePath, int iMaxPath);
 static char    *GwLkEnableDir(char *pszEnableDir, int iMaxPath);
 static char    *GwLkGetLocksDir(char *pszLocksDir, int iMaxPath);
 static POP3Link *GwLkGetLinkFromStrings(char **ppszStrings);
-static int      GwLkWriteLink(FILE * pLnkFile, POP3Link * pPopLnk);
-static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile);
-static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnableFile);
+static int      GwLkWriteLink(FILE *pLnkFile, POP3Link *pPopLnk);
+static char    *GwLkGetLockFileName(POP3Link const *pPopLnk, char *pszLockFile);
+static int      GwLkGetDisableFilePath(POP3Link const *pPopLnk, char *pszEnableFile);
 
 
 
@@ -166,9 +166,9 @@ static POP3Link *GwLkGetLinkFromStrings(char **ppszStrings)
 
 
 
-POP3Link       *GwLkAllocLink(char const * pszDomain, char const * pszName,
-                        char const * pszRmtDomain, char const * pszRmtName,
-                        char const * pszRmtPassword, char const * pszAuthType)
+POP3Link       *GwLkAllocLink(char const *pszDomain, char const *pszName,
+                              char const *pszRmtDomain, char const *pszRmtName,
+                              char const *pszRmtPassword, char const *pszAuthType)
 {
 
     POP3Link       *pPopLnk = (POP3Link *) SysAlloc(sizeof(POP3Link));
@@ -189,7 +189,7 @@ POP3Link       *GwLkAllocLink(char const * pszDomain, char const * pszName,
 
 
 
-void            GwLkFreePOP3Link(POP3Link * pPopLnk)
+void            GwLkFreePOP3Link(POP3Link *pPopLnk)
 {
 
     if (pPopLnk->pszDomain != NULL)
@@ -216,7 +216,7 @@ void            GwLkFreePOP3Link(POP3Link * pPopLnk)
 
 
 
-static int      GwLkWriteLink(FILE * pLnkFile, POP3Link * pPopLnk)
+static int      GwLkWriteLink(FILE *pLnkFile, POP3Link *pPopLnk)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -301,7 +301,7 @@ static int      GwLkWriteLink(FILE * pLnkFile, POP3Link * pPopLnk)
 
 
 
-int             GwLkAddLink(POP3Link * pPopLnk)
+int             GwLkAddLink(POP3Link *pPopLnk)
 {
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
@@ -311,7 +311,7 @@ int             GwLkAddLink(POP3Link * pPopLnk)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -339,9 +339,9 @@ int             GwLkAddLink(POP3Link * pPopLnk)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= lnkMax) && (stricmp(pPopLnk->pszDomain, ppszStrings[lnkDomain]) == 0) &&
-                (stricmp(pPopLnk->pszName, ppszStrings[lnkName]) == 0) &&
-                (stricmp(pPopLnk->pszRmtDomain, ppszStrings[lnkRmtDomain]) == 0) &&
-                (stricmp(pPopLnk->pszRmtName, ppszStrings[lnkRmtName]) == 0))
+            (stricmp(pPopLnk->pszName, ppszStrings[lnkName]) == 0) &&
+            (stricmp(pPopLnk->pszRmtDomain, ppszStrings[lnkRmtDomain]) == 0) &&
+            (stricmp(pPopLnk->pszRmtName, ppszStrings[lnkRmtName]) == 0))
         {
             StrFreeStrings(ppszStrings);
             fclose(pLnkFile);
@@ -375,7 +375,7 @@ int             GwLkAddLink(POP3Link * pPopLnk)
 
 
 
-int             GwLkRemoveLink(POP3Link * pPopLnk)
+int             GwLkRemoveLink(POP3Link *pPopLnk)
 {
 
     char            szLnkFilePath[SYS_MAX_PATH] = "";
@@ -389,7 +389,7 @@ int             GwLkRemoveLink(POP3Link * pPopLnk)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -436,9 +436,9 @@ int             GwLkRemoveLink(POP3Link * pPopLnk)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= lnkMax) && (stricmp(pPopLnk->pszDomain, ppszStrings[lnkDomain]) == 0) &&
-                (stricmp(pPopLnk->pszName, ppszStrings[lnkName]) == 0) &&
-                (stricmp(pPopLnk->pszRmtDomain, ppszStrings[lnkRmtDomain]) == 0) &&
-                (stricmp(pPopLnk->pszRmtName, ppszStrings[lnkRmtName]) == 0))
+            (stricmp(pPopLnk->pszName, ppszStrings[lnkName]) == 0) &&
+            (stricmp(pPopLnk->pszRmtDomain, ppszStrings[lnkRmtDomain]) == 0) &&
+            (stricmp(pPopLnk->pszRmtName, ppszStrings[lnkRmtName]) == 0))
         {
 
             ++iLinksFound;
@@ -520,7 +520,7 @@ int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -571,7 +571,7 @@ int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= lnkMax) && (stricmp(pszDomain, ppszStrings[lnkDomain]) == 0) &&
-                (stricmp(pszName, ppszStrings[lnkName]) == 0))
+            (stricmp(pszName, ppszStrings[lnkName]) == 0))
         {
 
             ++iLinksFound;
@@ -636,7 +636,7 @@ int             GwLkRemoveDomainLinks(const char *pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szLnkFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -753,7 +753,7 @@ int             GwLkGetDBFileSnapShot(const char *pszFileName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szGwLkFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -833,7 +833,7 @@ POP3Link       *GwLkGetFirstUser(GWLKF_HANDLE hLinksDB)
     char            szLnkLine[LINKS_TABLE_LINE_MAX] = "";
 
     while ((pPopLnk == NULL) &&
-            (MscGetConfigLine(szLnkLine, sizeof(szLnkLine) - 1, pGLSD->pDBFile) != NULL))
+           (MscGetConfigLine(szLnkLine, sizeof(szLnkLine) - 1, pGLSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szLnkLine);
 
@@ -864,7 +864,7 @@ POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB)
     char            szLnkLine[LINKS_TABLE_LINE_MAX] = "";
 
     while ((pPopLnk == NULL) &&
-            (MscGetConfigLine(szLnkLine, sizeof(szLnkLine) - 1, pGLSD->pDBFile) != NULL))
+           (MscGetConfigLine(szLnkLine, sizeof(szLnkLine) - 1, pGLSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szLnkLine);
 
@@ -885,11 +885,11 @@ POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB)
 
 
 
-static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile)
+static char    *GwLkGetLockFileName(POP3Link const *pPopLnk, char *pszLockFile)
 {
 
-    char            szLocksDir[SYS_MAX_PATH] = "",
-                    szRmtDomain[MAX_HOST_NAME] = "";
+    char            szLocksDir[SYS_MAX_PATH] = "";
+    char            szRmtDomain[MAX_HOST_NAME] = "";
 
     GwLkGetLocksDir(szLocksDir, sizeof(szLocksDir));
 
@@ -912,7 +912,7 @@ static char    *GwLkGetLockFileName(POP3Link const * pPopLnk, char *pszLockFile)
 
 
 
-int             GwLkLinkLock(POP3Link const * pPopLnk)
+int             GwLkLinkLock(POP3Link const *pPopLnk)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
@@ -925,7 +925,7 @@ int             GwLkLinkLock(POP3Link const * pPopLnk)
 
 
 
-void            GwLkLinkUnlock(POP3Link const * pPopLnk)
+void            GwLkLinkUnlock(POP3Link const *pPopLnk)
 {
 
     char            szLockFile[SYS_MAX_PATH] = "";
@@ -951,27 +951,27 @@ int             GwLkClearLinkLocksDir(void)
 
 
 
-int             GwLkLocalDomain(POP3Link const * pPopLnk)
+int             GwLkLocalDomain(POP3Link const *pPopLnk)
 {
 
     return (((pPopLnk != NULL) && (pPopLnk->pszDomain[0] != '@') &&
-                    (pPopLnk->pszDomain[0] != '?') && (pPopLnk->pszDomain[0] != '&')) ? 1 : 0);
+             (pPopLnk->pszDomain[0] != '?') && (pPopLnk->pszDomain[0] != '&')) ? 1 : 0);
 
 }
 
 
 
-int             GwLkMasqueradeDomain(POP3Link const * pPopLnk)
+int             GwLkMasqueradeDomain(POP3Link const *pPopLnk)
 {
 
     return (((pPopLnk != NULL) &&
-                    ((pPopLnk->pszDomain[0] == '?') || (pPopLnk->pszDomain[0] == '&'))) ? 1 : 0);
+             ((pPopLnk->pszDomain[0] == '?') || (pPopLnk->pszDomain[0] == '&'))) ? 1 : 0);
 
 }
 
 
 
-static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnableFile)
+static int      GwLkGetDisableFilePath(POP3Link const *pPopLnk, char *pszEnableFile)
 {
 
     if (GwLkLocalDomain(pPopLnk))
@@ -1011,7 +1011,7 @@ static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnable
 
 
 
-int             GwLkCheckEnabled(POP3Link const * pPopLnk)
+int             GwLkCheckEnabled(POP3Link const *pPopLnk)
 {
 
     char            szEnableFile[SYS_MAX_PATH] = "";
@@ -1033,7 +1033,7 @@ int             GwLkCheckEnabled(POP3Link const * pPopLnk)
 
 
 
-int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable)
+int             GwLkEnable(POP3Link const *pPopLnk, bool bEnable)
 {
 
     char            szEnableFile[SYS_MAX_PATH] = "";
@@ -1077,8 +1077,8 @@ int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable)
 
 
 
-int             GwLkEnable(char const * pszDomain, char const * pszName,
-                        char const * pszRmtDomain, char const * pszRmtName, bool bEnable)
+int             GwLkEnable(char const *pszDomain, char const *pszName,
+                           char const *pszRmtDomain, char const *pszRmtName, bool bEnable)
 {
 
     GWLKF_HANDLE    hLinksDB = GwLkOpenDB();
@@ -1093,9 +1093,9 @@ int             GwLkEnable(char const * pszDomain, char const * pszName,
     for (; pPopLnk != NULL; pPopLnk = GwLkGetNextUser(hLinksDB))
     {
         if ((stricmp(pPopLnk->pszDomain, pszDomain) == 0) &&
-                (stricmp(pPopLnk->pszName, pszName) == 0) &&
-                ((pszRmtDomain == NULL) || (stricmp(pPopLnk->pszRmtDomain, pszRmtDomain) == 0)) &&
-                ((pszRmtName == NULL) || (stricmp(pPopLnk->pszRmtName, pszRmtName) == 0)))
+            (stricmp(pPopLnk->pszName, pszName) == 0) &&
+            ((pszRmtDomain == NULL) || (stricmp(pPopLnk->pszRmtDomain, pszRmtDomain) == 0)) &&
+            ((pszRmtName == NULL) || (stricmp(pPopLnk->pszRmtName, pszRmtName) == 0)))
         {
             GwLkEnable(pPopLnk, bEnable);
 
@@ -1116,3 +1116,4 @@ int             GwLkEnable(char const * pszDomain, char const * pszName,
     return (0);
 
 }
+

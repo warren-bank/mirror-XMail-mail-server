@@ -51,12 +51,12 @@ typedef struct GWLKF_HANDLE_struct
 
 
 
-POP3Link       *GwLkAllocLink(char const * pszDomain, char const * pszName,
-                        char const * pszRmtDomain, char const * pszRmtName,
-                        char const * pszRmtPassword, char const * pszAuthType);
-void            GwLkFreePOP3Link(POP3Link * pPopLnk);
-int             GwLkAddLink(POP3Link * pPopLnk);
-int             GwLkRemoveLink(POP3Link * pPopLnk);
+POP3Link       *GwLkAllocLink(char const *pszDomain, char const *pszName,
+                              char const *pszRmtDomain, char const *pszRmtName,
+                              char const *pszRmtPassword, char const *pszAuthType);
+void            GwLkFreePOP3Link(POP3Link *pPopLnk);
+int             GwLkAddLink(POP3Link *pPopLnk);
+int             GwLkRemoveLink(POP3Link *pPopLnk);
 int             GwLkRemoveUserLinks(const char *pszDomain, const char *pszName);
 int             GwLkRemoveDomainLinks(const char *pszDomain);
 int             GwLkGetDBFileSnapShot(const char *pszFileName);
@@ -64,15 +64,15 @@ GWLKF_HANDLE    GwLkOpenDB(void);
 void            GwLkCloseDB(GWLKF_HANDLE hLinksDB);
 POP3Link       *GwLkGetFirstUser(GWLKF_HANDLE hLinksDB);
 POP3Link       *GwLkGetNextUser(GWLKF_HANDLE hLinksDB);
-int             GwLkLinkLock(POP3Link const * pPopLnk);
-void            GwLkLinkUnlock(POP3Link const * pPopLnk);
+int             GwLkLinkLock(POP3Link const *pPopLnk);
+void            GwLkLinkUnlock(POP3Link const *pPopLnk);
 int             GwLkClearLinkLocksDir(void);
-int             GwLkLocalDomain(POP3Link const * pPopLnk);
-int             GwLkMasqueradeDomain(POP3Link const * pPopLnk);
-int             GwLkCheckEnabled(POP3Link const * pPopLnk);
-int             GwLkEnable(POP3Link const * pPopLnk, bool bEnable);
-int             GwLkEnable(char const * pszDomain, char const * pszName,
-                        char const * pszRmtDomain, char const * pszRmtName, bool bEnable);
+int             GwLkLocalDomain(POP3Link const *pPopLnk);
+int             GwLkMasqueradeDomain(POP3Link const *pPopLnk);
+int             GwLkCheckEnabled(POP3Link const *pPopLnk);
+int             GwLkEnable(POP3Link const *pPopLnk, bool bEnable);
+int             GwLkEnable(char const *pszDomain, char const *pszName,
+                           char const *pszRmtDomain, char const *pszRmtName, bool bEnable);
 
 
 

@@ -28,7 +28,7 @@
 
 
 int             encode64(const char *_in, unsigned inlen,
-                        char *_out, unsigned outmax, unsigned *outlen);
+                         char *_out, unsigned outmax, unsigned *outlen);
 int             decode64(const char *in, unsigned inlen, char *out, unsigned *outlen);
 
 

@@ -39,7 +39,7 @@
 
 
 #define STD_WAIT_GATES              37
-
+#define STD_RES_HASH_SIZE           251
 
 
 
@@ -52,7 +52,8 @@ struct ResWaitGate
 {
     SYS_SEMAPHORE   hSemaphore;
     int             iWaitingProcesses;
-    SysListHead     ResList;
+    int             iHashSize;
+    SysListHead    *pResList;
 };
 
 struct ResLockEntry
@@ -63,6 +64,11 @@ struct ResLockEntry
     char            szName[1];
 };
 
+struct ResLocator
+{
+    int             iWaitGate;
+    int             iResIdx;
+};
 
 
 
@@ -72,17 +78,19 @@ struct ResLockEntry
 
 
 
-static int      RLckGetWaitGate(char const * pszResourceName);
-static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName);
-static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE);
-static ResLockEntry *RLckAllocEntry(char const * pszResourceName);
-static int      RLckFreeEntry(ResLockEntry * pRLE);
-static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName);
-static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName);
-static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName);
-static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName);
-static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int, char const *));
-static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char const *));
+static void     RLckGetResLocator(char const *pszResourceName, ResLocator *pRL);
+static ResLockEntry *RLckGetEntry(ResLocator const *pRL, char const *pszResourceName);
+static int      RLckRemoveEntry(ResLocator const *pRL, ResLockEntry *pRLE);
+static ResLockEntry *RLckAllocEntry(char const *pszResourceName);
+static int      RLckFreeEntry(ResLockEntry *pRLE);
+static int      RLckTryLockEX(ResLocator const *pRL, char const *pszResourceName);
+static int      RLckDoUnlockEX(ResLocator const *pRL, char const *pszResourceName);
+static int      RLckTryLockSH(ResLocator const *pRL, char const *pszResourceName);
+static int      RLckDoUnlockSH(ResLocator const *pRL, char const *pszResourceName);
+static RLCK_HANDLE RLckLock(char const *pszResourceName,
+                            int (*pLockProc) (ResLocator const *, char const *));
+static int      RLckUnlock(RLCK_HANDLE hLock,
+                           int (*pUnlockProc) (ResLocator const *, char const *));
 
 
 
@@ -125,20 +133,41 @@ int             RLckInitLockers(void)
     for (int ii = 0; ii < STD_WAIT_GATES; ii++)
     {
         if ((RLGates[ii].hSemaphore = SysCreateSemaphore(0,
-                                SYS_DEFAULT_MAXCOUNT)) == SYS_INVALID_SEMAPHORE)
+                                                         SYS_DEFAULT_MAXCOUNT)) == SYS_INVALID_SEMAPHORE)
         {
             ErrorPush();
 
             for (--ii; ii >= 0; ii--)
+            {
+                SysFree(RLGates[ii].pResList);
                 SysCloseSemaphore(RLGates[ii].hSemaphore);
+            }
 
             SysCloseMutex(hRLMutex);
             return (ErrorPop());
         }
 
         RLGates[ii].iWaitingProcesses = 0;
+        RLGates[ii].iHashSize = STD_RES_HASH_SIZE;
 
-        SYS_INIT_LIST_HEAD(&RLGates[ii].ResList);
+        if ((RLGates[ii].pResList = (SysListHead *)
+             SysAlloc(RLGates[ii].iHashSize *sizeof(SysListHead))) == NULL)
+        {
+            ErrorPush();
+
+            SysCloseSemaphore(RLGates[ii].hSemaphore);
+            for (--ii; ii >= 0; ii--)
+            {
+                SysFree(RLGates[ii].pResList);
+                SysCloseSemaphore(RLGates[ii].hSemaphore);
+            }
+
+            SysCloseMutex(hRLMutex);
+            return (ErrorPop());
+        }
+
+        for (int jj = 0; jj < RLGates[ii].iHashSize; jj++)
+            SYS_INIT_LIST_HEAD(&RLGates[ii].pResList[jj]);
     }
 
     return (0);
@@ -154,19 +183,22 @@ int             RLckCleanupLockers(void)
 
     for (int ii = 0; ii < STD_WAIT_GATES; ii++)
     {
-        SysListHead    *pHead = &RLGates[ii].ResList,
-                       *pLLink;
-
-        while ((pLLink = SYS_LIST_FIRST(pHead)) != NULL)
+        for (int jj = 0; jj < RLGates[ii].iHashSize; jj++)
         {
-            ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
+            SysListHead    *pHead = &RLGates[ii].pResList[jj];
+            SysListHead    *pLLink;
 
-            SYS_LIST_DEL(&pRLE->LLink);
+            while ((pLLink = SYS_LIST_FIRST(pHead)) != NULL)
+            {
+                ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
-            RLckFreeEntry(pRLE);
+                SYS_LIST_DEL(&pRLE->LLink);
+
+                RLckFreeEntry(pRLE);
+            }
         }
 
-
+        SysFree(RLGates[ii].pResList);
         SysCloseSemaphore(RLGates[ii].hSemaphore);
     }
 
@@ -180,31 +212,32 @@ int             RLckCleanupLockers(void)
 
 
 
-static int      RLckGetWaitGate(char const * pszResourceName)
+static void     RLckGetResLocator(char const *pszResourceName, ResLocator *pRL)
 {
 
-    SYS_UINT32      uHashValue = MscHashString(pszResourceName, strlen(pszResourceName));
+    SYS_UINT32      uResHash = MscHashString(pszResourceName, strlen(pszResourceName));
 
-    return ((int) (uHashValue % STD_WAIT_GATES));
+    pRL->iWaitGate = (int) (uResHash % STD_WAIT_GATES);
+    pRL->iResIdx = (int) (uResHash % (SYS_UINT32) RLGates[pRL->iWaitGate].iHashSize);
 
 }
 
 
 
-static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName)
+static ResLockEntry *RLckGetEntry(ResLocator const *pRL, char const *pszResourceName)
 {
 
-    SysListHead    *pHead = &RLGates[iWaitGate].ResList,
-                   *pLLink;
+    SysListHead    *pHead = &RLGates[pRL->iWaitGate].pResList[pRL->iResIdx];
+    SysListHead    *pLLink;
 
     SYS_LIST_FOR_EACH(pLLink, pHead)
-    {
-        ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
+        {
+            ResLockEntry   *pRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
-        if (stricmp(pszResourceName, pRLE->szName) == 0)
-            return (pRLE);
+            if (stricmp(pszResourceName, pRLE->szName) == 0)
+                return (pRLE);
 
-    }
+        }
 
     ErrSetErrorCode(ERR_LOCK_ENTRY_NOT_FOUND);
 
@@ -214,25 +247,25 @@ static ResLockEntry *RLckGetEntry(int iWaitGate, char const * pszResourceName)
 
 
 
-static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE)
+static int      RLckRemoveEntry(ResLocator const *pRL, ResLockEntry *pRLE)
 {
 
-    SysListHead    *pHead = &RLGates[iWaitGate].ResList,
-                   *pLLink;
+    SysListHead    *pHead = &RLGates[pRL->iWaitGate].pResList[pRL->iResIdx];
+    SysListHead    *pLLink;
 
     SYS_LIST_FOR_EACH(pLLink, pHead)
-    {
-        ResLockEntry   *pCurrRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
-
-        if (pCurrRLE == pRLE)
         {
-            SYS_LIST_DEL(&pRLE->LLink);
+            ResLockEntry   *pCurrRLE = SYS_LIST_ENTRY(pLLink, ResLockEntry, LLink);
 
-            RLckFreeEntry(pRLE);
+            if (pCurrRLE == pRLE)
+            {
+                SYS_LIST_DEL(&pRLE->LLink);
 
-            return (0);
+                RLckFreeEntry(pRLE);
+
+                return (0);
+            }
         }
-    }
 
     ErrSetErrorCode(ERR_LOCK_ENTRY_NOT_FOUND);
     return (ERR_LOCK_ENTRY_NOT_FOUND);
@@ -241,11 +274,11 @@ static int      RLckRemoveEntry(int iWaitGate, ResLockEntry * pRLE)
 
 
 
-static ResLockEntry *RLckAllocEntry(char const * pszResourceName)
+static ResLockEntry *RLckAllocEntry(char const *pszResourceName)
 {
 
     ResLockEntry   *pRLE = (ResLockEntry *) SysAlloc(sizeof(ResLockEntry) +
-            strlen(pszResourceName));
+                                                     strlen(pszResourceName));
 
     if (pRLE == NULL)
         return (NULL);
@@ -261,7 +294,7 @@ static ResLockEntry *RLckAllocEntry(char const * pszResourceName)
 
 
 
-static int      RLckFreeEntry(ResLockEntry * pRLE)
+static int      RLckFreeEntry(ResLockEntry *pRLE)
 {
 
     SysFree(pRLE);
@@ -272,13 +305,15 @@ static int      RLckFreeEntry(ResLockEntry * pRLE)
 
 
 
-static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName)
+static int      RLckTryLockEX(ResLocator const *pRL, char const *pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(pRL, pszResourceName);
 
     if (pRLE == NULL)
     {
+        SysListHead    *pHead = &RLGates[pRL->iWaitGate].pResList[pRL->iResIdx];
+
         if ((pRLE = RLckAllocEntry(pszResourceName)) == NULL)
             return (ErrGetErrorCode());
 
@@ -287,7 +322,7 @@ static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName)
 ///////////////////////////////////////////////////////////////////////////////
 //  Insert new entry in resource list
 ///////////////////////////////////////////////////////////////////////////////
-        SYS_LIST_ADDH(&pRLE->LLink, &RLGates[iWaitGate].ResList);
+        SYS_LIST_ADDH(&pRLE->LLink, pHead);
 
     }
     else
@@ -307,10 +342,10 @@ static int      RLckTryLockEX(int iWaitGate, char const * pszResourceName)
 
 
 
-static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName)
+static int      RLckDoUnlockEX(ResLocator const *pRL, char const *pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(pRL, pszResourceName);
 
     if ((pRLE == NULL) || (pRLE->iExLocks == 0))
     {
@@ -323,17 +358,18 @@ static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName)
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove entry from list and delete entry memory
 ///////////////////////////////////////////////////////////////////////////////
-    if (RLckRemoveEntry(iWaitGate, pRLE) < 0)
+    if (RLckRemoveEntry(pRL, pRLE) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Release waiting processes
 ///////////////////////////////////////////////////////////////////////////////
-    if (RLGates[iWaitGate].iWaitingProcesses > 0)
+    if (RLGates[pRL->iWaitGate].iWaitingProcesses > 0)
     {
-        SysReleaseSemaphore(RLGates[iWaitGate].hSemaphore, RLGates[iWaitGate].iWaitingProcesses);
+        SysReleaseSemaphore(RLGates[pRL->iWaitGate].hSemaphore,
+                            RLGates[pRL->iWaitGate].iWaitingProcesses);
 
-        RLGates[iWaitGate].iWaitingProcesses = 0;
+        RLGates[pRL->iWaitGate].iWaitingProcesses = 0;
     }
 
     return (0);
@@ -342,13 +378,15 @@ static int      RLckDoUnlockEX(int iWaitGate, char const * pszResourceName)
 
 
 
-static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName)
+static int      RLckTryLockSH(ResLocator const *pRL, char const *pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(pRL, pszResourceName);
 
     if (pRLE == NULL)
     {
+        SysListHead    *pHead = &RLGates[pRL->iWaitGate].pResList[pRL->iResIdx];
+
         if ((pRLE = RLckAllocEntry(pszResourceName)) == NULL)
             return (ErrGetErrorCode());
 
@@ -357,7 +395,7 @@ static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName)
 ///////////////////////////////////////////////////////////////////////////////
 //  Insert new entry in resource list
 ///////////////////////////////////////////////////////////////////////////////
-        SYS_LIST_ADDH(&pRLE->LLink, &RLGates[iWaitGate].ResList);
+        SYS_LIST_ADDH(&pRLE->LLink, pHead);
 
     }
     else
@@ -377,10 +415,10 @@ static int      RLckTryLockSH(int iWaitGate, char const * pszResourceName)
 
 
 
-static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName)
+static int      RLckDoUnlockSH(ResLocator const *pRL, char const *pszResourceName)
 {
 
-    ResLockEntry   *pRLE = RLckGetEntry(iWaitGate, pszResourceName);
+    ResLockEntry   *pRLE = RLckGetEntry(pRL, pszResourceName);
 
     if ((pRLE == NULL) || (pRLE->iShLocks == 0))
     {
@@ -393,17 +431,18 @@ static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName)
 ///////////////////////////////////////////////////////////////////////////////
 //  Remove entry from list and delete entry heap memory
 ///////////////////////////////////////////////////////////////////////////////
-        if (RLckRemoveEntry(iWaitGate, pRLE) < 0)
+        if (RLckRemoveEntry(pRL, pRLE) < 0)
             return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Release waiting processes
 ///////////////////////////////////////////////////////////////////////////////
-        if (RLGates[iWaitGate].iWaitingProcesses > 0)
+        if (RLGates[pRL->iWaitGate].iWaitingProcesses > 0)
         {
-            SysReleaseSemaphore(RLGates[iWaitGate].hSemaphore, RLGates[iWaitGate].iWaitingProcesses);
+            SysReleaseSemaphore(RLGates[pRL->iWaitGate].hSemaphore,
+                                RLGates[pRL->iWaitGate].iWaitingProcesses);
 
-            RLGates[iWaitGate].iWaitingProcesses = 0;
+            RLGates[pRL->iWaitGate].iWaitingProcesses = 0;
         }
     }
 
@@ -413,10 +452,13 @@ static int      RLckDoUnlockSH(int iWaitGate, char const * pszResourceName)
 
 
 
-static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int, char const *))
+static RLCK_HANDLE RLckLock(char const *pszResourceName,
+                            int (*pLockProc) (ResLocator const *, char const *))
 {
 
-    int             iWaitGate = RLckGetWaitGate(pszResourceName);
+    ResLocator      RL;
+
+    RLckGetResLocator(pszResourceName, &RL);
 
     for (;;)
     {
@@ -427,14 +469,14 @@ static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int,
             return (INVALID_RLCK_HANDLE);
 
 
-        int             iLockResult = pLockProc(iWaitGate, pszResourceName);
+        int             iLockResult = pLockProc(&RL, pszResourceName);
 
 
         if (iLockResult == ERR_LOCKED_RESOURCE)
         {
-            SYS_SEMAPHORE   SemID = RLGates[iWaitGate].hSemaphore;
+            SYS_SEMAPHORE   SemID = RLGates[RL.iWaitGate].hSemaphore;
 
-            ++RLGates[iWaitGate].iWaitingProcesses;
+            ++RLGates[RL.iWaitGate].iWaitingProcesses;
 
             SysUnlockMutex(hRLMutex);
 
@@ -463,11 +505,14 @@ static RLCK_HANDLE RLckLock(char const * pszResourceName, int (*pLockProc) (int,
 
 
 
-static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char const *))
+static int      RLckUnlock(RLCK_HANDLE hLock,
+                           int (*pUnlockProc) (ResLocator const *, char const *))
 {
 
     char           *pszResourceName = (char *) hLock;
-    int             iWaitGate = RLckGetWaitGate(pszResourceName);
+    ResLocator      RL;
+
+    RLckGetResLocator(pszResourceName, &RL);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lock resources list access
@@ -476,7 +521,7 @@ static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char cons
         return (ErrGetErrorCode());
 
 
-    if (pUnlockProc(iWaitGate, pszResourceName) < 0)
+    if (pUnlockProc(&RL, pszResourceName) < 0)
     {
         ErrorPush();
         SysUnlockMutex(hRLMutex);
@@ -495,7 +540,7 @@ static int      RLckUnlock(RLCK_HANDLE hLock, int (*pUnlockProc) (int, char cons
 
 
 
-RLCK_HANDLE     RLckLockEX(char const * pszResourceName)
+RLCK_HANDLE     RLckLockEX(char const *pszResourceName)
 {
 
     return (RLckLock(pszResourceName, RLckTryLockEX));
@@ -513,7 +558,7 @@ int             RLckUnlockEX(RLCK_HANDLE hLock)
 
 
 
-RLCK_HANDLE     RLckLockSH(char const * pszResourceName)
+RLCK_HANDLE     RLckLockSH(char const *pszResourceName)
 {
 
     return (RLckLock(pszResourceName, RLckTryLockSH));
@@ -528,3 +573,4 @@ int             RLckUnlockSH(RLCK_HANDLE hLock)
     return (RLckUnlock(hLock, RLckDoUnlockSH));
 
 }
+

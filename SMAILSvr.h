@@ -50,3 +50,4 @@ unsigned int    SMAILThreadProc(void *pThreadData);
 
 
 #endif
+

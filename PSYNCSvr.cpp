@@ -60,9 +60,9 @@
 static bool     PSYNCNeedSync(void);
 static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC);
 static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
-                        PSYNCConfig * pPSYNCCfg = NULL);
+                                    PSYNCConfig *pPSYNCCfg = NULL);
 static int      PSYNCTimeToStop(SHB_HANDLE hShbPSYNC);
-static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg);
+static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg);
 unsigned int    PSYNCThreadSyncProc(void *pThreadData);
 static int      PSYNCThreadNotifyExit(void);
 
@@ -119,7 +119,7 @@ static PSYNCConfig *PSYNCGetConfigCopy(SHB_HANDLE hShbPSYNC)
 
 
 static int      PSYNCThreadCountAdd(long lCount, SHB_HANDLE hShbPSYNC,
-                        PSYNCConfig * pPSYNCCfg)
+                                    PSYNCConfig *pPSYNCCfg)
 {
 
     int             iDoUnlock = 0;
@@ -191,7 +191,7 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
         }
 
         if (((pPSYNCCfg->iSyncInterval == 0) || (iElapsedTime < pPSYNCCfg->iSyncInterval)) &&
-                !PSYNCNeedSync())
+            !PSYNCNeedSync())
         {
             SysFree(pPSYNCCfg);
             continue;
@@ -235,7 +235,7 @@ unsigned int    PSYNCThreadProc(void *pThreadData)
 
 
 
-static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig * pPSYNCCfg)
+static int      PSYNCStartTransfer(SHB_HANDLE hShbPSYNC, PSYNCConfig *pPSYNCCfg)
 {
 
     GWLKF_HANDLE    hLinksDB = GwLkOpenDB();
@@ -330,7 +330,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     char            szErrorAccount[MAX_ADDR_NAME] = "";
 
     SvrConfigVar("Pop3SyncErrorAccount", szErrorAccount, sizeof(szErrorAccount) - 1,
-            hSvrConfig, "");
+                 hSvrConfig, "");
 
     char const     *pszErrorAccount = (IsEmptyString(szErrorAccount)) ? NULL: szErrorAccount;
 
@@ -340,7 +340,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     char            szFetchHdrTags[256] = "";
 
     SvrConfigVar("FetchHdrTags", szFetchHdrTags, sizeof(szFetchHdrTags) - 1,
-            hSvrConfig, "+X-Deliver-To,+Received,To,Cc");
+                 hSvrConfig, "+X-Deliver-To,+Received,To,Cc");
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Lock the link
@@ -377,7 +377,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
         if (pUI != NULL)
         {
             SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\"\n",
-                    pPopLnk->pszName, pPopLnk->pszDomain);
+                          pPopLnk->pszName, pPopLnk->pszDomain);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync
@@ -387,34 +387,34 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
             UsrGetAddress(pUI, szUserAddress);
 
             if (UPopSyncRemoteLink(szUserAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                            pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
-                            pszErrorAccount) < 0)
+                                   pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                                   pszErrorAccount) < 0)
                 ErrLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n",
-                        pPopLnk->pszName, pPopLnk->pszDomain);
+                              pPopLnk->pszName, pPopLnk->pszDomain);
 
 
             UsrFreeUserInfo(pUI);
         }
         else
             SysLogMessage(LOG_LEV_MESSAGE, "[PSYNC] User = \"%s\" - Domain = \"%s\" Failed !\n"
-                    "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
+                          "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
 
     }
     else if (GwLkMasqueradeDomain(pPopLnk))
     {
         SysLogMessage(LOG_LEV_MESSAGE,
-                "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
-                pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                      "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
+                      pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
-                        pszErrorAccount) < 0)
+                               pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                               pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
-                    pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                          "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
+                          pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
     }
     else
@@ -425,18 +425,18 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
 
 
         SysLogMessage(LOG_LEV_MESSAGE,
-                "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
-                szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                      "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
+                      szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Sync ( "pszDomain" == "@" + domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
-                        pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
-                        pszErrorAccount) < 0)
+                               pPopLnk->pszRmtPassword, szFetchHdrTags, pPopLnk->pszAuthType,
+                               pszErrorAccount) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
-                    szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                          "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
+                          szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
     }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -460,3 +460,4 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     return (0);
 
 }
+

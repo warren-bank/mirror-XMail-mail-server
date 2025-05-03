@@ -44,18 +44,18 @@ typedef struct INDEX_HANDLE_struct
 
 
 
-char           *TbixGetIndexFile(char const * pszTabFilePath, int const * piFieldsIdx,
-                        char *pszIndexFile);
-int             TbixCreateIndex(char const * pszTabFilePath, int const * piFieldsIdx, bool bCaseSens,
-                        int (*pHashFunc) (char const * const *, int const *, SYS_UINT32 *, bool) = NULL);
-int             TbixCalculateHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                        SYS_UINT32 * puHashVal, bool bCaseSens);
-char          **TbixLookup(char const * pszTabFilePath, int const * piFieldsIdx,
-                        bool bCaseSens,...);
-int             TbixCheckIndex(char const * pszTabFilePath, int const * piFieldsIdx, bool bCaseSens,
-                        int (*pHashFunc) (char const * const *, int const *, SYS_UINT32 *, bool) = NULL);
-INDEX_HANDLE    TbixOpenHandle(char const * pszTabFilePath, int const * piFieldsIdx,
-                        SYS_UINT32 uHashVal);
+char           *TbixGetIndexFile(char const *pszTabFilePath, int const *piFieldsIdx,
+                                 char *pszIndexFile);
+int             TbixCreateIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+                                int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) = NULL);
+int             TbixCalculateHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+                                  SYS_UINT32 *puHashVal, bool bCaseSens);
+char          **TbixLookup(char const *pszTabFilePath, int const *piFieldsIdx,
+                           bool bCaseSens, ...);
+int             TbixCheckIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+                               int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool) = NULL);
+INDEX_HANDLE    TbixOpenHandle(char const *pszTabFilePath, int const *piFieldsIdx,
+                               SYS_UINT32 uHashVal);
 int             TbixCloseHandle(INDEX_HANDLE hIndexLookup);
 int             TbixLookedUpRecords(INDEX_HANDLE hIndexLookup);
 char          **TbixGetRecord(INDEX_HANDLE hIndexLookup, int iRecord);

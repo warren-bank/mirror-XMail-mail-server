@@ -45,9 +45,9 @@ typedef struct RLCK_HANDLE_struct
 
 int             RLckInitLockers(void);
 int             RLckCleanupLockers(void);
-RLCK_HANDLE     RLckLockEX(char const * pszResourceName);
+RLCK_HANDLE     RLckLockEX(char const *pszResourceName);
 int             RLckUnlockEX(RLCK_HANDLE hLock);
-RLCK_HANDLE     RLckLockSH(char const * pszResourceName);
+RLCK_HANDLE     RLckLockSH(char const *pszResourceName);
 int             RLckUnlockSH(RLCK_HANDLE hLock);
 
 

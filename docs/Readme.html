@@ -1,6 +1,6 @@
 <HTML>
 <HEAD>
-<TITLE>XMail mail server v 1.11</TITLE>
+<TITLE>XMail mail server v 1.14</TITLE>
 <LINK REL="stylesheet" HREF="./xmail.css" TYPE="text/css">
 <LINK REV="made" HREF="mailto:davide@blue1.dev.mcafeelabs.com">
 </HEAD>
@@ -76,7 +76,7 @@
 	<LI><A HREF="#custom domain mail processing">CUSTOM DOMAIN MAIL PROCESSING</A></LI>
 	<LI><A HREF="#cmd aliases">CMD ALIASES</A></LI>
 	<LI><A HREF="#server.tab variables">SERVER.TAB VARIABLES</A></LI>
-	<LI><A HREF="#domain message filters">DOMAIN MESSAGE FILTERS</A></LI>
+	<LI><A HREF="#message filters">MESSAGE FILTERS</A></LI>
 	<LI><A HREF="#user.tab variables">USER.TAB VARIABLES</A></LI>
 	<LI><A HREF="#mail routing through addresses">MAIL ROUTING THROUGH ADDRESSES</A></LI>
 	<LI><A HREF="#xmail spool design">XMAIL SPOOL DESIGN</A></LI>
@@ -202,13 +202,13 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.</P>
 <H1><A NAME="version">VERSION</A></H1>
 <P>
 <H2><A NAME="current">current</A></H2>
-<P>1.12</P>
+<P>1.14</P>
 <P>
 <H2><A NAME="release type">release type</A></H2>
 <P>Gnu Public License <A HREF="http://www.gnu.org">http://www.gnu.org</A></P>
 <P>
 <H2><A NAME="release date">release date</A></H2>
-<P>25-01-2003</P>
+<P>02-04-2003</P>
 <P>
 <H2><A NAME="project by">project by</A></H2>
 <P>Davide Libenzi &lt;<A HREF="mailto:davidel@xmailserver.org">davidel@xmailserver.org</A>&gt; <A HREF="http://www.xmailserver.org/">http://www.xmailserver.org/</A></P>
@@ -578,7 +578,9 @@ MAIL_ROOT that point to the XMail Server root directory.</P>
   pop3.ipmap.tab  &lt;file&gt;
   smtp.ipmap.tab  &lt;file&gt;
   ctrl.ipmap.tab  &lt;file&gt;
-  finger.ipmap.tab    &lt;file&gt;</PRE>
+  finger.ipmap.tab    &lt;file&gt;
+  filters.in.tab  &lt;file&gt;
+  filters.out.tab &lt;file&gt;</PRE>
 <P>and these directories:</P>
 <PRE>
   bin     &lt;dir&gt;
@@ -1301,7 +1303,7 @@ The use of external authentication does not avoid the presence of the user entry
 <HR>
 <H1><A NAME="smtp client authentication">SMTP CLIENT AUTHENTICATION</A></H1>
 <P>When a message is to be sent through an SMTP server that requires authentication,
-XMail provides a way to handle this task by if th '<STRONG>userauth/smtp</STRONG>'
+XMail provides a way to handle this task by if the '<STRONG>userauth/smtp</STRONG>'
 subdirectory is set up properly.</P>
 <P>Suppose a mail is to be sent through the SMTP server '<STRONG>mail.foo.net</STRONG>', this makes XMail
 to search for a file named (inside  userauth/smtp):</P>
@@ -1761,40 +1763,50 @@ even for sending to local domains, and this is probably not what you want.
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
-<H1><A NAME="domain message filters">DOMAIN MESSAGE FILTERS</A></H1>
+<H1><A NAME="message filters">MESSAGE FILTERS</A></H1>
 <P>This feature offers a way to filter messages by providing the ability to
 execute external programs, such as scripts or real executables.
-These 'filters' may examine and/or
-modify messages and inform XMail of their actions with a return value.</P>
+These 'filters' may examine and/or modify messages and inform XMail of
+their actions with a return value.</P>
 <P>This feature offers the ability to inspect and modify messages, giving a way
 to reject messages based on content, alter messages (address rewriting)
 and so on.</P>
 <P>If this filters returns '<STRONG>97, 98 or 99</STRONG>' the message is rejected and
 is stopped in its travel.
 If the filter modifies the message it must return '<STRONG>100</STRONG>'.</P>
-<P>When a message is received by the SMTP server for user '<STRONG>foo&#64;xyzw.aiai.abc</STRONG>' XMail
-searches inside the '<STRONG>filters</STRONG>' subdirectory to find a file named (user processing):</P>
+<P>Filter selection is driven by two files '<STRONG>FILTERS.IN.TAB</STRONG>' and '<STRONG>FILTERS.OUT.TAB</STRONG>'
+that have the following format:</P>
 <PRE>
- foo@xyzw.aiai.abc.tab</PRE>
-<P>If this file is not found then XMail searches for (domain processing):</P>
+ &quot;sender&quot;[TAB]&quot;recipient&quot;[TAB]&quot;remote-addr&quot;[TAB]&quot;local-addr&quot;[TAB]&quot;filename&quot;[NEWLINE]</PRE>
+<P>For example:</P>
 <PRE>
- xyzw.aiai.abc.tab
- aiai.abc.tab
- abc.tab</PRE>
-<P>If this file is not found then XMail searches for (default processing):</P>
-<PRE>
- .tab</PRE>
-<P>The '<STRONG>.tab</STRONG>' file offers a way to specify a default mail filtering.</P>
-<P>If none of the above files are found the message continues its travel, otherwise
-the file is processed by submitting the message to all filters stored in the file.</P>
-<P>The syntax of the file is:</P>
+ &quot;*@bad-domain.com&quot; &quot;*&quot; &quot;0.0.0.0/0&quot; &quot;0.0.0.0/0&quot; &quot;av-filter.tab&quot;
+ &quot;*&quot; &quot;clean@purified.net&quot; &quot;0.0.0.0/0&quot; &quot;0.0.0.0/0&quot; &quot;spam-block.tab&quot;
+ &quot;*&quot; &quot;*&quot; &quot;192.168.1.0/24&quot; &quot;0.0.0.0/0&quot; &quot;archive.tab&quot;</PRE>
+<P>where the file ``av-filter.tab'' must be present inside the $MAIL_ROOT/filters directory.
+The ``sender'' and the ``recipient'' are resolved to the real account when possible.
+Address selection mask are formed by an IP address (network) plus the number of
+valid bits inside the network mask. The file '<STRONG>FILTERS.IN.TAB</STRONG>' lists filters that
+have to be applied to inbound messages (going to local mailboxes) while the file
+'<STRONG>FILTERS.OUT.TAB</STRONG>' lists filters that have to be applied to outbound messages
+(delivered remotely).
+All four (sender+recipient+remote-addr+local-addr) selection fields must have a match
+in order ``filename'' to be evaluated.
+The syntax of the filter file is:</P>
 <PRE>
  &quot;command&quot;[TAB]&quot;arg-or-macro&quot;[TAB]...[NEWLINE]</PRE>
-<P>Each argument can be a macro also:</P>
+<P>Each file may contain multiple commands, that will be executed in strictly sequential
+order. The first command that will trigger a rejection code will make the filtering
+process to end.
+Each argument can be a macro also:</P>
 <DL>
 <DT><STRONG>@@FROM</STRONG><BR>
 <DD>
 the sender of the message
+<P></P>
+<DT><STRONG><A NAME="item_%40%40RFROM">@@RFROM</A></STRONG><BR>
+<DD>
+the sender of the message resolved to the real account, when possible (alias resolution)
 <P></P>
 <DT><STRONG>@@RCPT</STRONG><BR>
 <DD>
@@ -1802,7 +1814,15 @@ the target of the message
 <P></P>
 <DT><STRONG>@@RRCPT</STRONG><BR>
 <DD>
-the real recipient (@@RCPT could be an alias) of the message
+the target of the message resolved to the real account, when possible (alias resolution)
+<P></P>
+<DT><STRONG><A NAME="item_%40%40REMOTEADDR">@@REMOTEADDR</A></STRONG><BR>
+<DD>
+remote IP address and port of the sender
+<P></P>
+<DT><STRONG><A NAME="item_%40%40LOCALADDR">@@LOCALADDR</A></STRONG><BR>
+<DD>
+local IP address and port where the message has been accepted
 <P></P>
 <DT><STRONG>@@FILE</STRONG><BR>
 <DD>
@@ -1825,20 +1845,23 @@ While returning '<STRONG>97</STRONG>' the message is rejected without notificati
 (a '<STRONG>98</STRONG>' response could lead to a frozen message if the <A HREF="#server.tab">SERVER.TAB</A> configuration enables this).
 If all filters return values different from '<STRONG>99, 98 and 97</STRONG>' the message continues its trip.
 The filter command may also modify the file
-(AV scanning, content filter, message rewriting, etc)
-by returning '<STRONG>100</STRONG>'.
+(AV scanning, content filter, message rewriting, etc) by returning '<STRONG>100</STRONG>'.
+The filter '<STRONG>MUST</STRONG>' return '<STRONG>100</STRONG>' in case it modifies the message.
 If the filter changes the message file it '<STRONG>MUST</STRONG>' keep the message structure and
 it '<STRONG>MUST</STRONG>' terminate all line with &lt;CR&gt;&lt;LF&gt;.</P>
 <P>The spool files has this structure:</P>
 <PRE>
- SmtpDomain      [ 1st line ]
- SmtpMessageID       [ 2nd line ]
- MAIL FROM:&lt;...&gt;     [ 3th line ]
- RCPT TO:&lt;...&gt;       [ 4th line ]
- &lt;&lt;MAIL-DATA&gt;&gt;       [ 5th line ]
+ Info Data           [ 1th line ]
+ SmtpDomain          [ 2nd line ]
+ SmtpMessageID       [ 3rd line ]
+ MAIL FROM:&lt;...&gt;     [ 4th line ]
+ RCPT TO:&lt;...&gt;       [ 5th line ]
+ &lt;&lt;MAIL-DATA&gt;&gt;       [ 6th line ]
  ...</PRE>
 <P>After the '<STRONG>&lt;&lt;MAIL-DATA&gt;&gt;</STRONG>' tag (5th line) the message follows. The message is composed
-of a headers section and, after the first empty line, the message body.</P>
+of a headers section and, after the first empty line, the message body.
+'<STRONG>EXTREME</STRONG>' care must be used when modifying the message because the filter will be working
+on the real message, and a badly reformatted file will lead to message loss.</P>
 <P>[<A HREF="#__index__">top</A>]</P>
 <P>
 <HR>
@@ -2058,6 +2081,10 @@ Setup XMail to use 'Maildir' delivery (default on Unix).
 <DT><STRONG><A NAME="item_%2DMm">-Mm</A></STRONG><BR>
 <DD>
 Setup XMail to use 'mailbox' delivery (default on Windows).
+<P></P>
+<DT><STRONG><A NAME="item_%2DMD_ndirs">-MD ndirs</A></STRONG><BR>
+<DD>
+Set the number of subdirectories allocated for the DNS cache files storage ( default 101 ).
 <P></P></DL>
 <DT><STRONG><A NAME="item_%5BPOP3%5D">[POP3]</A></STRONG><BR>
 <DD>
@@ -3001,7 +3028,8 @@ wild card match string for file list selection.
 <P></P></DL>
 <P>The result is a RESSTRING.
 If successful (00100), the directory is listed line by line, terminated by a line
-containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;).</P>
+containing a single dot (&lt;CR&gt;&lt;LF&gt;.&lt;CR&gt;&lt;LF&gt;). The listing format is:</P>
+<P>``filename''[TAB]``filesize''&lt;CR&gt;&lt;LF&gt;</P>
 <P>[<A HREF="#xmail admin protocol">admin protocol</A>] [<A HREF="#__index__">top</A>]</P>
 <P>
 <H2><A NAME="getting configuration file">Getting configuration file</A></H2>
@@ -3538,7 +3566,7 @@ Also you can limit the number of SMTP, POP3 and CTRL service threads by specifyi
 the options '<STRONG>-SX maxthreads</STRONG>', '<STRONG>-PX maxthreads</STRONG>' and '<STRONG>-CX maxthreads</STRONG>'.
 <P></P>
 <LI>
-If you have enabled logging, remember to setup the '<STRONG>-Mr ndays</STRONG>' option depending on the
+If you have enabled logging, remember to setup the '<STRONG>-Mr hours</STRONG>' option depending on the
 traffic you get in your server.
 This avoids XMail having to work with very large log files and can improve server performance.
 <P></P>

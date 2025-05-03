@@ -57,7 +57,7 @@
 
 static int      CDNS_CleanupPath(char const * pszCachePath);
 static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSubDir,
-                        char *pszFilePath);
+                                      char *pszFilePath);
 static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains);
 static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, SYS_UINT32 TTL);
 
@@ -151,7 +151,7 @@ int             CDNS_Initialize(int iCacheDirCount)
 
 
 static char    *CDNS_GetCacheFilePath(char const * pszDomain, char const * pszSubDir,
-                        char *pszFilePath)
+                                      char *pszFilePath)
 {
 
     char            szRootPath[SYS_MAX_PATH] = "";
@@ -209,7 +209,7 @@ static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -239,8 +239,8 @@ static int      CDNS_MxLoad(char const * pszDomain, char *&pszMXDomains)
         return (ERR_DNS_CACHE_FILE_FMT);
     }
 
-    unsigned long   ulCurTime = (unsigned long) time(NULL),
-                    ulTTL = (unsigned long) atol(szCacheLine);
+    unsigned long   ulCurTime = (unsigned long) time(NULL);
+    unsigned long   ulTTL = (unsigned long) atol(szCacheLine);
 
     if (ulCurTime > ((unsigned long) FI.tMod + ulTTL))
     {
@@ -295,7 +295,7 @@ static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, S
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -334,7 +334,7 @@ static int      CDNS_MxSave(char const * pszDomain, char const * pszMXDomains, S
 
 
 int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
-                        char const * pszSmartDNS)
+                                 char const * pszSmartDNS)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to get the cached copy
@@ -382,7 +382,7 @@ int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
         int             iQuerySockType = (stricmp(ppszTokens[ii + 1], "tcp") == 0) ? DNS_QUERY_TCP : DNS_QUERY_UDP;
 
         if (DNS_GetDomainMXDirect(ppszTokens[ii], pszDomain, iQuerySockType,
-                        pszMXDomains, &TTL) == 0)
+                                  pszMXDomains, &TTL) == 0)
         {
             StrFreeStrings(ppszTokens);
 
@@ -395,3 +395,4 @@ int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
     return (ErrGetErrorCode());
 
 }
+

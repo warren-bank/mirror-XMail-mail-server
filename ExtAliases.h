@@ -52,10 +52,10 @@ typedef struct EXAL_HANDLE_struct
 
 int             ExAlCheckAliasIndexes(void);
 ExtAlias       *ExAlAllocAlias(void);
-void            ExAlFreeAlias(ExtAlias * pExtAlias);
-int             ExAlAddAlias(ExtAlias * pExtAlias);
-ExtAlias       *ExAlGetAlias(char const * pszRmtDomain, char const * pszRmtName);
-int             ExAlRemoveAlias(ExtAlias * pExtAlias);
+void            ExAlFreeAlias(ExtAlias *pExtAlias);
+int             ExAlAddAlias(ExtAlias *pExtAlias);
+ExtAlias       *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName);
+int             ExAlRemoveAlias(ExtAlias *pExtAlias);
 int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName);
 int             ExAlRemoveDomainAliases(const char *pszDomain);
 int             ExAlGetDBFileSnapShot(const char *pszFileName);

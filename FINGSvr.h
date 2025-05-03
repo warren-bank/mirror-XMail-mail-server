@@ -42,7 +42,7 @@ struct FINGConfig
     long            lThreadCount;
     int             iTimeout;
     int             iNumAddr;
-    ServerNetPath   SvrPath[MAX_FING_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_FING_ACCEPT_ADDRESSES];
 
 };
 

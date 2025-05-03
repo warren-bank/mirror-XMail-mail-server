@@ -74,10 +74,10 @@ struct ExAlDBScanData
 
 
 
-static int      ExAlRebuildAliasIndexes(char const * pszAliasFilePath);
+static int      ExAlRebuildAliasIndexes(char const *pszAliasFilePath);
 static char    *ExAlGetTableFilePath(char *pszLnkFilePath, int iMaxPath);
 static ExtAlias *ExAlGetAliasFromStrings(char **ppszStrings);
-static int      ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias);
+static int      ExAlWriteAlias(FILE *pAliasFile, ExtAlias *pExtAlias);
 
 
 
@@ -122,7 +122,7 @@ int             ExAlCheckAliasIndexes(void)
 
 
 
-static int      ExAlRebuildAliasIndexes(char const * pszAliasFilePath)
+static int      ExAlRebuildAliasIndexes(char const *pszAliasFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild RmtDomain-RmtName index
@@ -194,7 +194,7 @@ ExtAlias       *ExAlAllocAlias(void)
 
 
 
-void            ExAlFreeAlias(ExtAlias * pExtAlias)
+void            ExAlFreeAlias(ExtAlias *pExtAlias)
 {
 
     if (pExtAlias->pszDomain != NULL)
@@ -215,7 +215,7 @@ void            ExAlFreeAlias(ExtAlias * pExtAlias)
 
 
 
-static int      ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias)
+static int      ExAlWriteAlias(FILE *pAliasFile, ExtAlias *pExtAlias)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -273,7 +273,7 @@ static int      ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias)
 
 
 
-int             ExAlAddAlias(ExtAlias * pExtAlias)
+int             ExAlAddAlias(ExtAlias *pExtAlias)
 {
 
     char            szAliasFilePath[SYS_MAX_PATH] = "";
@@ -283,7 +283,7 @@ int             ExAlAddAlias(ExtAlias * pExtAlias)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -311,9 +311,9 @@ int             ExAlAddAlias(ExtAlias * pExtAlias)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= ealMax) && (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-                (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
-                (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
-                (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
+            (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
+            (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
+            (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
         {
             StrFreeStrings(ppszStrings);
             fclose(pAliasFile);
@@ -357,7 +357,7 @@ int             ExAlAddAlias(ExtAlias * pExtAlias)
 
 
 
-ExtAlias       *ExAlGetAlias(char const * pszRmtDomain, char const * pszRmtName)
+ExtAlias       *ExAlGetAlias(char const *pszRmtDomain, char const *pszRmtName)
 {
 
     char            szAliasFilePath[SYS_MAX_PATH] = "";
@@ -367,7 +367,7 @@ ExtAlias       *ExAlGetAlias(char const * pszRmtDomain, char const * pszRmtName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (NULL);
@@ -377,9 +377,9 @@ ExtAlias       *ExAlGetAlias(char const * pszRmtDomain, char const * pszRmtName)
 //  Lookup record using the specified index
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszTabTokens = TbixLookup(szAliasFilePath, iIdxExAlias_RmtDomain_RmtName, false,
-            pszRmtDomain,
-            pszRmtName,
-            NULL);
+                                               pszRmtDomain,
+                                               pszRmtName,
+                                               NULL);
 
     if (ppszTabTokens == NULL)
     {
@@ -403,7 +403,7 @@ ExtAlias       *ExAlGetAlias(char const * pszRmtDomain, char const * pszRmtName)
 
 
 
-int             ExAlRemoveAlias(ExtAlias * pExtAlias)
+int             ExAlRemoveAlias(ExtAlias *pExtAlias)
 {
 
     char            szAliasFilePath[SYS_MAX_PATH] = "";
@@ -417,7 +417,7 @@ int             ExAlRemoveAlias(ExtAlias * pExtAlias)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -457,9 +457,9 @@ int             ExAlRemoveAlias(ExtAlias * pExtAlias)
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= ealMax) && (stricmp(pExtAlias->pszDomain, ppszStrings[ealDomain]) == 0) &&
-                (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
-                (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
-                (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
+            (stricmp(pExtAlias->pszName, ppszStrings[ealName]) == 0) &&
+            (stricmp(pExtAlias->pszRmtDomain, ppszStrings[ealRmtDomain]) == 0) &&
+            (stricmp(pExtAlias->pszRmtName, ppszStrings[ealRmtName]) == 0))
         {
 
             ++iAliasFound;
@@ -485,7 +485,8 @@ int             ExAlRemoveAlias(ExtAlias * pExtAlias)
 
     char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szTmpAliasFilePath, "%s.tmp", szAliasFilePath);
+    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+                szAliasFilePath);
 
     if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
     {
@@ -534,7 +535,7 @@ int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -580,7 +581,7 @@ int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= ealMax) && (stricmp(pszDomain, ppszStrings[ealDomain]) == 0) &&
-                (stricmp(pszName, ppszStrings[ealName]) == 0))
+            (stricmp(pszName, ppszStrings[ealName]) == 0))
         {
 
             ++iAliasFound;
@@ -604,7 +605,8 @@ int             ExAlRemoveUserAliases(const char *pszDomain, const char *pszName
 
     char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szTmpAliasFilePath, "%s.tmp", szAliasFilePath);
+    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+                szAliasFilePath);
 
     if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
     {
@@ -656,7 +658,7 @@ int             ExAlRemoveDomainAliases(const char *pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -726,7 +728,8 @@ int             ExAlRemoveDomainAliases(const char *pszDomain)
 
     char            szTmpAliasFilePath[SYS_MAX_PATH] = "";
 
-    sprintf(szTmpAliasFilePath, "%s.tmp", szAliasFilePath);
+    SysSNPrintf(szTmpAliasFilePath, sizeof(szTmpAliasFilePath) - 1, "%s.tmp",
+                szAliasFilePath);
 
     if (MscMoveFile(szAliasFilePath, szTmpAliasFilePath) < 0)
     {
@@ -776,7 +779,7 @@ int             ExAlGetDBFileSnapShot(const char *pszFileName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAliasFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -853,7 +856,7 @@ ExtAlias       *ExAlGetFirstAlias(EXAL_HANDLE hLinksDB)
     char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
     while ((pExtAlias == NULL) &&
-            (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
+           (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
@@ -884,7 +887,7 @@ ExtAlias       *ExAlGetNextAlias(EXAL_HANDLE hLinksDB)
     char            szAliasLine[ALIAS_TABLE_LINE_MAX] = "";
 
     while ((pExtAlias == NULL) &&
-            (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
+           (MscFGets(szAliasLine, sizeof(szAliasLine) - 1, pGLSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szAliasLine);
 
@@ -902,3 +905,4 @@ ExtAlias       *ExAlGetNextAlias(EXAL_HANDLE hLinksDB)
     return (pExtAlias);
 
 }
+

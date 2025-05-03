@@ -82,7 +82,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.12
+1.14
 
 =head2 release type
 
@@ -90,7 +90,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-25-01-2003
+02-04-2003
 
 =head2 project by
 
@@ -608,6 +608,8 @@ Mail root directory contain these files:
   smtp.ipmap.tab  <file>
   ctrl.ipmap.tab  <file>
   finger.ipmap.tab    <file>
+  filters.in.tab  <file>
+  filters.out.tab <file>
 
 and these directories:
 
@@ -1612,7 +1614,7 @@ The use of external authentication does not avoid the presence of the user entry
 =head1 SMTP CLIENT AUTHENTICATION
 
 When a message is to be sent through an SMTP server that requires authentication,
-XMail provides a way to handle this task by if th 'B<userauth/smtp>'
+XMail provides a way to handle this task by if the 'B<userauth/smtp>'
 subdirectory is set up properly.
 
 Suppose a mail is to be sent through the SMTP server 'B<mail.foo.net>', this makes XMail
@@ -2174,12 +2176,12 @@ even for sending to local domains, and this is probably not what you want.
 
 =end html
 
-=head1 DOMAIN MESSAGE FILTERS
+=head1 MESSAGE FILTERS
 
 This feature offers a way to filter messages by providing the ability to
 execute external programs, such as scripts or real executables.
-These 'filters' may examine and/or
-modify messages and inform XMail of their actions with a return value.
+These 'filters' may examine and/or modify messages and inform XMail of
+their actions with a return value.
 
 This feature offers the ability to inspect and modify messages, giving a way
 to reject messages based on content, alter messages (address rewriting)
@@ -2189,30 +2191,33 @@ If this filters returns 'B<97, 98 or 99>' the message is rejected and
 is stopped in its travel.
 If the filter modifies the message it must return 'B<100>'.
 
-When a message is received by the SMTP server for user 'B<fooE<64>xyzw.aiai.abc>' XMail
-searches inside the 'B<filters>' subdirectory to find a file named (user processing):
+Filter selection is driven by two files 'B<FILTERS.IN.TAB>' and 'B<FILTERS.OUT.TAB>'
+that have the following format:
 
- foo@xyzw.aiai.abc.tab
+ "sender"[TAB]"recipient"[TAB]"remote-addr"[TAB]"local-addr"[TAB]"filename"[NEWLINE]
 
-If this file is not found then XMail searches for (domain processing):
+For example:
 
- xyzw.aiai.abc.tab
- aiai.abc.tab
- abc.tab
+ "*@bad-domain.com" "*" "0.0.0.0/0" "0.0.0.0/0" "av-filter.tab"
+ "*" "clean@purified.net" "0.0.0.0/0" "0.0.0.0/0" "spam-block.tab"
+ "*" "*" "192.168.1.0/24" "0.0.0.0/0" "archive.tab"
 
-If this file is not found then XMail searches for (default processing):
-
- .tab
-
-The 'B<.tab>' file offers a way to specify a default mail filtering.
-
-If none of the above files are found the message continues its travel, otherwise
-the file is processed by submitting the message to all filters stored in the file.
-
-The syntax of the file is:
+where the file "av-filter.tab" must be present inside the $MAIL_ROOT/filters directory.
+The "sender" and the "recipient" are resolved to the real account when possible.
+Address selection mask are formed by an IP address (network) plus the number of
+valid bits inside the network mask. The file 'B<FILTERS.IN.TAB>' lists filters that
+have to be applied to inbound messages (going to local mailboxes) while the file
+'B<FILTERS.OUT.TAB>' lists filters that have to be applied to outbound messages
+(delivered remotely).
+All four (sender+recipient+remote-addr+local-addr) selection fields must have a match
+in order "filename" to be evaluated.
+The syntax of the filter file is:
 
  "command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
 
+Each file may contain multiple commands, that will be executed in strictly sequential
+order. The first command that will trigger a rejection code will make the filtering
+process to end.
 Each argument can be a macro also:
 
 =over 4
@@ -2221,13 +2226,25 @@ Each argument can be a macro also:
 
 the sender of the message
 
+=item @@RFROM
+
+the sender of the message resolved to the real account, when possible (alias resolution)
+
 =item @@RCPT
 
 the target of the message
 
 =item @@RRCPT
 
-the real recipient (@@RCPT could be an alias) of the message
+the target of the message resolved to the real account, when possible (alias resolution)
+
+=item @@REMOTEADDR
+
+remote IP address and port of the sender
+
+=item @@LOCALADDR
+
+local IP address and port where the message has been accepted
 
 =item @@FILE
 
@@ -2252,22 +2269,25 @@ While returning 'B<97>' the message is rejected without notification and without
 (a 'B<98>' response could lead to a frozen message if the L<"SERVER.TAB"> configuration enables this).
 If all filters return values different from 'B<99, 98 and 97>' the message continues its trip.
 The filter command may also modify the file
-(AV scanning, content filter, message rewriting, etc)
-by returning 'B<100>'.
+(AV scanning, content filter, message rewriting, etc) by returning 'B<100>'.
+The filter 'B<MUST>' return 'B<100>' in case it modifies the message.
 If the filter changes the message file it 'B<MUST>' keep the message structure and
 it 'B<MUST>' terminate all line with <CR><LF>.
 
 The spool files has this structure:
 
- SmtpDomain      [ 1st line ]
- SmtpMessageID       [ 2nd line ]
- MAIL FROM:<...>     [ 3th line ]
- RCPT TO:<...>       [ 4th line ]
- <<MAIL-DATA>>       [ 5th line ]
+ Info Data           [ 1th line ]
+ SmtpDomain          [ 2nd line ]
+ SmtpMessageID       [ 3rd line ]
+ MAIL FROM:<...>     [ 4th line ]
+ RCPT TO:<...>       [ 5th line ]
+ <<MAIL-DATA>>       [ 6th line ]
  ...
 
 After the 'B<E<lt>E<lt>MAIL-DATAE<gt>E<gt>>' tag (5th line) the message follows. The message is composed
 of a headers section and, after the first empty line, the message body.
+'B<EXTREME>' care must be used when modifying the message because the filter will be working
+on the real message, and a badly reformatted file will lead to message loss.
 
 =begin html
 
@@ -2530,6 +2550,10 @@ Setup XMail to use 'Maildir' delivery (default on Unix).
 =item -Mm
 
 Setup XMail to use 'mailbox' delivery (default on Windows).
+
+=item -MD ndirs
+
+Set the number of subdirectories allocated for the DNS cache files storage ( default 101 ).
 
 =back
 
@@ -3831,7 +3855,9 @@ wild card match string for file list selection.
 
 The result is a RESSTRING.
 If successful (00100), the directory is listed line by line, terminated by a line
-containing a single dot (<CR><LF>.<CR><LF>).
+containing a single dot (<CR><LF>.<CR><LF>). The listing format is:
+
+"filename"[TAB]"filesize"<CR><LF>
 
 =begin html
 
@@ -4558,7 +4584,7 @@ the options 'B<-SX maxthreads>', 'B<-PX maxthreads>' and 'B<-CX maxthreads>'.
 
 =item 7.
 
-If you have enabled logging, remember to setup the 'B<-Mr ndays>' option depending on the
+If you have enabled logging, remember to setup the 'B<-Mr hours>' option depending on the
 traffic you get in your server.
 This avoids XMail having to work with very large log files and can improve server performance.
 

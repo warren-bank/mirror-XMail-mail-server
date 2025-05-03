@@ -44,7 +44,7 @@
 #define TAB_SAMPLE_LINES            32
 #define TAB_MIN_HASH_SIZE           17
 #define TAB_INDEX_DIR               "tabindex"
-#define TAB_INDEX_MAGIC              (*(SYS_UINT32 *) "ABDL")
+#define TAB_INDEX_MAGIC             (*(SYS_UINT32 *) "ABDL")
 #define KEY_BUFFER_SIZE             1024
 #define TAB_RECORD_BUFFER_SIZE      2048
 #define TOKEN_SEP_STR               "\t"
@@ -89,16 +89,16 @@ struct IndexLookupData
 
 
 
-static int      TbixCalcHashSize(FILE * pTabFile, char * pszLineBuffer, int iBufferSize);
-static int      TbixFreeHash(HashNode * pHash, int iHashSize);
+static int      TbixCalcHashSize(FILE *pTabFile, char *pszLineBuffer, int iBufferSize);
+static int      TbixFreeHash(HashNode *pHash, int iHashSize);
 static int      TbixBuildKey(char *pszKey, va_list Args, bool bCaseSens);
-static int      TbixBuildKey(char *pszKey, char const * const * ppszTabTokens,
-                        int const * piFieldsIdx, bool bCaseSens);
-static int      TbixOpenIndex(char const * pszIndexFile, TabHashIndex & THI);
+static int      TbixBuildKey(char *pszKey, char const *const *ppszTabTokens,
+                             int const *piFieldsIdx, bool bCaseSens);
+static int      TbixOpenIndex(char const *pszIndexFile, TabHashIndex & THI);
 static int      TbixCloseIndex(TabHashIndex & THI);
-static int      TbixCheckIndex(char const * pszIndexFile);
+static int      TbixCheckIndex(char const *pszIndexFile);
 static SYS_UINT32  *TbixReadTable(TabHashIndex & THI, SYS_UINT32 uHashVal);
-static char   **TbixLoadRecord(FILE * pTabFile, SYS_UINT32 uOffset);
+static char   **TbixLoadRecord(FILE *pTabFile, SYS_UINT32 uOffset);
 
 
 
@@ -111,13 +111,13 @@ static char   **TbixLoadRecord(FILE * pTabFile, SYS_UINT32 uOffset);
 
 
 
-static int      TbixCalcHashSize(FILE * pTabFile, char * pszLineBuffer, int iBufferSize)
+static int      TbixCalcHashSize(FILE *pTabFile, char *pszLineBuffer, int iBufferSize)
 {
 
     int             iSampleLines = 0;
-    unsigned long   ulOrigOffset = (unsigned long) ftell(pTabFile),
-                    ulCurrOffset = 0,
-                    ulLineSize = 0;
+    unsigned long   ulOrigOffset = (unsigned long) ftell(pTabFile);
+    unsigned long   ulCurrOffset = 0;
+    unsigned long   ulLineSize = 0;
 
     rewind(pTabFile);
 
@@ -163,12 +163,12 @@ static int      TbixCalcHashSize(FILE * pTabFile, char * pszLineBuffer, int iBuf
 
 
 
-char           *TbixGetIndexFile(char const * pszTabFilePath, int const * piFieldsIdx,
-                        char *pszIndexFile)
+char           *TbixGetIndexFile(char const *pszTabFilePath, int const *piFieldsIdx,
+                                 char *pszIndexFile)
 {
 
-    char            szFileDir[SYS_MAX_PATH] = "",
-                    szFileName[SYS_MAX_PATH] = "";
+    char            szFileDir[SYS_MAX_PATH] = "";
+    char            szFileName[SYS_MAX_PATH] = "";
 
     MscSplitPath(pszTabFilePath, szFileDir, szFileName, NULL);
 
@@ -192,13 +192,13 @@ char           *TbixGetIndexFile(char const * pszTabFilePath, int const * piFiel
 
 
 
-static int      TbixFreeHash(HashNode * pHash, int iHashSize)
+static int      TbixFreeHash(HashNode *pHash, int iHashSize)
 {
 
     for (int ii = 0; ii < iHashSize; ii++)
     {
-        SysListHead    *pHead = &pHash[ii].NodeList,
-                       *pLLink;
+        SysListHead    *pHead = &pHash[ii].NodeList;
+        SysListHead    *pLLink;
 
         while ((pLLink = SYS_LIST_FIRST(pHead)) != NULL)
         {
@@ -218,8 +218,8 @@ static int      TbixFreeHash(HashNode * pHash, int iHashSize)
 
 
 
-int             TbixCreateIndex(char const * pszTabFilePath, int const * piFieldsIdx, bool bCaseSens,
-                        int (*pHashFunc) (char const * const *, int const *, SYS_UINT32 *, bool))
+int             TbixCreateIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+                                int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool))
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Adjust hash function
@@ -397,24 +397,24 @@ int             TbixCreateIndex(char const * pszTabFilePath, int const * piField
                 return (ERR_FILE_WRITE);
             }
 
-            SysListHead    *pHead = &pHash[ii].NodeList,
-                           *pLLink;
+            SysListHead    *pHead = &pHash[ii].NodeList;
+            SysListHead    *pLLink;
 
             SYS_LIST_FOR_EACH(pLLink, pHead)
-            {
-                HashLink       *pHL = SYS_LIST_ENTRY(pLLink, HashLink, LLink);
-                SYS_UINT32      uRecordOffset = pHL->uOffset;
-
-                if (!fwrite(&uRecordOffset, sizeof(uRecordOffset), 1, pIndexFile))
                 {
-                    fclose(pIndexFile);
-                    SysRemove(szIndexFile);
-                    TbixFreeHash(pHash, iHashSize);
+                    HashLink       *pHL = SYS_LIST_ENTRY(pLLink, HashLink, LLink);
+                    SYS_UINT32      uRecordOffset = pHL->uOffset;
 
-                    ErrSetErrorCode(ERR_FILE_WRITE);
-                    return (ERR_FILE_WRITE);
+                    if (!fwrite(&uRecordOffset, sizeof(uRecordOffset), 1, pIndexFile))
+                    {
+                        fclose(pIndexFile);
+                        SysRemove(szIndexFile);
+                        TbixFreeHash(pHash, iHashSize);
+
+                        ErrSetErrorCode(ERR_FILE_WRITE);
+                        return (ERR_FILE_WRITE);
+                    }
                 }
-            }
         }
     }
 
@@ -453,8 +453,8 @@ static int      TbixBuildKey(char *pszKey, va_list Args, bool bCaseSens)
 
 
 
-static int      TbixBuildKey(char *pszKey, char const * const * ppszTabTokens,
-                        int const * piFieldsIdx, bool bCaseSens)
+static int      TbixBuildKey(char *pszKey, char const *const *ppszTabTokens,
+                             int const *piFieldsIdx, bool bCaseSens)
 {
 
     SetEmptyString(pszKey);
@@ -485,8 +485,8 @@ static int      TbixBuildKey(char *pszKey, char const * const * ppszTabTokens,
 
 
 
-int             TbixCalculateHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                        SYS_UINT32 * puHashVal, bool bCaseSens)
+int             TbixCalculateHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+                                  SYS_UINT32 *puHashVal, bool bCaseSens)
 {
 
     char            szKey[KEY_BUFFER_SIZE] = "";
@@ -504,7 +504,7 @@ int             TbixCalculateHash(char const * const * ppszTabTokens, int const 
 
 
 
-static int      TbixOpenIndex(char const * pszIndexFile, TabHashIndex & THI)
+static int      TbixOpenIndex(char const *pszIndexFile, TabHashIndex & THI)
 {
 
     FILE           *pIndexFile = fopen(pszIndexFile, "rb");
@@ -557,7 +557,7 @@ static int      TbixCloseIndex(TabHashIndex & THI)
 
 
 
-static int      TbixCheckIndex(char const * pszIndexFile)
+static int      TbixCheckIndex(char const *pszIndexFile)
 {
 
     TabHashIndex    THI;
@@ -633,8 +633,8 @@ static SYS_UINT32  *TbixReadTable(TabHashIndex & THI, SYS_UINT32 uHashVal)
 
 
 
-char          **TbixLookup(char const * pszTabFilePath, int const * piFieldsIdx,
-                        bool bCaseSens,...)
+char          **TbixLookup(char const *pszTabFilePath, int const *piFieldsIdx,
+                           bool bCaseSens, ...)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build index file name
@@ -745,7 +745,7 @@ char          **TbixLookup(char const * pszTabFilePath, int const * piFieldsIdx,
 
 
 
-static char   **TbixLoadRecord(FILE * pTabFile, SYS_UINT32 uOffset)
+static char   **TbixLoadRecord(FILE *pTabFile, SYS_UINT32 uOffset)
 {
 
     if (fseek(pTabFile, uOffset, SEEK_SET) != 0)
@@ -768,8 +768,8 @@ static char   **TbixLoadRecord(FILE * pTabFile, SYS_UINT32 uOffset)
 
 
 
-int             TbixCheckIndex(char const * pszTabFilePath, int const * piFieldsIdx, bool bCaseSens,
-                        int (*pHashFunc) (char const * const *, int const *, SYS_UINT32 *, bool))
+int             TbixCheckIndex(char const *pszTabFilePath, int const *piFieldsIdx, bool bCaseSens,
+                               int (*pHashFunc) (char const *const *, int const *, SYS_UINT32 *, bool))
 {
 
     SYS_FILE_INFO   FI_Tab;
@@ -791,7 +791,7 @@ int             TbixCheckIndex(char const * pszTabFilePath, int const * piFields
     SYS_FILE_INFO   FI_Index;
 
     if ((SysGetFileInfo(szIndexFile, FI_Index) < 0) || (FI_Tab.tMod > FI_Index.tMod) ||
-            (TbixCheckIndex(szIndexFile) < 0))
+        (TbixCheckIndex(szIndexFile) < 0))
     {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -809,8 +809,8 @@ int             TbixCheckIndex(char const * pszTabFilePath, int const * piFields
 
 
 
-INDEX_HANDLE    TbixOpenHandle(char const * pszTabFilePath, int const * piFieldsIdx,
-                        SYS_UINT32 uHashVal)
+INDEX_HANDLE    TbixOpenHandle(char const *pszTabFilePath, int const *piFieldsIdx,
+                               SYS_UINT32 uHashVal)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Build index file name
@@ -915,3 +915,4 @@ char          **TbixGetRecord(INDEX_HANDLE hIndexLookup, int iRecord)
     return (TbixLoadRecord(pILD->pTabFile, pILD->pHashTable[iRecord + 1]));
 
 }
+

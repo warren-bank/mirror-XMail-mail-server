@@ -47,7 +47,7 @@
 {ERR_TACACS_FILE_NOT_FOUND, "TACACS configuration file not found", NULL},
 {ERR_TACACS_SERVER_NOT_FOUND, "TACACS server for domain not found", NULL},
 
- */
+    */
 
 
 
@@ -115,14 +115,14 @@
 
 
 
-enum TacsFields
-{
-    tacsDomain = 0,
-    tacsServer,
-    tacsPort,
+    enum TacsFields
+    {
+        tacsDomain = 0,
+        tacsServer,
+        tacsPort,
 
-    tacsMax
-};
+        tacsMax
+    };
 
 struct xtacacstype
 {
@@ -205,7 +205,7 @@ static int      TacsGetServerName(char const * pszDomain, char *pszTacsServer, i
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= tacsMax) &&
-                StrIWildMatch(pszDomain, ppszStrings[tacsDomain]))
+            StrIWildMatch(pszDomain, ppszStrings[tacsDomain]))
         {
             strcpy(pszTacsServer, ppszStrings[tacsServer]);
 
@@ -236,7 +236,7 @@ static int      TacsGetServerName(char const * pszDomain, char *pszTacsServer, i
 
 
 int             TacsAuthenticate(char const * pszDomain, char const * pszUsername,
-                        char const * pszPassword, int iServicePort)
+                                 char const * pszPassword, int iServicePort)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get TACACS server coordinates
@@ -261,7 +261,7 @@ int             TacsAuthenticate(char const * pszDomain, char const * pszUsernam
     SYS_INET_ADDR   SockAddr;
 
     if (MscCreateClientSocket(szTacsServer, iPortNo, SOCK_DGRAM, &SockFD, &SvrAddr,
-                    &SockAddr, TACACS_TIMEOUT) < 0)
+                              &SockAddr, TACACS_TIMEOUT) < 0)
         return (ErrGetErrorCode());
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -295,7 +295,7 @@ int             TacsAuthenticate(char const * pszDomain, char const * pszUsernam
 //  Send packet
 ///////////////////////////////////////////////////////////////////////////////
         if (SysSendDataTo(SockFD, (const struct sockaddr *) & SvrAddr, sizeof(SvrAddr),
-                        szBuffer, iQueryLenght, TACACS_TIMEOUT) != iQueryLenght)
+                          szBuffer, iQueryLenght, TACACS_TIMEOUT) != iQueryLenght)
             continue;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,7 @@ int             TacsAuthenticate(char const * pszDomain, char const * pszUsernam
 
 
         int             iPacketLenght = SysRecvDataFrom(SockFD, (struct sockaddr *) & RecvAddr, sizeof(RecvAddr),
-                (char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
+                                                        (char *) RespBuffer, sizeof(RespBuffer), TACACS_TIMEOUT);
 
 
         if (iPacketLenght < XTACACSSIZE)
@@ -340,3 +340,4 @@ int             TacsAuthenticate(char const * pszDomain, char const * pszUsernam
     return (ERR_TACACS_AUTH_UNAVAILABLE);
 
 }
+

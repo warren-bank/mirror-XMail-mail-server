@@ -43,8 +43,7 @@
 #define MAX_ACCEPT_ADDRESSES        32
 #define LOG_ROTATE_HOURS            24
 #define STD_SERVER_TIMEOUT          90
-#define SMTP_ERROR_VARNAME          "SMTP-Error"
-
+#define LOCAL_ADDRESS               "127.0.0.1"
 
 
 

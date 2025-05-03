@@ -92,7 +92,7 @@ static BOOL     CmdInstallService(DWORD dwStartType);
 static BOOL     CmdRemoveService(void);
 static int      CmdDebugService(int argc, TCHAR * argv[]);
 static BOOL     ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode,
-                        DWORD dwWaitHint);
+                                    DWORD dwWaitHint);
 static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize);
 static VOID     AddToMessageLog(LPCTSTR lpszMsg);
 
@@ -115,8 +115,8 @@ static int      MnSetupStdHandles(void)
 {
 
     HANDLE      hInFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL, OPEN_EXISTING, 0, NULL);
+                                     FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                     NULL, OPEN_EXISTING, 0, NULL);
 
     if (hInFile == INVALID_HANDLE_VALUE)
     {
@@ -125,8 +125,8 @@ static int      MnSetupStdHandles(void)
     }
 
     HANDLE      hOutFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL, OPEN_EXISTING, 0, NULL);
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      NULL, OPEN_EXISTING, 0, NULL);
 
     if (hOutFile == INVALID_HANDLE_VALUE)
     {
@@ -136,8 +136,8 @@ static int      MnSetupStdHandles(void)
     }
 
     HANDLE      hErrFile = CreateFile(NULFILE, GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL, OPEN_EXISTING, 0, NULL);
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      NULL, OPEN_EXISTING, 0, NULL);
 
     if (hErrFile == INVALID_HANDLE_VALUE)
     {
@@ -148,7 +148,7 @@ static int      MnSetupStdHandles(void)
     }
 
     if (!SetStdHandle(STD_INPUT_HANDLE, hInFile) || !SetStdHandle(STD_OUTPUT_HANDLE, hOutFile) ||
-            !SetStdHandle(STD_ERROR_HANDLE, hErrFile))
+        !SetStdHandle(STD_ERROR_HANDLE, hErrFile))
     {
         AddToMessageLog(_T("SetStdHandle"));
         CloseHandle(hErrFile);
@@ -167,10 +167,10 @@ int             _tmain(int argc, TCHAR * argv[])
 {
 
     SERVICE_TABLE_ENTRY DispTable[] =
-    {
-        {SZSERVICENAME, (LPSERVICE_MAIN_FUNCTION) ServiceMain},
-        {NULL, NULL}
-    };
+        {
+            {SZSERVICENAME, (LPSERVICE_MAIN_FUNCTION) ServiceMain},
+            {NULL, NULL}
+        };
 
     if (argc > 1)
     {
@@ -267,29 +267,29 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 
     switch (dwCtrlCode)
     {
-        case (SERVICE_CONTROL_SHUTDOWN):
-        case (SERVICE_CONTROL_STOP):
-            {
-                ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
+    case (SERVICE_CONTROL_SHUTDOWN):
+    case (SERVICE_CONTROL_STOP):
+    {
+        ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Signal the server to stop and wait for completion
 ///////////////////////////////////////////////////////////////////////////////
-                SvrStopServer(false);
+        SvrStopServer(false);
 
-                while (SvrInShutdown())
-                {
-                    Sleep(SERVER_STOP_WAIT / 2);
-                    ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
-                }
+        while (SvrInShutdown())
+        {
+            Sleep(SERVER_STOP_WAIT / 2);
+            ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
+        }
 
 
-                ReportStatusToSCMgr(SERVICE_STOPPED, 0, 0);
-            }
-            break;
+        ReportStatusToSCMgr(SERVICE_STOPPED, 0, 0);
+    }
+    break;
 
-        default:
-            ReportStatusToSCMgr(ssStatus.dwCurrentState, NO_ERROR, 0);
+    default:
+        ReportStatusToSCMgr(ssStatus.dwCurrentState, NO_ERROR, 0);
     }
 
 }
@@ -297,7 +297,7 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 
 
 static BOOL     ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode,
-                        DWORD dwWaitHint)
+                                    DWORD dwWaitHint)
 {
 
     static DWORD    dwCheckPoint = 1;
@@ -336,8 +336,8 @@ static VOID     AddToMessageLog(LPCTSTR lpszMsg)
 
     HANDLE          hEventSource = NULL;
     LPTSTR          lpszStrings[2];
-    TCHAR           szMsg[512] = _T(""),
-                    szErrMsg[2048] = _T("");
+    TCHAR           szMsg[512] = _T("");
+    TCHAR           szErrMsg[2048] = _T("");
 
     if (!bDebug)
     {
@@ -354,14 +354,14 @@ static VOID     AddToMessageLog(LPCTSTR lpszMsg)
         if ((hEventSource = RegisterEventSource(NULL, SZSERVICENAME)) != NULL)
         {
             ReportEvent(hEventSource,   // handle of event source
-                    EVENTLOG_ERROR_TYPE,    // event type
-                    0,          // event category
-                    0,          // event ID
-                    NULL,       // current user's SID
-                    2,          // strings in lpszStrings
-                    0,          // no bytes of raw data
-                    (const char **) lpszStrings,    // array of error strings
-                    NULL);      // no raw data
+                        EVENTLOG_ERROR_TYPE,    // event type
+                        0,          // event category
+                        0,          // event ID
+                        NULL,       // current user's SID
+                        2,          // strings in lpszStrings
+                        0,          // no bytes of raw data
+                        (const char **) lpszStrings,    // array of error strings
+                        NULL);      // no raw data
 
             DeregisterEventSource(hEventSource);
         }
@@ -375,33 +375,33 @@ static VOID     AddToMessageLog(LPCTSTR lpszMsg)
 static BOOL     CmdInstallService(DWORD dwStartType)
 {
 
-    SC_HANDLE       schService = NULL,
-                    schSCManager = NULL;
+    SC_HANDLE       schService = NULL;
+    SC_HANDLE       schSCManager = NULL;
     TCHAR           szPath[MAX_PATH] = _T("");
 
     if (GetModuleFileName(NULL, szPath, CountOf(szPath)) == 0)
     {
         _tprintf(_T("Unable to install %s - %s\n"), SZSERVICEDISPLAYNAME,
-                GetLastErrorText(szErr, CountOf(szErr)));
+                 GetLastErrorText(szErr, CountOf(szErr)));
         return (FALSE);
     }
 
     if ((schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) != NULL)
     {
         schService = CreateService(
-                schSCManager,   // SCManager database
-                SZSERVICENAME,  // name of service
-                SZSERVICEDISPLAYNAME,   // name to display
-                SERVICE_ALL_ACCESS, // desired access
-                SERVICE_WIN32_OWN_PROCESS,  // service type
-                dwStartType,    // start type
-                SERVICE_ERROR_NORMAL,   // error control type
-                szPath,         // service's binary
-                NULL,           // no load ordering group
-                NULL,           // no tag identifier
-                SZDEPENDENCIES, // dependencies
-                NULL,           // LocalSystem account
-                NULL);          // no password
+            schSCManager,   // SCManager database
+            SZSERVICENAME,  // name of service
+            SZSERVICEDISPLAYNAME,   // name to display
+            SERVICE_ALL_ACCESS, // desired access
+            SERVICE_WIN32_OWN_PROCESS,  // service type
+            dwStartType,    // start type
+            SERVICE_ERROR_NORMAL,   // error control type
+            szPath,         // service's binary
+            NULL,           // no load ordering group
+            NULL,           // no tag identifier
+            SZDEPENDENCIES, // dependencies
+            NULL,           // LocalSystem account
+            NULL);          // no password
 
         if (schService != NULL)
         {
@@ -413,13 +413,13 @@ static BOOL     CmdInstallService(DWORD dwStartType)
         }
         else
             _tprintf(_T("CreateService failed - %s\n"),
-                    GetLastErrorText(szErr, CountOf(szErr)));
+                     GetLastErrorText(szErr, CountOf(szErr)));
 
         CloseServiceHandle(schSCManager);
     }
     else
         _tprintf(_T("OpenSCManager failed - %s\n"),
-                GetLastErrorText(szErr, CountOf(szErr)));
+                 GetLastErrorText(szErr, CountOf(szErr)));
 
     return (FALSE);
 
@@ -430,8 +430,8 @@ static BOOL     CmdInstallService(DWORD dwStartType)
 static BOOL     CmdRemoveService(void)
 {
 
-    SC_HANDLE       schService = NULL,
-                    schSCManager = NULL;
+    SC_HANDLE       schService = NULL;
+    SC_HANDLE       schSCManager = NULL;
 
     if ((schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) != NULL)
     {
@@ -507,18 +507,18 @@ static int      CmdDebugService(int argc, LPTSTR argv[])
 static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)
 {
 
-    DWORD           dwRet,
-                    dwError = GetLastError();
+    DWORD           dwRet;
+    DWORD           dwError = GetLastError();
     LPTSTR          lpszTemp = NULL;
 
     dwRet = FormatMessage(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY,
-            NULL,
-            dwError,
-            LANG_NEUTRAL,
-            (LPTSTR) & lpszTemp,
-            0,
-            NULL);
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ARGUMENT_ARRAY,
+        NULL,
+        dwError,
+        LANG_NEUTRAL,
+        (LPTSTR) & lpszTemp,
+        0,
+        NULL);
 
     if ((dwRet == 0) || ((long) dwSize < (long) (dwRet + 14)))
         lpszBuf[0] = TCHAR('\0');
@@ -538,3 +538,4 @@ static LPTSTR   GetLastErrorText(LPTSTR lpszBuf, DWORD dwSize)
 
 
 #endif          // #ifndef SERVICE
+

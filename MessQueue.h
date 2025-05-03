@@ -58,18 +58,18 @@ typedef struct QMSG_HANDLE_struct
 
 
 
-QUEUE_HANDLE    QueOpen(char const * pszRootPath, int iMaxRetry, int iRetryTimeout,
+QUEUE_HANDLE    QueOpen(char const *pszRootPath, int iMaxRetry, int iRetryTimeout,
                         int iRetryIncrRatio, int iNumDirsLevel = STD_QUEUEFS_DIRS_X_LEVEL);
 int             QueClose(QUEUE_HANDLE hQueue);
 int             QueGetDirsLevel(QUEUE_HANDLE hQueue);
 char const     *QueGetRootPath(QUEUE_HANDLE hQueue);
-char           *QueLoadLastLogEntry(char const * pszLogFilePath);
+char           *QueLoadLastLogEntry(char const *pszLogFilePath);
 QMSG_HANDLE     QueCreateMessage(QUEUE_HANDLE hQueue);
-int             QueGetFilePath(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char * pszFilePath,
-                        char const * pszQueueDir = NULL);
+int             QueGetFilePath(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, char *pszFilePath,
+                               char const *pszQueueDir = NULL);
 int             QueCloseMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
-QMSG_HANDLE     QueGetHandle(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2, char const * pszQueueDir,
-                        char const * pszFileName);
+QMSG_HANDLE     QueGetHandle(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2, char const *pszQueueDir,
+                             char const *pszFileName);
 char const     *QueGetFileName(QMSG_HANDLE hMessage);
 int             QueGetLevel1(QMSG_HANDLE hMessage);
 int             QueGetLevel2(QMSG_HANDLE hMessage);
@@ -82,7 +82,7 @@ int             QueCommitMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 int             QueResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
 QMSG_HANDLE     QueExtractMessage(QUEUE_HANDLE hQueue, int iTimeout);
 int             QueCheckMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage);
-int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const * pszAddressMatch);
+int             QueFlushRsndArena(QUEUE_HANDLE hQueue, char const *pszAddressMatch);
 
 
 

@@ -40,42 +40,42 @@ struct DynString
 
 
 
-int             StrCmdLineToken(char const * &pszCmdLine, char *pszToken);
-char          **StrGetArgs(char const * pszCmdLine, int &iArgsCount);
+int             StrCmdLineToken(char const *&pszCmdLine, char *pszToken);
+char          **StrGetArgs(char const *pszCmdLine, int &iArgsCount);
 char           *StrLower(char *pszString);
 char           *StrUpper(char *pszString);
-char           *StrCrypt(char const * pszString, char *pszCrypt);
-char           *StrDeCrypt(char const * pszString, char *pszDeCrypt);
+char           *StrCrypt(char const *pszString, char *pszCrypt);
+char           *StrDeCrypt(char const *pszString, char *pszDeCrypt);
 char          **StrBuildList(char const *pszString, ...);
 char          **StrTokenize(const char *pszString, const char *pszTokenizer);
 void            StrFreeStrings(char **ppszStrings);
-int             StrStringsCount(char const * const * ppszStrings);
-bool            StrStringsMatch(char const * const * ppszStrings, char const * pszMatch);
-bool            StrStringsIMatch(char const * const * ppszStrings, char const * pszMatch);
-bool            StrStringsRIWMatch(char const * const * pszMatches, char const * pszString);
-char           *StrConcat(char const * const * ppszStrings, char const * pszCStr);
+int             StrStringsCount(char const *const *ppszStrings);
+bool            StrStringsMatch(char const *const *ppszStrings, char const *pszMatch);
+bool            StrStringsIMatch(char const *const *ppszStrings, char const *pszMatch);
+bool            StrStringsRIWMatch(char const *const *pszMatches, char const *pszString);
+char           *StrConcat(char const *const *ppszStrings, char const *pszCStr);
 char           *StrDeQuote(char *pszString, int iChar);
 char           *StrQuote(const char *pszString, int iChar);
 char          **StrGetTabLineStrings(const char *pszUsrLine);
-int             StrWriteCRLFString(FILE * pFile, const char *pszString);
-int             StrWildMatch(char const * pszString, char const * pszMatch);
-int             StrIWildMatch(char const * pszString, char const * pszMatch);
-char           *StrLoadFile(FILE * pFile);
-char           *StrVSprint(char const * pszFormat, va_list Args);
-char           *StrSprint(char const * pszFormat,...);
-int             StrSplitString(char const * pszString, char const * pszSplitters,
-                        char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);
+int             StrWriteCRLFString(FILE *pFile, const char *pszString);
+int             StrWildMatch(char const *pszString, char const *pszMatch);
+int             StrIWildMatch(char const *pszString, char const *pszMatch);
+char           *StrLoadFile(FILE *pFile);
+char           *StrVSprint(char const *pszFormat, va_list Args);
+char           *StrSprint(char const *pszFormat,...);
+int             StrSplitString(char const *pszString, char const *pszSplitters,
+                               char *pszStrLeft, int iSizeLeft, char *pszStrRight, int iSizeRight);
 char           *StrLTrim(char *pszString, char const *pszTrimChars);
 char           *StrRTrim(char *pszString, char const *pszTrimChars);
 char           *StrTrim(char *pszString, char const *pszTrimChars);
 char           *StrEOLTrim(char *pszString);
-char           *StrIStr(char const * pszBuffer, char const * pszMatch);
-int             StrDynInit(DynString * pDS);
-int             StrDynFree(DynString * pDS);
-int             StrDynTruncate(DynString * pDS);
-char const     *StrDynGet(DynString * pDS);
-int             StrDynSize(DynString * pDS);
-int             StrDynAdd(DynString * pDS, char const * pszBuffer, int iStringSize = -1);
+char           *StrIStr(char const *pszBuffer, char const *pszMatch);
+int             StrDynInit(DynString *pDS);
+int             StrDynFree(DynString *pDS);
+int             StrDynTruncate(DynString *pDS);
+char const     *StrDynGet(DynString *pDS);
+int             StrDynSize(DynString *pDS);
+int             StrDynAdd(DynString *pDS, char const *pszBuffer, int iStringSize = -1);
 
 
 

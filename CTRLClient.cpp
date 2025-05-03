@@ -76,7 +76,7 @@ char           *SvrGetLogsDir(char *pszLogsDir, int iMaxPath)
 
 
 int             CClnGetResponse(BSOCK_HANDLE hBSock, char *pszError, int iMaxError,
-                        int *piErrorCode, int iTimeout)
+                                int *piErrorCode, int iTimeout)
 {
 
     char            szRespBuffer[2048] = "";
@@ -200,7 +200,7 @@ int             CClnSendTextFile(const char *pszFileName, BSOCK_HANDLE hBSock, i
 
 
 int             CClnSubmitCommand(BSOCK_HANDLE hBSock, char const * pszCommand,
-                        char *pszError, int iMaxError, char const * pszIOFile, int iTimeout)
+                                  char *pszError, int iMaxError, char const * pszIOFile, int iTimeout)
 {
 
     if (BSckSendString(hBSock, pszCommand, iTimeout) < 0)
@@ -242,15 +242,15 @@ int             CClnSubmitCommand(BSOCK_HANDLE hBSock, char const * pszCommand,
 
 
 BSOCK_HANDLE    CClnConnectServer(char const * pszServer, int iPortNo,
-                        char const * pszUsername, char const * pszPassword,
-                        bool bUseMD5Auth, int iTimeout)
+                                  char const * pszUsername, char const * pszPassword,
+                                  bool bUseMD5Auth, int iTimeout)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Get server address
 ///////////////////////////////////////////////////////////////////////////////
-    NET_ADDRESS     NetAddr;
+    SYS_INET_ADDR   SvrAddr;
 
-    if (MscGetServerAddress(pszServer, NetAddr) < 0)
+    if (MscGetServerAddress(pszServer, SvrAddr, iPortNo) < 0)
         return (INVALID_BSOCK_HANDLE);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -260,10 +260,6 @@ BSOCK_HANDLE    CClnConnectServer(char const * pszServer, int iPortNo,
 
     if (SockFD == SYS_INVALID_SOCKET)
         return (INVALID_BSOCK_HANDLE);
-
-    SYS_INET_ADDR   SvrAddr;
-
-    SysSetupAddress(SvrAddr, AF_INET, NetAddr, htons((short) iPortNo));
 
     if (SysConnect(SockFD, &SvrAddr, sizeof(SvrAddr), iTimeout) < 0)
     {
@@ -286,7 +282,7 @@ BSOCK_HANDLE    CClnConnectServer(char const * pszServer, int iPortNo,
     char            szRTXBuffer[2048] = "";
 
     if (CClnGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer), &iErrorCode,
-                    iTimeout) < 0)
+                        iTimeout) < 0)
     {
         BSckDetach(hBSock, 1);
         return (INVALID_BSOCK_HANDLE);
@@ -306,7 +302,7 @@ BSOCK_HANDLE    CClnConnectServer(char const * pszServer, int iPortNo,
     char            szTimeStamp[256] = "";
 
     if (!bUseMD5Auth ||
-            (MscExtractServerTimeStamp(szRTXBuffer, szTimeStamp, sizeof(szTimeStamp)) == NULL))
+        (MscExtractServerTimeStamp(szRTXBuffer, szTimeStamp, sizeof(szTimeStamp)) == NULL))
         sprintf(szRTXBuffer, "\"%s\"\t\"%s\"", pszUsername, pszPassword);
     else
     {
@@ -343,7 +339,7 @@ BSOCK_HANDLE    CClnConnectServer(char const * pszServer, int iPortNo,
     }
 
     if (CClnGetResponse(hBSock, szRTXBuffer, sizeof(szRTXBuffer), &iErrorCode,
-                    iTimeout) < 0)
+                        iTimeout) < 0)
     {
         BSckDetach(hBSock, 1);
         return (INVALID_BSOCK_HANDLE);
@@ -422,14 +418,14 @@ void            CClnShowUsage(char const * pszProgName)
 int             CClnExec(int iArgCount, char *pszArgs[])
 {
 
-    int             ii,
-                    iPortNo = STD_CTRL_PORT,
-                    iTimeout = STD_CTRL_TIMEOUT;
+    int             ii;
+    int             iPortNo = STD_CTRL_PORT;
+    int             iTimeout = STD_CTRL_TIMEOUT;
     bool            bUseMD5Auth = true;
-    char            szServer[MAX_HOST_NAME] = "",
-                    szUsername[256] = "",
-                    szPassword[256] = "",
-                    szIOFile[SYS_MAX_PATH] = "";
+    char            szServer[MAX_HOST_NAME] = "";
+    char            szUsername[256] = "";
+    char            szPassword[256] = "";
+    char            szIOFile[SYS_MAX_PATH] = "";
 
     for (ii = 1; ii < iArgCount; ii++)
     {
@@ -438,51 +434,51 @@ int             CClnExec(int iArgCount, char *pszArgs[])
 
         switch (pszArgs[ii][1])
         {
-            case ('s'):
-                if (++ii < iArgCount)
-                    StrSNCpy(szServer, pszArgs[ii]);
-                break;
+        case ('s'):
+            if (++ii < iArgCount)
+                StrSNCpy(szServer, pszArgs[ii]);
+            break;
 
-            case ('n'):
-                if (++ii < iArgCount)
-                    iPortNo = atoi(pszArgs[ii]);
-                break;
+        case ('n'):
+            if (++ii < iArgCount)
+                iPortNo = atoi(pszArgs[ii]);
+            break;
 
-            case ('u'):
-                if (++ii < iArgCount)
-                    StrSNCpy(szUsername, pszArgs[ii]);
-                break;
+        case ('u'):
+            if (++ii < iArgCount)
+                StrSNCpy(szUsername, pszArgs[ii]);
+            break;
 
-            case ('p'):
-                if (++ii < iArgCount)
-                    StrSNCpy(szPassword, pszArgs[ii]);
-                break;
+        case ('p'):
+            if (++ii < iArgCount)
+                StrSNCpy(szPassword, pszArgs[ii]);
+            break;
 
-            case ('t'):
-                if (++ii < iArgCount)
-                    iTimeout = atoi(pszArgs[ii]);
-                break;
+        case ('t'):
+            if (++ii < iArgCount)
+                iTimeout = atoi(pszArgs[ii]);
+            break;
 
-            case ('f'):
-                if (++ii < iArgCount)
-                    StrSNCpy(szIOFile, pszArgs[ii]);
-                break;
+        case ('f'):
+            if (++ii < iArgCount)
+                StrSNCpy(szIOFile, pszArgs[ii]);
+            break;
 
-            case ('c'):
-                bUseMD5Auth = false;
-                break;
+        case ('c'):
+            bUseMD5Auth = false;
+            break;
 
-            default:
-                return (CCLN_ERR_BAD_USAGE);
+        default:
+            return (CCLN_ERR_BAD_USAGE);
         }
     }
 
     if ((strlen(szServer) == 0) || (strlen(szUsername) == 0) ||
-            (strlen(szPassword) == 0) || (ii == iArgCount))
+        (strlen(szPassword) == 0) || (ii == iArgCount))
         return (CCLN_ERR_BAD_USAGE);
 
-    int             iFirstParam = ii,
-                    iCmdLength = 0;
+    int             iFirstParam = ii;
+    int             iCmdLength = 0;
 
     for (; ii < iArgCount; ii++)
         iCmdLength += strlen(pszArgs[ii]) + 4;
@@ -503,7 +499,7 @@ int             CClnExec(int iArgCount, char *pszArgs[])
 
 
     BSOCK_HANDLE    hBSock = CClnConnectServer(szServer, iPortNo, szUsername, szPassword,
-            bUseMD5Auth, iTimeout);
+                                               bUseMD5Auth, iTimeout);
 
     if (hBSock == INVALID_BSOCK_HANDLE)
     {
@@ -516,7 +512,7 @@ int             CClnExec(int iArgCount, char *pszArgs[])
     char            szRTXBuffer[2048] = "";
 
     if (CClnSubmitCommand(hBSock, pszCommand, szRTXBuffer, sizeof(szRTXBuffer),
-                    (strlen(szIOFile) != 0) ? szIOFile : NULL, iTimeout) < 0)
+                          (strlen(szIOFile) != 0) ? szIOFile : NULL, iTimeout) < 0)
     {
         ErrorPush();
         CClnQuitConnection(hBSock, iTimeout);
@@ -572,3 +568,4 @@ int             main(int iArgCount, char *pszArgs[])
 }
 
 #endif          // #ifndef __CTRLCLNT_LIBRARY__
+

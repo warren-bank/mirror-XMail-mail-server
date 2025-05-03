@@ -165,15 +165,15 @@ char           *StrCrypt(char const * pszInput, char *pszCrypt)
 
 
 int             CreateUser(char const * pszRootDir, char const * pszDomain,
-                        char const * pszUsername, char const * pszPassword,
-                        unsigned int uUserId, char const * pszRealName,
-                        char const * pszHomePage, unsigned int uMBSize,
-                        bool bMaildir, FILE * pUsrFile)
+                           char const * pszUsername, char const * pszPassword,
+                           unsigned int uUserId, char const * pszRealName,
+                           char const * pszHomePage, unsigned int uMBSize,
+                           bool bMaildir, FILE * pUsrFile)
 {
 
     FILE           *pTabFile;
-    char            szPathName[SYS_MAX_PATH] = "",
-                    szCryptPwd[256] = "";
+    char            szPathName[SYS_MAX_PATH] = "";
+    char            szCryptPwd[256] = "";
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Check-create domain directory
@@ -319,19 +319,19 @@ void            ShowUsage(char const * pszProgName)
 int             main(int argc, char *argv[])
 {
 
-    int             ii,
-                    iNumUsers = 0;
+    int             ii;
+    int             iNumUsers = 0;
     bool            bMaildir = false;
-    unsigned int    uMBSize = MAX_MB_SIZE,
-                    uUserId = 1;
-    FILE           *pUsrFile,
-                   *pInFile = stdin;
-    char            szRootDir[SYS_MAX_PATH] = "." SYS_SLASH_STR,
-                    szInputFile[SYS_MAX_PATH] = "",
-                    szPathName[SYS_MAX_PATH] = "",
-                    szAutoDomain[256] = "mkuser.net",
-                    szAutoUsr[128] = "mkuser",
-                    szUsrLine[1024] = "";
+    unsigned int    uMBSize = MAX_MB_SIZE;
+    unsigned int    uUserId = 1;
+    FILE           *pUsrFile;
+    FILE           *pInFile = stdin;
+    char            szRootDir[SYS_MAX_PATH] = "." SYS_SLASH_STR;
+    char            szInputFile[SYS_MAX_PATH] = "";
+    char            szPathName[SYS_MAX_PATH] = "";
+    char            szAutoDomain[256] = "mkuser.net";
+    char            szAutoUsr[128] = "mkuser";
+    char            szUsrLine[1024] = "";
 
     for (ii = 1; ii < argc; ii++)
     {
@@ -340,52 +340,52 @@ int             main(int argc, char *argv[])
 
         switch (argv[ii][1])
         {
-            case ('a'):
-                if (++ii < argc)
-                    iNumUsers = atoi(argv[ii]);
-                break;
+        case ('a'):
+            if (++ii < argc)
+                iNumUsers = atoi(argv[ii]);
+            break;
 
-            case ('d'):
-                if (++ii < argc)
-                    StrSNCpy(szAutoDomain, argv[ii]);
-                break;
+        case ('d'):
+            if (++ii < argc)
+                StrSNCpy(szAutoDomain, argv[ii]);
+            break;
 
-            case ('f'):
-                if (++ii < argc)
-                    StrSNCpy(szInputFile, argv[ii]);
-                break;
+        case ('f'):
+            if (++ii < argc)
+                StrSNCpy(szInputFile, argv[ii]);
+            break;
 
-            case ('u'):
-                if (++ii < argc)
-                    StrSNCpy(szAutoUsr, argv[ii]);
-                break;
+        case ('u'):
+            if (++ii < argc)
+                StrSNCpy(szAutoUsr, argv[ii]);
+            break;
 
-            case ('r'):
-                if (++ii < argc)
-                    StrSNCpy(szRootDir, argv[ii]);
-                break;
+        case ('r'):
+            if (++ii < argc)
+                StrSNCpy(szRootDir, argv[ii]);
+            break;
 
-            case ('s'):
-                if (++ii < argc)
-                    uMBSize = (unsigned int) atol(argv[ii]);
-                break;
+        case ('s'):
+            if (++ii < argc)
+                uMBSize = (unsigned int) atol(argv[ii]);
+            break;
 
-            case ('i'):
-                if (++ii < argc)
-                    uUserId = (unsigned int) atol(argv[ii]);
-                break;
+        case ('i'):
+            if (++ii < argc)
+                uUserId = (unsigned int) atol(argv[ii]);
+            break;
 
-            case ('m'):
-                bMaildir = true;
-                break;
+        case ('m'):
+            bMaildir = true;
+            break;
 
-            case ('h'):
-                ShowUsage(argv[0]);
-                return (0);
+        case ('h'):
+            ShowUsage(argv[0]);
+            return (0);
 
-            default:
-                ShowUsage(argv[0]);
-                return (1);
+        default:
+            ShowUsage(argv[0]);
+            return (1);
         }
     }
 
@@ -437,24 +437,24 @@ int             main(int argc, char *argv[])
 ///////////////////////////////////////////////////////////////////////////////
         while (fgets(szUsrLine, sizeof(szUsrLine) - 1, pInFile) != NULL)
         {
-            char           *pszDomain,
-                           *pszUsername,
-                           *pszPassword,
-                           *pszRealName,
-                           *pszHomePage;
+            char           *pszDomain;
+            char           *pszUsername;
+            char           *pszPassword;
+            char           *pszRealName;
+            char           *pszHomePage;
 
             szUsrLine[strlen(szUsrLine) - 1] = '\0';
 
             if ((szUsrLine[0] == '#') ||
-                    ((pszDomain = strtok(szUsrLine, ";")) == NULL) ||
-                    ((pszUsername = strtok(NULL, ";")) == NULL) ||
-                    ((pszPassword = strtok(NULL, ";")) == NULL) ||
-                    ((pszRealName = strtok(NULL, ";")) == NULL) ||
-                    ((pszHomePage = strtok(NULL, ";")) == NULL))
+                ((pszDomain = strtok(szUsrLine, ";")) == NULL) ||
+                ((pszUsername = strtok(NULL, ";")) == NULL) ||
+                ((pszPassword = strtok(NULL, ";")) == NULL) ||
+                ((pszRealName = strtok(NULL, ";")) == NULL) ||
+                ((pszHomePage = strtok(NULL, ";")) == NULL))
                 continue;
 
             if (CreateUser(szRootDir, pszDomain, pszUsername, pszPassword, uUserId++,
-                            pszRealName, pszHomePage, uMBSize, bMaildir, pUsrFile) != 0)
+                           pszRealName, pszHomePage, uMBSize, bMaildir, pUsrFile) != 0)
             {
 
                 fprintf(stderr, "error creating <%s@%s> : %s\n",
@@ -474,15 +474,15 @@ int             main(int argc, char *argv[])
 ///////////////////////////////////////////////////////////////////////////////
         for (ii = 1; ii <= iNumUsers; ii++)
         {
-            char            szUsername[256] = "",
-                            szHomePage[256] = "";
+            char            szUsername[256] = "";
+            char            szHomePage[256] = "";
 
             sprintf(szUsername, "%s%d", szAutoUsr, ii);
 
             sprintf(szHomePage, "http://www.%s/~%s", szAutoDomain, szUsername);
 
             if (CreateUser(szRootDir, szAutoDomain, szUsername, szUsername, uUserId++,
-                            szUsername, szHomePage, uMBSize, bMaildir, pUsrFile) != 0)
+                           szUsername, szHomePage, uMBSize, bMaildir, pUsrFile) != 0)
             {
 
                 fprintf(stderr, "error creating <%s@%s> : %s\n",
@@ -498,3 +498,4 @@ int             main(int argc, char *argv[])
     return (0);
 
 }
+

@@ -26,31 +26,42 @@
 
 
 
+struct QueLogInfo
+{
+    char           *pszReason;
+    char           *pszServer;
+};
 
 
-int             QueUtGetFrozenList(QUEUE_HANDLE hQueue, char const * pszListFile);
+
+
+int             QueUtGetFrozenList(QUEUE_HANDLE hQueue, char const *pszListFile);
 int             QueUtUnFreezeMessage(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2,
-                        char const * pszMessageFile);
+                                     char const *pszMessageFile);
 int             QueUtDeleteFrozenMessage(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2,
-                        char const * pszMessageFile);
+                                         char const *pszMessageFile);
 int             QueUtGetFrozenMsgFile(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2,
-                        char const * pszMessageFile, char const * pszOutFile);
+                                      char const *pszMessageFile, char const *pszOutFile);
 int             QueUtGetFrozenLogFile(QUEUE_HANDLE hQueue, int iLevel1, int iLevel2,
-                        char const * pszMessageFile, char const * pszOutFile);
+                                      char const *pszMessageFile, char const *pszOutFile);
 int             QueUtErrLogMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        char const * pszFormat, ...);
-char           *QueUtGetLastSmptReason(char const * pszLogFilePath);
+                                   char const * pszFormat, ...);
+int             QueUtGetLastLogInfo(char const *pszLogFilePath, QueLogInfo *pQLI);
+void            QueUtFreeLastLogInfo(QueLogInfo *pQLI);
 bool            QueUtRemoveSpoolErrors(void);
 int             QueUtCleanupNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        SPLF_HANDLE hFSpool, char const * pszReason);
+                                              SPLF_HANDLE hFSpool, char const *pszReason,
+                                              char const *pszServer);
 int             QueUtNotifyErrDelivery(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        SPLF_HANDLE hFSpool, char const * pszReason, char const * pszText);
+                                       SPLF_HANDLE hFSpool, char const *pszReason,
+                                       char const *pszText, char const *pszServer);
 int             QueUtCleanupNotifyRoot(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        SPLF_HANDLE hFSpool, char const * pszReason);
+                                       SPLF_HANDLE hFSpool, char const *pszReason);
 int             QueUtResendMessage(QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage,
-                        SPLF_HANDLE hFSpool);
+                                   SPLF_HANDLE hFSpool);
 
 
 
 
 #endif
+

@@ -91,110 +91,110 @@ enum CtrlAccountsFileds
 
 
 static CTRLConfig *CTRLGetConfigCopy(SHB_HANDLE hShbCTRL);
-static int      CTRLLogEnabled(SHB_HANDLE hShbCTRL, CTRLConfig * pCTRLCfg = NULL);
+static int      CTRLLogEnabled(SHB_HANDLE hShbCTRL, CTRLConfig *pCTRLCfg = NULL);
 static int      CTRLCheckPeerIP(SYS_SOCKET SockFD);
-static int      CTRLLogSession(char const * pszUsername, char const * pszPassword,
-                        SYS_INET_ADDR const & PeerInfo, int iStatus);
+static int      CTRLLogSession(char const *pszUsername, char const *pszPassword,
+                               SYS_INET_ADDR const & PeerInfo, int iStatus);
 static int      CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL,
-                        CTRLConfig * pCTRLCfg = NULL);
+                                   CTRLConfig *pCTRLCfg = NULL);
 static unsigned int CTRLClientThread(void *pThreadData);
-static int      CTRLSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode);
-static int      CTRLSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
-                        char const * pszMessage);
-static int      CTRLVSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
-                        char const * pszFormat,...);
-static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const * pszMessage,
-                        int iTimeout);
+static int      CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode);
+static int      CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
+                                  char const *pszMessage);
+static int      CTRLVSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
+                                   char const *pszFormat,...);
+static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const *pszMessage,
+                                  int iTimeout);
 static char    *CTRLGetAccountsFilePath(char *pszAccFilePath, int iMaxPath);
-static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername,
-                        char const * pszPassword, char const * pszTimeStamp);
-static int      CTRLLogin(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * pszTimeStamp, SYS_INET_ADDR const & PeerInfo);
+static int      CTRLAccountCheck(CTRLConfig *pCTRLCfg, char const *pszUsername,
+                                 char const *pszPassword, char const *pszTimeStamp);
+static int      CTRLLogin(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                          char const *pszTimeStamp, SYS_INET_ADDR const & PeerInfo);
 static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
-                        SYS_INET_ADDR const & PeerInfo);
-static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * pszCommand);
-static int      CTRLDo_useradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_userdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_userpasswd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_usergetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_mluserdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_mluserlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_domaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_domainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_custdomget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_custdomset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_custdomlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_noop(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_quit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_poplnkadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_poplnkdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLCheckRelativePath(char const * pszPath);
-static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliasdomaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
-static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount);
+                                  SYS_INET_ADDR const & PeerInfo);
+static int      CTRLProcessCommand(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *pszCommand);
+static int      CTRLDo_useradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_userdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_userpasswd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliaslist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_uservars(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_uservarsset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_userlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_usergetmproc(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_usersetmproc(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_userauth(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_userstat(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_mluseradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_mluserdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_mluserlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_domainadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_domaindel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_domainlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_custdomget(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_custdomset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_custdomlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_noop(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_quit(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_poplnkadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_poplnkdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_poplnklist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_poplnkenable(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount);
+static int      CTRLCheckRelativePath(char const *pszPath);
+static int      CTRLDo_filelist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_cfgfileget(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_cfgfileset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_frozlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_frozsubmit(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_frozdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_frozgetlog(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_frozgetmsg(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_etrn(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomainadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                      char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomaindel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                      char const *const *ppszTokens, int iTokensCount);
+static int      CTRLDo_aliasdomainlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                       char const *const *ppszTokens, int iTokensCount);
 
 
 
@@ -228,7 +228,7 @@ static CTRLConfig *CTRLGetConfigCopy(SHB_HANDLE hShbCTRL)
 
 
 
-static int      CTRLLogEnabled(SHB_HANDLE hShbCTRL, CTRLConfig * pCTRLCfg)
+static int      CTRLLogEnabled(SHB_HANDLE hShbCTRL, CTRLConfig *pCTRLCfg)
 {
 
     int             iDoUnlock = 0;
@@ -279,8 +279,8 @@ static int      CTRLCheckPeerIP(SYS_SOCKET SockFD)
 
 
 
-static int      CTRLLogSession(char const * pszUsername, char const * pszPassword,
-                        SYS_INET_ADDR const & PeerInfo, int iStatus)
+static int      CTRLLogSession(char const *pszUsername, char const *pszPassword,
+                               SYS_INET_ADDR const & PeerInfo, int iStatus)
 {
 
     char            szTime[256] = "";
@@ -297,12 +297,12 @@ static int      CTRLLogSession(char const * pszUsername, char const * pszPasswor
     char            szIP[128] = "???.???.???.???";
 
     MscFileLog(CTRL_LOG_FILE, "\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\n", SysInetNToA(PeerInfo, szIP), pszUsername, pszPassword, szTime,
-            (iStatus == 0) ? "REQ" : ((iStatus > 0) ? "AUTH" : "FAIL"));
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\n", SysInetNToA(PeerInfo, szIP), pszUsername, pszPassword, szTime,
+               (iStatus == 0) ? "REQ" : ((iStatus > 0) ? "AUTH" : "FAIL"));
 
 
     RLckUnlockEX(hResLock);
@@ -315,7 +315,7 @@ static int      CTRLLogSession(char const * pszUsername, char const * pszPasswor
 
 
 static int      CTRLThreadCountAdd(long lCount, SHB_HANDLE hShbCTRL,
-                        CTRLConfig * pCTRLCfg)
+                                   CTRLConfig *pCTRLCfg)
 {
 
     int             iDoUnlock = 0;
@@ -360,8 +360,8 @@ unsigned int    CTRLThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_CTRL_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pCTRLCfg->iNumAddr, pCTRLCfg->SvrPath, pCTRLCfg->iPort,
-                    CTRL_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
+    if (MscCreateServerSockets(pCTRLCfg->iNumAddr, pCTRLCfg->SvrAddr, pCTRLCfg->iPort,
+                               CTRL_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
@@ -380,7 +380,7 @@ unsigned int    CTRLThreadProc(void *pThreadData)
         SYS_SOCKET      ConnSockFD[MAX_CTRL_ACCEPT_ADDRESSES];
 
         if (MscAcceptServerConnection(SockFDs, iNumSockFDs, ConnSockFD,
-                        iNumConnSockFD, CTRLSRV_ACCEPT_TIMEOUT) < 0)
+                                      iNumConnSockFD, CTRLSRV_ACCEPT_TIMEOUT) < 0)
         {
             unsigned long   ulFlags = CTRLF_STOP_SERVER;
 
@@ -504,7 +504,7 @@ static unsigned int CTRLClientThread(void *pThreadData)
     char            szIP[128] = "???.???.???.???";
 
     SysLogMessage(LOG_LEV_MESSAGE, "CTRL client connection from [%s]\n",
-            SysInetNToA(PeerInfo, szIP));
+                  SysInetNToA(PeerInfo, szIP));
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -514,7 +514,7 @@ static unsigned int CTRLClientThread(void *pThreadData)
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "CTRL client exit [%s]\n",
-            SysInetNToA(PeerInfo, szIP));
+                  SysInetNToA(PeerInfo, szIP));
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Unlink socket from the bufferer and close it
@@ -534,19 +534,19 @@ static unsigned int CTRLClientThread(void *pThreadData)
 
 
 
-static int      CTRLSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode)
+static int      CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode)
 {
 
     return (CTRLSendCmdResult(pCTRLCfg, hBSock, iErrorCode,
-                    (iErrorCode >= 0) ? "OK" : ErrGetErrorString(iErrorCode)));
+                              (iErrorCode >= 0) ? "OK" : ErrGetErrorString(iErrorCode)));
 
 }
 
 
 
 
-static int      CTRLSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
-                        char const * pszMessage)
+static int      CTRLSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
+                                  char const *pszMessage)
 {
 
     return (CTRLSendCmdResult(hBSock, iErrorCode, pszMessage, pCTRLCfg->iTimeout));
@@ -555,8 +555,8 @@ static int      CTRLSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, in
 
 
 
-static int      CTRLVSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
-                        char const * pszFormat,...)
+static int      CTRLVSendCmdResult(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock, int iErrorCode,
+                                   char const *pszFormat,...)
 {
 
     va_list         Args;
@@ -580,8 +580,8 @@ static int      CTRLVSendCmdResult(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock, i
 
 
 
-static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const * pszMessage,
-                        int iTimeout)
+static int      CTRLSendCmdResult(BSOCK_HANDLE hBSock, int iErrorCode, char const *pszMessage,
+                                  int iTimeout)
 {
 
     int             iSendResult;
@@ -611,8 +611,8 @@ static char    *CTRLGetAccountsFilePath(char *pszAccFilePath, int iMaxPath)
 
 
 
-static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername,
-                        char const * pszPassword, char const * pszTimeStamp)
+static int      CTRLAccountCheck(CTRLConfig *pCTRLCfg, char const *pszUsername,
+                                 char const *pszPassword, char const *pszTimeStamp)
 {
 
     char            szAccFilePath[SYS_MAX_PATH] = "";
@@ -622,7 +622,7 @@ static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szAccFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -651,7 +651,7 @@ static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername
         int             iFieldsCount = StrStringsCount(ppszStrings);
 
         if ((iFieldsCount >= accMax) &&
-                (stricmp(pszUsername, ppszStrings[accUsername]) == 0))
+            (stricmp(pszUsername, ppszStrings[accUsername]) == 0))
         {
 
             char            szClearPassword[256] = "";
@@ -699,14 +699,14 @@ static int      CTRLAccountCheck(CTRLConfig * pCTRLCfg, char const * pszUsername
 
 
 
-static int      CTRLLogin(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * pszTimeStamp, SYS_INET_ADDR const & PeerInfo)
+static int      CTRLLogin(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                          char const *pszTimeStamp, SYS_INET_ADDR const & PeerInfo)
 {
 
     char            szLogin[256] = "";
 
     if ((BSckGetString(hBSock, szLogin, sizeof(szLogin) - 1, pCTRLCfg->iTimeout) == NULL) ||
-            (MscCmdStringCheck(szLogin) < 0))
+        (MscCmdStringCheck(szLogin) < 0))
         return (ErrGetErrorCode());
 
 
@@ -773,7 +773,7 @@ static int      CTRLLogin(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
-                        SYS_INET_ADDR const & PeerInfo)
+                                  SYS_INET_ADDR const & PeerInfo)
 {
 
     CTRLConfig     *pCTRLCfg = CTRLGetConfigCopy(hShbCTRL);
@@ -782,7 +782,7 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
         return (ErrGetErrorCode());
 
     int             iSessionTimeout = pCTRLCfg->iSessionTimeout,
-                    iTimeout = pCTRLCfg->iTimeout;
+        iTimeout = pCTRLCfg->iTimeout;
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -806,7 +806,7 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
     MscGetTimeStr(szTime, sizeof(szTime) - 1);
 
     CTRLVSendCmdResult(pCTRLCfg, hBSock, 0, "%s %s CTRL Server; %s",
-            szTimeStamp, APP_NAME_VERSION_OS_STR, szTime);
+                       szTimeStamp, APP_NAME_VERSION_OS_STR, szTime);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  User login
@@ -826,8 +826,8 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
     char            szCommand[CTRL_MAX_LINE_SIZE] = "";
 
     while (!SvrInShutdown() &&
-            (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, iSessionTimeout) != NULL) &&
-            (MscCmdStringCheck(szCommand) == 0))
+           (BSckGetString(hBSock, szCommand, sizeof(szCommand) - 1, iSessionTimeout) != NULL) &&
+           (MscCmdStringCheck(szCommand) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Check for exit flag
@@ -859,8 +859,8 @@ static int      CTRLHandleSession(SHB_HANDLE hShbCTRL, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * pszCommand)
+static int      CTRLProcessCommand(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *pszCommand)
 {
 
     char          **ppszTokens = StrGetTabLineStrings(pszCommand);
@@ -984,8 +984,8 @@ static int      CTRLProcessCommand(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_useradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_useradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 5)
@@ -1043,8 +1043,8 @@ static int      CTRLDo_useradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_userdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_userdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1078,8 +1078,8 @@ static int      CTRLDo_userdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_userpasswd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_userpasswd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 4)
@@ -1136,8 +1136,8 @@ static int      CTRLDo_userpasswd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliasadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 4)
@@ -1150,8 +1150,8 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Check real user account existence
 ///////////////////////////////////////////////////////////////////////////////
-    char            szAccountName[MAX_ADDR_NAME] = "",
-        szAccountDomain[MAX_ADDR_NAME] = "";
+    char            szAccountName[MAX_ADDR_NAME] = "";
+    char            szAccountDomain[MAX_ADDR_NAME] = "";
 
     if (USmtpSplitEmailAddr(ppszTokens[3], szAccountName, szAccountDomain) < 0)
     {
@@ -1214,8 +1214,8 @@ static int      CTRLDo_aliasadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliasdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1241,8 +1241,8 @@ static int      CTRLDo_aliasdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliaslist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount > 4)
@@ -1252,9 +1252,9 @@ static int      CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL,
-                   *pszAlias = (iTokensCount > 2) ? ppszTokens[2] : NULL,
-                   *pszName = (iTokensCount > 3) ? ppszTokens[3] : NULL;
+    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL;
+    char const     *pszAlias = (iTokensCount > 2) ? ppszTokens[2] : NULL;
+    char const     *pszName = (iTokensCount > 3) ? ppszTokens[3] : NULL;
 
 
     ALSF_HANDLE     hAliasDB = UsrAliasOpenDB();
@@ -1276,8 +1276,8 @@ static int      CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         do
         {
             if (((pszDomain == NULL) || StrIWildMatch(pAI->pszDomain, pszDomain)) &&
-                    ((pszAlias == NULL) || StrIWildMatch(pAI->pszAlias, pszAlias)) &&
-                    ((pszName == NULL) || StrIWildMatch(pAI->pszName, pszName)))
+                ((pszAlias == NULL) || StrIWildMatch(pAI->pszAlias, pszAlias)) &&
+                ((pszName == NULL) || StrIWildMatch(pAI->pszName, pszName)))
             {
                 char            szAliasLine[1024] = "";
 
@@ -1311,8 +1311,8 @@ static int      CTRLDo_aliaslist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_uservars(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1322,8 +1322,8 @@ static int      CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    char const     *pszDomain = ppszTokens[1],
-                   *pszName = ppszTokens[2];
+    char const     *pszDomain = ppszTokens[1];
+    char const     *pszName = ppszTokens[2];
 
     if (MDomIsHandledDomain(pszDomain) < 0)
     {
@@ -1362,7 +1362,7 @@ static int      CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         if (pszVar != NULL)
         {
             if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",
-                            ppszVars[ii], pszVar) < 0)
+                                ppszVars[ii], pszVar) < 0)
             {
                 ErrorPush();
                 SysFree(pszVar);
@@ -1389,8 +1389,8 @@ static int      CTRLDo_uservars(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_uservarsset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *const *ppszTokens, int iTokensCount)
 {
 
     if ((iTokensCount < 5) || (((iTokensCount - 3) % 2) != 0))
@@ -1400,8 +1400,8 @@ static int      CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    char const     *pszDomain = ppszTokens[1],
-                   *pszName = ppszTokens[2];
+    char const     *pszDomain = ppszTokens[1];
+    char const     *pszName = ppszTokens[2];
 
     if (MDomIsHandledDomain(pszDomain) < 0)
     {
@@ -1456,8 +1456,8 @@ static int      CTRLDo_uservarsset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_userlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount > 3)
@@ -1467,8 +1467,8 @@ static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL,
-                   *pszName = (iTokensCount > 2) ? ppszTokens[2] : NULL;
+    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL;
+    char const     *pszName = (iTokensCount > 2) ? ppszTokens[2] : NULL;
 
 
     USRF_HANDLE     hUsersDB = UsrOpenDB();
@@ -1490,7 +1490,7 @@ static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         do
         {
             if (((pszDomain == NULL) || StrIWildMatch(pUI->pszDomain, pszDomain)) &&
-                    ((pszName == NULL) || StrIWildMatch(pUI->pszName, pszName)))
+                ((pszName == NULL) || StrIWildMatch(pUI->pszName, pszName)))
             {
                 char            szUserLine[1024] = "";
 
@@ -1526,8 +1526,8 @@ static int      CTRLDo_userlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_usergetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_usergetmproc(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1595,8 +1595,8 @@ static int      CTRLDo_usergetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_usersetmproc(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1683,8 +1683,8 @@ static int      CTRLDo_usersetmproc(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_userauth(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 4)
@@ -1729,8 +1729,8 @@ static int      CTRLDo_userauth(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_userstat(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -1745,7 +1745,7 @@ static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     char            szRealAddress[MAX_ADDR_NAME] = "";
     UserInfo       *pUI = UsrGetUserByNameOrAlias(ppszTokens[1], ppszTokens[2],
-                            szRealAddress);
+                                                  szRealAddress);
 
     if (pUI == NULL)
     {
@@ -1757,8 +1757,8 @@ static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Get mailbox infos
 ///////////////////////////////////////////////////////////////////////////////
-    unsigned long   ulMBSize = 0,
-                    ulNumMessages = 0;
+    unsigned long   ulMBSize = 0;
+    unsigned long   ulNumMessages = 0;
 
     if (UPopGetMailboxSize(pUI, ulMBSize, ulNumMessages) < 0)
     {
@@ -1779,13 +1779,13 @@ static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
     if ((BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"RealAddress\"\t\"%s\"",
-            szRealAddress) < 0) ||
-            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxSize\"\t\"%lu\"",
-            ulMBSize) < 0) ||
-            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
-            ulNumMessages) < 0) ||
-            (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
-            szIPAddr) < 0))
+                         szRealAddress) < 0) ||
+        (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxSize\"\t\"%lu\"",
+                         ulMBSize) < 0) ||
+        (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"MailboxMessages\"\t\"%lu\"",
+                         ulNumMessages) < 0) ||
+        (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"LastLoginIP\"\t\"%s\"",
+                         szIPAddr) < 0))
     {
         ErrorPush();
         UsrFreeUserInfo(pUI);
@@ -1802,8 +1802,8 @@ static int      CTRLDo_userstat(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_mluseradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -1879,8 +1879,8 @@ static int      CTRLDo_mluseradd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_mluserdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_mluserdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 4)
@@ -1936,8 +1936,8 @@ static int      CTRLDo_mluserdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_mluserlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_mluserlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -2022,8 +2022,8 @@ static int      CTRLDo_mluserlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_domainadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2063,8 +2063,8 @@ static int      CTRLDo_domainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_domaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_domaindel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2097,8 +2097,8 @@ static int      CTRLDo_domaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_domainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_domainlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     DOMLS_HANDLE    hDomainsDB = MDomOpenDB();
@@ -2147,8 +2147,8 @@ static int      CTRLDo_domainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_custdomget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_custdomget(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2194,8 +2194,8 @@ static int      CTRLDo_custdomget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_custdomset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_custdomset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2247,7 +2247,7 @@ static int      CTRLDo_custdomset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 //  Set custom domain file ( or delete it if size == 0 )
 ///////////////////////////////////////////////////////////////////////////////
     if (USmlSetCustomDomainFile(ppszTokens[1],
-                    (FI.ulSize != 0) ? szCustDomainFile : NULL) < 0)
+                                (FI.ulSize != 0) ? szCustDomainFile : NULL) < 0)
     {
         ErrorPush();
         SysRemove(szCustDomainFile);
@@ -2266,8 +2266,8 @@ static int      CTRLDo_custdomset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_custdomlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_custdomlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                   char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 1)
@@ -2317,8 +2317,8 @@ static int      CTRLDo_custdomlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_noop(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_noop(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 1)
@@ -2339,8 +2339,8 @@ static int      CTRLDo_noop(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_quit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_quit(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 1)
@@ -2360,8 +2360,8 @@ static int      CTRLDo_quit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_poplnkadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_poplnkadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 7)
@@ -2392,7 +2392,7 @@ static int      CTRLDo_poplnkadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
     POP3Link       *pPopLnk = GwLkAllocLink(ppszTokens[1], ppszTokens[2],
-            ppszTokens[3], ppszTokens[4], ppszTokens[5], ppszTokens[6]);
+                                            ppszTokens[3], ppszTokens[4], ppszTokens[5], ppszTokens[6]);
 
     if (pPopLnk == NULL)
     {
@@ -2422,8 +2422,8 @@ static int      CTRLDo_poplnkadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_poplnkdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_poplnkdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                 char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 5)
@@ -2454,7 +2454,7 @@ static int      CTRLDo_poplnkdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
     POP3Link       *pPopLnk = GwLkAllocLink(ppszTokens[1], ppszTokens[2],
-            ppszTokens[3], ppszTokens[4], NULL, NULL);
+                                            ppszTokens[3], ppszTokens[4], NULL, NULL);
 
     if (pPopLnk == NULL)
     {
@@ -2484,8 +2484,8 @@ static int      CTRLDo_poplnkdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_poplnklist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount > 3)
@@ -2495,8 +2495,8 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         return (ERR_BAD_CTRL_COMMAND);
     }
 
-    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL,
-                   *pszName = (iTokensCount > 2) ? ppszTokens[2] : NULL;
+    char const     *pszDomain = (iTokensCount > 1) ? ppszTokens[1] : NULL;
+    char const     *pszName = (iTokensCount > 2) ? ppszTokens[2] : NULL;
 
 
     GWLKF_HANDLE    hLinksDB = GwLkOpenDB();
@@ -2519,7 +2519,7 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
         do
         {
             if (((pszDomain == NULL) || (stricmp(pPopLnk->pszDomain, pszDomain) == 0)) &&
-                    ((pszName == NULL) || (stricmp(pPopLnk->pszName, pszName) == 0)))
+                ((pszName == NULL) || (stricmp(pPopLnk->pszName, pszName) == 0)))
             {
                 char const     *pszEnable = (GwLkCheckEnabled(pPopLnk) == 0) ? "ON" : "OFF";
                 char            szLinkLine[2048] = "";
@@ -2561,8 +2561,8 @@ static int      CTRLDo_poplnklist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_poplnkenable(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                    char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -2573,10 +2573,10 @@ static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
     }
 
     bool            bEnable = (atoi(ppszTokens[1])) ? true : false;
-    char const     *pszDomain = ppszTokens[2],
-                   *pszName = ppszTokens[3],
-                   *pszRmtDomain = (iTokensCount > 4) ? ppszTokens[4] : NULL,
-                   *pszRmtName = (iTokensCount > 5) ? ppszTokens[5] : NULL;
+    char const     *pszDomain = ppszTokens[2];
+    char const     *pszName = ppszTokens[3];
+    char const     *pszRmtDomain = (iTokensCount > 4) ? ppszTokens[4] : NULL;
+    char const     *pszRmtName = (iTokensCount > 5) ? ppszTokens[5] : NULL;
 
     if (GwLkEnable(pszDomain, pszName, pszRmtDomain, pszRmtName, bEnable) < 0)
     {
@@ -2593,7 +2593,7 @@ static int      CTRLDo_poplnkenable(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLCheckRelativePath(char const * pszPath)
+static int      CTRLCheckRelativePath(char const *pszPath)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2611,8 +2611,8 @@ static int      CTRLCheckRelativePath(char const * pszPath)
 
 
 
-static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_filelist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -2635,8 +2635,8 @@ static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup listing file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szRelativePath[SYS_MAX_PATH] = "",
-                    szFullPath[SYS_MAX_PATH] = "";
+    char            szRelativePath[SYS_MAX_PATH] = "";
+    char            szFullPath[SYS_MAX_PATH] = "";
 
     StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
@@ -2672,11 +2672,22 @@ static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
             if (!SYS_IS_VALID_FILENAME(szFileName) || !StrWildMatch(szFileName, ppszTokens[2]))
                 continue;
 
-            if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"", szFileName) < 0)
+
+            SYS_FILE_INFO   FI;
+            char            szFilePath[SYS_MAX_PATH] = "";
+
+            SysSNPrintf(szFilePath, sizeof(szFilePath) - 1, "%s%s%s",
+                        szFullPath, SYS_SLASH_STR, szFileName);
+
+            if (SysGetFileInfo(szFilePath, FI) == 0)
             {
-                ErrorPush();
-                MscCloseFindFile(hFileScan);
-                return (ErrorPop());
+                if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%lu\"",
+                                    szFileName, FI.ulSize) < 0)
+                {
+                    ErrorPush();
+                    MscCloseFindFile(hFileScan);
+                    return (ErrorPop());
+                }
             }
 
         } while (MscNextFile(hFileScan, szFileName));
@@ -2692,8 +2703,8 @@ static int      CTRLDo_filelist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_cfgfileget(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2716,8 +2727,8 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup client target file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szRelativePath[SYS_MAX_PATH] = "",
-                    szFullPath[SYS_MAX_PATH] = "";
+    char            szRelativePath[SYS_MAX_PATH] = "";
+    char            szFullPath[SYS_MAX_PATH] = "";
 
     StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
@@ -2730,7 +2741,7 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szFullPath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -2779,8 +2790,8 @@ static int      CTRLDo_cfgfileget(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_cfgfileset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -2803,8 +2814,8 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup client target file path
 ///////////////////////////////////////////////////////////////////////////////
-    char            szRelativePath[SYS_MAX_PATH] = "",
-                    szFullPath[SYS_MAX_PATH] = "";
+    char            szRelativePath[SYS_MAX_PATH] = "";
+    char            szFullPath[SYS_MAX_PATH] = "";
 
     StrSNCpy(szRelativePath, ppszTokens[1]);
     MscTranslatePath(szRelativePath);
@@ -2848,7 +2859,7 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szFullPath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -2886,8 +2897,8 @@ static int      CTRLDo_cfgfileset(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_frozlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 1)
@@ -2932,8 +2943,8 @@ static int      CTRLDo_frozlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_frozsubmit(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -2946,8 +2957,8 @@ static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to defroze frozen message
 ///////////////////////////////////////////////////////////////////////////////
-    int             iLevel1 = atoi(ppszTokens[1]),
-                    iLevel2 = atoi(ppszTokens[2]);
+    int             iLevel1 = atoi(ppszTokens[1]);
+    int             iLevel2 = atoi(ppszTokens[2]);
     char            szMessageFile[SYS_MAX_PATH] = "";
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
@@ -2969,8 +2980,8 @@ static int      CTRLDo_frozsubmit(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_frozdel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                               char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -2983,8 +2994,8 @@ static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to delete frozen message
 ///////////////////////////////////////////////////////////////////////////////
-    int             iLevel1 = atoi(ppszTokens[1]),
-                    iLevel2 = atoi(ppszTokens[2]);
+    int             iLevel1 = atoi(ppszTokens[1]);
+    int             iLevel2 = atoi(ppszTokens[2]);
     char            szMessageFile[SYS_MAX_PATH] = "";
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
@@ -3006,8 +3017,8 @@ static int      CTRLDo_frozdel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_frozgetlog(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -3020,8 +3031,8 @@ static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to delete frozen message
 ///////////////////////////////////////////////////////////////////////////////
-    int             iLevel1 = atoi(ppszTokens[1]),
-                    iLevel2 = atoi(ppszTokens[2]);
+    int             iLevel1 = atoi(ppszTokens[1]);
+    int             iLevel2 = atoi(ppszTokens[2]);
     char            szMessageFile[SYS_MAX_PATH] = "";
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
@@ -3063,8 +3074,8 @@ static int      CTRLDo_frozgetlog(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_frozgetmsg(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                  char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 4)
@@ -3077,8 +3088,8 @@ static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to delete frozen message
 ///////////////////////////////////////////////////////////////////////////////
-    int             iLevel1 = atoi(ppszTokens[1]),
-                    iLevel2 = atoi(ppszTokens[2]);
+    int             iLevel1 = atoi(ppszTokens[1]);
+    int             iLevel2 = atoi(ppszTokens[2]);
     char            szMessageFile[SYS_MAX_PATH] = "";
 
     StrSNCpy(szMessageFile, ppszTokens[3]);
@@ -3120,8 +3131,8 @@ static int      CTRLDo_frozgetmsg(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_etrn(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                            char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount < 2)
@@ -3154,8 +3165,8 @@ static int      CTRLDo_etrn(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
 
 
 
-static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliasdomainadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                      char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 3)
@@ -3168,8 +3179,8 @@ static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock
 ///////////////////////////////////////////////////////////////////////////////
 //  Filter params
 ///////////////////////////////////////////////////////////////////////////////
-    char            szDomain[MAX_HOST_NAME] = "",
-                    szADomain[MAX_HOST_NAME] = "";
+    char            szDomain[MAX_HOST_NAME] = "";
+    char            szADomain[MAX_HOST_NAME] = "";
 
     StrSNCpy(szDomain, ppszTokens[1]);
     StrLower(szDomain);
@@ -3206,8 +3217,8 @@ static int      CTRLDo_aliasdomainadd(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock
 
 
 
-static int      CTRLDo_aliasdomaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliasdomaindel(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                      char const *const *ppszTokens, int iTokensCount)
 {
 
     if (iTokensCount != 2)
@@ -3244,8 +3255,8 @@ static int      CTRLDo_aliasdomaindel(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock
 
 
 
-static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSock,
-                        char const * const * ppszTokens, int iTokensCount)
+static int      CTRLDo_aliasdomainlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
+                                       char const *const *ppszTokens, int iTokensCount)
 {
 
     ADOMAIN_HANDLE  hADomainDB = ADomOpenDB();
@@ -3261,14 +3272,14 @@ static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSoc
     CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
 
 
-    char const * const *ppszStrings = ADomGetFirstDomain(hADomainDB);
+    char const *const *ppszStrings = ADomGetFirstDomain(hADomainDB);
 
     for (; ppszStrings != NULL; ppszStrings = ADomGetNextDomain(hADomainDB))
     {
         if ((iTokensCount < 2) || StrStringsRIWMatch(&ppszTokens[1], ppszStrings[adomADomain]))
         {
             if (BSckVSendString(hBSock, pCTRLCfg->iTimeout, "\"%s\"\t\"%s\"",
-                    ppszStrings[adomADomain], ppszStrings[adomDomain]) < 0)
+                                ppszStrings[adomADomain], ppszStrings[adomDomain]) < 0)
             {
                 ErrorPush();
                 ADomCloseDB(hADomainDB);
@@ -3284,3 +3295,4 @@ static int      CTRLDo_aliasdomainlist(CTRLConfig * pCTRLCfg, BSOCK_HANDLE hBSoc
     return (0);
 
 }
+

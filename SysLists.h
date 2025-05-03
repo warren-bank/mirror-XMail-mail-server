@@ -92,6 +92,13 @@ do { \
 
 #define SYS_LIST_LINKED(ptr)                (((ptr)->pPrev != NULL) && ((ptr)->pNext != NULL))
 
+#define SYS_COPY_HEAD(dsth, srch) \
+do { \
+    (dsth)->pPrev = (srch)->pPrev; \
+    (dsth)->pNext = (srch)->pNext; \
+    if ((srch)->pNext != NULL) (srch)->pNext->pPrev = dsth; \
+    if ((srch)->pPrev != NULL) (srch)->pPrev->pNext = dsth; \
+} while (0)
 
 
 

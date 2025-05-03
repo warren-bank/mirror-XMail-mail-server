@@ -245,17 +245,19 @@
 #define ERR_BAD_RELATIVE_PATH       (-229)
 #define ERR_DNS_NXDOMAIN            (-230)
 #define ERR_BAD_RFCNAME             (-231)
+#define ERR_CONNECT                 (-232)
+#define ERR_MESSAGE_DELETED         (-233)
 
 
 
 
 int             ErrGetErrorCode(void);
-int             ErrSetErrorCode(int iError, char const * pszInfo = NULL);
+int             ErrSetErrorCode(int iError, char const *pszInfo = NULL);
 const char     *ErrGetErrorString(int iError);
 const char     *ErrGetErrorString(void);
 char           *ErrGetErrorStringInfo(int iError);
-int             ErrLogMessage(int iLogLevel, char const * pszFormat,...);
-int             ErrFileVLogMessage(char const * pszFileName, char const * pszFormat,
+int             ErrLogMessage(int iLogLevel, char const *pszFormat,...);
+int             ErrFileVLogMessage(char const *pszFileName, char const *pszFormat,
                         va_list Args);
 
 

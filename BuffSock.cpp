@@ -55,7 +55,7 @@ struct BuffSocketData
 
 
 
-static int      BSckFetchData(BuffSocketData * pBSD, int iTimeout);
+static int      BSckFetchData(BuffSocketData *pBSD, int iTimeout);
 
 
 
@@ -112,7 +112,7 @@ SYS_SOCKET      BSckDetach(BSOCK_HANDLE hBSock, int iCloseSocket)
 
 
 
-static int      BSckFetchData(BuffSocketData * pBSD, int iTimeout)
+static int      BSckFetchData(BuffSocketData *pBSD, int iTimeout)
 {
 
     int             iReadedBytes;
@@ -161,7 +161,7 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
 
     int             ii;
 
-    for (ii = 0; ii < iMaxChars; ii++)
+    for (ii = 0, iMaxChars--; ii < iMaxChars; ii++)
     {
         int             iChar = BSckGetChar(hBSock, iTimeout);
 
@@ -188,6 +188,8 @@ char           *BSckChGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxCh
 
     }
 
+    pszBuffer[ii] = '\0';
+
     if (pLineLength != NULL)
         *pLineLength = ii;
 
@@ -209,11 +211,10 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
                               int *pLineLength, int *piGotNL)
 {
 
+    int                 ii;
     BuffSocketData     *pBSD = (BuffSocketData *) hBSock;
 
-    int                 ii = 0;
-
-    for (--iMaxChars; ii < iMaxChars;)
+    for (ii = 0, iMaxChars--; ii < iMaxChars;)
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Verify to have something to read
@@ -268,6 +269,8 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
         }
     }
 
+    pszBuffer[ii] = '\0';
+
     if (pLineLength != NULL)
         *pLineLength = ii;
 
@@ -285,7 +288,7 @@ char           *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChar
 
 
 
-int             BSckSendString(BSOCK_HANDLE hBSock, char const * pszBuffer, int iTimeout)
+int             BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout)
 {
 
     BuffSocketData *pBSD = (BuffSocketData *) hBSock;
@@ -312,7 +315,7 @@ int             BSckSendString(BSOCK_HANDLE hBSock, char const * pszBuffer, int 
 
 
 
-int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * pszFormat,...)
+int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat,...)
 {
 
     va_list         Args;
@@ -343,7 +346,7 @@ int             BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const * 
 
 
 
-int             BSckSendData(BSOCK_HANDLE hBSock, char const * pszBuffer, int iSize, int iTimeout)
+int             BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout)
 {
 
     BuffSocketData *pBSD = (BuffSocketData *) hBSock;
@@ -361,8 +364,8 @@ int             BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, in
 {
 
     BuffSocketData *pBSD = (BuffSocketData *) hBSock;
-    int             iReadedBytes = 0,
-        iReadFromBuffer = Min(iSize, pBSD->iBytesInBuffer);
+    int             iReadedBytes = 0;
+    int             iReadFromBuffer = Min(iSize, pBSD->iBytesInBuffer);
 
     if (iReadFromBuffer > 0)
     {
@@ -396,3 +399,4 @@ SYS_SOCKET      BSckGetAttachedSocket(BSOCK_HANDLE hBSock)
     return (pBSD->SockFD);
 
 }
+

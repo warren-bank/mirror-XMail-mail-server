@@ -35,13 +35,13 @@
 
 
 
-char           *UAthGetRootPath(char const * pszService, char *pszAuthPath, int iMaxPath);
-int             UAthAuthenticateUser(char const * pszService, char const * pszDomain,
-                        char const * pszUsername, char const * pszPassword);
-int             UAthAddUser(char const * pszService, UserInfo * pUI);
-int             UAthModifyUser(char const * pszService, UserInfo * pUI);
-int             UAthDelUser(char const * pszService, UserInfo * pUI);
-int             UAthDropDomain(char const * pszService, char const * pszDomain);
+char           *UAthGetRootPath(char const *pszService, char *pszAuthPath, int iMaxPath);
+int             UAthAuthenticateUser(char const *pszService, char const *pszDomain,
+                                     char const *pszUsername, char const *pszPassword);
+int             UAthAddUser(char const *pszService, UserInfo *pUI);
+int             UAthModifyUser(char const *pszService, UserInfo *pUI);
+int             UAthDelUser(char const *pszService, UserInfo *pUI);
+int             UAthDropDomain(char const *pszService, char const *pszDomain);
 
 
 

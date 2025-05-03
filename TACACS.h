@@ -30,7 +30,7 @@
 
 
 int             TacsAuthenticate(char const * pszDomain, char const * pszUsername,
-                        char const * pszPassword, int iServicePort = -1);
+                                 char const * pszPassword, int iServicePort = -1);
 
 
 

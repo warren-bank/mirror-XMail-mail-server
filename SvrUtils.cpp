@@ -127,7 +127,7 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
     {
 
         if ((hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
-                sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
+                                                   sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
             return (INVALID_SVRCFG_HANDLE);
 
     }
@@ -135,7 +135,7 @@ SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock)
     {
 
         if ((hResLock = RLckLockSH(CfgGetBasedPath(szProfilePath, szResLock,
-                sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
+                                                   sizeof(szResLock)))) == INVALID_RLCK_HANDLE)
             return (INVALID_SVRCFG_HANDLE);
 
     }
@@ -199,7 +199,7 @@ void            SvrReleaseConfigHandle(SVRCFG_HANDLE hSvrConfig)
 
 
 char           *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName,
-                        const char *pszDefault)
+                                const char *pszDefault)
 {
 
     ServerConfigData *pSCD = (ServerConfigData *) hSvrConfig;
@@ -221,7 +221,7 @@ bool            SvrTestConfigFlag(char const * pszName, bool bDefault, SVRCFG_HA
     char            szValue[64] = "";
 
     SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig,
-            (bDefault) ? "1" : "0");
+                 (bDefault) ? "1" : "0");
 
     return ((atoi(szValue) != 0) ? true : false);
 
@@ -235,7 +235,7 @@ int             SvrGetConfigInt(char const * pszName, int iDefault, SVRCFG_HANDL
     char            szValue[64] = "";
 
     return (((SvrConfigVar(pszName, szValue, sizeof(szValue) - 1, hSvrConfig, NULL) < 0) ||
-            IsEmptyString(szValue)) ? iDefault: atoi(szValue));
+             IsEmptyString(szValue)) ? iDefault: atoi(szValue));
 
 }
 
@@ -259,7 +259,7 @@ int             SysFlushConfig(SVRCFG_HANDLE hSvrConfig)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szProfilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -336,7 +336,7 @@ static ServerInfoVar *SvrGetUserVar(HSLIST & hConfigList, const char *pszName)
     ServerInfoVar  *pSIV = (ServerInfoVar *) ListFirst(hConfigList);
 
     for (; pSIV != INVALID_SLIST_PTR; pSIV = (ServerInfoVar *)
-            ListNext(hConfigList, (PLISTLINK) pSIV))
+             ListNext(hConfigList, (PLISTLINK) pSIV))
         if (strcmp(pSIV->pszName, pszName) == 0)
             return (pSIV);
 
@@ -352,7 +352,7 @@ static int      SvrWriteInfoList(HSLIST & hConfigList, FILE * pProfileFile)
     ServerInfoVar  *pSIV = (ServerInfoVar *) ListFirst(hConfigList);
 
     for (; pSIV != INVALID_SLIST_PTR; pSIV = (ServerInfoVar *)
-            ListNext(hConfigList, (PLISTLINK) pSIV))
+             ListNext(hConfigList, (PLISTLINK) pSIV))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Write variabile name
@@ -390,7 +390,7 @@ static int      SvrLoadServerConfig(HSLIST & hConfigList, const char *pszFilePat
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(pszFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -449,7 +449,7 @@ int             SvrGetMessageID(SYS_UINT64 * pullMessageID)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szMsgIDFile, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -468,7 +468,7 @@ int             SvrGetMessageID(SYS_UINT64 * pullMessageID)
     char            szMessageID[128] = "";
 
     if ((MscGetString(pMsgIDFile, szMessageID, sizeof(szMessageID) - 1) == NULL) ||
-            !isdigit(szMessageID[0]))
+        !isdigit(szMessageID[0]))
     {
         fclose(pMsgIDFile);
         RLckUnlockEX(hResLock);
@@ -527,7 +527,7 @@ char           *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 
 
 int             SvrConfigVar(char const * pszVarName, char *pszVarValue, int iMaxVarValue,
-                        SVRCFG_HANDLE hSvrConfig, char const * pszDefault)
+                             SVRCFG_HANDLE hSvrConfig, char const * pszDefault)
 {
 
     int             iReleaseConfig = 0;
@@ -613,9 +613,9 @@ int             SvrCheckVirtMemSpace(unsigned long ulMinSpace)
         tLastCheck = tNow;
 
 
-        SYS_INT64       RamTotal,
-                        RamFree,
-                        VirtTotal;
+        SYS_INT64       RamTotal;
+        SYS_INT64       RamFree;
+        SYS_INT64       VirtTotal;
 
         if (SysMemoryInfo(&RamTotal, &RamFree, &VirtTotal, &FreeSpace) < 0)
             return (ErrGetErrorCode());
@@ -631,3 +631,4 @@ int             SvrCheckVirtMemSpace(unsigned long ulMinSpace)
     return (0);
 
 }
+

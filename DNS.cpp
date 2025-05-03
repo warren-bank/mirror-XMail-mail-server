@@ -93,44 +93,44 @@ struct DNSNameNode
 
 
 static SYS_UINT8   *DNS_AllocRespData(int iSize);
-static int      DNS_FreeRespData(SYS_UINT8 * pRespData);
-static int      DNS_RespDataSize(SYS_UINT8 const * pRespData);
-static DNSNameNode *DNS_AllocNameNode(char const * pszServer, char const * pszQuery);
-static void     DNS_FreeNameNode(DNSNameNode * pDNSNN);
+static int      DNS_FreeRespData(SYS_UINT8 *pRespData);
+static int      DNS_RespDataSize(SYS_UINT8 const *pRespData);
+static DNSNameNode *DNS_AllocNameNode(char const *pszServer, char const *pszQuery);
+static void     DNS_FreeNameNode(DNSNameNode *pDNSNN);
 static void     DNS_FreeNameList(HSLIST & hNameList);
-static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
-static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery);
-static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        DNSResourceRecord * pRR = NULL, int * piRRLength = NULL);
-static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName = NULL, int * piRRLength = NULL);
-static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName = NULL, SYS_UINT16 * pType = NULL,
-                        SYS_UINT16 * pClass = NULL, int * piRRLength = NULL);
-static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName);
+static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const *pszServer, char const *pszQuery);
+static int      DNS_AddNameNode(HSLIST & hNameList, char const *pszServer, char const *pszQuery);
+static int      DNS_GetResourceRecord(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                                      DNSResourceRecord *pRR = NULL, int *piRRLength = NULL);
+static int      DNS_GetName(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                            char *pszInetName = NULL, int *piRRLength = NULL);
+static int      DNS_GetQuery(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                             char *pszInetName = NULL, SYS_UINT16 *pType = NULL,
+                             SYS_UINT16 *pClass = NULL, int *piRRLength = NULL);
+static int      DNS_NameCopy(SYS_UINT8 *pDNSQName, char const *pszInetName);
 static SYS_UINT16 DNS_GetUniqueQueryId(void);
 static int      DNS_RequestSetup(DNSQuery & DNSQ, unsigned int uOpCode,
-                        unsigned int uQType, char const * pszInetName,
-                        int &iQueryLenght, bool bQueryRecursion = false);
-static SYS_UINT8 *DNS_QueryExec(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        unsigned int uOpCode, unsigned int uQType,
-                        char const * pszInetName, bool bQueryRecursion = false);
-static SYS_UINT8 *DNS_QuerySendStream(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        DNSQuery const & DNSQ, int iQueryLenght);
-static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        DNSQuery const & DNSQ, int iQueryLenght, bool & bTruncated);
-static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDomain,
-                        HSLIST & hNameList, char const * pszRespFile, SYS_UINT32 * pTTL = NULL);
-static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszRespFile,
-                        SYS_UINT32 * pTTL = NULL);
-static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszRespFile,
-                        bool & bAuth, SYS_UINT32 * pTTL = NULL);
-static int      DNS_FindDomainMX(char const * pszDNSServer, char const * pszDomain,
-                        HSLIST & hNameList, char const * pszRespFile, SYS_UINT32 * pTTL = NULL);
-static int      DNS_QueryDomainMX(char const * pszDNSServer, char const * pszDomain,
-                        char *&pszMXDomains, SYS_UINT32 * pTTL = NULL);
-static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * pszDomain,
-                        char const * pszRespFile, HSLIST & hNameList, SYS_UINT32 * pTTL = NULL);
+                                 unsigned int uQType, char const *pszInetName,
+                                 int &iQueryLenght, bool bQueryRecursion = false);
+static SYS_UINT8 *DNS_QueryExec(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                unsigned int uOpCode, unsigned int uQType,
+                                char const *pszInetName, bool bQueryRecursion = false);
+static SYS_UINT8 *DNS_QuerySendStream(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                      DNSQuery const & DNSQ, int iQueryLenght);
+static SYS_UINT8 *DNS_QuerySendDGram(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                     DNSQuery const & DNSQ, int iQueryLenght, bool & bTruncated);
+static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain,
+                                     HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL = NULL);
+static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                     SYS_UINT32 *pTTL = NULL);
+static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                     bool & bAuth, SYS_UINT32 *pTTL = NULL);
+static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain,
+                                 HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL = NULL);
+static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomain,
+                                  char *&pszMXDomains, SYS_UINT32 *pTTL = NULL);
+static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
+                                     char const *pszRespFile, HSLIST & hNameList, SYS_UINT32 *pTTL = NULL);
 static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath);
 
 
@@ -159,7 +159,7 @@ static SYS_UINT8   *DNS_AllocRespData(int iSize)
 
 
 
-static int          DNS_FreeRespData(SYS_UINT8 * pRespData)
+static int          DNS_FreeRespData(SYS_UINT8 *pRespData)
 {
 
     SYS_UINT8      *pBaseData = pRespData - DNS_RESPDATA_EXTRA;
@@ -173,7 +173,7 @@ static int          DNS_FreeRespData(SYS_UINT8 * pRespData)
 
 
 
-static int          DNS_RespDataSize(SYS_UINT8 const * pRespData)
+static int          DNS_RespDataSize(SYS_UINT8 const *pRespData)
 {
 
     SYS_UINT8 const     *pBaseData = pRespData - DNS_RESPDATA_EXTRA;
@@ -185,7 +185,7 @@ static int          DNS_RespDataSize(SYS_UINT8 const * pRespData)
 
 
 
-static DNSNameNode *DNS_AllocNameNode(char const * pszServer, char const * pszQuery)
+static DNSNameNode *DNS_AllocNameNode(char const *pszServer, char const *pszQuery)
 {
 
     DNSNameNode    *pDNSNN = (DNSNameNode *) SysAlloc(sizeof(DNSNameNode));
@@ -215,7 +215,7 @@ static DNSNameNode *DNS_AllocNameNode(char const * pszServer, char const * pszQu
 
 
 
-static void     DNS_FreeNameNode(DNSNameNode * pDNSNN)
+static void     DNS_FreeNameNode(DNSNameNode *pDNSNN)
 {
 
     SysFree(pDNSNN->pszQuery);
@@ -242,15 +242,15 @@ static void     DNS_FreeNameList(HSLIST & hNameList)
 
 
 
-static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery)
+static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const *pszServer, char const *pszQuery)
 {
 
     DNSNameNode    *pDNSNN = (DNSNameNode *) ListFirst(hNameList);
 
     for (; pDNSNN != INVALID_SLIST_PTR; pDNSNN = (DNSNameNode *)
-            ListNext(hNameList, (PLISTLINK) pDNSNN))
+             ListNext(hNameList, (PLISTLINK) pDNSNN))
         if ((stricmp(pDNSNN->pszServer, pszServer) == 0) &&
-                (stricmp(pDNSNN->pszQuery, pszQuery) == 0))
+            (stricmp(pDNSNN->pszQuery, pszQuery) == 0))
             return (pDNSNN);
 
     return (NULL);
@@ -259,7 +259,7 @@ static DNSNameNode *DNS_GetNameNode(HSLIST & hNameList, char const * pszServer, 
 
 
 
-static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char const * pszQuery)
+static int      DNS_AddNameNode(HSLIST & hNameList, char const *pszServer, char const *pszQuery)
 {
 
     DNSNameNode    *pDNSNN = DNS_AllocNameNode(pszServer, pszQuery);
@@ -275,8 +275,8 @@ static int      DNS_AddNameNode(HSLIST & hNameList, char const * pszServer, char
 
 
 
-static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        DNSResourceRecord * pRR, int * piRRLength)
+static int      DNS_GetResourceRecord(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                                      DNSResourceRecord *pRR, int *piRRLength)
 {
 
     if (pRR != NULL)
@@ -351,8 +351,8 @@ static int      DNS_GetResourceRecord(SYS_UINT8 const * pBaseData, SYS_UINT8 con
 
 
 
-static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char * pszInetName, int * piRRLength)
+static int      DNS_GetName(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                            char *pszInetName, int *piRRLength)
 {
 
     char            szNameBuffer[MAX_HOST_NAME] = "";
@@ -360,11 +360,11 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
     if (pszInetName == NULL)
         pszInetName = szNameBuffer;
 
-    int             iBaseLength = DNS_RespDataSize(pBaseData),
-                    iCurrOffset = (int) (pRespData - pBaseData),
-                    iDataLength = 0,
-                    iNameLength = 0,
-                    iBackLink = 0;
+    int             iBaseLength = DNS_RespDataSize(pBaseData);
+    int             iCurrOffset = (int) (pRespData - pBaseData);
+    int             iDataLength = 0;
+    int             iNameLength = 0;
+    int             iBackLink = 0;
 
     while (*pRespData != 0)
     {
@@ -374,7 +374,7 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
 //  Got displacement from base-data ( boundary checked )
 ///////////////////////////////////////////////////////////////////////////////
             if ((iCurrOffset = (int)
-                    ntohs(MscReadUint16(pRespData) & DNS_LABEL_LEN_MASK)) >= iBaseLength)
+                 ntohs(MscReadUint16(pRespData) & DNS_LABEL_LEN_MASK)) >= iBaseLength)
             {
                 ErrSetErrorCode(ERR_BAD_DNS_NAME_RECORD);
                 return (ERR_BAD_DNS_NAME_RECORD);
@@ -394,7 +394,7 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
         int             iLabelLength = (int) *pRespData;
 
         if (((iNameLength + iLabelLength + 2) >= MAX_HOST_NAME) ||
-                ((iCurrOffset + iLabelLength + 1) >= iBaseLength))
+            ((iCurrOffset + iLabelLength + 1) >= iBaseLength))
         {
             ErrSetErrorCode(ERR_BAD_DNS_NAME_RECORD);
             return (ERR_BAD_DNS_NAME_RECORD);
@@ -433,9 +433,9 @@ static int      DNS_GetName(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pResp
 
 
 
-static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRespData,
-                        char *pszInetName, SYS_UINT16 * pType, SYS_UINT16 * pClass,
-                        int * piRRLength)
+static int      DNS_GetQuery(SYS_UINT8 const *pBaseData, SYS_UINT8 const *pRespData,
+                             char *pszInetName, SYS_UINT16 *pType, SYS_UINT16 *pClass,
+                             int *piRRLength)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -478,7 +478,7 @@ static int      DNS_GetQuery(SYS_UINT8 const * pBaseData, SYS_UINT8 const * pRes
 
 
 
-static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
+static int      DNS_NameCopy(SYS_UINT8 *pDNSQName, char const *pszInetName)
 {
 
     char           *pszNameCopy = SysStrDup(pszInetName);
@@ -487,8 +487,8 @@ static int      DNS_NameCopy(SYS_UINT8 * pDNSQName, char const * pszInetName)
         return (ErrGetErrorCode());
 
     int             iNameLen = 0;
-    char           *pszToken = NULL,
-                   *pszSavePtr = NULL;
+    char           *pszToken = NULL;
+    char           *pszSavePtr = NULL;
 
     pszToken = SysStrTok(pszNameCopy, ".", &pszSavePtr);
 
@@ -536,8 +536,8 @@ static SYS_UINT16 DNS_GetUniqueQueryId(void)
 
 
 static int      DNS_RequestSetup(DNSQuery & DNSQ, unsigned int uOpCode,
-                        unsigned int uQType, char const * pszInetName,
-                        int &iQueryLenght, bool bQueryRecursion)
+                                 unsigned int uQType, char const *pszInetName,
+                                 int &iQueryLenght, bool bQueryRecursion)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -586,26 +586,26 @@ static int      DNS_RequestSetup(DNSQuery & DNSQ, unsigned int uOpCode,
 
 
 
-static SYS_UINT8 *DNS_QueryExec(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        unsigned int uOpCode, unsigned int uQType,
-                        char const * pszInetName, bool bQueryRecursion)
+static SYS_UINT8 *DNS_QueryExec(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                unsigned int uOpCode, unsigned int uQType,
+                                char const *pszInetName, bool bQueryRecursion)
 {
 
     int             iQueryLenght;
     DNSQuery        DNSQ;
 
     if (DNS_RequestSetup(DNSQ, uOpCode, uQType, pszInetName, iQueryLenght,
-                    bQueryRecursion) < 0)
+                         bQueryRecursion) < 0)
         return (NULL);
 
     bool            bTruncated = false;
 
     SYS_UINT8      *pRespData = DNS_QuerySendDGram(pszDNSServer, iPortNo, iTimeout,
-            DNSQ, iQueryLenght, bTruncated);
+                                                   DNSQ, iQueryLenght, bTruncated);
 
     if ((pRespData == NULL) && bTruncated)
         pRespData = DNS_QuerySendStream(pszDNSServer, iPortNo, iTimeout,
-                DNSQ, iQueryLenght);
+                                        DNSQ, iQueryLenght);
 
     return (pRespData);
 
@@ -614,8 +614,8 @@ static SYS_UINT8 *DNS_QueryExec(char const * pszDNSServer, int iPortNo, int iTim
 
 
 
-static SYS_UINT8 *DNS_QuerySendStream(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        DNSQuery const & DNSQ, int iQueryLenght)
+static SYS_UINT8 *DNS_QuerySendStream(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                      DNSQuery const & DNSQ, int iQueryLenght)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -626,7 +626,7 @@ static SYS_UINT8 *DNS_QuerySendStream(char const * pszDNSServer, int iPortNo, in
     SYS_INET_ADDR   SockAddr;
 
     if (MscCreateClientSocket(pszDNSServer, iPortNo, SOCK_STREAM, &SockFD, &SvrAddr,
-                    &SockAddr, iTimeout) < 0)
+                              &SockAddr, iTimeout) < 0)
         return (NULL);
 
 
@@ -707,8 +707,8 @@ static SYS_UINT8 *DNS_QuerySendStream(char const * pszDNSServer, int iPortNo, in
 
 
 
-static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int iTimeout,
-                        DNSQuery const & DNSQ, int iQueryLenght, bool & bTruncated)
+static SYS_UINT8 *DNS_QuerySendDGram(char const *pszDNSServer, int iPortNo, int iTimeout,
+                                     DNSQuery const & DNSQ, int iQueryLenght, bool & bTruncated)
 {
 
     bTruncated = false;
@@ -721,7 +721,7 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
     SYS_INET_ADDR   SockAddr;
 
     if (MscCreateClientSocket(pszDNSServer, iPortNo, SOCK_DGRAM, &SockFD, &SvrAddr,
-                    &SockAddr, iTimeout) < 0)
+                              &SockAddr, iTimeout) < 0)
         return (NULL);
 
 
@@ -746,7 +746,7 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
 
 
         int             iPacketLenght = SysRecvDataFrom(SockFD, (struct sockaddr *) &RecvAddr, sizeof(RecvAddr),
-                (char *) RespBuffer, sizeof(RespBuffer), iTimeout);
+                                                        (char *) RespBuffer, sizeof(RespBuffer), iTimeout);
 
 
         if ((iPacketLenght < 0) || (iPacketLenght < sizeof(DNS_HEADER)))
@@ -802,8 +802,8 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const * pszDNSServer, int iPortNo, int
 
 
 
-static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDomain,
-                        HSLIST & hNameList, char const * pszRespFile, SYS_UINT32 * pTTL)
+static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszDomain,
+                                     HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -848,8 +848,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
         int             iQLenght = 0;
-        SYS_UINT16      Type = 0,
-            Class = 0;
+        SYS_UINT16      Type = 0;
+        SYS_UINT16      Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
         if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
@@ -949,7 +949,7 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
         if (DNS_GetNameNode(hNameList, szNSName, pszDomain) == NULL)
         {
             int             iFindResult = DNS_FindDomainMX(szNSName, pszDomain,
-                                                            hNameList, pszRespFile, pTTL);
+                                                           hNameList, pszRespFile, pTTL);
 
             if ((iFindResult == 0) || (iFindResult == ERR_DNS_NXDOMAIN))
                 return (iFindResult);
@@ -980,8 +980,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszDoma
 
 
 
-static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszRespFile,
-                        SYS_UINT32 * pTTL)
+static int      DNS_DecodeResponseMX(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                     SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -1029,8 +1029,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
         int             iQLenght = 0;
-        SYS_UINT16      Type = 0,
-                        Class = 0;
+        SYS_UINT16      Type = 0;
+        SYS_UINT16      Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
         if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
@@ -1103,8 +1103,8 @@ static int      DNS_DecodeResponseMX(SYS_UINT8 * pRespData, char const * pszResp
 
 
 
-static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszRespFile,
-                        bool & bAuth, SYS_UINT32 * pTTL)
+static int      DNS_DecodeResponseNS(SYS_UINT8 *pRespData, char const *pszRespFile,
+                                     bool & bAuth, SYS_UINT32 *pTTL)
 {
 
     SYS_UINT8      *pBaseData = pRespData;
@@ -1147,8 +1147,8 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
     for (ii = 0; ii < (int) pDNSQ->DNSH.QDCount; ii++)
     {
         int             iQLenght = 0;
-        SYS_UINT16      Type = 0,
-                        Class = 0;
+        SYS_UINT16      Type = 0;
+        SYS_UINT16      Class = 0;
         char            szInetName[MAX_HOST_NAME] = "";
 
         if (DNS_GetQuery(pBaseData, pRespData, szInetName, &Type, &Class, &iQLenght) < 0)
@@ -1295,15 +1295,15 @@ static int      DNS_DecodeResponseNS(SYS_UINT8 * pRespData, char const * pszResp
 
 
 
-static int      DNS_FindDomainMX(char const * pszDNSServer, char const * pszDomain,
-                        HSLIST & hNameList, char const * pszRespFile, SYS_UINT32 * pTTL)
+static int      DNS_FindDomainMX(char const *pszDNSServer, char const *pszDomain,
+                                 HSLIST & hNameList, char const *pszRespFile, SYS_UINT32 *pTTL)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Send query and read result
 ///////////////////////////////////////////////////////////////////////////////
     SYS_UINT8      *pRespData = DNS_QueryExec(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
-            0, QTYPE_MX, pszDomain);
+                                              0, QTYPE_MX, pszDomain);
 
     if (pRespData == NULL)
         return (ErrGetErrorCode());
@@ -1317,7 +1317,7 @@ static int      DNS_FindDomainMX(char const * pszDNSServer, char const * pszDoma
 //  Decode server response ( recursive )
 ///////////////////////////////////////////////////////////////////////////////
     int             iDecodeResult = DNS_DecodeResponseMX(pRespData, pszDomain,
-            hNameList, pszRespFile, pTTL);
+                                                         hNameList, pszRespFile, pTTL);
 
 
     DNS_FreeRespData(pRespData);
@@ -1328,8 +1328,8 @@ static int      DNS_FindDomainMX(char const * pszDNSServer, char const * pszDoma
 
 
 
-static int      DNS_QueryDomainMX(char const * pszDNSServer, char const * pszDomain,
-                        char *&pszMXDomains, SYS_UINT32 * pTTL)
+static int      DNS_QueryDomainMX(char const *pszDNSServer, char const *pszDomain,
+                                  char *&pszMXDomains, SYS_UINT32 *pTTL)
 {
 
     HSLIST          hNameList;
@@ -1388,14 +1388,14 @@ static int      DNS_QueryDomainMX(char const * pszDNSServer, char const * pszDom
 
 
 
-int             DNS_QueryNameServers(char const * pszDNSServer, char const * pszDomain,
-                        char const * pszRespFile, bool & bAuth, SYS_UINT32 * pTTL)
+int             DNS_QueryNameServers(char const *pszDNSServer, char const *pszDomain,
+                                     char const *pszRespFile, bool & bAuth, SYS_UINT32 *pTTL)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Send query and read result
 ///////////////////////////////////////////////////////////////////////////////
     SYS_UINT8      *pRespData = DNS_QueryExec(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
-            0, QTYPE_NS, pszDomain);
+                                              0, QTYPE_NS, pszDomain);
 
     if (pRespData == NULL)
         return (ErrGetErrorCode());
@@ -1420,8 +1420,8 @@ int             DNS_QueryNameServers(char const * pszDNSServer, char const * psz
 
 
 
-static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * pszDomain,
-                        char const * pszRespFile, HSLIST & hNameList, SYS_UINT32 * pTTL)
+static int      DNS_GetNameServersLL(char const *pszDNSServer, char const *pszDomain,
+                                     char const *pszRespFile, HSLIST & hNameList, SYS_UINT32 *pTTL)
 {
 
     char            szRespFile[SYS_MAX_PATH] = "";
@@ -1500,8 +1500,8 @@ static int      DNS_GetNameServersLL(char const * pszDNSServer, char const * psz
 
 
 
-int             DNS_GetNameServers(char const * pszDNSServer, char const * pszDomain,
-                        char const * pszRespFile, SYS_UINT32 * pTTL)
+int             DNS_GetNameServers(char const *pszDNSServer, char const *pszDomain,
+                                   char const *pszRespFile, SYS_UINT32 *pTTL)
 {
 
     HSLIST          hNameList;
@@ -1510,7 +1510,7 @@ int             DNS_GetNameServers(char const * pszDNSServer, char const * pszDo
 
 
     int             iQueryResult = DNS_GetNameServersLL(pszDNSServer, pszDomain,
-            pszRespFile, hNameList, pTTL);
+                                                        pszRespFile, hNameList, pTTL);
 
 
     DNS_FreeNameList(hNameList);
@@ -1522,12 +1522,12 @@ int             DNS_GetNameServers(char const * pszDNSServer, char const * pszDo
 
 
 
-int             DNS_DomainNameServers(char const * pszDomain, char const * pszRespFile,
-                        SYS_UINT32 * pTTL)
+int             DNS_DomainNameServers(char const *pszDomain, char const *pszRespFile,
+                                      SYS_UINT32 *pTTL)
 {
 
-    char            szRootsFile[SYS_MAX_PATH] = "",
-        szRespFile[SYS_MAX_PATH] = "";
+    char            szRootsFile[SYS_MAX_PATH] = "";
+    char            szRespFile[SYS_MAX_PATH] = "";
 
     DNS_GetRootsFile(szRootsFile, sizeof(szRootsFile));
     StrSNCpy(szRespFile, szRootsFile);
@@ -1539,6 +1539,7 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
         return (ErrGetErrorCode());
 
     int             iSubDomains = StrStringsCount(ppszDomains);
+    int             iLastNSResult = ERR_DNS_NXDOMAIN;
     char            szPrevDomain[MAX_HOST_NAME] = "";
 
     for (--iSubDomains; iSubDomains >= 0; iSubDomains--)
@@ -1582,39 +1583,42 @@ int             DNS_DomainNameServers(char const * pszDomain, char const * pszRe
 
         fclose(pNSFile);
 
-        if (iNSGetResult < 0)
-        {
+///////////////////////////////////////////////////////////////////////////////
+//  Not getting a valid response at level N does not mean that we will not
+//  succeed at level N+1. It might happen that mid-level subdomains do not
+//  have NS records while low-level will do
+///////////////////////////////////////////////////////////////////////////////
+        if ((iLastNSResult = iNSGetResult) < 0)
             SysRemove(szRespFile2);
+        else
+        {
+            if (strcmp(szRespFile, szRootsFile) != 0)
+                SysRemove(szRespFile);
 
-            if (iNSGetResult == ERR_DNS_NXDOMAIN)
-            {
-                if (strcmp(szRespFile, szRootsFile) != 0)
-                    SysRemove(szRespFile);
-                return (iNSGetResult);
-            }
-
-            break;
+            StrSNCpy(szRespFile, szRespFile2);
         }
-
-        if (strcmp(szRespFile, szRootsFile) != 0)
-            SysRemove(szRespFile);
-
-        StrSNCpy(szRespFile, szRespFile2);
     }
 
     StrFreeStrings(ppszDomains);
 
+///////////////////////////////////////////////////////////////////////////////
+//  If we did not get any valid response walking down the hierarchy we bounce
+//  back with the latest error that we received
+///////////////////////////////////////////////////////////////////////////////
+    if (strcmp(szRespFile, szRootsFile) == 0)
+    {
+        ErrSetErrorCode(iLastNSResult);
+        return (iLastNSResult);
+    }
+
     if (MscCopyFile(pszRespFile, szRespFile) < 0)
     {
         ErrorPush();
-        if (strcmp(szRespFile, szRootsFile) != 0)
-            SysRemove(szRespFile);
-
+        SysRemove(szRespFile);
         return (ErrorPop());
     }
 
-    if (strcmp(szRespFile, szRootsFile) != 0)
-        SysRemove(szRespFile);
+    SysRemove(szRespFile);
 
     return (0);
 
@@ -1637,7 +1641,7 @@ static char    *DNS_GetRootsFile(char *pszRootsFilePath, int iMaxPath)
 
 
 
-int             DNS_GetRoots(char const * pszDNSServer, char const * pszRespFile)
+int             DNS_GetRoots(char const *pszDNSServer, char const *pszRespFile)
 {
 
     return (DNS_GetNameServers(pszDNSServer, ".", pszRespFile));
@@ -1647,7 +1651,7 @@ int             DNS_GetRoots(char const * pszDNSServer, char const * pszRespFile
 
 
 
-int             DNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains, SYS_UINT32 * pTTL)
+int             DNS_GetDomainMX(char const *pszDomain, char *&pszMXDomains, SYS_UINT32 *pTTL)
 {
 
     char            szRespFile[SYS_MAX_PATH] = "";
@@ -1700,8 +1704,8 @@ int             DNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains, SYS
 
 
 
-int             DNS_GetDomainMXDirect(char const * pszDNSServer, char const * pszDomain,
-                        int iQuerySockType, char *&pszMXDomains, SYS_UINT32 * pTTL)
+int             DNS_GetDomainMXDirect(char const *pszDNSServer, char const *pszDomain,
+                                      int iQuerySockType, char *&pszMXDomains, SYS_UINT32 *pTTL)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1718,34 +1722,34 @@ int             DNS_GetDomainMXDirect(char const * pszDNSServer, char const * ps
 
     switch (iQuerySockType)
     {
-        case (DNS_QUERY_TCP):
-            {
+    case (DNS_QUERY_TCP):
+    {
 
-                if ((pRespData = DNS_QuerySendStream(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
-                                        DNSQ, iQueryLenght)) == NULL)
-                    return (ErrGetErrorCode());
+        if ((pRespData = DNS_QuerySendStream(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
+                                             DNSQ, iQueryLenght)) == NULL)
+            return (ErrGetErrorCode());
 
-            }
-            break;
+    }
+    break;
 
-        case (DNS_QUERY_UDP):
-        default:
-            {
+    case (DNS_QUERY_UDP):
+    default:
+    {
 ///////////////////////////////////////////////////////////////////////////////
 //  Try needed UDP query first, if it's truncated switch to TCP query
 ///////////////////////////////////////////////////////////////////////////////
-                bool            bTruncated = false;
+        bool            bTruncated = false;
 
-                if (((pRespData = DNS_QuerySendDGram(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
-                                                DNSQ, iQueryLenght, bTruncated)) == NULL) && bTruncated)
-                    pRespData = DNS_QuerySendStream(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
-                            DNSQ, iQueryLenght);
+        if (((pRespData = DNS_QuerySendDGram(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
+                                             DNSQ, iQueryLenght, bTruncated)) == NULL) && bTruncated)
+            pRespData = DNS_QuerySendStream(pszDNSServer, DNS_PORTNO, DNS_SOCKET_TIMEOUT,
+                                            DNSQ, iQueryLenght);
 
-                if (pRespData == NULL)
-                    return (ErrGetErrorCode());
+        if (pRespData == NULL)
+            return (ErrGetErrorCode());
 
-            }
-            break;
+    }
+    break;
     }
 
 
@@ -1799,3 +1803,4 @@ int             DNS_GetDomainMXDirect(char const * pszDNSServer, char const * ps
     return (0);
 
 }
+

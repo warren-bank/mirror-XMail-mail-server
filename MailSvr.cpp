@@ -124,13 +124,13 @@ static char   **SvrMergeArgs(int iArgs, char *pszArgs[], int &iArgsCount);
 ///////////////////////////////////////////////////////////////////////////////
 //  External visible variabiles
 ///////////////////////////////////////////////////////////////////////////////
-SHB_HANDLE      hShbFING,
-    hShbCTRL,
-    hShbPOP3,
-    hShbSMTP,
-    hShbSMAIL,
-    hShbPSYNC,
-    hShbLMAIL;
+SHB_HANDLE      hShbFING;
+SHB_HANDLE      hShbCTRL;
+SHB_HANDLE      hShbPOP3;
+SHB_HANDLE      hShbSMTP;
+SHB_HANDLE      hShbSMAIL;
+SHB_HANDLE      hShbPSYNC;
+SHB_HANDLE      hShbLMAIL;
 char            szMailPath[SYS_MAX_PATH];
 QUEUE_HANDLE    hSpoolQueue;
 SYS_SEMAPHORE   hSyncSem;
@@ -151,13 +151,13 @@ static char     szShutdownFile[SYS_MAX_PATH];
 static bool     bServerShutdown = false;
 static int      iNumSMAILThreads;
 static int      iNumLMAILThreads;
-static SYS_THREAD hCTRLThread,
-    hFINGThread,
-    hPOP3Thread,
-    hSMTPThread,
-    hSMAILThreads[MAX_SMAIL_THREADS],
-    hLMAILThreads[MAX_LMAIL_THREADS],
-    hPSYNCThread;
+static SYS_THREAD hCTRLThread;
+static SYS_THREAD hFINGThread;
+static SYS_THREAD hPOP3Thread;
+static SYS_THREAD hSMTPThread;
+static SYS_THREAD hSMAILThreads[MAX_SMAIL_THREADS];
+static SYS_THREAD hLMAILThreads[MAX_LMAIL_THREADS];
+static SYS_THREAD hPSYNCThread;
 
 
 
@@ -215,12 +215,12 @@ static int      SvrSetShutdown(void)
 static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
 {
 
-    int             iPort = STD_CTRL_PORT,
-        iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT,
-        iNumAddr = 0;
+    int             iPort = STD_CTRL_PORT;
+    int             iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT;
+    int             iNumAddr = 0;
     long            lMaxThreads = MAX_CTRL_THREADS;
     unsigned long   ulFlags = 0;
-    ServerNetPath   SvrPath[MAX_CTRL_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_CTRL_ACCEPT_ADDRESSES];
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -245,7 +245,7 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
 
         case ('I'):
             if ((++ii < iArgCount) &&
-                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                (MscGetServerAddress(pszArgs[ii], SvrAddr[iNumAddr]) == 0))
                 ++iNumAddr;
             break;
 
@@ -277,7 +277,7 @@ static int      SvrSetupCTRL(int iArgCount, char *pszArgs[])
     pCTRLCfg->iNumAddr = iNumAddr;
 
     for (int nn = 0; nn < iNumAddr; nn++)
-        pCTRLCfg->SvrPath[nn] = SvrPath[nn];
+        pCTRLCfg->SvrAddr[nn] = SvrAddr[nn];
 
 
     ShbUnlock(hShbCTRL);
@@ -329,10 +329,10 @@ static void     SvrCleanupCTRL(void)
 static int      SvrSetupFING(int iArgCount, char *pszArgs[])
 {
 
-    int             iPort = STD_FINGER_PORT,
-        iNumAddr = 0;
+    int             iPort = STD_FINGER_PORT;
+    int             iNumAddr = 0;
     unsigned long   ulFlags = 0;
-    ServerNetPath   SvrPath[MAX_FING_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_FING_ACCEPT_ADDRESSES];
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -352,7 +352,7 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
 
         case ('I'):
             if ((++ii < iArgCount) &&
-                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                (MscGetServerAddress(pszArgs[ii], SvrAddr[iNumAddr]) == 0))
                 ++iNumAddr;
             break;
         }
@@ -376,7 +376,7 @@ static int      SvrSetupFING(int iArgCount, char *pszArgs[])
     pFINGCfg->iNumAddr = iNumAddr;
 
     for (int nn = 0; nn < iNumAddr; nn++)
-        pFINGCfg->SvrPath[nn] = SvrPath[nn];
+        pFINGCfg->SvrAddr[nn] = SvrAddr[nn];
 
 
     ShbUnlock(hShbFING);
@@ -427,14 +427,13 @@ static void     SvrCleanupFING(void)
 static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
 {
 
-    int             iPort = STD_POP3_PORT,
-        iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
-        iBadLoginWait = STD_POP3_BADLOGIN_WAIT,
-        iNumAddr = 0;
+    int             iPort = STD_POP3_PORT;
+    int             iSessionTimeout = STD_SERVER_SESSION_TIMEOUT;
+    int             iBadLoginWait = STD_POP3_BADLOGIN_WAIT;
+    int             iNumAddr = 0;
     long            lMaxThreads = MAX_POP3_THREADS;
     unsigned long   ulFlags = 0;
-    ServerNetPath   SvrPath[MAX_POP3_ACCEPT_ADDRESSES];
-
+    SYS_INET_ADDR   SvrAddr[MAX_POP3_ACCEPT_ADDRESSES];
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -468,7 +467,7 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
 
         case ('I'):
             if ((++ii < iArgCount) &&
-                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                (MscGetServerAddress(pszArgs[ii], SvrAddr[iNumAddr]) == 0))
                 ++iNumAddr;
             break;
 
@@ -500,7 +499,7 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
     pPOP3Cfg->iNumAddr = iNumAddr;
 
     for (int nn = 0; nn < iNumAddr; nn++)
-        pPOP3Cfg->SvrPath[nn] = SvrPath[nn];
+        pPOP3Cfg->SvrAddr[nn] = SvrAddr[nn];
 
 
     ShbUnlock(hShbPOP3);
@@ -555,14 +554,14 @@ static void     SvrCleanupPOP3(void)
 static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
 {
 
-    int             iPort = STD_SMTP_PORT,
-        iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
-        iMaxRcpts = STD_SMTP_MAX_RCPTS,
-        iNumAddr = 0;
+    int             iPort = STD_SMTP_PORT;
+    int             iSessionTimeout = STD_SERVER_SESSION_TIMEOUT;
+    int             iMaxRcpts = STD_SMTP_MAX_RCPTS;
+    int             iNumAddr = 0;
     unsigned int    uPopAuthExpireTime = STD_POP3AUTH_EXPIRE_TIME;
     long            lMaxThreads = MAX_SMTP_THREADS;
     unsigned long   ulFlags = 0;
-    ServerNetPath   SvrPath[MAX_SMTP_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -587,7 +586,7 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
 
         case ('I'):
             if ((++ii < iArgCount) &&
-                (MscSetupServerNetPath(SvrPath[iNumAddr], pszArgs[ii], -1) == 0))
+                (MscGetServerAddress(pszArgs[ii], SvrAddr[iNumAddr]) == 0))
                 ++iNumAddr;
             break;
 
@@ -631,7 +630,7 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
     pSMTPCfg->iNumAddr = iNumAddr;
 
     for (int nn = 0; nn < iNumAddr; nn++)
-        pSMTPCfg->SvrPath[nn] = SvrPath[nn];
+        pSMTPCfg->SvrAddr[nn] = SvrAddr[nn];
 
 
     ShbUnlock(hShbSMTP);
@@ -680,10 +679,10 @@ static void     SvrCleanupSMTP(void)
 static int      SvrSetupSMAIL(int iArgCount, char *pszArgs[])
 {
 
-    int             ii,
-        iRetryTimeout = STD_SMAIL_RETRY_TIMEOUT,
-        iRetryIncrRatio = STD_SMAIL_RETRY_INCR_RATIO,
-        iMaxRetry = STD_SMAIL_MAX_RETRY;
+    int             ii;
+    int             iRetryTimeout = STD_SMAIL_RETRY_TIMEOUT;
+    int             iRetryIncrRatio = STD_SMAIL_RETRY_INCR_RATIO;
+    int             iMaxRetry = STD_SMAIL_MAX_RETRY;
     unsigned long   ulFlags = 0;
 
     iNumSMAILThreads = STD_SMAIL_THREADS;
@@ -816,8 +815,8 @@ static void     SvrCleanupSMAIL(void)
 static int      SvrSetupPSYNC(int iArgCount, char *pszArgs[])
 {
 
-    int             iSyncInterval = STD_PSYNC_INTERVAL,
-        iNumSyncThreads = STD_PSYNC_NUM_THREADS;
+    int             iSyncInterval = STD_PSYNC_INTERVAL;
+    int             iNumSyncThreads = STD_PSYNC_NUM_THREADS;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -924,8 +923,8 @@ static void     SvrCleanupPSYNC(void)
 static int      SvrSetupLMAIL(int iArgCount, char *pszArgs[])
 {
 
-    int             ii,
-        iSleepTimeout = STD_LMAILTHREAD_SLEEP_TIME;
+    int             ii;
+    int             iSleepTimeout = STD_LMAILTHREAD_SLEEP_TIME;
     unsigned long   ulFlags = 0;
 
     iNumLMAILThreads = STD_LMAIL_THREADS;
@@ -1040,8 +1039,9 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
     bServerDebug = false;
 
 
-    int             iSndBufSize = -1,
-        iRcvBufSize = -1;
+    int             iSndBufSize = -1;
+    int             iRcvBufSize = -1;
+    int             iDnsCacheDirs = DNS_HASH_NUM_DIRS;
 
     for (int ii = 0; ii < iArgCount; ii++)
     {
@@ -1101,6 +1101,10 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
             iMailboxType = XMAIL_MAILBOX;
             break;
 
+        case ('D'):
+            if (++ii < iArgCount)
+                iDnsCacheDirs = atoi(pszArgs[ii]);
+            break;
         }
     }
 
@@ -1163,7 +1167,7 @@ static int      SvrSetup(int iArgCount, char *pszArgs[])
 ///////////////////////////////////////////////////////////////////////////////
 //  Initialize DNS cache
 ///////////////////////////////////////////////////////////////////////////////
-    if (CDNS_Initialize() < 0)
+    if (CDNS_Initialize(iDnsCacheDirs) < 0)
     {
         ErrorPush();
         RLckCleanupLockers();
@@ -1470,3 +1474,4 @@ bool            SvrInShutdown(bool bForceCheck)
     return (bShutdown);
 
 }
+

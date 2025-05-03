@@ -46,7 +46,7 @@ struct SMTPConfig
     int             iMaxRcpts;
     unsigned int    uPopAuthExpireTime;
     int             iNumAddr;
-    ServerNetPath   SvrPath[MAX_SMTP_ACCEPT_ADDRESSES];
+    SYS_INET_ADDR   SvrAddr[MAX_SMTP_ACCEPT_ADDRESSES];
 
 };
 

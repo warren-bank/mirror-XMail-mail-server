@@ -36,7 +36,7 @@
 
 int             CDNS_Initialize(int iCacheDirCount = DNS_HASH_NUM_DIRS);
 int             CDNS_GetDomainMX(char const * pszDomain, char *&pszMXDomains,
-                        char const * pszSmartDNS = NULL);
+                                 char const * pszSmartDNS = NULL);
 
 
 

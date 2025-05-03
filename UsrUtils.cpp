@@ -118,36 +118,36 @@ struct AliasDBScanData
 
 
 
-static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                                 SYS_UINT32 * puHashVal, bool bCaseSens);
-static int      UsrRebuildUsersIndexes(char const * pszUsrFilePath);
-static int      UsrRebuildAliasesIndexes(char const * pszAlsFilePath);
+static int      UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+                                 SYS_UINT32 *puHashVal, bool bCaseSens);
+static int      UsrRebuildUsersIndexes(char const *pszUsrFilePath);
+static int      UsrRebuildAliasesIndexes(char const *pszAlsFilePath);
 static char    *UsrGetTableFilePath(char *pszUsrFilePath, int iMaxPath);
 static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath);
 static UserInfo *UsrGetUserFromStrings(char **ppszStrings);
 static UserInfoVar *UsrAllocVar(const char *pszName, const char *pszValue);
-static void     UsrFreeVar(UserInfoVar * pUIV);
+static void     UsrFreeVar(UserInfoVar *pUIV);
 static void     UsrFreeInfoList(HSLIST & InfoList);
 static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName);
-static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile);
+static int      UsrWriteInfoList(HSLIST & InfoList, FILE *pProfileFile);
 static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID, const char *pszFilePath);
-static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile, int iMaxPath);
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain = NULL);
+static int      UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath);
+static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain = NULL);
 static int      UsrAliasLookupNameLK(const char *pszAlsFilePath, const char *pszDomain,
                                      const char *pszAlias, char *pszName = NULL, bool bWildMatch = true);
-static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI);
-static bool     UsrIsWildAlias(char const * pszAlias);
-static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName);
+static int      UsrWriteAlias(FILE *pAlsFile, AliasInfo *pAI);
+static bool     UsrIsWildAlias(char const *pszAlias);
+static int      UsrRemoveUserAlias(char const *pszDomain, char const *pszName);
 static UserInfo *UsrGetUserByNameLK(const char *pszUsrFilePath, const char *pszDomain,
                                     const char *pszName);
 static UserInfo *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char *pszName,
                                             char *pszRealAddr);
-static int      UsrDropUserEnv(UserInfo * pUI);
-static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile);
+static int      UsrDropUserEnv(UserInfo *pUI);
+static int      UsrWriteUser(UserInfo *pUI, FILE *pUsrFile);
 static char const *UsrGetMailboxDir(void);
-static int      UsrCreateMailbox(char const * pszUsrUserPath);
-static int      UsrPrepareUserEnv(UserInfo * pUI);
-static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath);
+static int      UsrCreateMailbox(char const *pszUsrUserPath);
+static int      UsrPrepareUserEnv(UserInfo *pUI);
+static char    *UsrGetPop3LocksPath(UserInfo *pUI, char *pszPop3LockPath, int iMaxPath);
 
 
 
@@ -182,8 +182,8 @@ static int      iIdxAlias_Domain_Alias[] =
 
 
 
-static int      UsrCalcAliasHash(char const * const * ppszTabTokens, int const * piFieldsIdx,
-                                 SYS_UINT32 * puHashVal, bool bCaseSens)
+static int      UsrCalcAliasHash(char const *const *ppszTabTokens, int const *piFieldsIdx,
+                                 SYS_UINT32 *puHashVal, bool bCaseSens)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  This will group wild alias ( * ? )
@@ -247,7 +247,7 @@ int             UsrCheckAliasesIndexes(void)
 
 
 
-static int      UsrRebuildUsersIndexes(char const * pszUsrFilePath)
+static int      UsrRebuildUsersIndexes(char const *pszUsrFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild Domain-Name index
@@ -263,7 +263,7 @@ static int      UsrRebuildUsersIndexes(char const * pszUsrFilePath)
 
 
 
-static int      UsrRebuildAliasesIndexes(char const * pszAlsFilePath)
+static int      UsrRebuildAliasesIndexes(char const *pszAlsFilePath)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Rebuild Domain-Alias index
@@ -305,7 +305,7 @@ static char    *UsrGetAliasFilePath(char *pszAlsFilePath, int iMaxPath)
 
 
 
-char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int iMaxPath)
+char           *UsrGetMLTableFilePath(UserInfo *pUI, char *pszMLTablePath, int iMaxPath)
 {
 
     UsrGetUserPath(pUI, pszMLTablePath, iMaxPath, 1);
@@ -318,7 +318,7 @@ char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int 
 
 
 
-UserType        UsrGetUserType(UserInfo * pUI)
+UserType        UsrGetUserType(UserInfo *pUI)
 {
 
     if (pUI->pszType == NULL)
@@ -339,8 +339,8 @@ UserType        UsrGetUserType(UserInfo * pUI)
 
 
 
-UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszName,
-                                     char const * pszPassword, UserType TypeUser)
+UserInfo       *UsrCreateDefaultUser(char const *pszDomain, char const *pszName,
+                                     char const *pszPassword, UserType TypeUser)
 {
 
     UserInfo       *pUI = (UserInfo *) SysAlloc(sizeof(UserInfo));
@@ -413,7 +413,7 @@ static UserInfo *UsrGetUserFromStrings(char **ppszStrings)
 
 
 
-void            UsrFreeUserInfo(UserInfo * pUI)
+void            UsrFreeUserInfo(UserInfo *pUI)
 {
 
     UsrFreeInfoList(pUI->InfoList);
@@ -439,7 +439,7 @@ void            UsrFreeUserInfo(UserInfo * pUI)
 
 
 
-char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
+char           *UsrGetUserInfoVar(UserInfo *pUI, const char *pszName,
                                   const char *pszDefault)
 {
 
@@ -454,7 +454,7 @@ char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
 
 
 
-int             UsrGetUserInfoVarInt(UserInfo * pUI, const char *pszName, int iDefault)
+int             UsrGetUserInfoVarInt(UserInfo *pUI, const char *pszName, int iDefault)
 {
 
     UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
@@ -465,7 +465,7 @@ int             UsrGetUserInfoVarInt(UserInfo * pUI, const char *pszName, int iD
 
 
 
-int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName)
+int             UsrDelUserInfoVar(UserInfo *pUI, const char *pszName)
 {
 
     UserInfoVar    *pUIV = UsrGetUserVar(pUI->InfoList, pszName);
@@ -486,7 +486,7 @@ int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName)
 
 
 
-int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
+int             UsrSetUserInfoVar(UserInfo *pUI, const char *pszName,
                                   const char *pszValue)
 {
 
@@ -514,7 +514,7 @@ int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
 
 
 
-char          **UsrGetProfileVars(UserInfo * pUI)
+char          **UsrGetProfileVars(UserInfo *pUI)
 {
 
     int             iVarsCount = ListGetCount(pUI->InfoList);
@@ -557,7 +557,7 @@ static UserInfoVar *UsrAllocVar(const char *pszName, const char *pszValue)
 
 
 
-static void     UsrFreeVar(UserInfoVar * pUIV)
+static void     UsrFreeVar(UserInfoVar *pUIV)
 {
 
     SysFree(pUIV->pszName);
@@ -597,7 +597,7 @@ static UserInfoVar *UsrGetUserVar(HSLIST & InfoList, const char *pszName)
 
 
 
-static int      UsrWriteInfoList(HSLIST & InfoList, FILE * pProfileFile)
+static int      UsrWriteInfoList(HSLIST & InfoList, FILE *pProfileFile)
 {
 
     UserInfoVar    *pUIV = (UserInfoVar *) ListFirst(InfoList);
@@ -692,7 +692,7 @@ static int      UsrLoadUserInfo(HSLIST & InfoList, unsigned int uUserID,
 
 
 
-static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile, int iMaxPath)
+static int      UsrGetDefaultInfoFile(char const *pszDomain, char *pszInfoFile, int iMaxPath)
 {
 
     if (pszDomain != NULL)
@@ -730,7 +730,7 @@ static int      UsrGetDefaultInfoFile(char const * pszDomain, char * pszInfoFile
 
 
 
-static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const * pszDomain)
+static int      UsrLoadUserDefaultInfo(HSLIST & InfoList, char const *pszDomain)
 {
 
     char            szUserDefFilePath[SYS_MAX_PATH] = "";
@@ -895,7 +895,7 @@ int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
 
 
 
-static int      UsrWriteAlias(FILE * pAlsFile, AliasInfo * pAI)
+static int      UsrWriteAlias(FILE *pAlsFile, AliasInfo *pAI)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -959,7 +959,7 @@ AliasInfo      *UsrAllocAlias(const char *pszDomain, const char *pszAlias,
 
 
 
-void            UsrFreeAlias(AliasInfo * pAI)
+void            UsrFreeAlias(AliasInfo *pAI)
 {
 
     SysFreeCheck(pAI->pszDomain);
@@ -972,7 +972,7 @@ void            UsrFreeAlias(AliasInfo * pAI)
 
 
 
-static bool     UsrIsWildAlias(char const * pszAlias)
+static bool     UsrIsWildAlias(char const *pszAlias)
 {
 
     return ((strchr(pszAlias, '*') != NULL) || (strchr(pszAlias, '?') != NULL));
@@ -981,7 +981,7 @@ static bool     UsrIsWildAlias(char const * pszAlias)
 
 
 
-int             UsrAddAlias(AliasInfo * pAI)
+int             UsrAddAlias(AliasInfo *pAI)
 {
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
@@ -1306,7 +1306,7 @@ int             UsrRemoveDomainAliases(const char *pszDomain)
 
 
 
-static int      UsrRemoveUserAlias(char const * pszDomain, char const * pszName)
+static int      UsrRemoveUserAlias(char const *pszDomain, char const *pszName)
 {
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
@@ -1508,11 +1508,11 @@ static UserInfo    *UsrGetUserByNameOrAliasNDA(const char *pszDomain, const char
                                                char *pszRealAddr)
 {
 
-    char const     *pszAliasedUser = NULL,
-        *pszAliasedDomain = NULL;
-    char            szAliasedAccount[MAX_ADDR_NAME] = "",
-        szAliasedName[MAX_ADDR_NAME] = "",
-        szAliasedDomain[MAX_ADDR_NAME] = "";
+    char const     *pszAliasedUser = NULL;
+    char const     *pszAliasedDomain = NULL;
+    char            szAliasedAccount[MAX_ADDR_NAME] = "";
+    char            szAliasedName[MAX_ADDR_NAME] = "";
+    char            szAliasedDomain[MAX_ADDR_NAME] = "";
 
     if (UsrAliasLookupName(pszDomain, pszName, szAliasedAccount))
     {
@@ -1727,7 +1727,7 @@ int             UsrRemoveUser(const char *pszDomain, const char *pszName,
 
 
 
-int             UsrModifyUser(UserInfo * pUI)
+int             UsrModifyUser(UserInfo *pUI)
 {
 
     char            szUsrFilePath[SYS_MAX_PATH] = "";
@@ -2004,7 +2004,7 @@ int             UsrRemoveDomainUsers(const char *pszDomain)
 
 
 
-static int      UsrDropUserEnv(UserInfo * pUI)
+static int      UsrDropUserEnv(UserInfo *pUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  User directory cleaning
@@ -2029,7 +2029,7 @@ static int      UsrDropUserEnv(UserInfo * pUI)
 
 
 
-static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile)
+static int      UsrWriteUser(UserInfo *pUI, FILE *pUsrFile)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2108,7 +2108,7 @@ static int      UsrWriteUser(UserInfo * pUI, FILE * pUsrFile)
 
 
 
-int             UsrAddUser(UserInfo * pUI)
+int             UsrAddUser(UserInfo *pUI)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Search for overlapping alias ( wildcard alias not checked here )
@@ -2235,7 +2235,7 @@ static char const *UsrGetMailboxDir(void)
 
 
 
-static int      UsrCreateMailbox(char const * pszUsrUserPath)
+static int      UsrCreateMailbox(char const *pszUsrUserPath)
 {
 
     if (iMailboxType == XMAIL_MAILBOX)
@@ -2262,7 +2262,7 @@ static int      UsrCreateMailbox(char const * pszUsrUserPath)
 
 
 
-static int      UsrPrepareUserEnv(UserInfo * pUI)
+static int      UsrPrepareUserEnv(UserInfo *pUI)
 {
 
     char            szUsrUserPath[SYS_MAX_PATH] = "";
@@ -2342,7 +2342,7 @@ static int      UsrPrepareUserEnv(UserInfo * pUI)
 
 
 
-int             UsrFlushUserVars(UserInfo * pUI)
+int             UsrFlushUserVars(UserInfo *pUI)
 {
 
     char            szUsrUserPath[SYS_MAX_PATH] = "";
@@ -2531,7 +2531,7 @@ UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB)
 
 
 
-static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int iMaxPath)
+static char    *UsrGetPop3LocksPath(UserInfo *pUI, char *pszPop3LockPath, int iMaxPath)
 {
 
     CfgGetRootPath(pszPop3LockPath, iMaxPath);
@@ -2551,7 +2551,7 @@ static char    *UsrGetPop3LocksPath(UserInfo * pUI, char *pszPop3LockPath, int i
 
 
 
-int             UsrPOP3Lock(UserInfo * pUI)
+int             UsrPOP3Lock(UserInfo *pUI)
 {
 
     char            szLockPath[SYS_MAX_PATH] = "";
@@ -2567,7 +2567,7 @@ int             UsrPOP3Lock(UserInfo * pUI)
 
 
 
-void            UsrPOP3Unlock(UserInfo * pUI)
+void            UsrPOP3Unlock(UserInfo *pUI)
 {
 
     char            szLockPath[SYS_MAX_PATH] = "";
@@ -2595,7 +2595,7 @@ int             UsrClearPop3LocksDir(void)
 
 
 
-char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, int iFinalSlash)
+char           *UsrGetUserPath(UserInfo *pUI, char *pszUserPath, int iMaxPath, int iFinalSlash)
 {
 
     MDomGetDomainPath(pUI->pszDomain, pszUserPath, iMaxPath, 1);
@@ -2611,7 +2611,7 @@ char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, 
 
 
 
-char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash)
+char           *UsrGetMailboxPath(UserInfo *pUI, char *pszMBPath, int iMaxPath, int iFinalSlash)
 {
 
     UsrGetUserPath(pUI, pszMBPath, iMaxPath, 1);
@@ -2626,8 +2626,8 @@ char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath,
 
 
 
-int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
-                                 char const * pszMessageID)
+int             UsrMoveToMailBox(UserInfo *pUI, char const *pszFileName,
+                                 char const *pszMessageID)
 {
 
     if (iMailboxType == XMAIL_MAILBOX)
@@ -2635,8 +2635,8 @@ int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
 ///////////////////////////////////////////////////////////////////////////////
 //  Setup full mailbox file path
 ///////////////////////////////////////////////////////////////////////////////
-        char            szMBPath[SYS_MAX_PATH] = "",
-            szMBFile[SYS_MAX_PATH] = "";
+        char            szMBPath[SYS_MAX_PATH] = "";
+        char            szMBFile[SYS_MAX_PATH] = "";
 
         UsrGetMailboxPath(pUI, szMBPath, sizeof(szMBPath), 0);
 
@@ -2693,7 +2693,7 @@ int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
 
 
 
-int             UsrGetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
+int             UsrGetMailProcessFile(UserInfo *pUI, char const *pszMPPath)
 {
 
     char            szMPFilePath[SYS_MAX_PATH] = "";
@@ -2733,7 +2733,7 @@ int             UsrGetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
 
 
 
-int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
+int             UsrSetMailProcessFile(UserInfo *pUI, char const *pszMPPath)
 {
 
     char            szMPFilePath[SYS_MAX_PATH] = "";
@@ -2773,7 +2773,7 @@ int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath)
 
 
 
-char           *UsrGetAddress(UserInfo * pUI, char *pszAddress)
+char           *UsrGetAddress(UserInfo *pUI, char *pszAddress)
 {
 
     sprintf(pszAddress, "%s@%s", pUI->pszName, pUI->pszDomain);
@@ -2784,7 +2784,7 @@ char           *UsrGetAddress(UserInfo * pUI, char *pszAddress)
 
 
 
-int             UsrGetAliasDBFileSnapShot(char const * pszFileName)
+int             UsrGetAliasDBFileSnapShot(char const *pszFileName)
 {
 
     char            szAlsFilePath[SYS_MAX_PATH] = "";
@@ -2920,3 +2920,4 @@ AliasInfo      *UsrAliasGetNext(ALSF_HANDLE hAliasDB)
     return (pAI);
 
 }
+

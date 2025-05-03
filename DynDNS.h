@@ -30,8 +30,8 @@
 
 int             DynDnsSetup(SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int             DynDnsRegisterDomainHTTP(char const * pszServer, int iPortNo,
-                        char const * pszHTTPRegString, char const * pszUsername = NULL,
-                        char const * pszPassword = NULL);
+                                         char const * pszHTTPRegString, char const * pszUsername = NULL,
+                                         char const * pszPassword = NULL);
 
 
 

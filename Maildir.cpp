@@ -118,8 +118,8 @@ int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
 ///////////////////////////////////////////////////////////////////////////////
 //  Lookup Maildir/tmp/ subpath
 ///////////////////////////////////////////////////////////////////////////////
-    char const     *pszTmpDir = MAILDIR_DIRECTORY SYS_SLASH_STR "tmp" SYS_SLASH_STR,
-                   *pszLookup = strstr(pszTmpEntryPath, pszTmpDir);
+    char const     *pszTmpDir = MAILDIR_DIRECTORY SYS_SLASH_STR "tmp" SYS_SLASH_STR;
+    char const     *pszLookup = strstr(pszTmpEntryPath, pszTmpDir);
 
     if (pszLookup == NULL)
     {
@@ -131,8 +131,8 @@ int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
 //  Build Maildir/new file path
 ///////////////////////////////////////////////////////////////////////////////
     int             iBaseLength = (int) (pszLookup - pszTmpEntryPath);
-    char const     *pszNewDir = MAILDIR_DIRECTORY SYS_SLASH_STR "new" SYS_SLASH_STR,
-                   *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
+    char const     *pszNewDir = MAILDIR_DIRECTORY SYS_SLASH_STR "new" SYS_SLASH_STR;
+    char const     *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
     char            szNewEntryPath[SYS_MAX_PATH] = "";
 
     StrSNCpy(szNewEntryPath, pszTmpEntryPath);
@@ -154,7 +154,7 @@ int             MdirMoveTmpEntryInNew(char const * pszTmpEntryPath)
 
 
 int             MdirMoveMessage(char const * pszMaildirPath, const char *pszFileName,
-                        char const * pszMessageID)
+                                char const * pszMessageID)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Allocate a Maildir/tmp entry
@@ -194,3 +194,4 @@ int             MdirMoveMessage(char const * pszMaildirPath, const char *pszFile
     return (0);
 
 }
+

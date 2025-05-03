@@ -1,6 +1,6 @@
 Summary: Advanced, fast and reliable ESMTP/POP3 mail server
 Name: xmail
-Version: 1.12
+Version: 1.14
 Release: 1
 Copyright: GPL
 Group: System Environment/Daemons
@@ -133,6 +133,25 @@ fi
 
 
 %changelog
+
+* Wed Apr 02 2003 Davide Libenzi <davidel@xmailserver.org>
+    Added a "Server:" field to the notification message. It'll report the remote SMTP server
+    host name and IP that issued the error. It will not be present if the error does not
+    originate from a remote SMTP server.
+    Added a new command line parameter -MD to set the number of subdirectories allocated
+    for the DNS cache files storage.
+    Messages with non RFC822 conforming headers are now handled by the PSYNC code.
+    ATTENTION: The filter architecture has been completely changed. To correctly
+    update to this version you have to create two empty files "filters.in.tab" and "filters.out.tab"
+    inside the $MAIL_ROOT directory. Please refer to the documentation for more informations
+    about the new filter architecture. If you are not currently using filters, the simple
+    creation of the two files listed above will be sufficent.
+    ATTENTION: The internal spool file format is changed with the new line added
+    ( the 1st one ) that contain various message informations. Filters that rely on the
+    internal spool file format must be changed to match the new structure.
+    Fixed a bug that made XMail to not correctly report zero sized files inside the mailbox.
+    Added file size to CTRL's "filelist" command.
+    Fixed a connect-error reporting bug on Windows platform.
 
 * Sat Jan 25 2003 Davide Libenzi <davidel@xmailserver.org>
     Better check for user/domain names.

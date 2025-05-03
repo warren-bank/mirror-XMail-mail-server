@@ -53,9 +53,9 @@
 #define StrSNCat(t, s)          StrNCat(t, s, sizeof(t))
 #define StrAppend(s)            ((char *) (s) + strlen(s))
 #define CheckRemoveFile(fp)     ((SysExistFile(fp)) ? SysRemove(fp) : 0)
-#define ErrorPush()             int iPushedError = ErrGetErrorCode();
-#define ErrorPop()              iPushedError
-#define ErrorFetch()            iPushedError
+#define ErrorPush()             int __iPushedError = ErrGetErrorCode()
+#define ErrorPop()              (ErrSetErrorCode(__iPushedError), __iPushedError)
+#define ErrorFetch()            __iPushedError
 #define SysFreeCheck(p)         do { if ((p) != NULL) SysFree(p), (p) = NULL; } while(0)
 #define IsDotFilename(f)        ((f)[0] == '.')
 #define IsEmailAddress(a)       (strchr((a), '@') != NULL)

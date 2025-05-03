@@ -566,3 +566,4 @@ MLUserInfo     *UsrMLGetNextUser(USRML_HANDLE hUsersDB)
     return (NULL);
 
 }
+

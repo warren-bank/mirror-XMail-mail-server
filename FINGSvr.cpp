@@ -69,13 +69,13 @@ static FINGConfig *FINGGetConfigCopy(SHB_HANDLE hShbFING);
 static int      FINGLogEnabled(SHB_HANDLE hShbFING, FINGConfig * pFINGCfg = NULL);
 static unsigned int FINGClientThread(void *pThreadData);
 static int      FINGLogSession(char const * pszSockHost, char const * pszSockDomain,
-                        SYS_INET_ADDR & PeerInfo, char const * pszQuery);
+                               SYS_INET_ADDR & PeerInfo, char const * pszQuery);
 static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock);
 static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
-                        FINGConfig * pFINGCfg, char const * pszSockDomain,
-                        SVRCFG_HANDLE hSvrConfig);
+                                 FINGConfig * pFINGCfg, char const * pszSockDomain,
+                                 SVRCFG_HANDLE hSvrConfig);
 static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
-                        BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg);
+                             BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg);
 static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg);
 
 
@@ -255,8 +255,8 @@ unsigned int    FINGThreadProc(void *pThreadData)
     int             iNumSockFDs = 0;
     SYS_SOCKET      SockFDs[MAX_FING_ACCEPT_ADDRESSES];
 
-    if (MscCreateServerSockets(pFINGCfg->iNumAddr, pFINGCfg->SvrPath, pFINGCfg->iPort,
-                    FING_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
+    if (MscCreateServerSockets(pFINGCfg->iNumAddr, pFINGCfg->SvrAddr, pFINGCfg->iPort,
+                               FING_LISTEN_SIZE, SockFDs, iNumSockFDs) < 0)
     {
         ErrorPush();
         SysLogMessage(LOG_LEV_ERROR, "%s\n", ErrGetErrorString());
@@ -275,7 +275,7 @@ unsigned int    FINGThreadProc(void *pThreadData)
         SYS_SOCKET      ConnSockFD[MAX_FING_ACCEPT_ADDRESSES];
 
         if (MscAcceptServerConnection(SockFDs, iNumSockFDs, ConnSockFD,
-                        iNumConnSockFD, FINGSRV_ACCEPT_TIMEOUT) < 0)
+                                      iNumConnSockFD, FINGSRV_ACCEPT_TIMEOUT) < 0)
         {
             unsigned long   ulFlags = FINGF_STOP_SERVER;
 
@@ -337,7 +337,7 @@ unsigned int    FINGThreadProc(void *pThreadData)
 
 
 static int      FINGLogSession(char const * pszSockHost, char const * pszSockDomain,
-                        SYS_INET_ADDR & PeerInfo, char const * pszQuery)
+                               SYS_INET_ADDR & PeerInfo, char const * pszQuery)
 {
 
     char            szTime[256] = "";
@@ -354,12 +354,12 @@ static int      FINGLogSession(char const * pszSockHost, char const * pszSockDom
     char            szIP[128] = "???.???.???.???";
 
     MscFileLog(FING_LOG_FILE, "\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\t\"%s\""
-            "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo, szIP),
-            szTime, pszQuery);
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\t\"%s\""
+               "\n", pszSockHost, pszSockDomain, SysInetNToA(PeerInfo, szIP),
+               szTime, pszQuery);
 
 
     RLckUnlockEX(hResLock);
@@ -407,21 +407,21 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
         return (ErrorPop());
     }
 
-    char            szSockHost[MAX_HOST_NAME] = "",
-                    szSockDomain[MAX_HOST_NAME] = "";
+    char            szSockHost[MAX_HOST_NAME] = "";
+    char            szSockDomain[MAX_HOST_NAME] = "";
 
     MscSplitFQDN(szSvrFQDN, szSockHost, szSockDomain);
 
     char            szIP[128] = "???.???.???.???";
 
     SysLogMessage(LOG_LEV_MESSAGE, "FINGER client connection from [%s]\n",
-            SysInetNToA(PeerInfo, szIP));
+                  SysInetNToA(PeerInfo, szIP));
 
 
     char            szQuery[1024] = "";
 
     if ((BSckGetString(hBSock, szQuery, sizeof(szQuery) - 1, pFINGCfg->iTimeout) != NULL) &&
-            (MscCmdStringCheck(szQuery) == 0))
+        (MscCmdStringCheck(szQuery) == 0))
     {
 ///////////////////////////////////////////////////////////////////////////////
 //  Log FINGER question
@@ -430,7 +430,7 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
             FINGLogSession(szSockHost, szSockDomain, PeerInfo, szQuery);
 
         SysLogMessage(LOG_LEV_MESSAGE, "FINGER query [%s] : \"%s\"\n",
-                SysInetNToA(PeerInfo, szIP), szQuery);
+                      SysInetNToA(PeerInfo, szIP), szQuery);
 
 
         SVRCFG_HANDLE   hSvrConfig = SvrGetConfigHandle();
@@ -447,7 +447,7 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 
     SysLogMessage(LOG_LEV_MESSAGE, "FINGER client exit [%s]\n",
-            SysInetNToA(PeerInfo, szIP));
+                  SysInetNToA(PeerInfo, szIP));
 
     return (0);
 
@@ -456,8 +456,8 @@ static int      FINGHandleSession(SHB_HANDLE hShbFING, BSOCK_HANDLE hBSock)
 
 
 static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
-                        FINGConfig * pFINGCfg, char const * pszSockDomain,
-                        SVRCFG_HANDLE hSvrConfig)
+                                 FINGConfig * pFINGCfg, char const * pszSockDomain,
+                                 SVRCFG_HANDLE hSvrConfig)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -495,8 +495,8 @@ static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
 ///////////////////////////////////////////////////////////////////////////////
 //  Split user-domain
 ///////////////////////////////////////////////////////////////////////////////
-    char            szUser[MAX_ADDR_NAME] = "",
-                    szDomain[MAX_ADDR_NAME] = "";
+    char            szUser[MAX_ADDR_NAME] = "";
+    char            szDomain[MAX_ADDR_NAME] = "";
 
     if (strchr(pszQuery, '@') != NULL)
     {
@@ -565,7 +565,7 @@ static int      FINGProcessQuery(char const * pszQuery, BSOCK_HANDLE hBSock,
 
 
 static int      FINGDumpUser(char const * pszUser, char const * pszDomain,
-                        BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
+                             BSOCK_HANDLE hBSock, FINGConfig * pFINGCfg)
 {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -640,7 +640,7 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
     for (; pMLUI != NULL; pMLUI = UsrMLGetNextUser(hUsersDB))
     {
         char            szUser[MAX_ADDR_NAME] = "",
-                        szDomain[MAX_ADDR_NAME] = "";
+            szDomain[MAX_ADDR_NAME] = "";
 
         if (USmtpSplitEmailAddr(pMLUI->pszAddress, szUser, szDomain) < 0)
         {
@@ -664,3 +664,4 @@ static int      FINGDumpMailingList(UserInfo * pUI, BSOCK_HANDLE hBSock, FINGCon
     return (0);
 
 }
+

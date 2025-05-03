@@ -74,52 +74,52 @@ typedef struct ALSF_HANDLE_struct
 
 int             UsrCheckUsersIndexes(void);
 int             UsrCheckAliasesIndexes(void);
-char           *UsrGetMLTableFilePath(UserInfo * pUI, char *pszMLTablePath, int iMaxPath);
-UserType        UsrGetUserType(UserInfo * pUI);
-UserInfo       *UsrCreateDefaultUser(char const * pszDomain, char const * pszName,
-                        char const * pszPassword, UserType TypeUser);
-void            UsrFreeUserInfo(UserInfo * pUI);
-char           *UsrGetUserInfoVar(UserInfo * pUI, const char *pszName,
-                        const char *pszDefault = NULL);
-int             UsrGetUserInfoVarInt(UserInfo * pUI, const char *pszName, int iDefault);
-int             UsrDelUserInfoVar(UserInfo * pUI, const char *pszName);
-int             UsrSetUserInfoVar(UserInfo * pUI, const char *pszName,
-                        const char *pszValue);
-char          **UsrGetProfileVars(UserInfo * pUI);
+char           *UsrGetMLTableFilePath(UserInfo *pUI, char *pszMLTablePath, int iMaxPath);
+UserType        UsrGetUserType(UserInfo *pUI);
+UserInfo       *UsrCreateDefaultUser(char const *pszDomain, char const *pszName,
+                                     char const *pszPassword, UserType TypeUser);
+void            UsrFreeUserInfo(UserInfo *pUI);
+char           *UsrGetUserInfoVar(UserInfo *pUI, const char *pszName,
+                                  const char *pszDefault = NULL);
+int             UsrGetUserInfoVarInt(UserInfo *pUI, const char *pszName, int iDefault);
+int             UsrDelUserInfoVar(UserInfo *pUI, const char *pszName);
+int             UsrSetUserInfoVar(UserInfo *pUI, const char *pszName,
+                                  const char *pszValue);
+char          **UsrGetProfileVars(UserInfo *pUI);
 int             UsrAliasLookupName(const char *pszDomain, const char *pszAlias,
-                        char *pszName = NULL, bool bWildMatch = true);
+                                   char *pszName = NULL, bool bWildMatch = true);
 AliasInfo      *UsrAllocAlias(const char *pszDomain, const char *pszAlias,
-                        const char *pszName);
-void            UsrFreeAlias(AliasInfo * pAI);
-int             UsrAddAlias(AliasInfo * pAI);
+                              const char *pszName);
+void            UsrFreeAlias(AliasInfo *pAI);
+int             UsrAddAlias(AliasInfo *pAI);
 int             UsrRemoveAlias(const char *pszDomain, const char *pszAlias);
 int             UsrRemoveDomainAliases(const char *pszDomain);
 UserInfo       *UsrLookupUser(const char *pszDomain, const char *pszName);
 UserInfo       *UsrGetUserByName(const char *pszDomain, const char *pszName);
 UserInfo       *UsrGetUserByNameOrAlias(const char *pszDomain, const char *pszName,
-                        char *pszRealAddr = NULL);
+                                        char *pszRealAddr = NULL);
 int             UsrRemoveUser(const char *pszDomain, const char *pszName,
-                        unsigned int uUserID);
-int             UsrModifyUser(UserInfo * pUI);
+                              unsigned int uUserID);
+int             UsrModifyUser(UserInfo *pUI);
 int             UsrRemoveDomainUsers(const char *pszDomain);
-int             UsrAddUser(UserInfo * pUI);
-int             UsrFlushUserVars(UserInfo * pUI);
+int             UsrAddUser(UserInfo *pUI);
+int             UsrFlushUserVars(UserInfo *pUI);
 int             UsrGetDBFileSnapShot(const char *pszFileName);
 USRF_HANDLE     UsrOpenDB(void);
 void            UsrCloseDB(USRF_HANDLE hUsersDB);
 UserInfo       *UsrGetFirstUser(USRF_HANDLE hUsersDB);
 UserInfo       *UsrGetNextUser(USRF_HANDLE hUsersDB);
-int             UsrPOP3Lock(UserInfo * pUI);
-void            UsrPOP3Unlock(UserInfo * pUI);
+int             UsrPOP3Lock(UserInfo *pUI);
+void            UsrPOP3Unlock(UserInfo *pUI);
 int             UsrClearPop3LocksDir(void);
-char           *UsrGetUserPath(UserInfo * pUI, char *pszUserPath, int iMaxPath, int iFinalSlash);
-char           *UsrGetMailboxPath(UserInfo * pUI, char *pszMBPath, int iMaxPath, int iFinalSlash);
-int             UsrMoveToMailBox(UserInfo * pUI, char const * pszFileName,
-                        char const * pszMessageID);
-int             UsrGetMailProcessFile(UserInfo * pUI, char const * pszMPPath);
-int             UsrSetMailProcessFile(UserInfo * pUI, char const * pszMPPath);
-char           *UsrGetAddress(UserInfo * pUI, char *pszAddress);
-int             UsrGetAliasDBFileSnapShot(char const * pszFileName);
+char           *UsrGetUserPath(UserInfo *pUI, char *pszUserPath, int iMaxPath, int iFinalSlash);
+char           *UsrGetMailboxPath(UserInfo *pUI, char *pszMBPath, int iMaxPath, int iFinalSlash);
+int             UsrMoveToMailBox(UserInfo *pUI, char const *pszFileName,
+                                 char const *pszMessageID);
+int             UsrGetMailProcessFile(UserInfo *pUI, char const *pszMPPath);
+int             UsrSetMailProcessFile(UserInfo *pUI, char const *pszMPPath);
+char           *UsrGetAddress(UserInfo *pUI, char *pszAddress);
+int             UsrGetAliasDBFileSnapShot(char const *pszFileName);
 ALSF_HANDLE     UsrAliasOpenDB(void);
 void            UsrAliasCloseDB(ALSF_HANDLE hAliasDB);
 AliasInfo      *UsrAliasGetFirst(ALSF_HANDLE hAliasDB);

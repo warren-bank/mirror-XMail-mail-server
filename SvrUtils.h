@@ -47,17 +47,17 @@ typedef struct SVRCFG_HANDLE_struct
 SVRCFG_HANDLE   SvrGetConfigHandle(int iWriteLock = 0);
 void            SvrReleaseConfigHandle(SVRCFG_HANDLE hSvrConfig);
 char           *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName,
-                        const char *pszDefault = NULL);
+                                const char *pszDefault = NULL);
 bool            SvrTestConfigFlag(char const * pszName, bool bDefault,
-                        SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
+                                  SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int             SvrGetConfigInt(char const * pszName, int iDefault,
-                        SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
+                                SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int             SysFlushConfig(SVRCFG_HANDLE hSvrConfig);
 int             SvrGetMessageID(SYS_UINT64 * pullMessageID);
 char           *SvrGetLogsDir(char *pszLogsPath, int iMaxPath);
 char           *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath);
 int             SvrConfigVar(char const * pszVarName, char *pszVarValue, int iMaxVarValue,
-                        SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, char const * pszDefault = NULL);
+                             SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, char const * pszDefault = NULL);
 int             SvrCheckDiskSpace(unsigned long ulMinSpace);
 int             SvrCheckVirtMemSpace(unsigned long ulMinSpace);
 

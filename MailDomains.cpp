@@ -153,7 +153,7 @@ static int      MDomRebuildDomainsIndexes(char const * pszDomainsFilePath)
 
 
 char           *MDomGetDomainPath(char const * pszDomain, char *pszDomainPath, int iMaxPath,
-                        int iFinalSlash)
+                                  int iFinalSlash)
 {
 ///////////////////////////////////////////////////////////////////////////////
 //  Make the domain lower-case
@@ -204,7 +204,7 @@ int             MDomLookupDomain(char const * pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szDomainsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -214,8 +214,8 @@ int             MDomLookupDomain(char const * pszDomain)
 //  Lookup record using the specified index
 ///////////////////////////////////////////////////////////////////////////////
     char          **ppszTabTokens = TbixLookup(szDomainsFilePath, iIdxDomains_Domain, false,
-            pszDomain,
-            NULL);
+                                               pszDomain,
+                                               NULL);
 
     if (ppszTabTokens == NULL)
     {
@@ -248,7 +248,7 @@ int             MDomAddDomain(char const * pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szDomainsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -353,7 +353,7 @@ int             MDomRemoveDomain(char const * pszDomain)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockEX(CfgGetBasedPath(szDomainsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
     {
@@ -516,7 +516,7 @@ int             MDomGetDomainsFileSnapShot(const char *pszFileName)
 
     char            szResLock[SYS_MAX_PATH] = "";
     RLCK_HANDLE     hResLock = RLckLockSH(CfgGetBasedPath(szDomainsFilePath, szResLock,
-                            sizeof(szResLock)));
+                                                          sizeof(szResLock)));
 
     if (hResLock == INVALID_RLCK_HANDLE)
         return (ErrGetErrorCode());
@@ -596,7 +596,7 @@ char const     *MDomGetFirstDomain(DOMLS_HANDLE hDomainsDB)
     char            szDomainsLine[MAIL_DOMAINS_LINE_MAX] = "";
 
     while ((pszDomain == NULL) &&
-            (MscFGets(szDomainsLine, sizeof(szDomainsLine) - 1, pDSD->pDBFile) != NULL))
+           (MscFGets(szDomainsLine, sizeof(szDomainsLine) - 1, pDSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szDomainsLine);
 
@@ -631,7 +631,7 @@ char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB)
     char            szDomainsLine[MAIL_DOMAINS_LINE_MAX] = "";
 
     while ((pszDomain == NULL) &&
-            (MscFGets(szDomainsLine, sizeof(szDomainsLine) - 1, pDSD->pDBFile) != NULL))
+           (MscFGets(szDomainsLine, sizeof(szDomainsLine) - 1, pDSD->pDBFile) != NULL))
     {
         char          **ppszStrings = StrGetTabLineStrings(szDomainsLine);
 
@@ -657,7 +657,7 @@ char const     *MDomGetNextDomain(DOMLS_HANDLE hDomainsDB)
 
 
 int             MDomGetClientDomain(char const * pszFQDN, char * pszClientDomain,
-                        int iMaxDomain)
+                                    int iMaxDomain)
 {
 
     for (; pszFQDN != NULL;)
@@ -694,3 +694,4 @@ int             MDomIsHandledDomain(char const * pszDomain)
     return (MDomLookupDomain(pszDomain));
 
 }
+

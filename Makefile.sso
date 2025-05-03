@@ -22,8 +22,8 @@ SYSTYPE = solaris
 O = o
 A = a
 CPP = cpp
-CC = c++
-LD = gcc
+CC = g++
+LD = g++
 
 CFLAGS = -O2 -I. -D__UNIX__ -D__SOLARIS__ -DXMAIL_SPARC -D_THREAD_SAFE=1 -D_REENTRANT=1
 
@@ -40,13 +40,15 @@ SVRSRCS = BuffSock.${CPP} CTRLSvr.${CPP} DynDNS.${CPP} DNS.${CPP} DNSCache.${CPP
 	MailConfig.${CPP} MailSvr.${CPP} Maildir.${CPP} MailDomains.${CPP} MD5.${CPP} MiscUtils.${CPP} LMAILSvr.${CPP} \
 	AliasDomain.${CPP} POP3GwLink.${CPP} POP3Svr.${CPP} POP3Utils.${CPP} PSYNCSvr.${CPP} ResLocks.${CPP} SList.${CPP} SMAILSvr.${CPP} \
 	TabIndex.${CPP} SMAILUtils.${CPP} SMTPSvr.${CPP} SMTPUtils.${CPP} ShBlocks.${CPP} StrUtils.${CPP} MessQueue.${CPP} \
-	QueueUtils.${CPP} SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP}
+	QueueUtils.${CPP} SvrUtils.${CPP} SysDep.${CPP} UsrMailList.${CPP} UsrAuth.${CPP} UsrUtils.${CPP} Main.${CPP} Base64Enc.${CPP} \
+	Filter.${CPP}
 
 SVROBJS = BuffSock.${O} CTRLSvr.${O} DynDNS.${O} DNS.${O} DNSCache.${O} Errors.${O} ExtAliases.${O} FINGSvr.${O} \
 	MailConfig.${O} MailSvr.${O} Maildir.${O} MailDomains.${O} MD5.${O} MiscUtils.${O} LMAILSvr.${O} \
 	AliasDomain.${O} POP3GwLink.${O} POP3Svr.${O} POP3Utils.${O} PSYNCSvr.${O} ResLocks.${O} SList.${O} SMAILSvr.${O} \
 	TabIndex.${O} SMAILUtils.${O} SMTPSvr.${O} SMTPUtils.${O} ShBlocks.${O} StrUtils.${O} MessQueue.${O} \
-	QueueUtils.${O} SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O}
+	QueueUtils.${O} SvrUtils.${O} SysDep.${O} UsrMailList.${O} UsrAuth.${O} UsrUtils.${O} Main.${O} Base64Enc.${O} \
+	Filter.${O}
 
 CCLNSRCS = Base64Enc.${CPP} BuffSock.${CPP} SysDep.${CPP} StrUtils.${CPP} MD5.${CPP} MiscUtils.${CPP} CTRLClient.${CPP} Errors.${CPP}
 
