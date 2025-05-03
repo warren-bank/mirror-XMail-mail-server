@@ -62,38 +62,37 @@
 #define SMTP_EXTAUTH_TIMEOUT    60
 #define SMTP_EXTAUTH_PRIORITY   SYS_PRIORITY_NORMAL
 #define SMTP_EXTAUTH_SUCCESS    0
-#define RFC_SPECIALS            "()<>@,/\\;:\"[]*?"
 
 #define SMTPCH_SUPPORT_SIZE     (1 << 0)
 #define SMTPCH_SUPPORT_TLS      (1 << 1)
 
 enum SmtpGwFileds {
 	gwDomain = 0,
-		gwGateway,
+	gwGateway,
 
-		gwMax
+	gwMax
 };
 
 enum SmtpFwdFileds {
 	fwdDomain = 0,
-		fwdGateway,
-		fwdOptions,
+	fwdGateway,
+	fwdOptions,
 
-		fwdMax
+	fwdMax
 };
 
 enum SmtpRelayFileds {
 	rlyFromIP = 0,
-		rlyFromMask,
+	rlyFromMask,
 
-		rlyMax
+	rlyMax
 };
 
 enum SpammerFileds {
 	spmFromIP = 0,
-		spmFromMask,
+	spmFromMask,
 
-		spmMax
+	spmMax
 };
 
 struct SmtpMXRecords {
@@ -693,14 +692,19 @@ int USmtpSplitEmailAddr(const char *pszAddr, char *pszUser, char *pszDomain)
 
 int USmtpCheckAddressPart(char const *pszName)
 {
-	for (; *pszName; pszName++)
-		if (*pszName <= ' ' || *pszName == 127 ||
-		    strchr(RFC_SPECIALS, *pszName) != NULL) {
-			ErrSetErrorCode(ERR_BAD_RFCNAME);
-			return ERR_BAD_RFCNAME;
-		}
+	char const *pszTop = pszName + strlen(pszName);
+
+	if (USmlDotAtom(pszName, pszTop) != pszTop) {
+		ErrSetErrorCode(ERR_BAD_RFCNAME);
+		return ERR_BAD_RFCNAME;
+	}
 
 	return 0;
+}
+
+int USmtpCheckDomainPart(char const *pszName)
+{
+	return USmlValidHost(pszName, pszName + strlen(pszName));
 }
 
 int USmtpCheckAddress(char const *pszAddress)
@@ -709,7 +713,8 @@ int USmtpCheckAddress(char const *pszAddress)
 	char szDomain[MAX_ADDR_NAME] = "";
 
 	if (USmtpSplitEmailAddr(pszAddress, szUser, szDomain) < 0 ||
-	    USmtpCheckAddressPart(szUser) < 0 || USmtpCheckAddressPart(szDomain) < 0)
+	    USmtpCheckAddressPart(szUser) < 0 ||
+	    USmtpCheckDomainPart(szDomain) < 0)
 		return ErrGetErrorCode();
 
 	return 0;

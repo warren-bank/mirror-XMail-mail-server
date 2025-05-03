@@ -56,7 +56,8 @@ int UPopGetSessionMsgTotal(POP3_HANDLE hPOPSession);
 unsigned long UPopGetSessionMBSize(POP3_HANDLE hPOPSession);
 int UPopGetSessionLastAccessed(POP3_HANDLE hPOPSession);
 int UPopGetMessageSize(POP3_HANDLE hPOPSession, int iMsgIndex, unsigned long &ulMessageSize);
-int UPopGetMessageUIDL(POP3_HANDLE hPOPSession, int iMsgIndex, char *pszMessageUIDL);
+int UPopGetMessageUIDL(POP3_HANDLE hPOPSession, int iMsgIndex, char *pszMessageUIDL,
+		       int iSize);
 int UPopDeleteMessage(POP3_HANDLE hPOPSession, int iMsgIndex);
 int UPopResetSession(POP3_HANDLE hPOPSession);
 int UPopSendErrorResponse(BSOCK_HANDLE hBSock, int iErrorCode, int iTimeout);

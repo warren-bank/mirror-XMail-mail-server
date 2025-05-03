@@ -66,8 +66,8 @@ static ServerInfoVar *SvrAllocVar(const char *pszName, const char *pszValue);
 static ServerInfoVar *SvrGetUserVar(HASH_HANDLE hHash, const char *pszName);
 static int SvrWriteConfig(HASH_HANDLE hHash, FILE *pFile);
 static int SvrReadConfig(HASH_HANDLE hHash, const char *pszFilePath);
-static char *SvrGetProtoIPPropFile(char const *pszProto, char *pszFileName, int iMaxName);
-static char *SvrGetProtoHNPropFile(char const *pszProto, char *pszFileName, int iMaxName);
+static char *SvrGetProtoIPPropFile(const char *pszProto, char *pszFileName, int iMaxName);
+static char *SvrGetProtoHNPropFile(const char *pszProto, char *pszFileName, int iMaxName);
 
 static char *SvrGetProfileFilePath(char *pszFilePath, int iMaxPath)
 {
@@ -167,7 +167,7 @@ char *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName, const char 
 	return pszDefault != NULL ? SysStrDup(pszDefault): NULL;
 }
 
-bool SvrTestConfigFlag(char const *pszName, bool bDefault, SVRCFG_HANDLE hSvrConfig)
+bool SvrTestConfigFlag(const char *pszName, bool bDefault, SVRCFG_HANDLE hSvrConfig)
 {
 	char szValue[64] = "";
 
@@ -176,7 +176,7 @@ bool SvrTestConfigFlag(char const *pszName, bool bDefault, SVRCFG_HANDLE hSvrCon
 	return atoi(szValue) != 0 ? true: false;
 }
 
-int SvrGetConfigInt(char const *pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
+int SvrGetConfigInt(const char *pszName, int iDefault, SVRCFG_HANDLE hSvrConfig)
 {
 	char szValue[64] = "";
 
@@ -373,8 +373,8 @@ char *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath)
 	return pszSpoolPath;
 }
 
-int SvrConfigVar(char const *pszVarName, char *pszVarValue, int iMaxVarValue,
-		 SVRCFG_HANDLE hSvrConfig, char const *pszDefault)
+int SvrConfigVar(const char *pszVarName, char *pszVarValue, int iMaxVarValue,
+		 SVRCFG_HANDLE hSvrConfig, const char *pszDefault)
 {
 	int iReleaseConfig = 0;
 
@@ -449,7 +449,7 @@ int SvrCheckVirtMemSpace(unsigned long ulMinSpace)
 	return 0;
 }
 
-static char *SvrGetProtoIPPropFile(char const *pszProto, char *pszFileName, int iMaxName)
+static char *SvrGetProtoIPPropFile(const char *pszProto, char *pszFileName, int iMaxName)
 {
 	char szMailRoot[SYS_MAX_PATH] = "";
 
@@ -459,7 +459,7 @@ static char *SvrGetProtoIPPropFile(char const *pszProto, char *pszFileName, int 
 	return pszFileName;
 }
 
-static char *SvrGetProtoHNPropFile(char const *pszProto, char *pszFileName, int iMaxName)
+static char *SvrGetProtoHNPropFile(const char *pszProto, char *pszFileName, int iMaxName)
 {
 	char szMailRoot[SYS_MAX_PATH] = "";
 
@@ -469,8 +469,8 @@ static char *SvrGetProtoHNPropFile(char const *pszProto, char *pszFileName, int 
 	return pszFileName;
 }
 
-int SvrEnumProtoProps(char const *pszProto, const SYS_INET_ADDR *pPeerInfo,
-		      char const *pszHostName, int (*pfEnum)(void *, char const *, char const *),
+int SvrEnumProtoProps(const char *pszProto, const SYS_INET_ADDR *pPeerInfo,
+		      const char *pszHostName, int (*pfEnum)(void *, const char *, const char *),
 		      void *pPrivate)
 {
 	int i;

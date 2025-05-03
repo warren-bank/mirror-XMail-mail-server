@@ -79,7 +79,8 @@ static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
 			    FilterMsgInfo const &FMI, char **ppszFilters, int iMaxFilters);
 static void FilFreeFilters(char **ppszFilters, int iNumFilters);
 static int FilGetFilterPath(char const *pszFileName, char *pszFilePath, int iMaxPath);
-static int FilPreExec(FilterMsgInfo const &FMI, FilterTokens *pToks, char **ppszPEError);
+static int FilPreExec(FilterMsgInfo const &FMI, FilterExecCtx *pFCtx,
+		      FilterTokens *pToks, char **ppszPEError);
 static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 			  QUEUE_HANDLE hQueue, QMSG_HANDLE hMessage, FilterMsgInfo const &FMI,
 			  char const *pszType);
@@ -181,8 +182,8 @@ static int FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo & FMI)
 	char szDomain[MAX_ADDR_NAME] = "";
 
 	ZeroData(FMI);
-	if ((iFromDomains > 0) &&
-	    (USmtpSplitEmailAddr(ppszFrom[iFromDomains - 1], szUser, szDomain) == 0)) {
+	if (iFromDomains > 0 &&
+	    USmtpSplitEmailAddr(ppszFrom[iFromDomains - 1], szUser, szDomain) == 0) {
 		if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL) {
 			UsrGetAddress(pUI, FMI.szSender);
 
@@ -192,8 +193,8 @@ static int FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo & FMI)
 	} else
 		SetEmptyString(FMI.szSender);
 
-	if ((iRcptDomains > 0) &&
-	    (USmtpSplitEmailAddr(ppszRcpt[iRcptDomains - 1], szUser, szDomain) == 0)) {
+	if (iRcptDomains > 0 &&
+	    USmtpSplitEmailAddr(ppszRcpt[iRcptDomains - 1], szUser, szDomain) == 0) {
 		if ((pUI = UsrGetUserByNameOrAlias(szDomain, szUser)) != NULL) {
 			UsrGetAddress(pUI, FMI.szRecipient);
 
@@ -203,8 +204,8 @@ static int FilLoadMsgInfo(SPLF_HANDLE hFSpool, FilterMsgInfo & FMI)
 	} else
 		SetEmptyString(FMI.szRecipient);
 
-	if ((MscGetServerAddress(ppszInfo[smiServerAddr], FMI.LocalAddr) < 0) ||
-	    (MscGetServerAddress(ppszInfo[smiClientAddr], FMI.RemoteAddr) < 0))
+	if (MscGetServerAddress(ppszInfo[smiServerAddr], FMI.LocalAddr) < 0 ||
+	    MscGetServerAddress(ppszInfo[smiClientAddr], FMI.RemoteAddr) < 0)
 		return ErrGetErrorCode();
 
 	StrSNCpy(FMI.szSpoolFile, pszSpoolFile);
@@ -307,7 +308,6 @@ static int FilSelectFilters(char const *pszFilterFilePath, char const *pszMode,
 
 			}
 		}
-
 		StrFreeStrings(ppszTokens);
 	}
 	fclose(pFile);
@@ -371,6 +371,9 @@ int FilExecPreParse(FilterExecCtx *pCtx, char **ppszPEError)
 
 				return -1;
 			}
+		} else if (strcmp(pszVar, "timeo") == 0) {
+			if (pszVal != NULL)
+				pCtx->iTimeout = atoi(pszVal);
 		}
 	}
 	StrFreeStrings(ppszEToks);
@@ -378,16 +381,15 @@ int FilExecPreParse(FilterExecCtx *pCtx, char **ppszPEError)
 	return 0;
 }
 
-static int FilPreExec(FilterMsgInfo const &FMI, FilterTokens *pToks, char **ppszPEError)
+static int FilPreExec(FilterMsgInfo const &FMI, FilterExecCtx *pFCtx,
+		      FilterTokens *pToks, char **ppszPEError)
 {
-	FilterExecCtx FCtx;
+	pFCtx->pToks = pToks;
+	pFCtx->pszAuthName = FMI.szAuthName;
+	pFCtx->ulFlags = 0;
+	pFCtx->iTimeout = iFilterTimeout;
 
-	ZeroData(FCtx);
-	FCtx.pToks = pToks;
-	FCtx.pszAuthName = FMI.szAuthName;
-	FCtx.ulFlags = 0;
-
-	return FilExecPreParse(&FCtx, ppszPEError);
+	return FilExecPreParse(pFCtx, ppszPEError);
 }
 
 static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
@@ -427,12 +429,14 @@ static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 
 		/* Perform pre-exec filtering (like exec exclude if authenticated, ...) */
 		char *pszPEError = NULL;
+		FilterExecCtx FCtx;
 		FilterTokens Toks;
 
+		ZeroData(FCtx);
 		Toks.ppszCmdTokens = ppszCmdTokens;
 		Toks.iTokenCount = iFieldsCount;
 
-		if (FilPreExec(FMI, &Toks, &pszPEError) < 0) {
+		if (FilPreExec(FMI, &FCtx, &Toks, &pszPEError) < 0) {
 			if (bFilterLogEnabled)
 				FilLogExec(FMI, Toks.ppszCmdTokens, -1,
 					   -1, pszType, pszPEError);
@@ -448,7 +452,7 @@ static int FilApplyFilter(char const *pszFilterPath, SPLF_HANDLE hFSpool,
 		int iExitCode = -1;
 		int iExitFlags = 0;
 		int iExecResult = SysExec(Toks.ppszCmdTokens[0], &Toks.ppszCmdTokens[0],
-					  iFilterTimeout, FILTER_PRIORITY, &iExitCode);
+					  FCtx.iTimeout, FILTER_PRIORITY, &iExitCode);
 
 		/* Log the operation, if requested. */
 		if (bFilterLogEnabled)

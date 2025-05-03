@@ -25,6 +25,7 @@
 #include "SysDepUnix.h"
 #include "AppDefines.h"
 
+#define SINF_SIZE(s, f) (((SYS_INT64) (s).f) * (s).mem_unit)
 
 int SysDepInitLibrary(void)
 {
@@ -122,8 +123,8 @@ int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 	}
 
 	int iMinPriority = sched_get_priority_min(iPolicy),
-	iMaxPriority = sched_get_priority_max(iPolicy),
-	iStdPriority = (iMinPriority + iMaxPriority) / 2;
+		iMaxPriority = sched_get_priority_max(iPolicy),
+		iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
 	switch (iPriority) {
 	case SYS_PRIORITY_NORMAL:
@@ -174,10 +175,10 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
 		return ERR_GET_MEMORY_INFO;
 	}
-	*pRamTotal = (SYS_INT64) SI.totalram;
-	*pRamFree = (SYS_INT64) SI.freeram;
-	*pVirtTotal = (SYS_INT64) SI.totalswap + (SYS_INT64) SI.totalram;
-	*pVirtFree = (SYS_INT64) SI.freeswap + (SYS_INT64) SI.freeram;
+	*pRamTotal = SINF_SIZE(SI, totalram);
+	*pRamFree = SINF_SIZE(SI, freeram);
+	*pVirtTotal = SINF_SIZE(SI, totalswap) + SINF_SIZE(SI, totalram);
+	*pVirtFree = SINF_SIZE(SI, freeswap) + SINF_SIZE(SI, freeram);
 
 	return 0;
 }

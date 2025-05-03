@@ -1,10 +1,44 @@
 NAME
 
-    XMail Change Log as of Version 1.25
+    XMail Change Log as of Version 1.26
 
     [top]
 
 CHANGE LOG
+
+  Jun 27, 2009 v 1.26
+
+    *   Fixed a bug where STARTTLS was resetting the session too much, by
+        canceling certain flags/options read inside the SERVER.TAB.
+
+    *   Fixed a bug that happened if a message filter mistakenly remove the
+        message file from under XMail control.
+
+    *   Fixed a bug that make XMail to wrongly report virtual memory sizes
+        on 32 bit systems with larger than 4GB VM space.
+
+    *   Changed the line termination used to store messages into the
+        mailboxes of Unix versions of XMail. Now messages are stored with
+        the OS native LF termination, instead of the RFC CRLF that was used
+        before. This allows other Unix softwares working together with XMail
+        to not be confused by the extra CR present in the line termination.
+
+    *   The "smtprelay" behaviour with respect to 5xx responses from one of
+        the servers in the relay list, has been changed. Now a 5xx response
+        will stop the processing, instead of iterating on the remaining
+        servers of the list.
+
+    *   Avoid to crawl all the USER.TAB file during a "userlist" CTRL
+        command.
+
+    *   Fixed a bug that allowed non-RFC characters inside domain names.
+
+    *   Fixed OSX Leopard build error.
+
+    *   Added "timeo" option to flags execution.
+
+    *   Added "NoAuth", "EnableVRFY" and "EnableETRN" settings inside IP
+        properties.
 
   Jan 3, 2008 v 1.25
 
@@ -117,7 +151,7 @@ CHANGE LOG
          * (separator is now the ';' character and can have options attached,
          * separated by comma).
          * You need to adjust it according to the new format
-         ********************************************************************    
+         ********************************************************************
 
     *   Added new "EnableCTRL-TLS", "EnableSMTP-TLS" and "EnablePOP3-TLS"
         SERVER.TAB variables.
@@ -766,7 +800,7 @@ CHANGE LOG
          ********************************************************************
          * You must create the directory 'cmdaliases' inside $MAIL_ROOT
          * to have 1.2 work correctly
-         ********************************************************************    
+         ********************************************************************
 
     *   Fixed a bug that had XMail not check for the user variable SmtpPerms
         with CRAM-MD5 authetication.
@@ -798,7 +832,7 @@ CHANGE LOG
          ********************************************************************    
          * You must create the file ALIASDOMAIN.TAB inside $MAIL_ROOT
          * (even if empty)
-         ********************************************************************    
+         ********************************************************************
 
     *   Added CTRL commands 'aliasdomainadd', 'aliasdomaindel' and
         'aliasdomainlist' to handle domain aliases through the CTRL
@@ -1266,7 +1300,7 @@ CHANGE LOG
          * 6) Rename all spool/logs/ files removing the .log extension
          * 7) Move all spool/logs/ file into 0/0/slog
          * 8) Now You can remove the above directories and restart XMail
-         ********************************************************************    
+         ********************************************************************
 
     *   ORBS relays checking has been added and is activated by the new
         SERVER.TAB option 'ORBS-MAPSCheck'.
@@ -1383,7 +1417,7 @@ CHANGE LOG
          * several domains.
          * In order to use this new version You MUST move Your domains
          * directories inside the new  domains  directory
-         ********************************************************************    
+         ********************************************************************
 
     *   SMAIL scheduling times in sending messages has been changed (see -Qi
         command line option).
@@ -1607,7 +1641,7 @@ CHANGE LOG
          * The spool file format is changed !
          * In order to use this new version You MUST flush the spool before
          * starting the new version of XMail.
-         ********************************************************************    
+         ********************************************************************
 
     *   Modified SysRename() to MscMoveFile() to avoid errors in all cases
         where files are positioned on differents mount points (Unixes

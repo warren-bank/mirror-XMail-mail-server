@@ -33,6 +33,7 @@
 #define SYS_INFINITE_TIMEOUT    (4 * 1024 * 1024)
 #define SYS_DEFAULT_MAXCOUNT    (INT_MAX - 1)
 
+#define SYS_EOL                 "\n"
 #define SYS_SLASH_CHAR          '/'
 #define SYS_SLASH_STR           "/"
 #define SYS_BASE_FS_STR         ""
@@ -55,6 +56,8 @@
 #define SysSNPrintf             snprintf
 #define stricmp                 strcasecmp
 #define strnicmp                strncasecmp
+
+#define Sys_fseek(f, o, w)      fseek(f, (long) (o), w)
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO

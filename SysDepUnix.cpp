@@ -314,7 +314,7 @@ int SysRecvDataFrom(SYS_SOCKET SockFD, SYS_INET_ADDR *pFrom, char *pszBuffer,
 	return iRecvBytes;
 }
 
-int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
+int SysSendData(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	struct pollfd pfds;
 
@@ -346,7 +346,7 @@ int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int i
 	return iSendBytes;
 }
 
-int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
+int SysSend(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	int iRtxBytes = 0;
 
@@ -363,7 +363,7 @@ int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTime
 }
 
 int SysSendDataTo(SYS_SOCKET SockFD, const SYS_INET_ADDR *pTo,
-		  char const *pszBuffer, int iBufferSize, int iTimeout)
+		  const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	struct pollfd pfds;
 
@@ -495,7 +495,7 @@ int SysSelect(int iMaxFD, SYS_fd_set *pReadFDs, SYS_fd_set *pWriteFDs, SYS_fd_se
 	return iSelectResult;
 }
 
-int SysSendFileMMap(SYS_SOCKET SockFD, char const *pszFileName, SYS_OFF_T llBaseOffset,
+int SysSendFileMMap(SYS_SOCKET SockFD, const char *pszFileName, SYS_OFF_T llBaseOffset,
 		    SYS_OFF_T llEndOffset, int iTimeout)
 {
 	int iFileID = open(pszFileName, O_RDONLY);
@@ -558,7 +558,7 @@ int SysSendFileMMap(SYS_SOCKET SockFD, char const *pszFileName, SYS_OFF_T llBase
 
 #if !defined(SYS_HAS_SENDFILE)
 
-int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, SYS_OFF_T llBaseOffset,
+int SysSendFile(SYS_SOCKET SockFD, const char *pszFileName, SYS_OFF_T llBaseOffset,
 		SYS_OFF_T llEndOffset, int iTimeout)
 {
 	return SysSendFileMMap(SockFD, pszFileName, llBaseOffset, llEndOffset, iTimeout);
@@ -1101,7 +1101,7 @@ static int SysWaitPID(pid_t PID, int *piExitCode, int iTimeout)
 	return 0;
 }
 
-int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout,
+int SysExec(const char *pszCommand, const char *const *pszArgs, int iWaitTimeout,
 	    int iPriority, int *piExitStatus)
 {
 	int iExitStatus;
@@ -1321,7 +1321,7 @@ void *SysRealloc(void *pData, unsigned int uSize)
 	return pNewData;
 }
 
-int SysLockFile(const char *pszFileName, char const *pszLockExt)
+int SysLockFile(const char *pszFileName, const char *pszLockExt)
 {
 	int iFileID;
 	char szLockFile[SYS_MAX_PATH] = "";
@@ -1342,7 +1342,7 @@ int SysLockFile(const char *pszFileName, char const *pszLockExt)
 	return 0;
 }
 
-int SysUnlockFile(const char *pszFileName, char const *pszLockExt)
+int SysUnlockFile(const char *pszFileName, const char *pszLockExt)
 {
 	char szLockFile[SYS_MAX_PATH] = "";
 
@@ -1355,7 +1355,7 @@ int SysUnlockFile(const char *pszFileName, char const *pszLockExt)
 	return 0;
 }
 
-SYS_HANDLE SysOpenModule(char const *pszFilePath)
+SYS_HANDLE SysOpenModule(const char *pszFilePath)
 {
 	void *pModule = dlopen(pszFilePath, RTLD_LAZY);
 
@@ -1374,7 +1374,7 @@ int SysCloseModule(SYS_HANDLE hModule)
 	return 0;
 }
 
-void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
+void *SysGetSymbol(SYS_HANDLE hModule, const char *pszSymbol)
 {
 	void *pSymbol = dlsym((void *) hModule, pszSymbol);
 
@@ -1386,7 +1386,7 @@ void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 	return pSymbol;
 }
 
-int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
+int SysEventLogV(int iLogLevel, const char *pszFormat, va_list Args)
 {
 	openlog(APP_NAME_STR, LOG_PID, LOG_DAEMON);
 
@@ -1399,7 +1399,7 @@ int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 	return 0;
 }
 
-int SysEventLog(int iLogLevel, char const *pszFormat, ...)
+int SysEventLog(int iLogLevel, const char *pszFormat, ...)
 {
 	va_list Args;
 
@@ -1412,7 +1412,7 @@ int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 	return 0;
 }
 
-int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
+int SysLogMessage(int iLogLevel, const char *pszFormat, ...)
 {
 	extern bool bServerDebug;
 
@@ -1644,7 +1644,7 @@ void SysFindClose(SYS_HANDLE hFind)
 	SysFree(pFFD);
 }
 
-int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO &FI)
+int SysGetFileInfo(const char *pszFileName, SYS_FILE_INFO &FI)
 {
 	struct stat stat_buffer;
 
@@ -1655,15 +1655,15 @@ int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO &FI)
 
 	ZeroData(FI);
 	FI.iFileType = (S_ISREG(stat_buffer.st_mode)) ? ftNormal:
-	((S_ISDIR(stat_buffer.st_mode)) ?ftDirectory:
-	 ((S_ISLNK(stat_buffer.st_mode)) ? ftLink: ftOther));
+		((S_ISDIR(stat_buffer.st_mode)) ?ftDirectory:
+		 ((S_ISLNK(stat_buffer.st_mode)) ? ftLink: ftOther));
 	FI.llSize = stat_buffer.st_size;
 	FI.tMod = stat_buffer.st_mtime;
 
 	return 0;
 }
 
-int SysSetFileModTime(char const *pszFileName, time_t tMod)
+int SysSetFileModTime(const char *pszFileName, time_t tMod)
 {
 	struct utimbuf TMB;
 
@@ -1741,7 +1741,7 @@ int SysRemoveDir(const char *pszPath)
 	return 0;
 }
 
-int SysMoveFile(char const *pszOldName, char const *pszNewName)
+int SysMoveFile(const char *pszOldName, const char *pszNewName)
 {
 	if (rename(pszOldName, pszNewName) != 0) {
 		ErrSetErrorCode(ERR_FILE_MOVE);
@@ -1751,7 +1751,7 @@ int SysMoveFile(char const *pszOldName, char const *pszNewName)
 	return 0;
 }
 
-int SysVSNPrintf(char *pszBuffer, int iSize, char const *pszFormat, va_list Args)
+int SysVSNPrintf(char *pszBuffer, int iSize, const char *pszFormat, va_list Args)
 {
 	int iPrintResult = vsnprintf(pszBuffer, iSize, pszFormat, Args);
 
@@ -1768,7 +1768,7 @@ int SysFileSync(FILE *pFile)
 	return 0;
 }
 
-char *SysStrTok(char *pszData, char const *pszDelim, char **ppszSavePtr)
+char *SysStrTok(char *pszData, const char *pszDelim, char **ppszSavePtr)
 {
 	return strtok_r(pszData, pszDelim, ppszSavePtr);
 }
@@ -1815,7 +1815,7 @@ long SysGetDayLight(void)
 	return (long) ((tmCurr.tm_isdst <= 0) ? 0: 3600);
 }
 
-SYS_MMAP SysCreateMMap(char const *pszFileName, unsigned long ulFlags)
+SYS_MMAP SysCreateMMap(const char *pszFileName, unsigned long ulFlags)
 {
 	int iFD = open(pszFileName, (ulFlags & SYS_MMAP_WRITE) ? O_RDWR: O_RDONLY);
 

@@ -84,18 +84,18 @@
 
 enum SvrServices {
 	SVC_SMAIL = 0,
-		SVC_CTRL,
-		SVC_CRTLS,
-		SVC_POP3,
-		SVC_SMTP,
-		SVC_FING,
-		SVC_LMAIL,
-		SVC_PSYNC,
-		SVC_SMTPS,
-		SVC_POP3S,
-		SVC_CTRLS,
+	SVC_CTRL,
+	SVC_CRTLS,
+	SVC_POP3,
+	SVC_SMTP,
+	SVC_FING,
+	SVC_LMAIL,
+	SVC_PSYNC,
+	SVC_SMTPS,
+	SVC_POP3S,
+	SVC_CTRLS,
 
-		SVC_MAX
+	SVC_MAX
 };
 
 struct SvrShutdownCtx {
@@ -1669,7 +1669,8 @@ bool SvrInShutdown(bool bForceCheck)
 			SysShutdownLibrary();
 
 			bShutdown = true;
-		}
+		} else
+			bShutdown = false;
 	}
 
 	return bShutdown;

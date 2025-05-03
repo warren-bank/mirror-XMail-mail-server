@@ -89,7 +89,7 @@ static int SysCrtReportHook(int iType, char *pszMsg, int *piRetVal);
 static void SysRunThreadExitHooks(SYS_THREAD ThreadID, int iMode);
 static int SysSetSocketsOptions(SYS_SOCKET SockFD);
 static int SysRecvLL(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize);
-static int SysSendLL(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize);
+static int SysSendLL(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize);
 static unsigned int SysThreadRunner(void *pRunData);
 static int SysThreadSetup(SYS_THREAD ThreadID);
 static int SysThreadCleanup(SYS_THREAD ThreadID);
@@ -170,7 +170,7 @@ static int SysSetServerName(void)
 static int SysCrtReportHook(int iType, char *pszMsg, int *piRetVal)
 {
 	int iLogLevel, iRetCode;
-	char const *pszType;
+	const char *pszType;
 
 	switch (iType) {
 	case _CRT_ERROR:
@@ -418,7 +418,7 @@ static int SysRecvLL(SYS_SOCKET SockFD, char *pszBuffer, int iBufferSize)
 			NULL, NULL) == 0) ? (int) dwRtxBytes: -WSAGetLastError();
 }
 
-static int SysSendLL(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize)
+static int SysSendLL(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize)
 {
 	DWORD dwRtxBytes = 0;
 	WSABUF WSABuff;
@@ -553,7 +553,7 @@ int SysRecvDataFrom(SYS_SOCKET SockFD, SYS_INET_ADDR *pFrom, char *pszBuffer,
 	return (int) dwRtxBytes;
 }
 
-int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
+int SysSendData(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	HANDLE hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
@@ -601,7 +601,7 @@ int SysSendData(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int i
 	return iSendBytes;
 }
 
-int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTimeout)
+int SysSend(SYS_SOCKET SockFD, const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	int iRtxBytes = 0;
 
@@ -618,7 +618,7 @@ int SysSend(SYS_SOCKET SockFD, char const *pszBuffer, int iBufferSize, int iTime
 }
 
 int SysSendDataTo(SYS_SOCKET SockFD, const SYS_INET_ADDR *pTo,
-		  char const *pszBuffer, int iBufferSize, int iTimeout)
+		  const char *pszBuffer, int iBufferSize, int iTimeout)
 {
 	HANDLE hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
@@ -744,7 +744,7 @@ SYS_SOCKET SysAccept(SYS_SOCKET SockFD, SYS_INET_ADDR *pSockName, int iTimeout)
 			SockFDAccept = WSAAccept(SockFD, (struct sockaddr *) pSockName->Addr,
 						 &iNameLen, NULL, 0);
 		} else if (dwWaitResult == (WSA_WAIT_EVENT_0 + 1))
-				ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
+			ErrSetErrorCode(ERR_SERVER_SHUTDOWN);
 		else
 			ErrSetErrorCode(ERR_TIMEOUT);
 	}
@@ -788,7 +788,7 @@ int SysSelect(int iMaxFD, SYS_fd_set *pReadFDs, SYS_fd_set *pWriteFDs, SYS_fd_se
 	return iSelectResult;
 }
 
-int SysSendFile(SYS_SOCKET SockFD, char const *pszFileName, SYS_OFF_T llBaseOffset,
+int SysSendFile(SYS_SOCKET SockFD, const char *pszFileName, SYS_OFF_T llBaseOffset,
 		SYS_OFF_T llEndOffset, int iTimeout)
 {
 	/* Open the source file */
@@ -1122,7 +1122,7 @@ unsigned long SysGetCurrentThreadId(void)
 	return (unsigned long) GetCurrentThreadId();
 }
 
-int SysExec(char const *pszCommand, char const *const *pszArgs, int iWaitTimeout,
+int SysExec(const char *pszCommand, const char *const *pszArgs, int iWaitTimeout,
 	    int iPriority, int *piExitStatus)
 {
 	int i, iCommandLength = strlen(pszCommand) + 4;
@@ -1325,7 +1325,7 @@ void *SysRealloc(void *pData, unsigned int uSize)
 	return pNewData;
 }
 
-int SysLockFile(const char *pszFileName, char const *pszLockExt)
+int SysLockFile(const char *pszFileName, const char *pszLockExt)
 {
 	char szLockFile[SYS_MAX_PATH] = "";
 
@@ -1359,7 +1359,7 @@ int SysLockFile(const char *pszFileName, char const *pszLockExt)
 	return 0;
 }
 
-int SysUnlockFile(const char *pszFileName, char const *pszLockExt)
+int SysUnlockFile(const char *pszFileName, const char *pszLockExt)
 {
 	char szLockFile[SYS_MAX_PATH] = "";
 
@@ -1372,7 +1372,7 @@ int SysUnlockFile(const char *pszFileName, char const *pszLockExt)
 	return 0;
 }
 
-SYS_HANDLE SysOpenModule(char const *pszFilePath)
+SYS_HANDLE SysOpenModule(const char *pszFilePath)
 {
 	HMODULE hModule = LoadLibrary(pszFilePath);
 
@@ -1391,7 +1391,7 @@ int SysCloseModule(SYS_HANDLE hModule)
 	return 0;
 }
 
-void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
+void *SysGetSymbol(SYS_HANDLE hModule, const char *pszSymbol)
 {
 	void *pSymbol = (void *) GetProcAddress((HMODULE) hModule, pszSymbol);
 
@@ -1403,7 +1403,7 @@ void *SysGetSymbol(SYS_HANDLE hModule, char const *pszSymbol)
 	return pSymbol;
 }
 
-int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
+int SysEventLogV(int iLogLevel, const char *pszFormat, va_list Args)
 {
 	HANDLE hEventSource = RegisterEventSource(NULL, szServerName);
 
@@ -1428,7 +1428,7 @@ int SysEventLogV(int iLogLevel, char const *pszFormat, va_list Args)
 	return 0;
 }
 
-int SysEventLog(int iLogLevel, char const *pszFormat, ...)
+int SysEventLog(int iLogLevel, const char *pszFormat, ...)
 {
 	va_list Args;
 
@@ -1441,7 +1441,7 @@ int SysEventLog(int iLogLevel, char const *pszFormat, ...)
 	return 0;
 }
 
-int SysLogMessage(int iLogLevel, char const *pszFormat, ...)
+int SysLogMessage(int iLogLevel, const char *pszFormat, ...)
 {
 	va_list Args;
 	extern bool bServerDebug;
@@ -1595,7 +1595,7 @@ void SysFindClose(SYS_HANDLE hFind)
 	SysFree(pFFD);
 }
 
-int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO &FI)
+int SysGetFileInfo(const char *pszFileName, SYS_FILE_INFO &FI)
 {
 	WIN32_FIND_DATA WFD;
 	HANDLE hFind = FindFirstFile(pszFileName, &WFD);
@@ -1615,7 +1615,7 @@ int SysGetFileInfo(char const *pszFileName, SYS_FILE_INFO &FI)
 	return 0;
 }
 
-int SysSetFileModTime(char const *pszFileName, time_t tMod)
+int SysSetFileModTime(const char *pszFileName, time_t tMod)
 {
 	HANDLE hFile = CreateFile(pszFileName, GENERIC_WRITE,
 				  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -1721,7 +1721,7 @@ int SysRemoveDir(const char *pszPath)
 	return 0;
 }
 
-int SysMoveFile(char const *pszOldName, char const *pszNewName)
+int SysMoveFile(const char *pszOldName, const char *pszNewName)
 {
 	if (!MoveFileEx(pszOldName, pszNewName,
 			MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
@@ -1732,7 +1732,7 @@ int SysMoveFile(char const *pszOldName, char const *pszNewName)
 	return 0;
 }
 
-int SysVSNPrintf(char *pszBuffer, int iSize, char const *pszFormat, va_list Args)
+int SysVSNPrintf(char *pszBuffer, int iSize, const char *pszFormat, va_list Args)
 {
 	return _vsnprintf(pszBuffer, iSize, pszFormat, Args);
 }
@@ -1747,7 +1747,7 @@ int SysFileSync(FILE *pFile)
 	return 0;
 }
 
-char *SysStrTok(char *pszData, char const *pszDelim, char **ppszSavePtr)
+char *SysStrTok(char *pszData, const char *pszDelim, char **ppszSavePtr)
 {
 	return *ppszSavePtr = strtok(pszData, pszDelim);
 }
@@ -1792,7 +1792,7 @@ long SysGetDayLight(void)
 	return (long) ((tmCurr.tm_isdst <= 0) ? 0: 3600);
 }
 
-int SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)
+int SysGetDiskSpace(const char *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)
 {
 	ULARGE_INTEGER BytesAvail, BytesOnDisk, BytesFree;
 	char szXPath[SYS_MAX_PATH] = "";
@@ -1814,7 +1814,6 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		  SYS_INT64 *pVirtTotal, SYS_INT64 *pVirtFree)
 {
 #if _WIN32_WINNT >= 0x0500
-
 	MEMORYSTATUSEX MSEX;
 
 	ZeroData(MSEX);
@@ -1822,14 +1821,11 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 		ErrSetErrorCode(ERR_GET_MEMORY_INFO);
 		return ERR_GET_MEMORY_INFO;
 	}
-
 	*pRamTotal = (SYS_INT64) MSEX.ullTotalPhys;
 	*pRamFree = (SYS_INT64) MSEX.ullAvailPhys;
 	*pVirtTotal = (SYS_INT64) MSEX.ullTotalVirtual;
 	*pVirtFree = (SYS_INT64) MSEX.ullAvailVirtual;
-
 #else
-
 	MEMORYSTATUS MS;
 
 	ZeroData(MS);
@@ -1838,13 +1834,12 @@ int SysMemoryInfo(SYS_INT64 *pRamTotal, SYS_INT64 *pRamFree,
 	*pRamFree = (SYS_INT64) MS.dwAvailPhys;
 	*pVirtTotal = (SYS_INT64) MS.dwTotalVirtual;
 	*pVirtFree = (SYS_INT64) MS.dwAvailVirtual;
-
 #endif
 
 	return 0;
 }
 
-SYS_MMAP SysCreateMMap(char const *pszFileName, unsigned long ulFlags)
+SYS_MMAP SysCreateMMap(const char *pszFileName, unsigned long ulFlags)
 {
 	HANDLE hFile = CreateFile(pszFileName, (ulFlags & SYS_MMAP_WRITE) ?
 				  GENERIC_WRITE | GENERIC_READ: GENERIC_READ,

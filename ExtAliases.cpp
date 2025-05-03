@@ -42,11 +42,11 @@
 
 enum ExtAliasFields {
 	ealRmtDomain = 0,
-		ealRmtName,
-		ealDomain,
-		ealName,
+	ealRmtName,
+	ealDomain,
+	ealName,
 
-		ealMax
+	ealMax
 };
 
 struct ExAlDBScanData {
@@ -61,9 +61,9 @@ static int ExAlWriteAlias(FILE * pAliasFile, ExtAlias * pExtAlias);
 
 static int iIdxExAlias_RmtDomain_RmtName[] = {
 	ealRmtDomain,
-		ealRmtName,
+	ealRmtName,
 
-		INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
 int ExAlCheckAliasIndexes(void)

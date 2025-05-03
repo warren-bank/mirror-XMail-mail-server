@@ -202,21 +202,21 @@ static VOID WINAPI ServiceCtrl(DWORD dwCtrlCode)
 	switch (dwCtrlCode) {
 	case (SERVICE_CONTROL_SHUTDOWN):
 	case (SERVICE_CONTROL_STOP):
-		{
-			ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
+	{
+		ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR, SERVER_STOP_WAIT);
 
-			/* Signal the server to stop and wait for completion */
-			SvrStopServer(false);
+		/* Signal the server to stop and wait for completion */
+		SvrStopServer(false);
 
-			while (SvrInShutdown()) {
-				Sleep(SERVER_STOP_WAIT / 2);
-				ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR,
-						    SERVER_STOP_WAIT);
-			}
-
-			ReportStatusToSCMgr(SERVICE_STOPPED, 0, 0);
+		while (SvrInShutdown()) {
+			Sleep(SERVER_STOP_WAIT / 2);
+			ReportStatusToSCMgr(SERVICE_STOP_PENDING, NO_ERROR,
+					    SERVER_STOP_WAIT);
 		}
-		break;
+
+		ReportStatusToSCMgr(SERVICE_STOPPED, 0, 0);
+	}
+	break;
 
 	default:
 		ReportStatusToSCMgr(ssStatus.dwCurrentState, NO_ERROR, 0);
@@ -234,7 +234,7 @@ static BOOL ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWO
 			ssStatus.dwControlsAccepted = 0;
 		else
 			ssStatus.dwControlsAccepted =
-			SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+				SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 
 		ssStatus.dwCurrentState = dwCurrentState;
 		ssStatus.dwWin32ExitCode = dwWin32ExitCode;

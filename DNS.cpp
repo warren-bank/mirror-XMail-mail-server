@@ -512,7 +512,7 @@ static SYS_UINT8 *DNS_QuerySendDGram(char const *pszDNSServer, int iPortNo, int 
 			return NULL;
 		}
 		if (pDNSH->TC) {
-			*piTrunc++;
+			(*piTrunc)++;
 
 			SysCloseSocket(SockFD);
 			ErrSetErrorCode(ERR_TRUNCATED_DGRAM_DNS_RESPONSE);

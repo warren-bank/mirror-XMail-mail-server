@@ -56,7 +56,7 @@ int iLogRotateHours = 24;
 int iAddrFamily = AF_INET;
 static char const * const pszCClnErrors[] = {
 	"Wrong command line usage",
-		"Either none or both private key and certificate file must be supplied"
+	"Either none or both private key and certificate file must be supplied"
 };
 
 char *SvrGetLogsDir(char *pszLogsDir, int iMaxPath)

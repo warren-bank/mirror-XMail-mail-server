@@ -68,6 +68,8 @@
 #include <dlfcn.h>
 #include <sched.h>
 #include <pthread.h>
+#if !defined(__DARWIN_10_5__)
 #include <kvm.h>
+#endif
 
 #endif

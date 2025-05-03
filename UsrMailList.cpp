@@ -43,9 +43,9 @@
 
 enum MLUsrFileds {
 	mlusrAddress = 0,
-		mlusrPerms,
+	mlusrPerms,
 
-		mlusrMax
+	mlusrMax
 };
 
 struct MLUsersScanData {

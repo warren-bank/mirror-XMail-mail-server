@@ -70,7 +70,7 @@ Linux, FreeBSD, OpenBSD and Solaris and M$ Visual C++ for NT/2K.
 
 =head2 current
 
-1.25
+1.26
 
 =head2 release type
 
@@ -78,7 +78,7 @@ Gnu Public License L<http://www.gnu.org>
 
 =head2 release date
 
-Jan 3, 2008
+Jun 27, 2009
 
 =head2 project by
 
@@ -1679,6 +1679,18 @@ If set to 1, drops the TLS requirement for SMTP sessions coming from the matched
 
 If set to 0, bypasses the "CheckMailerDomain" 'B<SERVER.TAB>' variable.
 
+=item NoAuth
+
+If set to 1, release the authentication policy for this IP.
+
+=item EnableVRFY
+
+If set to 1, enable VRFY commands from this IP.
+
+=item EnableETRN
+
+If set to 1, enable ETRN commands from this IP.
+
 =back
 
 [L<table index|"Configuration tables">] [L<configuration|"Configuration">] [L<top|"__index__">]
@@ -2544,6 +2556,10 @@ exclude filter execution in case of authenticated sender
 
 exclude filter execution in case the client IP is white-listed inside the SMTP.IPPROP.TAB file.
 This flag works only for SMTP filters.
+
+=item timeo
+
+sets the timeout value for this filter execution
 
 =back
 

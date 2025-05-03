@@ -49,7 +49,7 @@
 enum PopDomainFileds {
 	domDomain = 0,
 
-		domMax
+	domMax
 };
 
 struct DomainsScanData {
@@ -64,7 +64,7 @@ static char *MDomGetDomainsFilePath(char *pszDomainsFilePath, int iMaxPath);
 static int iIdxDomains_Domain[] = {
 	domDomain,
 
-		INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
 int MDomCheckDomainsIndexes(void)

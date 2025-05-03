@@ -423,7 +423,7 @@ int StrWildMatch(char const *pszString, char const *pszMatch)
 			if (iReverse)
 				pszMatch++;
 			for (iPrev = 256, iMatched = 0; *++pszMatch &&
-			     (iEscape || (*pszMatch != ']')); iPrev = iEscape ? iPrev : *pszMatch)
+				     (iEscape || (*pszMatch != ']')); iPrev = iEscape ? iPrev : *pszMatch)
 			{
 				if (!iEscape && (iEscape = *pszMatch == '\\'))
 					continue;
@@ -509,7 +509,7 @@ int StrSplitString(char const *pszString, char const *pszSplitters,
 	char const *pszSplitChar = NULL;
 
 	for (; (*pszSplitters != '\0') &&
-	     ((pszSplitChar = strchr(pszString, *pszSplitters)) == NULL); ++pszSplitters);
+		     ((pszSplitChar = strchr(pszString, *pszSplitters)) == NULL); ++pszSplitters);
 
 	if (pszSplitChar == NULL) {
 		if (pszStrLeft != NULL)
@@ -796,7 +796,7 @@ char *StrMacSubst(char const *pszIn, int *piSize,
 
 	return StrDynDrop(&DynS, piSize);
 
-	ErrorExit:
+ErrorExit:
 	SysFree(pszLkup);
 	StrDynFree(&DynS);
 	return NULL;

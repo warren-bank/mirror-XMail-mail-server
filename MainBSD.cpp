@@ -42,7 +42,7 @@
 #define XMAIL_DEBUG_OPTION    "-Md"
 #define XMAIL_PIDDIR_ENV      "XMAIL_PID_DIR"
 
-#if defined(__GLIBC__) && defined (__FreeBSD_kernel__)
+#if (defined(__GLIBC__) && defined (__FreeBSD_kernel__)) || defined(__DARWIN_10_5__)
 #define BSD_SETPGRP()         setpgrp()
 #else
 #define BSD_SETPGRP()         setpgrp(0, getpid())

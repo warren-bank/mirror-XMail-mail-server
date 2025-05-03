@@ -58,6 +58,12 @@ ifeq ($(OSTYPE),Darwin)
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__DARWIN__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
 	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -lpthread
 else
+ifeq ($(OSTYPE),Darwin10.5)
+	SYSTYPE = darwin-10.5
+	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__DARWIN__ -D__DARWIN_10_5__ -D_REENTRANT=1 \
+	       -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
+	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lpthread
+else
 ifeq ($(OSTYPE),GNU/kFreeBSD)
 	SYSTYPE = freebsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
@@ -66,6 +72,7 @@ else
 	SYSTYPE = freebsd
 	CFLAGS := $(CFLAGS) -I. -D__UNIX__ -D__BSD__ -D__FREEBSD__ -D_REENTRANT=1 -D_THREAD_SAFE=1 -DHAS_SYSMACHINE
 	LDFLAGS := $(LDFLAGS) $(SSLLIBS) -lkvm -lcrypt -pthread -lc_r
+endif
 endif
 endif
 endif

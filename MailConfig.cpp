@@ -36,14 +36,13 @@ char *CfgGetRootPath(char *pszPath, int iMaxPath)
 	return pszPath;
 }
 
-char *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
+char *CfgGetBasedPath(const char *pszFullPath, char *pszBasePath, int iMaxPath)
 {
+	int iRootLength;
 	char szRootPath[SYS_MAX_PATH] = "";
 
 	CfgGetRootPath(szRootPath, sizeof(szRootPath));
-
-	int iRootLength = strlen(szRootPath);
-
+	iRootLength = strlen(szRootPath);
 	if (strncmp(pszFullPath, szRootPath, iRootLength) == 0)
 		StrNCpy(pszBasePath, pszFullPath + iRootLength, iMaxPath);
 	else
@@ -52,12 +51,11 @@ char *CfgGetBasedPath(char const *pszFullPath, char *pszBasePath, int iMaxPath)
 	return pszBasePath;
 }
 
-char *CfgGetFullPath(char const *pszRelativePath, char *pszFullPath, int iMaxPath)
+char *CfgGetFullPath(const char *pszRelativePath, char *pszFullPath, int iMaxPath)
 {
 	CfgGetRootPath(pszFullPath, iMaxPath);
-
 	StrNCat(pszFullPath,
-		(*pszRelativePath != SYS_SLASH_CHAR) ? pszRelativePath : pszRelativePath + 1,
+		(*pszRelativePath != SYS_SLASH_CHAR) ? pszRelativePath: pszRelativePath + 1,
 		iMaxPath);
 
 	return pszFullPath;

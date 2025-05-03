@@ -62,7 +62,7 @@ static int ADomLookupDomainLK(const char *pszADomainFilePath, const char *pszADo
 static int iIdxADomain_Alias[] = {
 	adomADomain,
 
-		INDEX_SEQUENCE_TERMINATOR
+	INDEX_SEQUENCE_TERMINATOR
 };
 
 static bool ADomIsWildAlias(char const *pszAlias)

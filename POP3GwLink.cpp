@@ -44,13 +44,13 @@
 
 enum LinksFileds {
 	lnkDomain = 0,
-		lnkName,
-		lnkRmtDomain,
-		lnkRmtName,
-		lnkRmtPassword,
-		lnkAuthType,
+	lnkName,
+	lnkRmtDomain,
+	lnkRmtName,
+	lnkRmtPassword,
+	lnkAuthType,
 
-		lnkMax
+	lnkMax
 };
 
 struct GwLkDBScanData {

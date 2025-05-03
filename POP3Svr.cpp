@@ -49,10 +49,10 @@
 
 enum POP3States {
 	stateInit,
-		stateUser,
-		stateLogged,
+	stateUser,
+	stateLogged,
 
-		stateExit
+	stateExit
 };
 
 struct POP3Session {
@@ -351,7 +351,7 @@ static int POP3LogSession(POP3Session &POP3S, char const *pszStatus, char const 
 		return ErrGetErrorCode();
 
 	char const *pszPassword = (POP3S.iLogPasswd == 2 || (POP3S.iLogPasswd == 1 &&
-							     POP3S.iPOP3State == stateLogged)) ?
+							     POP3S.iPOP3State != stateLogged)) ?
 		POP3S.szPassword: "";
 	char szIP[128] = "???.???.???.???";
 
@@ -563,12 +563,13 @@ static int POP3HandleCmd_PASS(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 	StrSNCpy(POP3S.szPassword, ppszTokens[1]);
 	StrFreeStrings(ppszTokens);
 
-	/* Check the presence of external authentication modules. If authentication */
-	/* succeed "pszPassword" is set to NULL that instruct "UPopBuildSession" */
-	/* to not make local authentication */
+	/* Check the presence of external authentication modules. If authentication
+	 * succeed "pszPassword" is set to NULL that instruct "UPopBuildSession"
+	 * to not make local authentication.
+	 */
 	char const *pszPassword = POP3S.szPassword;
-	int iAuthResult = UAthAuthenticateUser(AUTH_SERVICE_POP3,
-					       POP3S.szSvrDomain, POP3S.szUser, POP3S.szPassword);
+	int iAuthResult = UAthAuthenticateUser(AUTH_SERVICE_POP3, POP3S.szSvrDomain,
+					       POP3S.szUser, POP3S.szPassword);
 
 	if (iAuthResult < 0) {
 		if (iAuthResult != ERR_NO_EXTERNAL_AUTH_DEFINED) {
@@ -862,6 +863,7 @@ static int POP3HandleCmd_UIDL(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 
 	int iMsgIndex = -1;
 	int iNumArgs = sscanf(pszCommand, "%*s %d", &iMsgIndex);
+	char szMessageUIDL[256];
 
 	if (iNumArgs < 1) {
 		int iMsgCount = UPopGetSessionMsgCurrent(POP3S.hPOPSession);
@@ -870,20 +872,16 @@ static int POP3HandleCmd_UIDL(const char *pszCommand, BSOCK_HANDLE hBSock, POP3S
 		BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout, "+OK %d", iMsgCount);
 
 		for (int i = 0; i < iMsgTotal; i++) {
-			char szMessageUIDL[256] = "";
-
-			if (UPopGetMessageUIDL(POP3S.hPOPSession, i + 1, szMessageUIDL) == 0) {
-
+			if (UPopGetMessageUIDL(POP3S.hPOPSession, i + 1, szMessageUIDL,
+					       sizeof(szMessageUIDL)) == 0) {
 				BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,
 						"%d %s", i + 1, szMessageUIDL);
 			}
 		}
-
 		BSckSendString(hBSock, ".", POP3S.pPOP3Cfg->iTimeout);
 	} else {
-		char szMessageUIDL[256] = "";
-
-		if (UPopGetMessageUIDL(POP3S.hPOPSession, iMsgIndex, szMessageUIDL) < 0)
+		if (UPopGetMessageUIDL(POP3S.hPOPSession, iMsgIndex, szMessageUIDL,
+				       sizeof(szMessageUIDL)) < 0)
 			BSckSendString(hBSock, "-ERR No such message", POP3S.pPOP3Cfg->iTimeout);
 		else {
 			BSckVSendString(hBSock, POP3S.pPOP3Cfg->iTimeout,

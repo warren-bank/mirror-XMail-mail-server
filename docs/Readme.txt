@@ -69,7 +69,7 @@ VERSION
 
   current
 
-    1.25
+    1.26
 
   release type
 
@@ -77,7 +77,7 @@ VERSION
 
   release date
 
-    Jan 3, 2008
+    Jun 27, 2009
 
   project by
 
@@ -243,8 +243,8 @@ BUILD
       (located in "win32ssl\dll") inside the same folder where the XMail.exe binary resides.
 
       C:> nmake /f Makefile.win
-  
-      If once you run the XMail binaries, Windows complains about missing DLLs, your system
+      
+  If once you run the XMail binaries, Windows complains about missing DLLs, your system
       is probably missing the Microsoft CRT redistributable package, that you can download
       here L<http://www.xmailserver.org/vcredist_x86.exe>.
 
@@ -1452,6 +1452,15 @@ CONFIGURATION
     SenderDomainCheck
         If set to 0, bypasses the "CheckMailerDomain" 'SERVER.TAB' variable.
 
+    NoAuth
+        If set to 1, release the authentication policy for this IP.
+
+    EnableVRFY
+        If set to 1, enable VRFY commands from this IP.
+
+    EnableETRN
+        If set to 1, enable ETRN commands from this IP.
+
     [table index] [configuration] [top]
 
    SMTP.HNPROP.TAB
@@ -1565,16 +1574,20 @@ EXTERNAL AUTHENTICATION
 
         executed when user authentication is required
 
-    useradd
+        useradd
+
         executed when a user need to be added
 
-    useredit
+        useredit
+
         executed when a user change is required
 
-    userdel
+        userdel
+
         executed when a user deletion is required
 
-    domaindrop
+        domaindrop
+
         executed when all domain users need to be deleted
 
     The first line that stores the handling command for the requested action
@@ -2211,6 +2224,9 @@ MESSAGE FILTERS
         inside the SMTP.IPPROP.TAB file. This flag works only for SMTP
         filters.
 
+    timeo
+        sets the timeout value for this filter execution
+
     Each argument can be a macro also (see [MACRO SUBSTITUTION]):
 
     FROM
@@ -2592,8 +2608,8 @@ SSL CONFIGURATION
     generate a certificate request file:
 
       $ openssl req -new -key server.key -out cert.csr
-  
-      C:> openssl req -new -key server.key -out cert.csr -config openssl.cnf
+      
+  C:> openssl req -new -key server.key -out cert.csr -config openssl.cnf
 
     The 'openssl.cnf' file is supplied inside the Xmail's Windows binary
     package, and inside the 'win32ssl\conf' directory of the source package.
@@ -3402,7 +3418,7 @@ XMAIL ADMIN PROTOCOL
   Getting mailproc.tab file
 
      "usergetmproc"[TAB]"domain"[TAB]"username"<CR><LF>
- 
+
     or
 
      "usergetmproc"[TAB]"domain"[TAB]"username"[TAB]"flags"<CR><LF>
@@ -3435,7 +3451,7 @@ XMAIL ADMIN PROTOCOL
   Setting mailproc.tab file
 
      "usersetmproc"[TAB]"domain"[TAB]"username"<CR><LF>
- 
+
     or
 
      "usersetmproc"[TAB]"domain"[TAB]"username"[TAB]"which"<CR><LF>
@@ -4381,4 +4397,16 @@ THANKS
     All of the free source community, for giving me code and knowledge.
 
     [top]
+
+POD ERRORS
+
+    Hey! The above document had some coding errors, which are explained
+    below:
+
+    Around line 784:
+        =back doesn't take any parameters, but you said =back end html
+
+    Around line 1811:
+        You can't have =items (as at line 1817) unless the first thing after
+        the =over is an =item
 

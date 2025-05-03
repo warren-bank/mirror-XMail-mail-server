@@ -153,7 +153,7 @@ static int MnDaemonBootStrap(void)
 
 		exit(errno);
 	} else if (iChildPID > 0)
-			exit(0);
+		exit(0);
 
 	/* Disassociate from controlling terminal and process group. Ensure the process */
 	/* can't reacquire a new controlling terminal. */
@@ -173,7 +173,7 @@ static int MnDaemonBootStrap(void)
 
 		exit(errno);
 	} else if (iChildPID > 0)
-			exit(0);
+		exit(0);
 
 	/* Close open file descriptors */
 	for (int fd = 0; fd < NOFILE; fd++)

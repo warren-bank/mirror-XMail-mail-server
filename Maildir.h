@@ -25,10 +25,11 @@
 
 #define MAILDIR_DIRECTORY           "Maildir"
 
-int MdirCreateStructure(char const *pszBasePath);
-int MdirGetTmpMaildirEntry(char const *pszMaildirPath, char *pszFilePath);
-int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath);
-int MdirMoveMessage(char const *pszMaildirPath, const char *pszFileName,
-		    char const *pszMessageID = NULL);
+int MdirCreateStructure(const char *pszBasePath);
+int MdirGetTmpMaildirEntry(const char *pszMaildirPath, char *pszFilePath,
+			   int iMaxPath);
+int MdirMoveTmpEntryInNew(const char *pszTmpEntryPath);
+int MdirMoveMessage(const char *pszMaildirPath, const char *pszFileName,
+		    const char *pszMessageID = NULL);
 
 #endif

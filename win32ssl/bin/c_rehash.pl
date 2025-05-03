@@ -24,11 +24,19 @@ if ($? != 0) {
 print "Found OpenSSL version: $osslver\n";
 
 
-foreach (@ARGV) {
-    if(-d $_ and -w $_) {
-	hash_dir($_);
+my $use_symlink = $symlink_exists;
+
+for (my $i = 0; $i <= $#ARGV; $i++) {
+    if ($ARGV[$i] eq "-c") {
+        $use_symlink = 0;
+    } else {
+        if(-d $ARGV[$i] and -w $ARGV[$i]) {
+            hash_dir($ARGV[$i]);
+        }
     }
 }
+
+
 
 sub hash_dir {
     my %hashlist;
@@ -39,20 +47,21 @@ sub hash_dir {
 
     # Delete any existing symbolic links
     foreach (grep {/^[\da-f]+\.r{0,1}\d+$/} @flist) {
-	if(-l $_) {
-	    unlink $_;
-	}
+        if(-l $_) {
+            unlink $_;
+        }
     }
     closedir DIR;
-    FILE: foreach $fname (grep {/\.pem$/} @flist) {
-	# Check to see if certificates and/or CRLs present.
-	my ($cert, $crl) = check_file($fname);
-	if(!$cert && !$crl) {
-	    print STDERR "WARNING: $fname does not contain a certificate or CRL: skipping\n";
-	    next;
-	}
-	link_hash_cert($fname) if($cert);
-	link_hash_crl($fname) if($crl);
+  FILE:
+    foreach $fname (grep {/\.pem$/} @flist) {
+        # Check to see if certificates and/or CRLs present.
+        my ($cert, $crl) = check_file($fname);
+        if(!$cert && !$crl) {
+            print STDERR "WARNING: $fname does not contain a certificate or CRL: skipping\n";
+            next;
+        }
+        link_hash_cert($fname) if($cert);
+        link_hash_crl($fname) if($crl);
     }
 }
 
@@ -61,16 +70,16 @@ sub check_file {
     my $fname = $_[0];
     open IN, $fname;
     while(<IN>) {
-	if(/^-----BEGIN (.*)-----/) {
-	    my $hdr = $1;
-	    if($hdr =~ /^(X509 |TRUSTED |)CERTIFICATE$/) {
-		$is_cert = 1;
-		last if($is_crl);
-	    } elsif($hdr eq "X509 CRL") {
-		$is_crl = 1;
-		last if($is_cert);
-	    }
-	}
+        if(/^-----BEGIN (.*)-----/) {
+            my $hdr = $1;
+            if($hdr =~ /^(X509 |TRUSTED |)CERTIFICATE$/) {
+                $is_cert = 1;
+                last if($is_crl);
+            } elsif($hdr eq "X509 CRL") {
+                $is_crl = 1;
+                last if($is_cert);
+            }
+        }
     }
     close IN;
     return ($is_cert, $is_crl);
@@ -94,19 +103,19 @@ sub link_hash_cert {
     my $suffix = 0;
     # Search for an unused hash filename
     while(exists $hashlist{"$hash.$suffix"}) {
-	# Hash matches: if fingerprint matches its a duplicate cert
-	if($hashlist{"$hash.$suffix"} eq $fprint) {
-	    print STDERR "WARNING: Skipping duplicate certificate $fname\n";
-	    return;
-	}
-	$suffix++;
+        # Hash matches: if fingerprint matches its a duplicate cert
+        if($hashlist{"$hash.$suffix"} eq $fprint) {
+            print STDERR "WARNING: Skipping duplicate certificate $fname\n";
+            return;
+        }
+        $suffix++;
     }
     $hash .= ".$suffix";
     print "$fname => $hash\n";
-    if ($symlink_exists) {
-	symlink $fname, $hash;
+    if ($use_symlink) {
+        symlink $fname, $hash;
     } else {
-	file_cp($fname, $hash);
+        file_cp($fname, $hash);
     }
     $hashlist{$hash} = $fprint;
 }
@@ -124,19 +133,19 @@ sub link_hash_crl {
     my $suffix = 0;
     # Search for an unused hash filename
     while(exists $hashlist{"$hash.r$suffix"}) {
-	# Hash matches: if fingerprint matches its a duplicate cert
-	if($hashlist{"$hash.r$suffix"} eq $fprint) {
-	    print STDERR "WARNING: Skipping duplicate CRL $fname\n";
-	    return;
-	}
-	$suffix++;
+        # Hash matches: if fingerprint matches its a duplicate cert
+        if($hashlist{"$hash.r$suffix"} eq $fprint) {
+            print STDERR "WARNING: Skipping duplicate CRL $fname\n";
+            return;
+        }
+        $suffix++;
     }
     $hash .= ".r$suffix";
     print "$fname => $hash\n";
-    if ($symlink_exists) {
-	symlink $fname, $hash;
+    if ($use_symlink) {
+        symlink $fname, $hash;
     } else {
-	file_cp($fname, $hash);
+        file_cp($fname, $hash);
     }
     $hashlist{$hash} = $fprint;
 }
@@ -145,35 +154,35 @@ sub file_cp {
     my ($fsrc, $fdst) = @_;
 
     if (!open(SFIL, "$fsrc")) {
-	print STDERR "unable to open $fsrc\n";
-	return 0;
+        print STDERR "unable to open $fsrc\n";
+        return 0;
     }
     if (!open(DFIL, ">$fdst")) {
-	print STDERR "unable to create $fdst\n";
-	close SFIL;
-	return 0;
+        print STDERR "unable to create $fdst\n";
+        close SFIL;
+        return 0;
     }
     binmode SFIL;
     binmode DFIL;
     for (;;) {
-	my $data;
-	my $size = read(SFIL, $data, 10000);
-	
-	if (!defined($size)) {
-	    print STDERR "unable to read file: $fsrc\n";
-	    close SFIL;
-	    close DFIL;
-	    return 0;
-	}
-	if (!$size) {
-	    last;
-	}
-	if (!print DFIL $data) {
-	    print STDERR "unable to write file: $fdst\n";
-	    close SFIL;
-	    close DFIL;
-	    return 0;
-	}
+        my $data;
+        my $size = read(SFIL, $data, 10000);
+
+        if (!defined($size)) {
+            print STDERR "unable to read file: $fsrc\n";
+            close SFIL;
+            close DFIL;
+            return 0;
+        }
+        if (!$size) {
+            last;
+        }
+        if (!print DFIL $data) {
+            print STDERR "unable to write file: $fdst\n";
+            close SFIL;
+            close DFIL;
+            return 0;
+        }
     }
     close SFIL;
     close DFIL;

@@ -119,7 +119,7 @@ static int SysMapGetAddrInfoError(int iError)
 	return ERR_NETWORK;
 }
 
-int SysGetHostByName(char const *pszName, int iFamily, SYS_INET_ADDR &AddrInfo)
+int SysGetHostByName(const char *pszName, int iFamily, SYS_INET_ADDR &AddrInfo)
 {
 	int iError;
 	struct addrinfo *pCRes, *pRes, *pRes4 = NULL, *pRes6 = NULL;
@@ -307,7 +307,7 @@ int SysInetIPV6ToIPV4(SYS_INET_ADDR const &SAddr, SYS_INET_ADDR &DAddr)
 	SYS_IN4(&DAddr)->sin_family = AF_INET;
 	SYS_IN4(&DAddr)->sin_port = SYS_IN6(&SAddr)->sin6_port;
 	memcpy(&SYS_IN4(&DAddr)->sin_addr.s_addr,
-	       (char const *) &SYS_IN6(&SAddr)->sin6_addr + 12, 4);
+	       (const char *) &SYS_IN6(&SAddr)->sin6_addr + 12, 4);
 	DAddr.iSize = sizeof(struct sockaddr_in);
 
 	return 0;

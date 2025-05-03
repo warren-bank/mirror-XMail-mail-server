@@ -61,21 +61,21 @@ struct SMTPGateway {
 
 enum SmtpMsgInfo {
 	smsgiClientDomain = 0,
-		smsgiClientAddr,
-		smsgiServerDomain,
-		smsgiServerAddr,
-		smsgiTime,
-		smsgiSeverName,
+	smsgiClientAddr,
+	smsgiServerDomain,
+	smsgiServerAddr,
+	smsgiTime,
+	smsgiSeverName,
 
-		smsgiMax
+	smsgiMax
 };
 
 enum SpoolMsgInfo {
 	smiClientAddr,
-		smiServerAddr,
-		smiTime,
+	smiServerAddr,
+	smiTime,
 
-		smiMax
+	smiMax
 };
 
 SMTPGateway **USmtpMakeGateways(char const * const *ppszGwHosts, char const **ppszOptions);
@@ -91,6 +91,7 @@ int USmtpIsAllowedRelay(const SYS_INET_ADDR & PeerInfo, SVRCFG_HANDLE hSvrConfig
 char **USmtpGetPathStrings(const char *pszMailCmd);
 int USmtpSplitEmailAddr(const char *pszAddr, char *pszUser, char *pszDomain);
 int USmtpCheckAddressPart(char const *pszName);
+int USmtpCheckDomainPart(char const *pszName);
 int USmtpCheckAddress(char const *pszAddress);
 int USmtpInitError(SMTPError *pSMTPE);
 int USmtpSetError(SMTPError *pSMTPE, int iSTMPResponse, char const *pszSTMPResponse,

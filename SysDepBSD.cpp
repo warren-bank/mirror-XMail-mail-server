@@ -132,7 +132,7 @@ long SysGetTimeZone(void)
 
 	localtime_r(&tCurr, &tmCurr);
 
-	return (long) -tmCurr.tm_gmtoff;
+	return -tmCurr.tm_gmtoff + tmCurr.tm_isdst * 3600;
 }
 
 int SysGetDiskSpace(char const *pszPath, SYS_INT64 *pTotal, SYS_INT64 *pFree)

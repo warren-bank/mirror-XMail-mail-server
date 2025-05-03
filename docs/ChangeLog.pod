@@ -1,11 +1,66 @@
 
 =head1 NAME
 
-XMail Change Log as of Version 1.25
+XMail Change Log as of Version 1.26
 
 [L<top|"__index__">]
 
 =head1 CHANGE LOG
+
+=head2 Jun 27, 2009 v 1.26
+
+=over 4
+
+=item *
+
+Fixed a bug where STARTTLS was resetting the session too much, by canceling
+certain flags/options read inside the SERVER.TAB.
+
+=item *
+
+Fixed a bug that happened if a message filter mistakenly remove the message file
+from under XMail control.
+
+=item *
+
+Fixed a bug that make XMail to wrongly report virtual memory sizes on 32 bit
+systems with larger than 4GB VM space.
+
+=item *
+
+Changed the line termination used to store messages into the mailboxes
+of Unix versions of XMail. Now messages are stored with the OS native LF
+termination, instead of the RFC CRLF that was used before.
+This allows other Unix softwares working together with XMail to not be
+confused by the extra CR present in the line termination.
+
+=item *
+
+The "smtprelay" behaviour with respect to 5xx responses from one of the servers
+in the relay list, has been changed. Now a 5xx response will stop the
+processing, instead of iterating on the remaining servers of the list.
+
+=item *
+
+Avoid to crawl all the USER.TAB file during a "userlist" CTRL command.
+
+=item *
+
+Fixed a bug that allowed non-RFC characters inside domain names.
+
+=item *
+
+Fixed OSX Leopard build error.
+
+=item *
+
+Added "timeo" option to flags execution.
+
+=item *
+
+Added "NoAuth", "EnableVRFY" and "EnableETRN" settings inside IP properties.
+
+=back
 
 =head2 Jan 3, 2008 v 1.25
 

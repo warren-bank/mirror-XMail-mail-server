@@ -57,8 +57,8 @@ int SysSetThreadPriority(SYS_THREAD ThreadID, int iPriority)
 	}
 
 	int iMinPriority = sched_get_priority_min(iPolicy),
-	iMaxPriority = sched_get_priority_max(iPolicy),
-	iStdPriority = (iMinPriority + iMaxPriority) / 2;
+		iMaxPriority = sched_get_priority_max(iPolicy),
+		iStdPriority = (iMinPriority + iMaxPriority) / 2;
 
 	switch (iPriority) {
 	case (SYS_PRIORITY_NORMAL):

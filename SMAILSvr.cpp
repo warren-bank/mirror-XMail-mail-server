@@ -1058,9 +1058,9 @@ static int SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSM
 
 			if (stricmp(ppszCmdTokens[0], "external") == 0)
 				iCmdResult =
-				SMAILCmd_external(hSvrConfig, hShbSMAIL, pszDestDomain,
-						  ppszCmdTokens, iFieldsCount, hFSpool,
-						  hQueue, hMessage);
+					SMAILCmd_external(hSvrConfig, hShbSMAIL, pszDestDomain,
+							  ppszCmdTokens, iFieldsCount, hFSpool,
+							  hQueue, hMessage);
 			else if (stricmp(ppszCmdTokens[0], "filter") == 0)
 				iCmdResult = SMAILCmd_filter(hSvrConfig, hShbSMAIL, pszDestDomain,
 							     ppszCmdTokens, iFieldsCount, hFSpool,
@@ -1071,19 +1071,19 @@ static int SMAILCustomProcessMessage(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSM
 							   hQueue, hMessage);
 			else if (stricmp(ppszCmdTokens[0], "smtprelay") == 0)
 				iCmdResult =
-				SMAILCmd_smtprelay(hSvrConfig, hShbSMAIL, pszDestDomain,
-						   ppszCmdTokens, iFieldsCount, hFSpool,
-						   hQueue, hMessage);
+					SMAILCmd_smtprelay(hSvrConfig, hShbSMAIL, pszDestDomain,
+							   ppszCmdTokens, iFieldsCount, hFSpool,
+							   hQueue, hMessage);
 			else if (stricmp(ppszCmdTokens[0], "redirect") == 0)
 				iCmdResult =
-				SMAILCmd_redirect(hSvrConfig, hShbSMAIL, pszDestDomain,
-						  ppszCmdTokens, iFieldsCount, hFSpool,
-						  hQueue, hMessage);
+					SMAILCmd_redirect(hSvrConfig, hShbSMAIL, pszDestDomain,
+							  ppszCmdTokens, iFieldsCount, hFSpool,
+							  hQueue, hMessage);
 			else if (stricmp(ppszCmdTokens[0], "lredirect") == 0)
 				iCmdResult =
-				SMAILCmd_lredirect(hSvrConfig, hShbSMAIL, pszDestDomain,
-						   ppszCmdTokens, iFieldsCount, hFSpool,
-						   hQueue, hMessage);
+					SMAILCmd_lredirect(hSvrConfig, hShbSMAIL, pszDestDomain,
+							   ppszCmdTokens, iFieldsCount, hFSpool,
+							   hQueue, hMessage);
 			else {
 				SysLogMessage(LOG_LEV_ERROR,
 					      "Invalid command \"%s\" in file \"%s\"\n",
@@ -1439,7 +1439,7 @@ static int SMAILCmd_smtprelay(SVRCFG_HANDLE hSvrConfig, SHB_HANDLE hShbSMAIL,
 	/* that have an empty relay list */
 	int iReturnCode = 0;
 
-	for (int i = 0; ppGws[i] != NULL; i++) {
+	for (int i = 0; ppGws[i] != NULL && iReturnCode >= 0; i++) {
 		SysLogMessage(LOG_LEV_MESSAGE,
 			      "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
 			      ppGws[i]->pszHost, pszSMTPDomain, pszMailFrom, pszRcptTo);

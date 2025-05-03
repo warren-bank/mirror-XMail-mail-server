@@ -37,7 +37,26 @@
 #include "MiscUtils.h"
 #include "Maildir.h"
 
-int MdirCreateStructure(char const *pszBasePath)
+static int MdirMessageID(char *pszMessageID, int iMaxMessageID)
+{
+	/*
+	 * Get thread ID and host name. We do not use atomic inc on ulUniqSeq, since
+	 * collision is prevented by the thread ID
+	 */
+	static unsigned long ulUniqSeq = 0;
+	unsigned long ulThreadID = SysGetCurrentThreadId();
+	SYS_INT64 iMsTime = SysMsTime();
+	char szHostName[MAX_HOST_NAME] = "";
+
+	gethostname(szHostName, sizeof(szHostName) - 1);
+	SysSNPrintf(pszMessageID, iMaxMessageID,
+		    SYS_LLU_FMT ".%lu.%lx.%s",
+		    iMsTime, ulThreadID, ulUniqSeq++, szHostName);
+
+	return 0;
+}
+
+int MdirCreateStructure(const char *pszBasePath)
 {
 	/* Create Maildir directory */
 	char szMaildirPath[SYS_MAX_PATH] = "";
@@ -73,20 +92,25 @@ int MdirCreateStructure(char const *pszBasePath)
 	return 0;
 }
 
-int MdirGetTmpMaildirEntry(char const *pszMaildirPath, char *pszFilePath)
+int MdirGetTmpMaildirEntry(const char *pszMaildirPath, char *pszFilePath,
+			   int iMaxPath)
 {
-	char szTmpPath[SYS_MAX_PATH] = "";
+	char szMessageID[SYS_MAX_PATH];
 
-	sprintf(szTmpPath, "%s" SYS_SLASH_STR "tmp", pszMaildirPath);
+	if (MdirMessageID(szMessageID, sizeof(szMessageID)) < 0)
+		return ErrGetErrorCode();
+	SysSNPrintf(pszFilePath, iMaxPath,
+		    "%s" SYS_SLASH_STR "tmp" SYS_SLASH_STR "%s",
+		    pszMaildirPath, szMessageID);
 
-	return MscUniqueFile(szTmpPath, pszFilePath);
+	return 0;
 }
 
-int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
+int MdirMoveTmpEntryInNew(const char *pszTmpEntryPath)
 {
 	/* Lookup Maildir/tmp/ subpath */
-	char const *pszTmpDir = MAILDIR_DIRECTORY SYS_SLASH_STR "tmp" SYS_SLASH_STR;
-	char const *pszLookup = strstr(pszTmpEntryPath, pszTmpDir);
+	const char *pszTmpDir = MAILDIR_DIRECTORY SYS_SLASH_STR "tmp" SYS_SLASH_STR;
+	const char *pszLookup = strstr(pszTmpEntryPath, pszTmpDir);
 
 	if (pszLookup == NULL) {
 		ErrSetErrorCode(ERR_INVALID_MAILDIR_SUBPATH);
@@ -94,8 +118,8 @@ int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
 	}
 	/* Build Maildir/new file path */
 	int iBaseLength = (int) (pszLookup - pszTmpEntryPath);
-	char const *pszNewDir = MAILDIR_DIRECTORY SYS_SLASH_STR "new" SYS_SLASH_STR;
-	char const *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
+	const char *pszNewDir = MAILDIR_DIRECTORY SYS_SLASH_STR "new" SYS_SLASH_STR;
+	const char *pszSlash = strrchr(pszTmpEntryPath, SYS_SLASH_CHAR);
 	char szNewEntryPath[SYS_MAX_PATH] = "";
 
 	StrSNCpy(szNewEntryPath, pszTmpEntryPath);
@@ -109,30 +133,28 @@ int MdirMoveTmpEntryInNew(char const *pszTmpEntryPath)
 	return 0;
 }
 
-int MdirMoveMessage(char const *pszMaildirPath, const char *pszFileName, char const *pszMessageID)
+/*
+ * This function must be called with file names located onto the same
+ * mount/drive: of the destination Maildir. This is accomplished by
+ * the function UsrGetTmpFile().
+ */
+int MdirMoveMessage(const char *pszMaildirPath, const char *pszFileName,
+		    const char *pszMessageID)
 {
-	/* Allocate a Maildir/tmp entry */
-	char szTmpEntryPath[SYS_MAX_PATH] = "";
+	char szMessageID[SYS_MAX_PATH];
+	char szNewEntryPath[SYS_MAX_PATH];
 
 	if (pszMessageID == NULL) {
-		if (MdirGetTmpMaildirEntry(pszMaildirPath, szTmpEntryPath) < 0)
+		if (MdirMessageID(szMessageID, sizeof(szMessageID)) < 0)
 			return ErrGetErrorCode();
-	} else
-		sprintf(szTmpEntryPath, "%s" SYS_SLASH_STR "tmp" SYS_SLASH_STR "%s",
-			pszMaildirPath, pszMessageID);
-
-	/* This perform a copy&delete to Maildir/tmp */
-	if (MscMoveFile(pszFileName, szTmpEntryPath) < 0) {
-		ErrorPush();
-		CheckRemoveFile(szTmpEntryPath);
-		return ErrorPop();
+		pszMessageID = szMessageID;
 	}
-	/* This perform a fast system move from Maildir/tmp to Maildir/new */
-	if (MdirMoveTmpEntryInNew(szTmpEntryPath) < 0) {
-		ErrorPush();
-		SysRemove(szTmpEntryPath);
-		return ErrorPop();
-	}
+	SysSNPrintf(szNewEntryPath, sizeof(szNewEntryPath),
+		    "%s" SYS_SLASH_STR "new" SYS_SLASH_STR "%s",
+		    pszMaildirPath, pszMessageID);
+	if (SysMoveFile(pszFileName, szNewEntryPath) < 0)
+		return ErrGetErrorCode();
 
 	return 0;
 }
+

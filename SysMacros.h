@@ -63,28 +63,28 @@
 #define MemMatch(s, n, m, l)    ((n) == (l) && memcmp(s, m, n) == 0)
 #define EquivDatum(a, b)        ((a)->lSize == (b)->lSize && memcmp((a)->pData, (b)->pData, (a)->lSize) == 0)
 #define ArrayInit(a, v)         do { unsigned int __i; for (__i = 0; __i < CountOf(a); __i++) (a)[__i] = (v); } while (0)
-#define StrVSprint(r, l, f) do { \
-	int             iCurrSize = 256; \
-	int             iPSize; \
-	va_list         Args; \
-	for (;;) { \
-		r = (char *) SysAlloc(iCurrSize); \
-		if (r == NULL) \
-			break; \
-		va_start(Args, l); \
-		if (((iPSize = SysVSNPrintf(r, iCurrSize - 1, f, Args)) >= 0) && \
-			    iPSize < iCurrSize) { \
-			va_end(Args); \
-			break; \
-		} \
-		va_end(Args); \
-		if (iPSize > 0) \
-			iCurrSize = (4 * iPSize) / 3 + 2; \
-		else \
-			iCurrSize *= 2; \
-		SysFree(r); \
-	} \
-} while (0)
+#define StrVSprint(r, l, f) do {					\
+		int             iCurrSize = 256;			\
+		int             iPSize;					\
+		va_list         Args;					\
+		for (;;) {						\
+			r = (char *) SysAlloc(iCurrSize);		\
+			if (r == NULL)					\
+				break;					\
+			va_start(Args, l);				\
+			if (((iPSize = SysVSNPrintf(r, iCurrSize - 1, f, Args)) >= 0) && \
+			    iPSize < iCurrSize) {			\
+				va_end(Args);				\
+				break;					\
+			}						\
+			va_end(Args);					\
+			if (iPSize > 0)					\
+				iCurrSize = (4 * iPSize) / 3 + 2;	\
+			else						\
+				iCurrSize *= 2;				\
+			SysFree(r);					\
+		}							\
+	} while (0)
 
 /* Inline functions */
 

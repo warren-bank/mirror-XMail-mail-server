@@ -64,9 +64,9 @@
 
 enum CtrlAccountsFileds {
 	accUsername = 0,
-		accPassword,
+	accPassword,
 
-		accMax
+	accMax
 };
 
 static CTRLConfig *CTRLGetConfigCopy(SHB_HANDLE hShbCTRL);
@@ -799,8 +799,8 @@ static int CTRLDo_useradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		return ErrorPop();
 	}
 
-	if ((USmtpCheckAddressPart(ppszTokens[1]) < 0) ||
-	    (USmtpCheckAddressPart(ppszTokens[2]) < 0)) {
+	if (USmtpCheckDomainPart(ppszTokens[1]) < 0 ||
+	    USmtpCheckAddressPart(ppszTokens[2]) < 0) {
 		ErrorPush();
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
 		return ErrorPop();
@@ -814,7 +814,6 @@ static int CTRLDo_useradd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
 		return ErrorPop();
 	}
-
 	if (UsrAddUser(pUI) < 0) {
 		ErrorPush();
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
@@ -1338,7 +1337,7 @@ static int CTRLDo_userlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 
 	CTRLSendCmdResult(pCTRLCfg, hBSock, CTRL_LISTFOLLOW_RESULT);
 
-	UserInfo *pUI = UsrGetFirstUser(hUsersDB);
+	UserInfo *pUI = UsrGetFirstUser(hUsersDB, 0);
 
 	if (pUI != NULL) {
 		do {
@@ -1363,7 +1362,7 @@ static int CTRLDo_userlist(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 
 			UsrFreeUserInfo(pUI);
 
-		} while ((pUI = UsrGetNextUser(hUsersDB)) != NULL);
+		} while ((pUI = UsrGetNextUser(hUsersDB, 0)) != NULL);
 	}
 
 	BSckSendString(hBSock, ".", pCTRLCfg->iTimeout);
@@ -1794,7 +1793,7 @@ static int CTRLDo_domainadd(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		ErrSetErrorCode(ERR_BAD_CTRL_COMMAND);
 		return ERR_BAD_CTRL_COMMAND;
 	}
-	if (USmtpCheckAddressPart(ppszTokens[1]) < 0) {
+	if (USmtpCheckDomainPart(ppszTokens[1]) < 0) {
 		ErrorPush();
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
 		return ErrorPop();
@@ -1928,7 +1927,7 @@ static int CTRLDo_custdomset(CTRLConfig *pCTRLCfg, BSOCK_HANDLE hBSock,
 		return ERR_BAD_CTRL_COMMAND;
 	}
 
-	if (USmtpCheckAddressPart(ppszTokens[1]) < 0) {
+	if (USmtpCheckDomainPart(ppszTokens[1]) < 0) {
 		ErrorPush();
 		CTRLSendCmdResult(pCTRLCfg, hBSock, ErrGetErrorCode());
 		return ErrorPop();

@@ -34,20 +34,20 @@ SVRCFG_HANDLE SvrGetConfigHandle(int iWriteLock = 0);
 void SvrReleaseConfigHandle(SVRCFG_HANDLE hSvrConfig);
 char *SvrGetConfigVar(SVRCFG_HANDLE hSvrConfig, const char *pszName,
 		      const char *pszDefault = NULL);
-bool SvrTestConfigFlag(char const *pszName, bool bDefault,
+bool SvrTestConfigFlag(const char *pszName, bool bDefault,
 		       SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
-int SvrGetConfigInt(char const *pszName, int iDefault,
+int SvrGetConfigInt(const char *pszName, int iDefault,
 		    SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE);
 int SysFlushConfig(SVRCFG_HANDLE hSvrConfig);
 int SvrGetMessageID(SYS_UINT64 * pullMessageID);
 char *SvrGetLogsDir(char *pszLogsPath, int iMaxPath);
 char *SvrGetSpoolDir(char *pszSpoolPath, int iMaxPath);
-int SvrConfigVar(char const *pszVarName, char *pszVarValue, int iMaxVarValue,
-		 SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, char const *pszDefault = NULL);
+int SvrConfigVar(const char *pszVarName, char *pszVarValue, int iMaxVarValue,
+		 SVRCFG_HANDLE hSvrConfig = INVALID_SVRCFG_HANDLE, const char *pszDefault = NULL);
 int SvrCheckDiskSpace(unsigned long ulMinSpace);
 int SvrCheckVirtMemSpace(unsigned long ulMinSpace);
-int SvrEnumProtoProps(char const *pszProto, const SYS_INET_ADDR *pPeerInfo,
-		      char const *pszHostName, int (*pfEnum)(void *, char const *, char const *),
+int SvrEnumProtoProps(const char *pszProto, const SYS_INET_ADDR *pPeerInfo,
+		      const char *pszHostName, int (*pfEnum)(void *, const char *, const char *),
 		      void *pPrivate);
 
 #endif

@@ -47,10 +47,10 @@ struct AliasInfo {
 
 enum UserType {
 	usrTypeError = -1,
-		usrTypeUser = 0,
-		usrTypeML,
+	usrTypeUser = 0,
+	usrTypeML,
 
-		usrTypeMax
+	usrTypeMax
 };
 
 typedef struct USRF_HANDLE_struct {
@@ -63,8 +63,8 @@ int UsrCheckUsersIndexes(void);
 int UsrCheckAliasesIndexes(void);
 char *UsrGetMLTableFilePath(UserInfo *pUI, char *pszMLTablePath, int iMaxPath);
 UserType UsrGetUserType(UserInfo *pUI);
-UserInfo *UsrCreateDefaultUser(char const *pszDomain, char const *pszName,
-			       char const *pszPassword, UserType TypeUser);
+UserInfo *UsrCreateDefaultUser(const char *pszDomain, const char *pszName,
+			       const char *pszPassword, UserType TypeUser);
 void UsrFreeUserInfo(UserInfo *pUI);
 char *UsrGetUserInfoVar(UserInfo *pUI, const char *pszName, const char *pszDefault = NULL);
 int UsrGetUserInfoVarInt(UserInfo *pUI, const char *pszName, int iDefault);
@@ -90,18 +90,19 @@ int UsrFlushUserVars(UserInfo *pUI);
 int UsrGetDBFileSnapShot(const char *pszFileName);
 USRF_HANDLE UsrOpenDB(void);
 void UsrCloseDB(USRF_HANDLE hUsersDB);
-UserInfo *UsrGetFirstUser(USRF_HANDLE hUsersDB);
-UserInfo *UsrGetNextUser(USRF_HANDLE hUsersDB);
+UserInfo *UsrGetFirstUser(USRF_HANDLE hUsersDB, int iLoadUCfg);
+UserInfo *UsrGetNextUser(USRF_HANDLE hUsersDB, int iLoadUCfg);
 int UsrPOP3Lock(UserInfo *pUI);
 void UsrPOP3Unlock(UserInfo *pUI);
 int UsrClearPop3LocksDir(void);
+int UsrGetTmpFile(const char *pszDomain, char *pszTmpFile, int iMaxPath);
 char *UsrGetUserPath(UserInfo *pUI, char *pszUserPath, int iMaxPath, int iFinalSlash);
 char *UsrGetMailboxPath(UserInfo *pUI, char *pszMBPath, int iMaxPath, int iFinalSlash);
-int UsrMoveToMailBox(UserInfo *pUI, char const *pszFileName, char const *pszMessageID);
-int UsrGetMailProcessFile(UserInfo *pUI, char const *pszMPPath, unsigned long ulFlags);
-int UsrSetMailProcessFile(UserInfo *pUI, char const *pszMPPath, int iWhich);
+int UsrMoveToMailBox(UserInfo *pUI, const char *pszFileName, const char *pszMessageID);
+int UsrGetMailProcessFile(UserInfo *pUI, const char *pszMPPath, unsigned long ulFlags);
+int UsrSetMailProcessFile(UserInfo *pUI, const char *pszMPPath, int iWhich);
 char *UsrGetAddress(UserInfo *pUI, char *pszAddress);
-int UsrGetAliasDBFileSnapShot(char const *pszFileName);
+int UsrGetAliasDBFileSnapShot(const char *pszFileName);
 ALSF_HANDLE UsrAliasOpenDB(void);
 void UsrAliasCloseDB(ALSF_HANDLE hAliasDB);
 AliasInfo *UsrAliasGetFirst(ALSF_HANDLE hAliasDB);

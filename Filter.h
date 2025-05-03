@@ -58,16 +58,17 @@ struct FilterExecCtx {
 	FilterTokens *pToks;
 	char const *pszAuthName;
 	unsigned long ulFlags;
+	int iTimeout;
 };
 
 enum FilterFields {
 	filSender = 0,
-		filRecipient,
-		filRemoteAddr,
-		filLocalAddr,
-		filFileName,
+	filRecipient,
+	filRemoteAddr,
+	filLocalAddr,
+	filFileName,
 
-		filMax
+	filMax
 };
 
 int FilLogFilter(FilterLogInfo const *pFLI);

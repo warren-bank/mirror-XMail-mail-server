@@ -373,7 +373,7 @@ char *MscStrftime(struct tm const *ptmTime, char *pszDateStr, int iSize)
 {
 	const char *pszWDays[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 	const char *pszMonths[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+				    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
 
 	SysSNPrintf(pszDateStr, iSize, "%s, %d %s %d %02d:%02d:%02d",
@@ -617,7 +617,7 @@ int main(int iArgCount, char *pszArgs[])
 		int iLineLength = strlen(szBuffer);
 
 		for (; (iLineLength > 0) &&
-		     ((szBuffer[iLineLength - 1] == '\r') || (szBuffer[iLineLength - 1] == '\n'));
+			     ((szBuffer[iLineLength - 1] == '\r') || (szBuffer[iLineLength - 1] == '\n'));
 		     iLineLength--);
 
 		szBuffer[iLineLength] = '\0';
@@ -716,8 +716,8 @@ int main(int iArgCount, char *pszArgs[])
 			int iLineLength = strlen(szBuffer);
 
 			for (; (iLineLength > 0) &&
-			     ((szBuffer[iLineLength - 1] == '\r') ||
-			      (szBuffer[iLineLength - 1] == '\n')); iLineLength--);
+				     ((szBuffer[iLineLength - 1] == '\r') ||
+				      (szBuffer[iLineLength - 1] == '\n')); iLineLength--);
 
 			szBuffer[iLineLength] = '\0';
 

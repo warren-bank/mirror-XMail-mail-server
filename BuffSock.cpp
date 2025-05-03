@@ -46,12 +46,12 @@ struct BuffSocketData {
 };
 
 static int BSckReadLL(BuffSocketData *pBSD, void *pData, int iSize, int iTimeout);
-static int BSckWriteLL(BuffSocketData *pBSD, void const *pData, int iSize, int iTimeout);
-static char const *BSckSock_Name(void *pPrivate);
+static int BSckWriteLL(BuffSocketData *pBSD, const void *pData, int iSize, int iTimeout);
+static const char *BSckSock_Name(void *pPrivate);
 static int BSckSock_Free(void *pPrivate);
 static int BSckSock_Read(void *pPrivate, void *pData, int iSize, int iTimeout);
-static int BSckSock_Write(void *pPrivate, void const *pData, int iSize, int iTimeout);
-static int BSckSock_SendFile(void *pPrivate, char const *pszFilePath, SYS_OFF_T llBaseOffset,
+static int BSckSock_Write(void *pPrivate, const void *pData, int iSize, int iTimeout);
+static int BSckSock_SendFile(void *pPrivate, const char *pszFilePath, SYS_OFF_T llBaseOffset,
 			     SYS_OFF_T llEndOffset, int iTimeout);
 static int BSckFetchData(BuffSocketData *pBSD, int iTimeout);
 
@@ -73,12 +73,12 @@ static int BSckReadLL(BuffSocketData *pBSD, void *pData, int iSize, int iTimeout
 	return iCount;
 }
 
-static int BSckWriteLL(BuffSocketData *pBSD, void const *pData, int iSize, int iTimeout)
+static int BSckWriteLL(BuffSocketData *pBSD, const void *pData, int iSize, int iTimeout)
 {
 	int iCount = 0;
 
 	while (iCount < iSize) {
-		int iCWrite = BSOCK_WRITE(pBSD, (char const *) pData + iCount,
+		int iCWrite = BSOCK_WRITE(pBSD, (const char *) pData + iCount,
 					  iSize - iCount, iTimeout);
 
 		if (iCWrite <= 0)
@@ -89,7 +89,7 @@ static int BSckWriteLL(BuffSocketData *pBSD, void const *pData, int iSize, int i
 	return iCount;
 }
 
-static char const *BSckSock_Name(void *pPrivate)
+static const char *BSckSock_Name(void *pPrivate)
 {
 
 	return BSOCK_BIO_NAME;
@@ -105,12 +105,12 @@ static int BSckSock_Read(void *pPrivate, void *pData, int iSize, int iTimeout)
 	return SysRecvData((SYS_SOCKET) (long) pPrivate, (char *) pData, iSize, iTimeout);
 }
 
-static int BSckSock_Write(void *pPrivate, void const *pData, int iSize, int iTimeout)
+static int BSckSock_Write(void *pPrivate, const void *pData, int iSize, int iTimeout)
 {
-	return SysSendData((SYS_SOCKET) (long) pPrivate, (char const *) pData, iSize, iTimeout);
+	return SysSendData((SYS_SOCKET) (long) pPrivate, (const char *) pData, iSize, iTimeout);
 }
 
-static int BSckSock_SendFile(void *pPrivate, char const *pszFilePath, SYS_OFF_T llBaseOffset,
+static int BSckSock_SendFile(void *pPrivate, const char *pszFilePath, SYS_OFF_T llBaseOffset,
 			     SYS_OFF_T llEndOffset, int iTimeout)
 {
 	return SysSendFile((SYS_SOCKET) (long) pPrivate, pszFilePath, llBaseOffset,
@@ -285,7 +285,7 @@ char *BSckGetString(BSOCK_HANDLE hBSock, char *pszBuffer, int iMaxChars, int iTi
 	return NULL;
 }
 
-int BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout)
+int BSckSendString(BSOCK_HANDLE hBSock, const char *pszBuffer, int iTimeout)
 {
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 	char *pszSendBuffer = (char *) SysAlloc(strlen(pszBuffer) + 3);
@@ -306,7 +306,7 @@ int BSckSendString(BSOCK_HANDLE hBSock, char const *pszBuffer, int iTimeout)
 	return iSendLength;
 }
 
-int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ...)
+int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, const char *pszFormat, ...)
 {
 	char *pszBuffer = NULL;
 
@@ -324,7 +324,7 @@ int BSckVSendString(BSOCK_HANDLE hBSock, int iTimeout, char const *pszFormat, ..
 	return 0;
 }
 
-int BSckSendData(BSOCK_HANDLE hBSock, char const *pszBuffer, int iSize, int iTimeout)
+int BSckSendData(BSOCK_HANDLE hBSock, const char *pszBuffer, int iSize, int iTimeout)
 {
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
@@ -357,7 +357,7 @@ int BSckReadData(BSOCK_HANDLE hBSock, char *pszBuffer, int iSize, int iTimeout, 
 	return iReadedBytes;
 }
 
-int BSckSendFile(BSOCK_HANDLE hBSock, char const *pszFilePath, SYS_OFF_T llBaseOffset,
+int BSckSendFile(BSOCK_HANDLE hBSock, const char *pszFilePath, SYS_OFF_T llBaseOffset,
 		 SYS_OFF_T llEndOffset, int iTimeout)
 {
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
@@ -372,7 +372,7 @@ SYS_SOCKET BSckGetAttachedSocket(BSOCK_HANDLE hBSock)
 	return pBSD->SockFD;
 }
 
-int BSckSetIOops(BSOCK_HANDLE hBSock, BufSockIOOps const *pIOops)
+int BSckSetIOops(BSOCK_HANDLE hBSock, const BufSockIOOps *pIOops)
 {
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 
@@ -381,7 +381,7 @@ int BSckSetIOops(BSOCK_HANDLE hBSock, BufSockIOOps const *pIOops)
 	return 0;
 }
 
-char const *BSckBioName(BSOCK_HANDLE hBSock)
+const char *BSckBioName(BSOCK_HANDLE hBSock)
 {
 	BuffSocketData *pBSD = (BuffSocketData *) hBSock;
 

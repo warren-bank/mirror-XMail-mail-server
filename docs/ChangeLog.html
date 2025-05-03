@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>XMail Change Log v 1.25</title>
+<title>XMail Change Log v 1.26</title>
 <link rel="stylesheet" href="./xmail.css" type="text/css" />
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rev="made" href="mailto:root@localhost" />
@@ -10,8 +10,10 @@
 
 <body>
 
-<p><a name="__index__"></a></p>
+
 <!-- INDEX BEGIN -->
+<div name="index">
+<p><a name="__index__"></a></p>
 
 <ul>
 
@@ -19,6 +21,7 @@
 	<li><a href="#change_log">CHANGE LOG</a></li>
 	<ul>
 
+		<li><a href="#jun_27__2009_v_1_26">Jun 27, 2009 v 1.26</a></li>
 		<li><a href="#jan_3__2008_v_1_25">Jan 3, 2008 v 1.25</a></li>
 		<li><a href="#jan_1__2007_v_1_24">Jan 1, 2007 v 1.24</a></li>
 		<li><a href="#nov_19__2006_v_1_23">Nov 19, 2006 v 1.23</a></li>
@@ -108,18 +111,64 @@
 	</ul>
 
 </ul>
+
+<hr name="index" />
+</div>
 <!-- INDEX END -->
 
-<hr />
 <p>
 </p>
 <h1><a name="name">NAME</a></h1>
-<p>XMail Change Log as of Version 1.25</p>
+<p>XMail Change Log as of Version 1.26</p>
 <p>[<a href="#__index__">top</a>]</p>
 <p>
 </p>
 <hr />
 <h1><a name="change_log">CHANGE LOG</a></h1>
+<p>
+</p>
+<h2><a name="jun_27__2009_v_1_26">Jun 27, 2009 v 1.26</a></h2>
+<ul>
+<li>
+<p>Fixed a bug where STARTTLS was resetting the session too much, by canceling
+certain flags/options read inside the SERVER.TAB.</p>
+</li>
+<li>
+<p>Fixed a bug that happened if a message filter mistakenly remove the message file
+from under XMail control.</p>
+</li>
+<li>
+<p>Fixed a bug that make XMail to wrongly report virtual memory sizes on 32 bit
+systems with larger than 4GB VM space.</p>
+</li>
+<li>
+<p>Changed the line termination used to store messages into the mailboxes
+of Unix versions of XMail. Now messages are stored with the OS native LF
+termination, instead of the RFC CRLF that was used before.
+This allows other Unix softwares working together with XMail to not be
+confused by the extra CR present in the line termination.</p>
+</li>
+<li>
+<p>The &quot;smtprelay&quot; behaviour with respect to 5xx responses from one of the servers
+in the relay list, has been changed. Now a 5xx response will stop the
+processing, instead of iterating on the remaining servers of the list.</p>
+</li>
+<li>
+<p>Avoid to crawl all the USER.TAB file during a &quot;userlist&quot; CTRL command.</p>
+</li>
+<li>
+<p>Fixed a bug that allowed non-RFC characters inside domain names.</p>
+</li>
+<li>
+<p>Fixed OSX Leopard build error.</p>
+</li>
+<li>
+<p>Added &quot;timeo&quot; option to flags execution.</p>
+</li>
+<li>
+<p>Added &quot;NoAuth&quot;, &quot;EnableVRFY&quot; and &quot;EnableETRN&quot; settings inside IP properties.</p>
+</li>
+</ul>
 <p>
 </p>
 <h2><a name="jan_3__2008_v_1_25">Jan 3, 2008 v 1.25</a></h2>
@@ -131,7 +180,7 @@
 <p>Added a new -YT command line option to set the timeout used by a POP3 client connection.</p>
 </li>
 <li>
-<p>Fixed a bug in the RFC822 ATEXT token definition.</p>
+<p>Fixed a bug in the <a href="http://www.ietf.org/rfc/rfc822.txt" class="rfc">RFC822</a> ATEXT token definition.</p>
 </li>
 <li>
 <p>If the recipient domain does not have an MX record, and does not have an A record,
@@ -167,7 +216,7 @@ SMTPGW.TAB parsing).</p>
 <p>Added remote MTA message ID to SMAIL logging.</p>
 </li>
 <li>
-<p>Added a new ``POP3S'' option to the POP3LINKS.TAB file, to allow connections
+<p>Added a new &quot;POP3S&quot; option to the POP3LINKS.TAB file, to allow connections
 to full POP3S remote servers.</p>
 </li>
 <li>
@@ -179,20 +228,20 @@ and to report the number of messages and the total size of the mailbox (in
 case of successful login).</p>
 </li>
 <li>
-<p>Added a new ``Pop3LogPasswd'' SERVER.TAB variable to control if POP3 passwords
+<p>Added a new &quot;Pop3LogPasswd&quot; SERVER.TAB variable to control if POP3 passwords
 are logged into the POP3 log file.</p>
 </li>
 <li>
-<p>Added a new ``SmtpNoTLSAuths'' SERVER.TAB variable. It allows to specify
+<p>Added a new &quot;SmtpNoTLSAuths&quot; SERVER.TAB variable. It allows to specify
 which SMTP authentications are allowed in non-TLS mode.</p>
 </li>
 <li>
-<p>Fixed a small memory leak affecting users using the ``OutBind'' feature.</p>
+<p>Fixed a small memory leak affecting users using the &quot;OutBind&quot; feature.</p>
 </li>
 <li>
-<p>Removed the ``SMTP-TLS'' SERVER.TAB variable and replaced with ``SmtpGwConfig''
-that supports the format described in ``SMTP GATEWAY CONFIGURATION''. The
-``SmtpGwConfig'' allows the user to specify global options for remote SMTP
+<p>Removed the &quot;SMTP-TLS&quot; SERVER.TAB variable and replaced with &quot;SmtpGwConfig&quot;
+that supports the format described in &quot;SMTP GATEWAY CONFIGURATION&quot;. The
+&quot;SmtpGwConfig&quot; allows the user to specify global options for remote SMTP
 connections.</p>
 </li>
 <li>
@@ -210,11 +259,11 @@ connections.</p>
  ********************************************************************</pre>
 </li>
 <li>
-<p>Added the new ``OutBind'' options for PSYNC accounts. It allows to specify the
+<p>Added the new &quot;OutBind&quot; options for PSYNC accounts. It allows to specify the
 IP of the interface to be used when talking to the remote server.</p>
 </li>
 <li>
-<p>Added a new ``OutBind'' option to the ``SmtpConfig'' SERVER.TAB variables.
+<p>Added a new &quot;OutBind&quot; option to the &quot;SmtpConfig&quot; SERVER.TAB variables.
 It allows to specify the IP of the interface to be used when talking to the
 remote server.</p>
 </li>
@@ -234,7 +283,7 @@ through host name.</p>
  ********************************************************************</pre>
 </li>
 <li>
-<p>Added the new ``Leave'' options for PSYNC accounts, that allows messages to be left
+<p>Added the new &quot;Leave&quot; options for PSYNC accounts, that allows messages to be left
 on the remote server. This option only works if the remote POP3 server supports
 the UIDL command.</p>
 </li>
@@ -264,22 +313,22 @@ resulted in EFULL errors never returned at SMTP level.</p>
  ********************************************************************</pre>
 </li>
 <li>
-<p>Added new ``EnableCTRL-TLS'', ``EnableSMTP-TLS'' and ``EnablePOP3-TLS'' SERVER.TAB variables.</p>
+<p>Added new &quot;EnableCTRL-TLS&quot;, &quot;EnableSMTP-TLS&quot; and &quot;EnablePOP3-TLS&quot; SERVER.TAB variables.</p>
 </li>
 <li>
-<p>Added SMTP gateway options to the ``DefaultSMTPGateways'' variable, to the
-SMTPFWD.TAB file, and to the ``smtprelay'' command inside the mail processing files.</p>
-<p>Added a new ``WantTLS'' option to the ``SmtpConfig'' SERVER.TAB variables.</p>
+<p>Added SMTP gateway options to the &quot;DefaultSMTPGateways&quot; variable, to the
+SMTPFWD.TAB file, and to the &quot;smtprelay&quot; command inside the mail processing files.</p>
+<p>Added a new &quot;WantTLS&quot; option to the &quot;SmtpConfig&quot; SERVER.TAB variables.</p>
 </li>
 <li>
-<p>Added a new ``EaseTLS'' option to the SMTP.IPPROP.TAB file.</p>
+<p>Added a new &quot;EaseTLS&quot; option to the SMTP.IPPROP.TAB file.</p>
 </li>
 <li>
-<p>Added a new 'S' SMTP auth option to bypass a ``WantTLS'' configuration.</p>
+<p>Added a new 'S' SMTP auth option to bypass a &quot;WantTLS&quot; configuration.</p>
 </li>
 <li>
-<p>Added ``SSLUseCertsFile'', ``SSLUseCertsDir'', ``SSLWantVerify'', ``SSLAllowSelfSigned'',
-``SSLWantCert'' and ``SSLMaxCertsDepth'' SERVER.TAB variables to configure XMail's SSL behaviour.</p>
+<p>Added &quot;SSLUseCertsFile&quot;, &quot;SSLUseCertsDir&quot;, &quot;SSLWantVerify&quot;, &quot;SSLAllowSelfSigned&quot;,
+&quot;SSLWantCert&quot; and &quot;SSLMaxCertsDepth&quot; SERVER.TAB variables to configure XMail's SSL behaviour.</p>
 </li>
 <li>
 <p>Added STARTTLS SMTP support.</p>
@@ -300,7 +349,7 @@ SMTPFWD.TAB file, and to the ``smtprelay'' command inside the mail processing fi
 <p>Added FAPOP, STLS and FSTLS authentication options to the POP3LINKS.TAB file..</p>
 </li>
 <li>
-<p>Added a new ``SMTP-TLS'' SERVER.TAB variable to tell XMail if it has to try to negotiate
+<p>Added a new &quot;SMTP-TLS&quot; SERVER.TAB variable to tell XMail if it has to try to negotiate
 TLS sessions with remote SMTP servers.</p>
 </li>
 <li>
@@ -315,7 +364,7 @@ TLS sessions with remote SMTP servers.</p>
 <p>Changed the filter log to include the full exec string (separated by semicolon).</p>
 </li>
 <li>
-<p>Fix CTRL ``poplnkadd'' and ``poplnkdel'' to accept local domains strings starting
+<p>Fix CTRL &quot;poplnkadd&quot; and &quot;poplnkdel&quot; to accept local domains strings starting
 with special characters.</p>
 </li>
 <li>
@@ -323,15 +372,15 @@ with special characters.</p>
 package without the usage of the MS VC++ IDE.</p>
 </li>
 <li>
-<p>Reject a CTRL ``domainadd'' command if an alias domain already exists with the same name.</p>
+<p>Reject a CTRL &quot;domainadd&quot; command if an alias domain already exists with the same name.</p>
 </li>
 <li>
-<p>Changed the CTRL ``usergetmproc'' command to allow the caller to specify if it
-is the user or the domain one that is wanted. Or a merges of both, if ``DU'' is
+<p>Changed the CTRL &quot;usergetmproc&quot; command to allow the caller to specify if it
+is the user or the domain one that is wanted. Or a merges of both, if &quot;DU&quot; is
 specified in the optional 3th parameter.</p>
 </li>
 <li>
-<p>Changed the CTRL ``usersetmproc'' command to allow the caller to specify if it
+<p>Changed the CTRL &quot;usersetmproc&quot; command to allow the caller to specify if it
 is the user ('U') or the domain ('D') one that is wanted to be set.</p>
 </li>
 <li>
@@ -350,13 +399,13 @@ only done during the SMTP phase).</p>
 Bounce immediately instead, avoiding lengthy retry policies.</p>
 </li>
 <li>
-<p>Added the ``wlex'' flag to filter lines (works for the SMTP ones only), to exclude
+<p>Added the &quot;wlex&quot; flag to filter lines (works for the SMTP ones only), to exclude
 execution of the filter line in case the client IP is white-listed inside the
 ipprop file.</p>
 </li>
 <li>
 <p>Added the post-RCPT SMTP filter, that is called before XMail acks the client recipient.
-A new ``RCPT=EFILTER'' long entry is emitted in case a recipient is rejected by a filter.</p>
+A new &quot;RCPT=EFILTER&quot; long entry is emitted in case a recipient is rejected by a filter.</p>
 </li>
 <li>
 <p>Added @@CRCPT (current recipient) and @@FROM (sender email address) macros to SMTP
@@ -371,13 +420,13 @@ the alias domain resolution.</p>
 <p>Added the ability to bypass the SMTP.IPMAP.TAB inclusion using SMTP authentication.</p>
 </li>
 <li>
-<p>Added a new SERVER.TAB variable ``SMTP-IpMapDropCode'' to control the drop code
+<p>Added a new SERVER.TAB variable &quot;SMTP-IpMapDropCode&quot; to control the drop code
 to be used for IPs listed inside the SMTP.IPMAP.TAB. Like other codes inside
 XMail, 1 means drop now, 0 means allow if auth, and -N means add N seconds delay.
-An immediate drop will emit a ``SNDRIP=EIPBAN'' log entry.</p>
+An immediate drop will emit a &quot;SNDRIP=EIPBAN&quot; log entry.</p>
 </li>
 <li>
-<p>Added a new SERVER.TAB variable ``SmtpMsgIPBan'' to control the SMTP message returned
+<p>Added a new SERVER.TAB variable &quot;SmtpMsgIPBan&quot; to control the SMTP message returned
 in case of SMTP.IPMAP.TAB inclusion.</p>
 </li>
 <li>
@@ -390,14 +439,14 @@ in case of SMTP.IPMAP.TAB inclusion.</p>
 <p>Fixed a build problem on OpenBSD related to the lack of c_r (reentrant C library) library.</p>
 </li>
 <li>
-<p>Fixed greetings message to be RFC2821 compliant (server host must be first).</p>
+<p>Fixed greetings message to be <a href="http://www.ietf.org/rfc/rfc2821.txt" class="rfc">RFC2821</a> compliant (server host must be first).</p>
 </li>
 <li>
 <p>Fixed a NAME_MAX build error ond *BSD and Solaris.</p>
 </li>
 <li>
-<p>Added a ``Pop3ScanCur'' USER.TAB variable to control the scan of the Maildir's ``cur''
-directory during POP3 message list build. Now XMail only scans the ``new'' directory
+<p>Added a &quot;Pop3ScanCur&quot; USER.TAB variable to control the scan of the Maildir's &quot;cur&quot;
+directory during POP3 message list build. Now XMail only scans the &quot;new&quot; directory
 as default.</p>
 </li>
 </ul>
@@ -426,7 +475,7 @@ configuations.</p>
 </li>
 <li>
 <p>Added the ability to exclude filters from execution in case of authenticated user.
-By pre-pending the filter command token with a token containing ``!aex'', the filters
+By pre-pending the filter command token with a token containing &quot;!aex&quot;, the filters
 won't be run if the user authenticated himself.</p>
 </li>
 <li>
@@ -434,15 +483,15 @@ won't be run if the user authenticated himself.</p>
 for SMTP ones).</p>
 </li>
 <li>
-<p>Added a new ``NoSenderBounce'' variable inside the SERVER.TAB file, to enable
+<p>Added a new &quot;NoSenderBounce&quot; variable inside the SERVER.TAB file, to enable
 XMail generated bounce messages to have the empty SMTP sender ('MAIL FROM:&lt;&gt;').</p>
 </li>
 <li>
-<p>Added a new ``SMTP-MaxErrors'' variable inside the SERVER.TAB file to set the maximum
+<p>Added a new &quot;SMTP-MaxErrors&quot; variable inside the SERVER.TAB file to set the maximum
 errors allowed in a single SMTP session (default zero, unlimited).</p>
 </li>
 <li>
-<p>Added a ``LastLoginTimeDate'' variable to the ``userstat'' CTRL command.</p>
+<p>Added a &quot;LastLoginTimeDate&quot; variable to the &quot;userstat&quot; CTRL command.</p>
 </li>
 <li>
 <p>Added external aliases support in the CTRL protocol.</p>
@@ -459,7 +508,7 @@ with domain's ones first, followed by user's ones.</p>
 <p>The maximum mailbox size of zero is now interpreted as unlimited.</p>
 </li>
 <li>
-<p>Fixed XMail's sendmail to detect non-RFC822 data and handle it correctly.</p>
+<p>Fixed XMail's sendmail to detect non-<a href="http://www.ietf.org/rfc/rfc822.txt" class="rfc">RFC822</a> data and handle it correctly.</p>
 </li>
 <li>
 <p>The IP:PORT addresses emission in spool files (and Received: lines) has been changed
@@ -470,7 +519,7 @@ to the form [IP]:PORT.</p>
 </li>
 <li>
 <p>Fixed an error message in the SMTP server, that was triggered by the remote client
-not using the proper syntax for the ``MAIL FROM:'' and ``RCPT TO:'' commands.</p>
+not using the proper syntax for the &quot;MAIL FROM:&quot; and &quot;RCPT TO:&quot; commands.</p>
 </li>
 <li>
 <p>Fixed explicit routing through SMTPGW.TAB file.</p>
@@ -484,7 +533,7 @@ cfgfileget/cfgfileset.</p>
 older versions of XMail does not have the domain directory inside cmdaliases.</p>
 </li>
 <li>
-<p>The SMTP server FQDN variable should be set to the value of ``SmtpServerDomain'', when
+<p>The SMTP server FQDN variable should be set to the value of &quot;SmtpServerDomain&quot;, when
 this is used inside the SERVER.TAB file.</p>
 </li>
 </ul>
@@ -501,16 +550,16 @@ this is used inside the SERVER.TAB file.</p>
 <h2><a name="may_29__2004_v_1_19">May 29, 2004 v 1.19</a></h2>
 <ul>
 <li>
-<p>Implemented the ``filter'' command for custom mail processing (MAILPROC.TAB, cmdaliases
+<p>Implemented the &quot;filter&quot; command for custom mail processing (MAILPROC.TAB, cmdaliases
 and custom domains).</p>
 </li>
 <li>
-<p>If ``RemoveSpoolErrors'' is set inside the SERVER.TAB file, messages are never frozen.
+<p>If &quot;RemoveSpoolErrors&quot; is set inside the SERVER.TAB file, messages are never frozen.
 Before there was a special case (delivery failure and delivery notification failure)
 that could have lead to frozen messages.</p>
 </li>
 <li>
-<p>Made ``aliasdomainadd'' to check for the existence of the alias domain (and reject
+<p>Made &quot;aliasdomainadd&quot; to check for the existence of the alias domain (and reject
 the command if existing).</p>
 </li>
 <li>
@@ -525,13 +574,13 @@ external commands execution.</p>
 <p>The SPAMMERS.TAB check is now bypassable (see doc for details).</p>
 </li>
 <li>
-<p>'<strong>ATTENTION</strong>': Changed the ``aliasdomainlist'' syntax and output format (see doc for details).</p>
+<p>'<strong>ATTENTION</strong>': Changed the &quot;aliasdomainlist&quot; syntax and output format (see doc for details).</p>
 </li>
 <li>
 <p>Made (on Unix setups) the PID file name to be dependent on the daemon file name.</p>
 </li>
 <li>
-<p>Implemeted a domain-wise MAILPROC.TAB and extended its ``redirect'' and ``lredirect''
+<p>Implemeted a domain-wise MAILPROC.TAB and extended its &quot;redirect&quot; and &quot;lredirect&quot;
 commands to support account specific (USER@DOMAIN) and domain targets (DOMAIN).</p>
 </li>
 <li>
@@ -551,7 +600,7 @@ as a consequence of this, the system dependent portion of XMail (SysDep*).</p>
 <p>Fixed a bug in the address range parsing (x.y.w.z/s).</p>
 </li>
 <li>
-<p>Fixed the alias lookup to perform a better ``best match'' wildcard selection.</p>
+<p>Fixed the alias lookup to perform a better &quot;best match&quot; wildcard selection.</p>
 </li>
 <li>
 <p>Fixed a bug in the DNS resolved that made XMail to not correctly handle domain CNAMEs.</p>
@@ -582,7 +631,7 @@ versions of XMail.</p>
 </li>
 <li>
 <p>A notification message is now sent to the sender if the message is handled with
-``smtp'' or ``smtprelay'' commands and a permanent error happen when sending to the
+&quot;smtp&quot; or &quot;smtprelay&quot; commands and a permanent error happen when sending to the
 remote SMTP server.</p>
 </li>
 </ul>
@@ -591,7 +640,7 @@ remote SMTP server.</p>
 <h2><a name="jul_8__2003_v_1_16">Jul 8, 2003 v 1.16</a></h2>
 <ul>
 <li>
-<p>Added a new configuration file ``smtp.ipprop.tab'' to be able to specify peer IP based
+<p>Added a new configuration file &quot;smtp.ipprop.tab&quot; to be able to specify peer IP based
 configuration option, like for example IP white listing against IP checks.</p>
 </li>
 <li>
@@ -603,7 +652,7 @@ filters before starting to use the new version.</p>
 <p>Added the ability to specify a custom error message for filters.</p>
 </li>
 <li>
-<p>Fixed a bug in the string quoting function that showed up when the string was empty (``'').</p>
+<p>Fixed a bug in the string quoting function that showed up when the string was empty (&quot;&quot;).</p>
 </li>
 <li>
 <p>Changed the order used by XMail to check the mailer domain. Now MX check is performed
@@ -618,14 +667,14 @@ the SMTP client does authenticate with the server.</p>
 <p>Added the rejection map name inside the SMTP log file in case of SNDRIP=EIPMAP error.</p>
 </li>
 <li>
-<p>Modified XMail's sendmail to add the RFC822 Date: header if missing.</p>
+<p>Modified XMail's sendmail to add the <a href="http://www.ietf.org/rfc/rfc822.txt" class="rfc">RFC822</a> Date: header if missing.</p>
 </li>
 <li>
 <p>XMail now uses the name of the executable ( without .exe ) to both register the service
 name and fetch registry variables.</p>
 </li>
 <li>
-<p>The POP3 server now picks up messages even from the Maildir's ``cur'' subdirectory.</p>
+<p>The POP3 server now picks up messages even from the Maildir's &quot;cur&quot; subdirectory.</p>
 </li>
 </ul>
 <p>
@@ -645,7 +694,7 @@ list processing upon receival of certain exit codes.</p>
 <li>
 <p>Fixed a bug ( Windows OS bug ) that made XMail unable to create domains starting
 with reserved device names ( COM#, LPT, PRN, CON, ... ). So, for example, a domain
-named ``com4.domain.org'' couldn't be created because of this naming conflict.</p>
+named &quot;com4.domain.org&quot; couldn't be created because of this naming conflict.</p>
 </li>
 <li>
 <p>Fixed a bug that made XMail to not apply filters for local mailing list.</p>
@@ -659,7 +708,7 @@ named ``com4.domain.org'' couldn't be created because of this naming conflict.</
 <h2><a name="april_2__2003_v_1_14">April 2, 2003 v 1.14</a></h2>
 <ul>
 <li>
-<p>Added a ``Server:'' field to the notification message. It'll report the remote SMTP server
+<p>Added a &quot;Server:&quot; field to the notification message. It'll report the remote SMTP server
 host name and IP that issued the error. It will not be present if the error does not
 originate from a remote SMTP server.</p>
 </li>
@@ -668,11 +717,11 @@ originate from a remote SMTP server.</p>
 for the DNS cache files storage.</p>
 </li>
 <li>
-<p>Messages with non RFC822 conforming headers are now handled by the PSYNC code.</p>
+<p>Messages with non <a href="http://www.ietf.org/rfc/rfc822.txt" class="rfc">RFC822</a> conforming headers are now handled by the PSYNC code.</p>
 </li>
 <li>
 <p>'<strong>ATTENTION</strong>': The filter architecture has been completely changed. To correctly
-update to this version you have to create two empty files ``filters.in.tab'' and ``filters.out.tab''
+update to this version you have to create two empty files &quot;filters.in.tab&quot; and &quot;filters.out.tab&quot;
 inside the $MAIL_ROOT directory. Please refer to the documentation for more information
 about the new filter architecture. If you are not currently using filters, the simple
 creation of the two files listed above will be sufficent.</p>
@@ -686,7 +735,7 @@ internal spool file format must be changed to match the new structure.</p>
 <p>Fixed a bug that made XMail to not correctly report zero sized files inside the mailbox.</p>
 </li>
 <li>
-<p>Added file size to CTRL's ``filelist'' command.</p>
+<p>Added file size to CTRL's &quot;filelist&quot; command.</p>
 </li>
 <li>
 <p>Fixed a connect-error reporting bug on Windows platform.</p>
@@ -709,13 +758,13 @@ internal spool file format must be changed to match the new structure.</p>
 <p>Added the client FQDN inside the SMTP log file in case the RDNS check is enabled.</p>
 </li>
 <li>
-<p>Added a new SERVER.TAB variable ``SmtpMsgIPBanSpammers'' to set the message that is sent
+<p>Added a new SERVER.TAB variable &quot;SmtpMsgIPBanSpammers&quot; to set the message that is sent
 to the SMTP client when the client IP is listed inside the file SPAMMER.TAB.</p>
-<p>Added a new SERVER.TAB variable ``SmtpMsgIPBanMaps'' to set the message that is sent
-to the SMTP client when the client IP is listed inside one of the ``CustMapsList''.</p>
+<p>Added a new SERVER.TAB variable &quot;SmtpMsgIPBanMaps&quot; to set the message that is sent
+to the SMTP client when the client IP is listed inside one of the &quot;CustMapsList&quot;.</p>
 </li>
 <li>
-<p>Added a new SERVER.TAB variable ``SmtpMsgIPBanSpamAddress'' to set the message that is sent
+<p>Added a new SERVER.TAB variable &quot;SmtpMsgIPBanSpamAddress&quot; to set the message that is sent
 to the SMTP client when the client IP is listed inside the file SPAM-ADDRESS.TAB.</p>
 </li>
 <li>
@@ -747,14 +796,14 @@ the account itself.</p>
 <p>Added a new macro @@RRCPT to filters commands to extract the real local recipient.</p>
 </li>
 <li>
-<p>Changed the way the EXTALIASES.TAB mapping modify the return path. It now change the ``Reply-To:''
-instead of the ``From:'' to avoid problems with signature verification software.</p>
+<p>Changed the way the EXTALIASES.TAB mapping modify the return path. It now change the &quot;Reply-To:&quot;
+instead of the &quot;From:&quot; to avoid problems with signature verification software.</p>
 </li>
 <li>
 <p>Implemented logging on SMTP transactions rejected because of mapped IP or failing RDNS check.</p>
 </li>
 <li>
-<p>Added a new SERVER.TAB variable ``SmtpServerDomain'' to force the SMTP domain used by XMail
+<p>Added a new SERVER.TAB variable &quot;SmtpServerDomain&quot; to force the SMTP domain used by XMail
 in its banner string ( for CRAM-MD5 ESMTP authentication ).</p>
 </li>
 <li>
@@ -975,7 +1024,7 @@ the system has to send the notification message.</p>
 <p>Added an extra message header field 'X-AuthUser:' to log the username used by the account to send the message.</p>
 </li>
 <li>
-<p>Added Reply-To: RFC822 header for mailing lists sends.</p>
+<p>Added Reply-To: <a href="http://www.ietf.org/rfc/rfc822.txt" class="rfc">RFC822</a> header for mailing lists sends.</p>
 </li>
 <li>
 <p>Fixed a Win32 subsystem API to let XMail to correctly handle network shared MAIL_ROOTs.</p>
@@ -1553,7 +1602,7 @@ in a way or another (see section POP3LINKS.TAB).</p>
 'Custom domain mail processing').</p>
 </li>
 <li>
-<p>The use of <code>realloc()</code> function has been removed to make place for <code>free()/malloc()</code> due a glibc bug
+<p>The use of <code>realloc()</code> function has been removed to make place for free()/malloc() due a glibc bug
 with such function.</p>
 </li>
 </ul>
