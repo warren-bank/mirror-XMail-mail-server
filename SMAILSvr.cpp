@@ -92,6 +92,8 @@ static int      SMAILCmd_wait(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, 
                         int iNumTokens, SPLF_HANDLE hFSpool);
 static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
                         int iNumTokens, SPLF_HANDLE hFSpool);
+static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
+                        int iNumTokens, SPLF_HANDLE hFSpool);
 static int      SMAILCmd_redirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
                         int iNumTokens, SPLF_HANDLE hFSpool);
 static int      SMAILCmd_lredirect(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
@@ -927,6 +929,9 @@ static int      SMAILCustomProcessMessage(SHB_HANDLE hShbSMAIL, SPLF_HANDLE hFSp
             else if (stricmp(ppszCmdTokens[0], "smtp") == 0)
                 iCmdResult = SMAILCmd_smtp(hShbSMAIL, pszDestDomain, ppszCmdTokens,
                         iFieldsCount, hFSpool);
+            else if (stricmp(ppszCmdTokens[0], "smtprelay") == 0)
+                iCmdResult = SMAILCmd_smtprelay(hShbSMAIL, pszDestDomain, ppszCmdTokens,
+                        iFieldsCount, hFSpool);
             else if (stricmp(ppszCmdTokens[0], "redirect") == 0)
                 iCmdResult = SMAILCmd_redirect(hShbSMAIL, pszDestDomain, ppszCmdTokens,
                         iFieldsCount, hFSpool);
@@ -1174,6 +1179,112 @@ static int      SMAILCmd_smtp(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, 
 
 }
 
+
+
+static int      SMAILCmd_smtprelay(SHB_HANDLE hShbSMAIL, char const * pszDestDomain, char **ppszCmdTokens,
+                        int iNumTokens, SPLF_HANDLE hFSpool)
+{
+
+    if (iNumTokens != 2)
+    {
+        ErrSetErrorCode(ERR_BAD_DOMAIN_PROC_CMD_SYNTAX);
+        return (ERR_BAD_DOMAIN_PROC_CMD_SYNTAX);
+    }
+
+
+    char          **ppszRelays = NULL;
+
+    if (ppszCmdTokens[1][0] == '#')
+    {
+        if ((ppszRelays = StrTokenize(ppszCmdTokens[1] + 1, ",")) != NULL)
+        {
+            int             iRelayCount = StrStringsCount(ppszRelays);
+
+            srand((unsigned int) time(NULL));
+
+            for (int ii = 0; ii < (iRelayCount / 2); ii++)
+            {
+                int             iSwap1 = rand() % iRelayCount,
+                                iSwap2 = rand() % iRelayCount;
+                char           *pszRly1 = ppszRelays[iSwap1],
+                               *pszRly2 = ppszRelays[iSwap2];
+
+                ppszRelays[iSwap1] = pszRly2;
+                ppszRelays[iSwap2] = pszRly1;
+            }
+        }
+    }
+    else
+        ppszRelays = StrTokenize(ppszCmdTokens[1], ",");
+
+
+    if (ppszRelays == NULL)
+        return (ErrGetErrorCode());
+
+
+
+    char const     *pszSMTPDomain = USmlGetSMTPDomain(hFSpool);
+    char const     *pszMailFrom = USmlMailFrom(hFSpool);
+    char const     *pszRcptTo = USmlRcptTo(hFSpool);
+    char const     *pszSendMailFrom = USmlSendMailFrom(hFSpool);
+    char const     *pszSendRcptTo = USmlSendRcptTo(hFSpool);
+    char const     *pszMailFile = USmlGetMailFile(hFSpool);
+    char const     *pszSpoolFilePath = USmlGetSpoolFilePath(hFSpool);
+
+    SMTPError       SMTPE;
+
+    USmtpInitError(&SMTPE);
+
+///////////////////////////////////////////////////////////////////////////////
+//  By initializing this to zero makes XMail to discharge all mail for domains
+//  that have an empty relay list
+///////////////////////////////////////////////////////////////////////////////
+    int             iReturnCode = 0;
+
+    for (int ss = 0; ppszRelays[ss] != NULL; ss++)
+    {
+        SysLogMessage(LOG_LEV_MESSAGE, "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\"\n",
+                ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+
+
+        USmtpCleanupError(&SMTPE);
+
+        if (USmtpSendMail(ppszRelays[ss], pszSMTPDomain, pszSendMailFrom, pszSendRcptTo,
+                pszMailFile, &SMTPE) == 0)
+        {
+///////////////////////////////////////////////////////////////////////////////
+//  Log Mailer operation
+///////////////////////////////////////////////////////////////////////////////
+            if (SMAILLogEnabled(hShbSMAIL))
+                USmlLogMessage(hFSpool, "RLYS", ppszRelays[ss]);
+
+            USmtpCleanupError(&SMTPE);
+
+            StrFreeStrings(ppszRelays);
+
+            return (0);
+        }
+
+
+        ErrLogMessage(LOG_LEV_MESSAGE,
+                "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
+                ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+
+        QueErrLogMessage(pszSpoolFilePath,
+                "SMAIL SMTP-Send RLYS = \"%s\" SMTP = \"%s\" From = \"%s\" To = \"%s\" Failed !\n",
+                ppszRelays[ss], pszSMTPDomain, pszMailFrom, pszRcptTo);
+
+
+        iReturnCode = USmtpIsFatalError(&SMTPE) ? ErrGetErrorCode() : -ErrGetErrorCode();
+    }
+
+    USmtpCleanupError(&SMTPE);
+
+    StrFreeStrings(ppszRelays);
+
+    return (iReturnCode);
+
+}
 
 
 

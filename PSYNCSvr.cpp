@@ -378,6 +378,22 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
                     "Error = %s\n", pPopLnk->pszName, pPopLnk->pszDomain, ErrGetErrorString());
 
     }
+    else if (GwLkAnonymousDomain(pPopLnk))
+    {
+        SysLogMessage(LOG_LEV_MESSAGE,
+                "[PSYNC/ANON] RmtDomain = \"%s\" - RmtName = \"%s\"\n",
+                pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+
+///////////////////////////////////////////////////////////////////////////////
+//  Sync
+///////////////////////////////////////////////////////////////////////////////
+        if (UPopSyncRemoteLink(NULL, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+                        pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
+            ErrLogMessage(LOG_LEV_MESSAGE,
+                    "[PSYNC/ANON] RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
+                    pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+
+    }
     else
     {
         char            szSyncAddress[MAX_ADDR_NAME] = "";
@@ -397,7 +413,6 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
             ErrLogMessage(LOG_LEV_MESSAGE,
                     "[PSYNC/EXT] Acount = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
                     szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
-
     }
 
 ///////////////////////////////////////////////////////////////////////////////

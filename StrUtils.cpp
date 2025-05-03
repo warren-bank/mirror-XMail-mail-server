@@ -549,33 +549,24 @@ char           *StrVSprint(char const * pszFormat, va_list Args)
 {
 
     int             iCurrSize = 256;
-    char           *pszMessage = (char *) SysAlloc(iCurrSize);
-
-    if (pszMessage == NULL)
-        return (NULL);
 
     for (;;)
     {
-	    int             iNeededBytes = SysVSNPrintf(pszMessage, iCurrSize - 1, pszFormat, Args);
+        char           *pszMessage = (char *) SysAlloc(iCurrSize);
 
-        if ((iNeededBytes >= 0) && (iNeededBytes < (iCurrSize - 1)))
+        if (pszMessage == NULL)
+            return (NULL);
+
+        if (SysVSNPrintf(pszMessage, iCurrSize - 1, pszFormat, Args) >= 0)
             return (pszMessage);
 
         iCurrSize *= 2;
 
-        char           *pszNew = (char *) SysRealloc(pszMessage, iCurrSize);
-
-        if (pszNew == NULL)
-        {
-            SysFree(pszMessage);
-            return (NULL);
-        }
-
-        pszMessage = pszNew;
+        SysFree(pszMessage);
     }
-
+	
     return (NULL);
-
+	
 }
 
 

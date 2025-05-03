@@ -102,6 +102,7 @@ int             USmlCreateSpoolFile(SPLF_HANDLE hFSpool, char const * pszFromUse
 int             USmlProcessLocalUserMessage(UserInfo * pUI, SPLF_HANDLE hFSpool,
                         LocalMailProcConfig & LMPC);
 int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash = 1);
+int             USmlDomainCustomFileName(char const * pszDestDomain, char *pszCustFilePath);
 int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCustFilePath);
 int             USmlGetDomainCustomSpoolFile(char const * pszSpoolFilePath, char *pszCustFilePath);
 int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, char const * pszDestDomain,

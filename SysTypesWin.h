@@ -53,7 +53,6 @@
 #define SYS_INVALID_IPCNAME     ((SYS_IPCNAME) 0)
 
 #define SysSNPrintf             _snprintf
-#define SysVSNPrintf            _vsnprintf
 
 #define SYS_fd_set              fd_set
 #define SYS_FD_ZERO             FD_ZERO

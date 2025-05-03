@@ -4,3 +4,6 @@
 "smtp"
 "wait"	"2"
 "external"	"0"	"0"	"custom_delivery-delfile.sh"	"-s"	"@@FROM"	"-r"	"@@RCPT"	"-f"	"@@TMPFILE"
+"smtprelay"	"smtp.piggy.net"
+"smtprelay"	"smtp2.piggy.net:6110"
+

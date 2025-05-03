@@ -912,6 +912,15 @@ int             GwLkLocalDomain(POP3Link const * pPopLnk)
 
 
 
+int             GwLkAnonymousDomain(POP3Link const * pPopLnk)
+{
+
+    return (((pPopLnk != NULL) && (pPopLnk->pszDomain[0] == '?')) ? 1: 0);
+
+}
+
+
+
 static int      GwLkGetDisableFilePath(POP3Link const * pPopLnk, char *pszEnableFile)
 {
 

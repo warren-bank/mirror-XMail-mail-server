@@ -213,6 +213,7 @@
 #define ERR_QUEUE_ARRAY_FULL        (-186)
 #define ERR_QUEUE_ENTRY_NOT_FOUND   (-187)
 #define ERR_NULL_SENDER             (-188)
+#define ERR_RCPTTO_UNKNOWN          (-189)
 
 
 

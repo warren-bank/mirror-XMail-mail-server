@@ -72,11 +72,12 @@
 #define MAX_CTRL_THREADS            512
 #define MAIL_MAGIC_KEY              0xabcd
 #define SVR_EXIT_WAIT               480
-#define STD_SERVER_SESSION_TIMEOUT  120
+#define STD_SERVER_SESSION_TIMEOUT  90
 #define MAX_CLIENTS_WAIT            300
-#define CTRL_SERVER_SESSION_TIMEOUT 480
+#define CTRL_SERVER_SESSION_TIMEOUT 120
 #define SERVER_SLEEP_TIMESLICE      2
 #define SHUTDOWN_CHECK_TIME         2
+
 
 
 
@@ -427,7 +428,7 @@ static int      SvrSetupPOP3(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_POP3_PORT,
-                    iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT,
+                    iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
                     iBadLoginWait = STD_POP3_BADLOGIN_WAIT,
                     iNumAddr = 0;
     long            lMaxThreads = MAX_POP3_THREADS;
@@ -565,7 +566,7 @@ static int      SvrSetupSMTP(int iArgCount, char *pszArgs[])
 {
 
     int             iPort = STD_SMTP_PORT,
-                    iSessionTimeout = CTRL_SERVER_SESSION_TIMEOUT,
+                    iSessionTimeout = STD_SERVER_SESSION_TIMEOUT,
                     iMaxRcpts = STD_SMTP_MAX_RCPTS,
                     iNumAddr = 0;
     long            lMaxThreads = MAX_SMTP_THREADS;

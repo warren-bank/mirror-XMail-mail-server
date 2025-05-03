@@ -130,6 +130,8 @@ int             SysMakeDir(const char *pszPath);
 int             SysRemoveDir(const char *pszPath);
 int             SysMoveFile(char const * pszOldName, char const * pszNewName);
 
+int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args);
+
 
 
 

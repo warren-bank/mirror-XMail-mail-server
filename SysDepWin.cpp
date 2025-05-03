@@ -2002,3 +2002,12 @@ int             SysMoveFile(char const * pszOldName, char const * pszNewName)
     return (0);
 
 }
+
+
+
+int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args)
+{
+
+    return (_vsnprintf(pszBuffer, iSize, pszFormat, Args));
+
+}

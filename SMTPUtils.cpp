@@ -224,7 +224,30 @@ char          **USmtpGetFwdGateways(SVRCFG_HANDLE hSvrConfig, const char *pszDom
 
         if ((iFieldsCount >= fwdMax) && StrIWildMatch(pszDomain, ppszStrings[fwdDomain]))
         {
-            char          **ppszFwdGws = StrTokenize(ppszStrings[fwdGateway], ",");
+            char          **ppszFwdGws = NULL;
+
+            if (ppszStrings[fwdGateway][0] == '#')
+            {
+                if ((ppszFwdGws = StrTokenize(ppszStrings[fwdGateway] + 1, ",")) != NULL)
+                {
+                    int             iGwCount = StrStringsCount(ppszFwdGws);
+
+                    srand((unsigned int) time(NULL));
+
+                    for (int ii = 0; ii < (iGwCount / 2); ii++)
+                    {
+                        int             iSwap1 = rand() % iGwCount,
+                                        iSwap2 = rand() % iGwCount;
+                        char           *pszGw1 = ppszFwdGws[iSwap1],
+                                       *pszGw2 = ppszFwdGws[iSwap2];
+
+                        ppszFwdGws[iSwap1] = pszGw2;
+                        ppszFwdGws[iSwap2] = pszGw1;
+                    }
+                }
+            }
+            else
+                ppszFwdGws = StrTokenize(ppszStrings[fwdGateway], ",");
 
             StrFreeStrings(ppszStrings);
             fclose(pFwdFile);

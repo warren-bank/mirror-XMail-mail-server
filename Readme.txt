@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.61 ( Beta-15 )
+Version      : 0.62 ( Beta-16 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 12-09-2000
+Date         : 21-10-2000
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -348,6 +348,24 @@ Date 12-09-2000		0.61
 	email address as username ( @ or : as separators ).
 	Authenticated users will get the permission stored in the new  "DefaultSmtpPerms"  SERVER.TAB
 	variable.
+Date 12-09-2000		0.62
+	Added a new custom domain processing command  "smtprelay"  that can be used to route
+	messages to other smtp servers ( see section "Custom domain mail processing" ).
+	New search method for  custdomains/  files : now the test to find out if the domain
+	sub1.sub2.domain.net  will get a custom domain processing is done by looking up
+	sub1.sub2.domain.net.tab , .sub2.domain.net.tab , .domain.net.tab , .net.tab and then .tab.
+	There is a new POP3 sync method now that enables users that receives mail for multiple recipients
+	into a single external POP3 account to get all mail to be distributed locally.
+	You've to be sure, to not create mail loops, that all recipients domains are locally handled
+	in a way or another ( see section POP3LINKS.TAB ).
+	Added the random order option to SMTPFWD.TAB gateways to randomly select the order of the try list
+	( see section SMTPFWD.TAB ).
+	Added the random order option to  "smtprelay"  custom domain processing ( see section
+	"Custom domain mail processing" ).
+
+
+
+
 
 
 
@@ -528,9 +546,9 @@ Part 4			Requirements
 	Any version of Linux.
 	Windows NT with ws2_32.dll correctly installed.
 	A working DNS and gateway to the internet ( if You plan to use it ).
-	To build for Linux You need any version of gcc and libc or glibc ( better )
+	To build for Linux You need any version of gcc and libc or glibc ( better ) 
 	installed.
-	To build for Windows You need MS Visual C++ ( for which I give the project )
+	To build for Windows You need MS Visual C++ ( for which I give the project ) 
 	or any other working compiler that give support for Win32 SDK.
 
 
@@ -568,9 +586,11 @@ Part 5			Getting sources
 
 
 
+
+
 Part 6			Build
 
-	In Windows NT I give You a project that can be loaded from Visual C++ while 
+	In Windows NT I give You a project that can be loaded from Visual C++ while
 	in Linux ( and other Unixes ) I give You a Makefile.lnx ( for now ) :
 
 	# make -f Makefile.lnx
@@ -821,9 +841,9 @@ Part 7			Configuration
 	This file define "Return-Path: <...>" mapping for internal mail delivery.
 	If You are using a Mail client like Outlook, Eudora, KMail ... You have configured 
 	Your email address with the external account say "dlibenzi@maticad.it".
-	When You post an inernal message to "foo@maticad" the mail client put Your external
+	When You post an inernal message to "foo@maticad" the mail client put Your external 
 	email address ( "dlibenzi@maticad.it" ) in the "MAIL FROM: <...>" SMTP request.
-	Now if the user "foo" reply to this message, it'll reply to "dlibenzi@maticad.it" 
+	Now if the user "foo" reply to this message, it'll reply to "dlibenzimaticad.it"
 	then it'll be sent to the external mail server.
 	With the entry above in EXTALIASES.TAB file the "Return-Path: <...>" field is filled 
 	with "dlibenzi@maticad" that lead to an internal mail reply.
@@ -892,6 +912,15 @@ Part 7			Configuration
 	The message will be pushed into the spool having as destination  dlibenzi@maticad.com  ,
 	so You've to have some kind of processing for that user or domain in Your XMail configuration
 	( for example custom domain processing ).
+	You can also have the option to setup a line like this one :
+
+	"?maticad.com"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+
+	and the fetched messages will be pushed into the spool using the address contained into the "To:"
+	tag of the incoming message. This enable users that have a single external POP3 account that
+	collect mail for multiple local users to have fetched mail distributed locally.
+	You've to be sure that the recipients domains are handled locally in a way or another.
+	Particular attention is to be taken about at not creating mail loops.
 
 
 	SERVER.TAB :
@@ -938,6 +967,11 @@ Part 7			Configuration
 
 	will send all mail for  "*.dummy.net"  through the provided list of mail exchangers.
 	If the port ( :nn ) is not specified the default SMTP port ( 25 ) is assumed.
+	You can also enable XMail to random-select the order of the gateway list by specifying :
+
+	"*.dummy.net"	"#mail.maticad.it,192.168.1.1,mx.maticad.it:6423"
+
+	using the character  #  as the first char of the gateway list.
 
 
 	SMTPRELAY.TAB :
@@ -1030,7 +1064,7 @@ Part 7			Configuration
 
 
 	"RealName"	"Davide Libenzi"
-	"HomePage"	"http://www.maticad.it/davide"
+	"HomePage"	"http://www.mycio.com/davidel"
 	"MaxMBSize"	"30000"
 
 
@@ -1122,7 +1156,7 @@ Part 7			Configuration
 	store user informations like :
 
 	"RealName"	"Davide Libenzi"
-	"HomePage"	"http://www.maticad.it/davide"
+	"HomePage"	"http://www.mycio.com/davidel"
 	"MaxMBSize"	"30000"
 	"ClosedML"	"0"
 
@@ -1372,8 +1406,18 @@ Part 9			SMTP Client Authentication
 
 Part 10			Custom domain mail processing
 
-	If a file named  DOMAIN.tab  is present inside  custdomains  directory this is
-	treated as a command file for custom domain  DOMAIN  processing.
+	If a message that has as target domain  sub1.sub2.domain.net  arrive onto the XMail server, XMail
+	will decide if this domain will get a custom domain processing by trying to lookup :
+
+	sub1.sub2.domain.net.tab
+	.sub2.domain.net.tab
+	.domain.net.tab
+	.net.tab
+	.tab
+
+	inside the  custdomains  directory.
+	If one of these files is found the incoming mail will get a custom domain processing by executing
+	commands that are stored into such file.
 	The format is :
 
 	"command"[TAB]"arg-or-macro"[TAB]...[NEWLINE]
@@ -1422,7 +1466,7 @@ Part 10			Custom domain mail processing
 	[LREDIRECT]
 	"lredirect"[TAB]"domain"[TAB]...[NEWLINE]
 
-	Redirect message to internal or external domain impersonating local domain 
+	Redirect message to internal or external domain impersonating local domain
 	during messages delivery.
 	If the message was for foo-user@custdomain.net and the file custdomain.net.tab
 	contain a line :
@@ -1437,6 +1481,14 @@ Part 10			Custom domain mail processing
 	Wait "timeout" seconds.
 	This command is used to give external commands the time to read the temporary
 	message file when such commands are lounched with wait-timeout = 0.
+
+	[SMTPRELAY]
+	"smtprelay"[TAB]"server[:port],server[:port],..."[NEWLINE]
+
+	Send mail to the specified SMTP server list by trying the first, if fails the second and so on.
+	Otherwise You can use this syntax :
+	"smtprelay"[TAB]"#server[:port],server[:port],..."[NEWLINE]
+	To have XMail random-select the order the specified relays.
 
 	[SMTP]
 	"smtp"[NEWLINE]
@@ -1626,7 +1678,7 @@ Part 13			USER.TAB variables
 	[HomePage]
 	User home page, ie. :
 
-	"HomePage"	"http://www.maticad.it/davide"
+	"HomePage"	"http://www.mycio.com/davidel"
 
 	[MaxMBSize]
 	Max user mailbox size in Kb, ie. :
@@ -2639,7 +2691,7 @@ Part 23			Miscellaneous
 	If You've an heavy loaded server remember to setup the best number of SMAIL threads
 	by specifying the "-Qn nthreads" option ( You must do some tentatives to find the best
 	value for Your needs ).
-	Also You can limit the number of SMTP, POP3 and CTRL service threads by specifying 
+	Also You can limit the number of SMTP, POP3 and CTRL service threads by specifying
 	the options "-SX maxthreads", "-PX maxthreads" and "-CX maxthreads".
 
 	[7]

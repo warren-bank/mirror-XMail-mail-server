@@ -52,7 +52,6 @@
 #define SYS_INVALID_IPCNAME     ((SYS_IPCNAME) 0)
 
 #define SysSNPrintf             snprintf
-#define SysVSNPrintf            vsnprintf
 #define stricmp                 strcasecmp
 #define strnicmp                strncasecmp
 #define min(a, b)               (((a) < (b)) ? (a): (b))

@@ -2538,3 +2538,14 @@ int             SysMoveFile(char const * pszOldName, char const * pszNewName)
     return (0);
 
 }
+
+
+
+int             SysVSNPrintf(char *pszBuffer, int iSize, char const * pszFormat, va_list Args)
+{
+
+    int iPrintResult = vsnprintf(pszBuffer, iSize, pszFormat, Args);
+
+    return ((iPrintResult < iSize) ? iPrintResult: -1);
+
+}

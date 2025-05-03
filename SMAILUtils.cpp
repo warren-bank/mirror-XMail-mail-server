@@ -126,6 +126,8 @@ static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessa
                         char const * pszSmtpMessageID, char const * pszFrom, char const * pszRcpt,
                         char const * pszMedium, char const * pszParam);
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr);
+static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr);
+
 
 
 
@@ -1777,6 +1779,21 @@ int             USmlGetDomainCustomDir(char *pszCustomDir, int iFinalSlash)
 
 
 
+int             USmlDomainCustomFileName(char const * pszDestDomain, char *pszCustFilePath)
+{
+
+    char            szCustomDir[SYS_MAX_PATH] = "";
+
+    USmlGetDomainCustomDir(szCustomDir);
+
+
+    sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, pszDestDomain);
+
+    return (0);
+
+}
+
+
 
 int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCustFilePath)
 {
@@ -1785,9 +1802,24 @@ int             USmlGetDomainCustomFile(char const * pszDestDomain, char *pszCus
 
     USmlGetDomainCustomDir(szCustomDir);
 
-    sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, pszDestDomain);
+    for (char const * pszSubDom = pszDestDomain; pszSubDom != NULL;
+            pszSubDom = strchr(pszSubDom + 1, '.'))
+    {
+        sprintf(pszCustFilePath, "%s%s.tab", szCustomDir, pszSubDom);
 
-    return (0);
+        if (SysExistFile(pszCustFilePath))
+            return (0);
+
+    }
+
+    sprintf(pszCustFilePath, "%s.tab", szCustomDir);
+
+    if (SysExistFile(pszCustFilePath))
+        return (0);
+
+
+    ErrSetErrorCode(ERR_NOT_A_CUSTOM_DOMAIN);
+    return (ERR_NOT_A_CUSTOM_DOMAIN);
 
 }
 
@@ -1822,13 +1854,8 @@ int             USmlGetDomainMsgCustomFile(SPLF_HANDLE hFSpool, char const * psz
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustDomainFile[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomFile(pszDestDomain, szCustDomainFile);
-
-    if (!SysExistFile(szCustDomainFile))
-    {
-        ErrSetErrorCode(ERR_NOT_A_CUSTOM_DOMAIN);
-        return (ERR_NOT_A_CUSTOM_DOMAIN);
-    }
+    if (USmlGetDomainCustomFile(pszDestDomain, szCustDomainFile) < 0)
+        return (ErrGetErrorCode());
 
 
     RLCK_HANDLE     hResLock = RLckLockSH(szCustDomainFile);
@@ -1863,13 +1890,8 @@ int             USmlGetCustomDomainFile(char const * pszDestDomain, char const *
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustDomainFile[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomFile(pszDestDomain, szCustDomainFile);
-
-    if (!SysExistFile(szCustDomainFile))
-    {
-        ErrSetErrorCode(ERR_NOT_A_CUSTOM_DOMAIN);
-        return (ERR_NOT_A_CUSTOM_DOMAIN);
-    }
+    if (USmlGetDomainCustomFile(pszDestDomain, szCustDomainFile) < 0)
+        return (ErrGetErrorCode());
 
 
     char            szResLock[SYS_MAX_PATH] = "";
@@ -1905,7 +1927,7 @@ int             USmlSetCustomDomainFile(char const * pszDestDomain, char const *
 ///////////////////////////////////////////////////////////////////////////////
     char            szCustDomainFile[SYS_MAX_PATH] = "";
 
-    USmlGetDomainCustomFile(pszDestDomain, szCustDomainFile);
+    USmlDomainCustomFileName(pszDestDomain, szCustDomainFile);
 
 
     char            szResLock[SYS_MAX_PATH] = "";
@@ -1988,16 +2010,7 @@ int             USmlCustomizedDomain(char const * pszDestDomain)
 
     char            szCustFilePath[SYS_MAX_PATH] = "";
 
-    if (USmlGetDomainCustomFile(pszDestDomain, szCustFilePath) < 0)
-        return (ErrGetErrorCode());
-
-    if (!SysExistFile(szCustFilePath))
-    {
-        ErrSetErrorCode(ERR_NOT_A_CUSTOM_DOMAIN);
-        return (ERR_NOT_A_CUSTOM_DOMAIN);
-    }
-
-    return (0);
+    return (USmlGetDomainCustomFile(pszDestDomain, szCustFilePath));
 
 }
 
@@ -2127,7 +2140,6 @@ int             USmlParseAddress(char const * pszAddress, char *pszPreAddr, char
 
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr)
 {
-
 ///////////////////////////////////////////////////////////////////////////////
 //  Try to discover the "Return-Path" ( or eventually "From" ) tag to setup
 //  the "MAIL FROM: <>" part of the spool message
@@ -2152,6 +2164,26 @@ static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr)
 
     ErrSetErrorCode(ERR_MAILFROM_UNKNOWN);
     return (ERR_MAILFROM_UNKNOWN);
+
+}
+
+
+
+static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr)
+{
+///////////////////////////////////////////////////////////////////////////////
+//  Try to extract the "To:" tag from the mail headers
+///////////////////////////////////////////////////////////////////////////////
+    MessageTagData *pMTD = USmlFindTag(hTagList, "To");
+
+    if ((pMTD == NULL) ||
+            (USmlParseAddress(pMTD->pszTagData, NULL, pszToAddr) < 0))
+    {
+        ErrSetErrorCode(ERR_RCPTTO_UNKNOWN);
+        return (ERR_RCPTTO_UNKNOWN);
+    }
+
+    return (0);
 
 }
 
@@ -2189,6 +2221,24 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
     char            szFromAddr[MAX_ADDR_NAME] = "";
 
     USmlExtractFromAddress(hTagList, szFromAddr);
+
+///////////////////////////////////////////////////////////////////////////////
+//  If the recipient is NULL try to extract the "To:" tag from the message
+///////////////////////////////////////////////////////////////////////////////
+    char            szToAddr[MAX_ADDR_NAME] = "";
+
+    if (pszRcptTo == NULL)
+    {
+        if (USmlExtractToAddress(hTagList, szToAddr) < 0)
+        {
+            ErrorPush();
+            USmlFreeTagsList(hTagList);
+            fclose(pMailFile);
+            return (ErrorPop());
+        }
+
+        pszRcptTo = szToAddr;
+    }
 
     USmlFreeTagsList(hTagList);
 
