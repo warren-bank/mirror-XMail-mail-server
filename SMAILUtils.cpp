@@ -127,6 +127,8 @@ static int      USmlLogMessage(char const * pszSMTPDomain, char const * pszMessa
                         char const * pszMedium, char const * pszParam);
 static int      USmlExtractFromAddress(HSLIST & hTagList, char *pszFromAddr);
 static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr);
+static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagList,
+                        char * pszRecipient);
 
 
 
@@ -2189,6 +2191,59 @@ static int      USmlExtractToAddress(HSLIST & hTagList, char *pszToAddr)
 
 
 
+static int      USmlBuildTargetRecipient(char const * pszRcptTo, HSLIST & hTagList,
+                        char * pszRecipient)
+{
+
+    if (pszRcptTo == NULL)
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  If the recipient is NULL try to extract the "To:" tag from the message
+///////////////////////////////////////////////////////////////////////////////
+        if (USmlExtractToAddress(hTagList, pszRecipient) < 0)
+            return (ErrGetErrorCode());
+
+    }
+    else if (*pszRcptTo == '?')
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
+//  "?" + masquerade-domain
+///////////////////////////////////////////////////////////////////////////////
+        char            szToAddr[MAX_ADDR_NAME] = "",
+                        szToUser[MAX_ADDR_NAME] = "";
+
+        if ((USmlExtractToAddress(hTagList, szToAddr) < 0) ||
+                (USmtpSplitEmailAddr(szToAddr, szToUser, NULL) < 0))
+            return (ErrGetErrorCode());
+
+
+        sprintf(pszRecipient, "%s@%s", szToUser, pszRcptTo + 1);
+    }
+    else if (*pszRcptTo == '&')
+    {
+///////////////////////////////////////////////////////////////////////////////
+//  We need to masquerade incoming domain. In this case "pszRcptTo" is made by
+//  "&" + add-domain
+///////////////////////////////////////////////////////////////////////////////
+        char            szToAddr[MAX_ADDR_NAME] = "";
+
+        if (USmlExtractToAddress(hTagList, szToAddr) < 0)
+            return (ErrGetErrorCode());
+
+
+        sprintf(pszRecipient, "%s%s", szToAddr, pszRcptTo + 1);
+    }
+    else
+        strcpy(pszRecipient, pszRcptTo);
+
+
+    return (0);
+
+}
+
+
+
 int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRcptTo,
                         char const * pszSpoolFile)
 {
@@ -2227,17 +2282,12 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
 ///////////////////////////////////////////////////////////////////////////////
     char            szToAddr[MAX_ADDR_NAME] = "";
 
-    if (pszRcptTo == NULL)
+    if (USmlBuildTargetRecipient(pszRcptTo, hTagList, szToAddr) < 0)
     {
-        if (USmlExtractToAddress(hTagList, szToAddr) < 0)
-        {
-            ErrorPush();
-            USmlFreeTagsList(hTagList);
-            fclose(pMailFile);
-            return (ErrorPop());
-        }
-
-        pszRcptTo = szToAddr;
+        ErrorPush();
+        USmlFreeTagsList(hTagList);
+        fclose(pMailFile);
+        return (ErrorPop());
     }
 
     USmlFreeTagsList(hTagList);
@@ -2249,7 +2299,7 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
     {
         fclose(pMailFile);
 
-        ErrSetErrorCode(ERR_FILE_CREATE);
+        ErrSetErrorCode(ERR_FILE_CREATE, pszSpoolFile);
         return (ERR_FILE_CREATE);
     }
 
@@ -2258,7 +2308,7 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
 ///////////////////////////////////////////////////////////////////////////////
     char            szSmtpDomain[MAX_HOST_NAME] = "";
 
-    if (USmtpSplitEmailAddr(pszRcptTo, NULL, szSmtpDomain) < 0)
+    if (USmtpSplitEmailAddr(szToAddr, NULL, szSmtpDomain) < 0)
     {
         ErrorPush();
         fclose(pSpoolFile);
@@ -2293,7 +2343,7 @@ int             USmlCreateSpoolFile(char const * pszMailFile, char const * pszRc
 ///////////////////////////////////////////////////////////////////////////////
 //  Write "RCPT TO:"
 ///////////////////////////////////////////////////////////////////////////////
-    fprintf(pSpoolFile, "RCPT TO: <%s>\r\n", pszRcptTo);
+    fprintf(pSpoolFile, "RCPT TO: <%s>\r\n", szToAddr);
 
 ///////////////////////////////////////////////////////////////////////////////
 //  Write SPOOL_FILE_DATA_START

@@ -1,9 +1,9 @@
 
 			< XMail Server >
 
-Version      : 0.62 ( Beta-16 )
+Version      : 0.63 ( Beta-17 )
 Release type : Gnu Public License	http://www.gnu.org
-Date         : 21-10-2000
+Date         : 27-10-2000
 Project by   : Davide Libenzi <davide_libenzi@mycio.com>	http://www.mycio.com/davidel/xmail
 Credits      :
              : Michael Hartle <mhartle@hartle-klug.com>
@@ -362,6 +362,12 @@ Date 12-09-2000		0.62
 	( see section SMTPFWD.TAB ).
 	Added the random order option to  "smtprelay"  custom domain processing ( see section
 	"Custom domain mail processing" ).
+	The use of realloc() function has been removed to make place for free()/malloc() due a glibc bug
+	with such function.
+Date 27-10-2000		0.63
+	Added a feature that makes usable the new POP3LINKS.TAB fetching option by masquerading
+	incoming recipient. This can be done by replacing the domain part or by adding a constant
+	string to the To: address ( see  POP3LINKS.TAB section ).
 
 
 
@@ -916,11 +922,19 @@ Part 7			Configuration
 
 	"?maticad.com"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
 
-	and the fetched messages will be pushed into the spool using the address contained into the "To:"
-	tag of the incoming message. This enable users that have a single external POP3 account that
-	collect mail for multiple local users to have fetched mail distributed locally.
-	You've to be sure that the recipients domains are handled locally in a way or another.
+	and the fetched messages will be pushed into the spool using, as name part the name contained
+	into the "To:" tag of the incoming message, and domain part the string after the  ?  character
+	( masquerade domain ).
+	So if a message having as To: address  graycat@felins.net  is fetched by the previous line a
+	message is pushed into the spool with address  graycat@maticad.com.
+	You've to be sure that the masquerade domain ( maticad.com ) is handled locally in a way or another.
 	Particular attention is to be taken about at not creating mail loops.
+	Another otion is :
+
+	"&.local"	"dlibenzi"	"maticad.it"	"dlibenzi"	"XYZ..."	"CLR"
+
+	where a fetched message whose To: address is graycat@felins.net will be replaced with
+	graycat@felins.net.local.
 
 
 	SERVER.TAB :

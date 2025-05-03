@@ -381,17 +381,17 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
     else if (GwLkAnonymousDomain(pPopLnk))
     {
         SysLogMessage(LOG_LEV_MESSAGE,
-                "[PSYNC/ANON] RmtDomain = \"%s\" - RmtName = \"%s\"\n",
-                pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\"\n",
+                pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Sync
+//  Sync ( "pszDomain" == "?" + masq-domain or "pszDomain" == "&" + add-domain )
 ///////////////////////////////////////////////////////////////////////////////
-        if (UPopSyncRemoteLink(NULL, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
+        if (UPopSyncRemoteLink(pPopLnk->pszDomain, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
                         pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
             ErrLogMessage(LOG_LEV_MESSAGE,
-                    "[PSYNC/ANON] RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
-                    pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
+                    "[PSYNC/MASQ] MasqDomain = \"%s\" - RmtDomain = \"%s\" - RmtName = \"%s\" Failed !\n",
+                    pPopLnk->pszDomain + 1, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
     }
     else
@@ -406,7 +406,7 @@ unsigned int    PSYNCThreadSyncProc(void *pThreadData)
                 szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName);
 
 ///////////////////////////////////////////////////////////////////////////////
-//  Sync
+//  Sync ( "pszDomain" == "@" + domain )
 ///////////////////////////////////////////////////////////////////////////////
         if (UPopSyncRemoteLink(szSyncAddress, pPopLnk->pszRmtDomain, pPopLnk->pszRmtName,
                         pPopLnk->pszRmtPassword, pPopLnk->pszAuthType) < 0)
