@@ -1,4 +1,4 @@
-To: Davide Libenzi <davidel@xmailserver.org>
+To: GmailUser <no-reply@gmail.com>
 Subject: XMail test
 Message-ID: <1@example.com>
 
